@@ -31,7 +31,15 @@ check() {
 frames() {
     local i
     for i in 0 1 2 3 4 5 6 7 8 9; do python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/f$i.ppm" 2>/dev/null; sleep 0.12; done
-    md5sum "$O"/f?.ppm | cut -d' ' -f1 | sort -u | wc -l
+    # below the bar only: the clock may tick over a minute while we look
+    python3 -I -c 'import sys, hashlib
+seen = set()
+for f in sys.argv[1:]:
+    d = open(f, "rb").read()
+    h = d.split(b"\n", 3)
+    w = int(h[1].split()[0])
+    seen.add(hashlib.md5(h[3][w * 3 * 40:]).hexdigest())
+print(len(seen))' "$O"/f?.ppm
     rm -f "$O"/f?.ppm
 }
 search() {  # search WORD: Ctrl+F in Settings, type, Enter goes to the first control
@@ -67,20 +75,20 @@ done
 press down; sleep 0.5   # round to Skjermer again
 
 # ── Live wallpaper: Fakkel (8 fps) → Rolig (4 fps) → Av (stillbilde 00). Measured on the empty workspace 3.
-press meta_l+3; sleep 1.5
+press meta_l+3; sleep 2.5
 torch=$(frames)
 shot bakgrunn-fakkel "Levende bakgrunn: Fakkel ($torch ulike bilder på 2 s)"
 press meta_l+1; sleep 1
 search bakgrunn
 press right; sleep 1
 shot bakgrunn-rolig-valgt "Levende bakgrunn satt til Rolig"
-press meta_l+3; sleep 1.5
+press meta_l+3; sleep 2.5
 calm=$(frames)
 shot bakgrunn-rolig "Rolig: $calm ulike bilder på 2 s"
 press meta_l+1; sleep 1
 press right; sleep 1
 shot bakgrunn-av-valgt "Levende bakgrunn satt til Av"
-press meta_l+3; sleep 1.5
+press meta_l+3; sleep 2.5
 still=$(frames)
 shot bakgrunn-av "Av: $still ulikt bilde på 2 s (stillbilde 00)"
 press meta_l+1; sleep 1
@@ -121,11 +129,6 @@ shot dnd-stille "Ikke forstyrr: et vanlig varsel vises ikke"
 keys "olymparch-settings set notifications.dnd off; notify-send Steam 'Varselet vises'; sleep 1.5; c dnd-off-shows 'hyprctl layers | grep -q olymparch-notifications'\n" 1
 wait_for 'CHK-dnd-off-shows-(OK|NO)' 30; seen 'CHK-dnd-off-shows-OK' || fails+=(dnd-off-shows)
 shot dnd-av "Ikke forstyrr av (fra kommandolinja): varselet vises"
-sleep 6
-keys "olymparch-settings set notifications.dnd on; notify-send -u critical Disk 'Disken er 95 % full'; sleep 1.5; c dnd-critical 'hyprctl layers | grep -q olymparch-notifications'\n" 1
-wait_for 'CHK-dnd-critical-(OK|NO)' 30; seen 'CHK-dnd-critical-OK' || fails+=(dnd-critical)
-shot dnd-kritisk "Ikke forstyrr på: kritiske varsler vises likevel"
-keys "olymparch-settings set notifications.dnd off; clear\n" 1
 
 # ── The rest through the same command Zeus will use
 check keyboard 'olymparch-settings set keyboard.layout no && hyprctl getoption input.kb_layout | grep -q "str: no" && grep -q "kb_layout = .no." ~/.config/olymparch/hypr.lua; olymparch-settings set keyboard.layout us'
@@ -139,7 +142,8 @@ keys "clear; olymparch-settings list display | head -20\n" 2
 shot kommandolinja "olymparch-settings list display: det samme som vinduet viser"
 
 # Advanced view, set from the terminal: the open window follows (settings.json is watched)
-keys "olymparch-settings set settings.advanced on; olymparch-settings open display; clear\n" 2.5
+keys "olymparch-settings set settings.advanced on; olymparch-settings open display; sleep 1; c settings-open 'hyprctl clients | grep -q \"title: Olymparch Settings\"'\n" 2.5
+wait_for 'CHK-settings-open-(OK|NO)' 30; seen 'CHK-settings-open-OK' || fails+=(settings-open)
 shot skjermer-avansert "Avansert visning (satt fra kommandolinja): Skjermer med alle valg"
 press down; sleep 0.8
 shot lyd-avansert "Lyd, avansert: utgang og inngang fra PipeWire"
@@ -149,6 +153,7 @@ press ctrl+f; keys "doctor" 0.8; press ret; sleep 0.5
 press ret; sleep 4
 shot doctor "Om Olymparch: «Sjekk systemet» kjører olymparch doctor"
 close_settings
+check doctor-runs 'olymparch-settings run about.doctor | grep -q "Hyprland is running"'
 
 # Update now: a terminal with olymparch update (it stops at the sudo password; Ctrl+C closes it)
 keys "olymparch-settings run updates.now; sleep 2; c update-terminal 'pgrep -f olymparch-update'\n" 3
@@ -160,6 +165,12 @@ press ctrl+c; sleep 1
 press meta_l+spc; sleep 1; keys "innst" 1
 shot meny-innstillinger "Menyen (Super+Space) finner Innstillinger"
 press esc; sleep 0.5
+
+# last, because a critical notification stays until it is clicked
+keys "olymparch-settings set notifications.dnd on; notify-send -u critical Disk 'Disken er 95 % full'; sleep 1.5; c dnd-critical 'hyprctl layers | grep -q olymparch-notifications'\n" 1
+wait_for 'CHK-dnd-critical-(OK|NO)' 30; seen 'CHK-dnd-critical-OK' || fails+=(dnd-critical)
+shot dnd-kritisk "Ikke forstyrr på: kritiske varsler vises likevel"
+keys "olymparch-settings set notifications.dnd off; clear\n" 1
 
 # The shell's own log, for errors
 keys "tail -n 60 ~/.local/state/olymparch/shell.log | while IFS= read -r l; do echo \"<2>QS: \$l\" > /dev/kmsg; done; echo '<2>LOG-DONE' > /dev/kmsg\n" 1

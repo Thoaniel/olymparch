@@ -151,7 +151,7 @@ Scope {
         function open(): void { win.open = true; }
         function close(): void { win.open = false; }
         function toggle(): void { win.open = !win.open; }
-        function show(page: string): void { win.step(0); win.page = page; win.open = true; }
+        function page(id: string): void { win.step(0); win.page = id; win.open = true; }  // not "show": qs ipc has a subcommand by that name
         function reload(): void { Settings.reload(); }
     }
     onOpenChanged: if (open) { refreshMonitors(); aboutProc.running = true; }
@@ -232,6 +232,7 @@ Scope {
                 }
 
                 Flickable {
+                    id: navFlick
                     anchors { left: parent.left; right: parent.right; top: searchBox.bottom; bottom: parent.bottom; topMargin: 6 }
                     contentHeight: navCol.implicitHeight + 12
                     clip: true
@@ -257,8 +258,13 @@ Scope {
                                         id: item
                                         required property var modelData
                                         readonly property bool current: !win.query && win.page === modelData.id
-                                        width: grp.width; height: 27
+                                        width: grp.width; height: 26
                                         color: current ? win.theme.raised : "transparent"
+                                        onCurrentChanged: if (current && navFlick.height > 100) {
+                                            const y = mapToItem(navCol, 0, 0).y;
+                                            if (y < navFlick.contentY) navFlick.contentY = Math.max(0, y - 30);
+                                            else if (y + height > navFlick.contentY + navFlick.height) navFlick.contentY = y + height - navFlick.height + 8;
+                                        }
                                         Rectangle { visible: item.current; width: 2; height: parent.height; color: win.theme.gold }
                                         Text {
                                             anchors { left: parent.left; leftMargin: 14; right: parent.right; rightMargin: 8; verticalCenter: parent.verticalCenter }
@@ -292,17 +298,22 @@ Scope {
                         font { family: win.theme.mono; pixelSize: 15; bold: true }
                         color: win.theme.text
                     }
-                    Row {
+                    Item {
                         id: advSwitch
                         anchors { right: parent.right; verticalCenter: parent.verticalCenter }
-                        spacing: 8
+                        width: advRow.implicitWidth; height: 24
                         activeFocusOnTab: true
                         Keys.onSpacePressed: Settings.set("settings.advanced", !win.advanced)
-                        Text { text: I18n.t("settings.advanced", "Advanced view"); font { family: win.theme.mono; pixelSize: 12 } color: advSwitch.activeFocus ? win.theme.goldHi : win.theme.muted; anchors.verticalCenter: parent.verticalCenter }
-                        Rectangle {
-                            width: 30; height: 16; color: "#0d0d12"; anchors.verticalCenter: parent.verticalCenter
-                            border.color: win.advanced || advSwitch.activeFocus ? win.theme.gold : win.theme.line
-                            Rectangle { x: win.advanced ? 16 : 2; y: 2; width: 10; height: 10; color: win.advanced ? win.theme.gold : win.theme.muted }
+                        Row {
+                            id: advRow
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 8
+                            Text { text: I18n.t("settings.advanced", "Advanced view"); font { family: win.theme.mono; pixelSize: 12 } color: advSwitch.activeFocus ? win.theme.goldHi : win.theme.muted; anchors.verticalCenter: parent.verticalCenter }
+                            Rectangle {
+                                width: 30; height: 16; color: "#0d0d12"; anchors.verticalCenter: parent.verticalCenter
+                                border.color: win.advanced || advSwitch.activeFocus ? win.theme.gold : win.theme.line
+                                Rectangle { x: win.advanced ? 16 : 2; y: 2; width: 10; height: 10; color: win.advanced ? win.theme.gold : win.theme.muted }
+                            }
                         }
                         MouseArea { anchors.fill: parent; onClicked: Settings.set("settings.advanced", !win.advanced) }
                     }
@@ -372,7 +383,7 @@ Scope {
                             Text {
                                 topPadding: 6
                                 readonly property var m: win.monitors.find(x => x.name === win.monitor)
-                                text: m ? ((m.make ? m.make.split(" ")[0] + " " : "") + (m.model || "") + " · " + m.name).toUpperCase() : ""
+                                text: m ? ((m.model || m.description || "") + " · " + m.name).toUpperCase() : ""
                                 font { family: win.theme.mono; pixelSize: 11; letterSpacing: 1.5 }
                                 color: win.theme.muted
                             }
@@ -692,7 +703,7 @@ Scope {
                                 Rectangle {
                                     id: out
                                     visible: win.outputKey === row.s.key && win.output.length > 0
-                                    anchors { left: parent.left; right: parent.right; top: ctl.bottom; topMargin: 8 }
+                                    y: Math.max(info.y + info.implicitHeight, ctl.y + ctl.height) + 8
                                     width: parent.width
                                     height: outText.implicitHeight + 16
                                     color: "#0d0d12"

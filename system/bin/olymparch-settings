@@ -607,7 +607,7 @@ elseif cmd == "about" then
     print("hyprland=" .. (capture("hyprctl version -j"):match('"tag":%s*"([^"]+)"') or "?"))
 
 elseif cmd == "open" then
-    if arg[2] then shell_call("show", arg[2]) else shell_call("open") end
+    if arg[2] then shell_call("page", arg[2]) else shell_call("open") end
 
 elseif cmd == "files" then
     for _, k in ipairs({ "settings", "hypr", "monitors", "idle", "hyprland" }) do

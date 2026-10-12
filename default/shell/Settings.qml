@@ -10,26 +10,27 @@ import Quickshell.Io
 Singleton {
     id: settings
     readonly property string file: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/olymparch/settings.json"
-    property var schema: ({ groups: [], pages: [], settings: [] })
-    property var defaults: ({})
-    property var values: ({})
-
-    FileView {
-        path: "/usr/share/olymparch/settings/schema.json"
-        blockLoading: true
-        onLoaded: {
-            try {
-                const s = JSON.parse(text());
-                const d = {};
-                for (const e of s.settings) d[e.key] = e.default;
-                settings.defaults = d;
-                settings.schema = s;
-            } catch (e) {
-                console.warn("settings: bad schema:", e);
-            }
-        }
+    // read synchronously at start (blockLoading), so the first bindings already see the defaults
+    readonly property var schema: {
+        try { return JSON.parse(schemaFile.text()); } catch (e) { console.warn("settings: bad schema:", e); }
+        return { groups: [], pages: [], settings: [] };
+    }
+    readonly property var defaults: {
+        const d = {};
+        for (const e of schema.settings) d[e.key] = e.default;
+        return d;
+    }
+    readonly property var values: {
+        const t = user.text();
+        if (!t || !t.trim()) return {};
+        try { return JSON.parse(t) || {}; } catch (e) { console.warn("settings:", file, e); return {}; }
     }
 
+    FileView {
+        id: schemaFile
+        path: "/usr/share/olymparch/settings/schema.json"
+        blockLoading: true
+    }
     FileView {
         id: user
         path: settings.file
@@ -37,10 +38,6 @@ Singleton {
         watchChanges: true
         printErrors: false
         onFileChanged: reload()
-        onLoaded: {
-            try { settings.values = JSON.parse(text()) || {}; } catch (e) { console.warn("settings:", settings.file, e); }
-        }
-        onLoadFailed: settings.values = {}
     }
     function reload() { user.reload(); }
 
