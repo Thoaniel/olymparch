@@ -1,0 +1,164 @@
+#!/bin/bash
+# VM test: the everyday tools (olymparch-tool, olymparch-remind). On a copy of the installed disk (OLYMPARCH_BASE):
+# the tool packages from the mirrors, the shell, olymparch.lua, the schema and the scripts from this repo, then
+#   screenshot of a region (Print + drag) → notification → «Edit» opens satty; colour picker (Super+Shift+C);
+#   OCR of a window with known text (Super+Shift+T); clipboard history with text and an image (Super+Ctrl+V,
+#   search, Enter pastes); emoji typed into a terminal (Super+period); a 2 s recording (Super+Shift+R twice, the
+#   file has frames, red dot in the bar); a reminder; clipboard history off wipes it. A screenshot of every step.
+# No sound: the VM has a null audio device and the recorder records video only.
+set -uo pipefail
+cd "$(dirname "$0")/../.."
+. dev/env
+SRC=${OLYMPARCH_BASE:-tests/vm/out/install-disk}
+[ -f "$SRC/disk.qcow2" ] || { echo "kjør tests/vm/install-disk først" >&2; exit 2; }
+O=tests/vm/out/tools
+rm -rf -- tests/vm/out/tools
+mkdir -p "$O"
+install -m644 "$SRC/vars.fd" "$O/vars.fd"
+qemu-img create -q -f qcow2 -b "$(realpath "$SRC/disk.qcow2")" -F qcow2 "$O/disk.qcow2"
+QMP=$O/qmp.sock
+. tests/vm/lib.sh
+PW='olymp-test-123'
+trap 'kill "$QPID" 2>/dev/null' EXIT
+t0=$SECONDS
+vm boot.log -virtfs local,path="$PWD",mount_tag=olysrc,security_model=none,readonly=on,id=src \
+    -device qemu-xhci,id=xhci -device usb-tablet,bus=xhci.0 \
+    -audiodev none,id=snd0 -device ich9-intel-hda -device hda-output,audiodev=snd0
+unlock_and_desktop "$PW"
+python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/size.ppm"
+read -r W H < <(head -c 20 "$O/size.ppm" | tr -s '\n' ' ' | awk '{print $2, $3}')
+drag() { python3 -I tests/vm/qmp.py "$QMP" drag "$1" "$2" "$3" "$4" "$W" "$H"; sleep "${5:-1}"; }
+click() { python3 -I tests/vm/qmp.py "$QMP" click "$1" "$2" "$W" "$H"; sleep "${3:-1}"; }
+work() { python3 -I tests/vm/qmp.py "$QMP" move $((W / 4)) $((H / 2)) "$W" "$H"; sleep 0.5; }   # focus follows the mouse
+ok=()
+fail=()
+check() {  # check NAME MARKER SECONDS: the VM echoed MARKER to the serial console
+    if wait_for "$2" "$3"; then ok+=("$1"); else fail+=("$1"); fi
+}
+
+# ── setup: packages from the mirrors, then this repo's pieces; /dev/kmsg writable for the checks (test VM only)
+press meta_l+ret; sleep 2
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo pacman -Sy --noconfirm --needed wl-clipboard cliphist grim slurp satty hyprpicker gpu-screen-recorder wf-recorder tesseract tesseract-data-eng tesseract-data-nor wtype noto-fonts-emoji ffmpeg >/tmp/pacman.log 2>&1; echo \"<2>PACMAN rc=\$?\" | sudo tee /dev/kmsg; sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /mnt/default/apps /mnt/default/settings /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -m755 /mnt/system/bin/olymparch-tool /mnt/system/bin/olymparch-remind /mnt/system/bin/olymparch-settings /usr/bin/ && sudo chmod o+w /dev/kmsg && hyprctl reload >/dev/null; pkill -x quickshell; sleep 3; setsid -f olymparch-tool clip-watch; echo '<2>TOOLS-READY' > /dev/kmsg; exit\n" 1
+keys "$PW\n" 1
+wait_for 'TOOLS-READY' 600 || { shot oppsett-feil "Oppsettet ble ikke ferdig"; finish "FAIL · fikk ikke lagt inn verktøyene"; }
+grep -aoE 'PACMAN rc=[0-9]+' "$O/$LOG" | head -1
+sleep 4
+
+# two windows: a work terminal (left) and one with known text for OCR (right, large font)
+press meta_l+ret; sleep 2
+keys "foot -o 'main.font=JetBrains Mono:size=24' -T ocr sh -c 'printf \"\\\\n  Olymparch leser tekst\\\\n  Hello from the VM\\\\n\"; sleep 3000' & sleep 2; clear\n" 3
+work
+shot oppsett "Verktøyene er lagt inn: arbeidsterminal til venstre, tekstvindu til høyre"
+RX=$((W / 2 + 10)) RY=50   # top-left of the right window's text
+
+# satty is seen when it runs (it has the keyboard while open)
+keys "(while sleep 1; do pgrep -x satty >/dev/null && { echo '<2>SATTY-OK' > /dev/kmsg; break; }; done &) ; clear\n" 1
+
+# ── 1. Screenshot of a region: Print, drag → saved + clipboard + notification with «Edit» / «Open folder»
+press print; sleep 1.5
+python3 -I tests/vm/qmp.py "$QMP" move $((RX + 200)) $((RY + 200)) "$W" "$H"; sleep 0.5
+shot slurp "Print: velg et område (svart slør, gull ramme)"
+drag "$RX" "$RY" $((W - 20)) $((RY + 150)) 2.5
+shot skjermbilde-varsel "Skjermbildet: kopiert og lagret, varsel med bilde, «Rediger» og «Åpne mappe»"
+python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/probe.ppm"
+if xy=$(python3 -I tests/vm/button.py "$O/probe.ppm" 0 2>/dev/null) && [ -n "$xy" ]; then
+    read -r bx by _ <<<"$xy"
+    click "$bx" "$by" 4
+else
+    keys "olymparch-tool screenshot-edit \"\$(ls -t ~/Pictures/Screenshots/*.png | head -1)\" &\n" 4
+fi
+shot satty "«Rediger»: satty åpner skjermbildet (gull først i paletten)"
+press esc; sleep 1   # Esc closes satty
+work
+keys "clear; pkill -x satty; f=\$(ls -t ~/Pictures/Screenshots/*.png | head -1); ls -l \"\$f\"; wl-paste --list-types | grep -q image/png && [ -s \"\$f\" ] && echo '<2>SHOT-OK' > /dev/kmsg\n" 2
+check skjermbilde 'SHOT-OK' 10
+check satty 'SATTY-OK' 2
+shot skjermbilde-fil "Filen i ~/Pictures/Screenshots, bildet på utklippstavlen"
+
+# ── 2. Colour picker: Super+Shift+C, click the gold wordmark in the bar
+press meta_l+shift+c; sleep 1.5
+python3 -I tests/vm/qmp.py "$QMP" move $((W / 2 + 40)) 17 "$W" "$H"; sleep 0.8
+shot fargevelger "Super+Shift+C: hyprpicker med forstørrelse over gullet i baren"
+click $((W / 2 + 40)) 17 2
+shot farge-varsel "Fargen er kopiert: varsel med fargeprøve og #hex"
+work
+keys "clear; wl-paste; echo; wl-paste | grep -qE '^#[0-9a-f]{6}\$' && echo '<2>COLOR-OK' > /dev/kmsg\n" 2
+check fargevelger 'COLOR-OK' 10
+
+# ── 3. OCR: Super+Shift+T, drag over the text window
+press meta_l+shift+t; sleep 1.5
+drag "$RX" "$RY" $((W - 20)) $((RY + 150)) 6
+shot ocr-varsel "Super+Shift+T: teksten er lest (engelsk + norsk) og kopiert"
+work
+keys "clear; wl-paste; wl-paste | grep -qi 'olymparch' && echo '<2>OCR-OK' > /dev/kmsg\n" 2
+check ocr 'OCR-OK' 10
+shot ocr-tekst "Det OCR fant, limt ut i terminalen"
+
+# ── 4. Clipboard history: text and an image, picker, search, Enter pastes into the terminal
+keys "clear; printf 'hemmelig-test' | CLIPBOARD_STATE=sensitive olymparch-tool clip-store; printf 'Ferietekst fra testen' | wl-copy; sleep 1; wl-copy < \"\$(ls -t ~/Pictures/Screenshots/*.png | head -1)\"; sleep 1; printf 'Siste kopi' | wl-copy; sleep 1; cliphist list | cut -c1-60\n" 4
+press meta_l+ctrl+v; sleep 2
+shot utklipp "Super+Ctrl+V: historikken med tekst og bilde (miniatyr)"
+keys "ferie" 1
+shot utklipp-sok "Søk: «ferie»"
+press ret; sleep 2
+shot utklipp-limt "Enter limer inn i terminalen"
+press ret; sleep 1
+keys "clear; cliphist list | grep -q hemmelig || echo '<2>SENSITIVE-OK' > /dev/kmsg; cliphist list | grep -q 'binary data' && echo '<2>CLIPIMG-OK' > /dev/kmsg\n" 2
+check passord-ikke-lagret 'SENSITIVE-OK' 8
+check utklipp-bilde 'CLIPIMG-OK' 8
+keys "clear\n" 0.5
+press meta_l+ctrl+v; sleep 2
+press down; sleep 0.3
+press delete; sleep 1
+shot utklipp-slett "Delete fjerner den valgte"
+press esc; sleep 1
+
+# ── 5. Emoji: Super+period, search in Norwegian, Enter types it into the terminal
+keys "clear; echo -n 'Emoji: '; read e; [ -n \"\$e\" ] && [ \"\$(wl-paste)\" = \"\$e\" ] && printf %s \"\$e\" | LC_ALL=C grep -q '[^ -~]' && echo '<2>EMOJI-OK' > /dev/kmsg\n" 1
+press meta_l+dot; sleep 2
+shot emoji "Super+punktum: emojivelgeren (nylig brukte først)"
+keys "hjerte" 1
+shot emoji-sok "Søk på norsk: «hjerte»"
+press ret; sleep 2
+shot emoji-skrevet "Enter skriver emojien inn i terminalen"
+press ret; sleep 1
+check emoji 'EMOJI-OK' 8
+
+# ── 6. Recording: Super+Shift+R, click = the whole screen, 2 s, Super+Shift+R again
+keys "clear\n" 0.5
+press meta_l+shift+r; sleep 1.5
+click $((W / 2)) $((H / 2)) 3
+shot opptak "Opptaket går: rødt merke med tid i baren"
+work
+python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/bar-rec.ppm"
+red_rec=$(python3 -I tests/vm/pixels.py "$O/bar-rec.ppm" $((W / 2)) 0 "$W" 34 | sed -E 's/.*red=([0-9]+).*/\1/')
+sleep 1
+press meta_l+shift+r; sleep 5
+shot opptak-lagret "Stoppet: varsel «Opptaket er lagret» med Spill av / Åpne mappe"
+keys "clear; f=\$(ls -t ~/Videos/*.mp4 | head -1); n=\$(ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of csv=p=0 \"\$f\"); echo \"\$f: \$n bilder\"; tail -n 3 \${XDG_RUNTIME_DIR}/olymparch-tool/recorder.log; [ \"\${n:-0}\" -gt 10 ] && echo \"<2>REC-OK \$n\" > /dev/kmsg; ffprobe -v error -select_streams a -show_entries stream=index -of csv=p=0 \"\$f\" | grep -q . || echo '<2>REC-NOAUDIO' > /dev/kmsg\n" 4
+check opptak 'REC-OK' 15
+check opptak-uten-lyd 'REC-NOAUDIO' 5
+shot opptak-fil "Filen i ~/Videos har bilder og ingen lyd"
+
+# ── 7. A reminder in 5 s
+keys "clear; olymparch-remind 5s 'Ta en pause'; olymparch-remind list\n" 7
+shot paminnelse "olymparch-remind 5s «Ta en pause»: varselet kommer"
+keys "olymparch-remind list | grep -q olymparch-remind- || echo '<2>REMIND-OK' > /dev/kmsg\n" 2
+check paminnelse 'REMIND-OK' 8
+
+# ── 8. Clipboard history off: watcher stopped, history wiped; the picker says so
+keys "clear; olymparch-settings set privacy.clipboard_history off; sleep 1; [ -z \"\$(cliphist list)\" ] && ! pgrep -f 'wl-paste --watch' >/dev/null && echo '<2>CLIPOFF-OK' > /dev/kmsg\n" 3
+check utklipp-av 'CLIPOFF-OK' 10
+press meta_l+ctrl+v; sleep 2
+shot utklipp-av "Utklippshistorikk av: velgeren sier hvor den slås på"
+press esc; sleep 1
+
+# The shell's log, for QML errors
+keys "clear; tail -n 60 ~/.local/state/olymparch/shell.log | while IFS= read -r l; do echo \"<2>QS: \$l\" > /dev/kmsg; done; echo '<2>LOG-DONE' > /dev/kmsg\n" 2
+wait_for 'LOG-DONE' 20
+grep -aoE 'QS: .*' "$O/$LOG" | sed 's/\x1b\[[0-9;]*m//g' >"$O/shell-log.txt"
+errors=$(awk '/Launching config/ {n = 0} /ERROR|TypeError|ReferenceError/ {n++} END {print n + 0}' "$O/shell-log.txt")
+((errors == 0)) && ok+=(skall-logg) || fail+=("skall-logg($errors)")
+((${red_rec:-0} > 50)) && ok+=(opptaksmerke) || fail+=("opptaksmerke(red=${red_rec:-?})")
+summary="ok: ${ok[*]:-}; feil: ${fail[*]:-ingen}"
+finish "$([ ${#fail[@]} = 0 ] && echo PASS || echo FAIL) · verktøyene: $summary på $((SECONDS - t0)) s"
