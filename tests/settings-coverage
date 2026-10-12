@@ -49,6 +49,7 @@ for g in schema["groups"]:
         bad(f"group {g['id']}: no pages")
 
 VIAS = {"shell", "hypr", "monitor", "idle", "audio", "cursor", "stored", "action", "info", "bluetooth", "power", "mime", "terminal", "unit", "dropin", "headset", "mangohud", "envd", "brightness", "system", "pwclock"}
+VIAS |= {"nightlight", "wpprio", "gamechat"}   # display.night_light, audio.priority, audio.game_chat
 seen = set()
 for s in settings:
     k = s.get("key", "?")
@@ -309,6 +310,50 @@ exit 0
         bad(f"Wi-Fi: the list shows an open twin of a saved WPA network as saved:\n{r.stdout}")
     if re.search(r'password|psk|wifi-sec', log.read_text()):
         bad("Wi-Fi: a password went through nmcli's command line")
+
+# ── «Install …» rows and the devices/audio/power keys (display.night_light, network.tailscale, network.firewall,
+#    audio.per_app, display.hdr/colorspace, power.charge_limit): one-click installs name an app ID from install-app's
+#    fixed list, each install row hides once its program is there and stands next to the setting that needs it, and
+#    bad values never reach Lua, wpctl or the helper.
+ia = (root / "system/lib/install-app").read_text()
+ia_ids = set(re.findall(r"^\s+([a-z-]+)\) pkgs=\(", ia, re.M))
+for s in settings:
+    cmd = s["apply"].get("command", "")
+    m = re.match(r"pkexec /usr/lib/olymparch/install-app ([a-z-]+)", cmd)
+    if m and m.group(1) not in ia_ids:
+        bad(f"{s['key']}: install-app {m.group(1)} is not in system/lib/install-app's list")
+    if "install-app" in cmd and not m:
+        bad(f"{s['key']}: install-app must be run as pkexec /usr/lib/olymparch/install-app APP")
+    if s.get("unless"):
+        if not m:
+            bad(f"{s['key']}: «unless» is for install rows (pkexec /usr/lib/olymparch/install-app APP)")
+        if not any(o.get("needs") == s["unless"] for o in settings):
+            bad(f"{s['key']}: installs {s['unless']}, but no setting needs it")
+for k, prog in (("display.night_light", "hyprsunset"), ("network.tailscale", "tailscale"), ("network.firewall", "nft")):
+    if keys.get(k, {}).get("needs") != prog or not any(o.get("unless") == prog for o in settings):
+        bad(f"{k}: must need {prog} and have an «Install» row (unless: {prog})")
+with tempfile.TemporaryDirectory() as home:
+    conf = Path(home, ".config")
+    (conf / "olymparch").mkdir(parents=True)
+    (conf / "olymparch/settings.json").write_text(json.dumps({
+        "display.hdr@Virtual-1": "yes", "display.colorspace@Virtual-1": 'srgb" }) os.execute("x") --',
+        "display.colorspace@DP-2": "wide", "display.hdr@DP-3": True, "display.game_monitor": "a b;rm",
+        "audio.priority": 'x" } ] } os.execute', "power.charge_limit": 20, "games.crash_order": "rm -rf",
+    }))
+    env3 = dict(env, HOME=home, XDG_RUNTIME_DIR=home)
+    r = subprocess.run([cli_path, "apply"], env=env3, capture_output=True, text=True)
+    mon = (conf / "olymparch/monitors.lua").read_text() if (conf / "olymparch/monitors.lua").exists() else ""
+    if r.stderr.count("ignoring") != 6 or "os.execute" in mon or 'cm = "wide"' not in mon or 'cm = "hdr"' not in mon or "bitdepth = 10" not in mon:
+        bad(f"olymparch-settings: HDR/colour space/devices values not checked or not written (rc {r.returncode}):\n{mon}{r.stderr}")
+    for args in (["pick", "audio.per_app", "1;id", "up"], ["pick", "audio.per_app", "12", "louder"], ["set", "power.charge_limit", "49"],
+                 ["set", "input.polling_rate", "1000"], ["set", "network.firewall", "maybe"], ["set", "games.crash_order", "proton"],
+                 ["set", "display.colorspace@Virtual-1", "hdr"], ["set", "audio.priority", "a b"]):
+        if subprocess.run([cli_path, *args], env=env3, capture_output=True).returncode not in (2, 3):
+            bad(f"olymparch-settings {' '.join(args)!r} was not refused")
+proton = (root / "system/bin/olymparch-proton").read_text()
+orders = set(re.findall(r'^    "([a-z-]+)": \[', proton, re.M))
+if orders != {o["value"] for o in keys["games.crash_order"]["options"]}:
+    bad("games.crash_order: the options must be exactly olymparch-proton's ORDERS")
 
 # ── Norwegian for every string the shell shows
 nb = json.loads((root / "default/i18n/nb.json").read_text())

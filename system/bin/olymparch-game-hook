@@ -84,6 +84,14 @@ case ${1:-} in
         say "game: $kind appid=$appid window=$addr pid=$pid (found at $gpid)"
         # The window's own process is the game; it is what gamemode should tune
         { mine "$pid" && register "$pid"; } || say "gamemode: could not register $pid"
+        # Settings → Displays → «Main monitor for games» (display.game_monitor): the window goes there. The name is
+        # checked again (only an output that is connected now), and the address is the hex one Hyprland gave us.
+        gm=$(olymparch-settings get display.game_monitor 2>/dev/null || true)
+        if [[ $gm =~ ^[A-Za-z0-9_.-]{1,64}$ && $gm != auto && $addr =~ ^(0x)?[0-9a-fA-F]{1,16}$ ]] &&
+            hyprctl monitors -j 2>/dev/null | grep -qF "\"name\": \"$gm\""; then
+            hyprctl dispatch "hl.dsp.window.move({ monitor = \"$gm\", window = \"address:0x${addr#0x}\" })" >/dev/null 2>&1 &&
+                say "moved window=$addr to monitor $gm"
+        fi
         # The Proton watcher needs to know this game reached a window
         [ "$appid" != - ] && date +%s >"$run/$appid.window"
         ;;

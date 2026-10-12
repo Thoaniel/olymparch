@@ -8,6 +8,10 @@ export PATH=/usr/bin LC_ALL=C
 [ $# = 1 ] || { echo "bruk: install-app APP" >&2; exit 2; }
 case $1 in
     torrent) pkgs=(transmission-gtk) ;;
+    # Settings rows that need a program Olymparch doesn't install (official Arch repositories only)
+    nightlight) pkgs=(hyprsunset) ;;   # display.night_light
+    tailscale) pkgs=(tailscale) ;;     # network.tailscale
+    firewall) pkgs=(nftables) ;;       # network.firewall
     *) echo "install-app: ukjent app" >&2; exit 2 ;;
 esac
 exec </dev/null 9>/run/olymparch-install-app.lock

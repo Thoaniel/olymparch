@@ -11,8 +11,8 @@
   olymparch-proton restart-steam        close Steam, apply the queue, start it again
 
 Steam rewrites config.vdf when it exits, so changes are queued and applied by olymparch-launch-steam before Steam
-starts. Order after a crash: Valve's default -> newest installed GE-Proton -> Proton Experimental. Games whose
-anti-cheat blocks Linux never cycle.
+starts. Order after a crash: Valve's default -> newest installed GE-Proton -> Proton Experimental, or the order
+chosen in Settings -> Games (games.crash_order). Games whose anti-cheat blocks Linux never cycle.
 """
 import json
 import os
@@ -30,6 +30,24 @@ STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", HOME / ".local/state")) / "oly
 STATE = STATE_DIR / "state.json"
 QUEUE = STATE_DIR / "queue.json"
 CHAIN = ["default", "GE-Proton", "proton_experimental"]
+# Settings -> Games -> «Order after a crash» (games.crash_order in settings.json): a fixed name, never a tool name
+ORDERS = {
+    "valve-ge-experimental": ["default", "GE-Proton", "proton_experimental"],
+    "valve-experimental-ge": ["default", "proton_experimental", "GE-Proton"],
+    "ge-valve-experimental": ["GE-Proton", "default", "proton_experimental"],
+    "ge-experimental-valve": ["GE-Proton", "proton_experimental", "default"],
+    "experimental-valve-ge": ["proton_experimental", "default", "GE-Proton"],
+    "experimental-ge-valve": ["proton_experimental", "GE-Proton", "default"],
+}
+SETTINGS = Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config")) / "olymparch/settings.json"
+
+
+def crash_order():
+    try:
+        v = json.loads(SETTINGS.read_text()).get("games.crash_order")
+    except (OSError, ValueError, AttributeError):
+        v = None
+    return ORDERS.get(v, CHAIN) if isinstance(v, str) else CHAIN
 APPID_RE = re.compile(r"[0-9]{1,10}")
 TOOL_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}")  # compat tool names go into config.vdf: no quotes
 
@@ -316,7 +334,7 @@ def failed(appid, secs, why):
     if chain_class(cur) not in tried:
         tried.append(chain_class(cur))
     nxt = None
-    for cls in CHAIN:
+    for cls in crash_order():
         if cls not in tried and resolve(cls):
             nxt = resolve(cls)
             break

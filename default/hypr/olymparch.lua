@@ -124,6 +124,8 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("sh -c '[ \"$(olymparch-settings get disks.usb_automount 2>/dev/null)\" = false ] && exec udiskie --no-automount --notify --no-tray; exec udiskie --automount --notify --no-tray'")
     hl.exec_cmd("olymparch-welcome")   -- first-login hints (e.g. set up Zeus)
     hl.exec_cmd("sh -c 'f=$HOME/.config/hypr/hypridle.conf; [ -f \"$f\" ] || f=/usr/share/olymparch/idle/hypridle.conf; exec hypridle -c \"$f\"'")
+    -- Night light (Settings → Displays): hyprsunset with ~/.config/hypr/hyprsunset.conf (warmer 20:00–07:00)
+    hl.exec_cmd("sh -c '[ \"$(olymparch-settings get display.night_light 2>/dev/null)\" = true ] && command -v hyprsunset >/dev/null && exec hyprsunset'")
 end)
 
 -- Games need no launch options: every new window is traced back to its process, and a game gets gamemode

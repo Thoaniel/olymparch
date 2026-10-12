@@ -13,10 +13,12 @@
 --   olymparch-settings open [PAGE]             open the Settings window
 --   olymparch-settings profiles                the saved layout of every monitor combination (* = in use)
 --   olymparch-settings monitors-changed        apply the layout for the monitors connected now (Hyprland runs it)
---   olymparch-settings items KEY [--scan]      Wi-Fi networks, Bluetooth devices; pick KEY ID connects
+--   olymparch-settings items KEY [--scan]      Wi-Fi networks, Bluetooth devices, apps playing sound; pick KEY ID
+--                                             connects (pick audio.per_app ID up|down|mute changes its volume)
 --   olymparch-settings choices KEY | missing   what a choice can be here; settings this machine can't use
 --   olymparch-settings view NAME              disks, libraries, mounts, subvolumes, snapshots, kernel, overdrive,
---                                             firmware, games, proton, proton-games, zeus (read-only)
+--                                             firmware, games, proton, proton-games, zeus, controllers,
+--                                             input-devices, bluetooth-adapters, cpu (read-only)
 --   olymparch-settings zeus-install | zeus-setup   in a terminal (Settings → Zeus); never downloads a model
 --   olymparch-settings about | files | check | pending | wired
 -- Per-monitor keys take the output after @, such as display.scale@DP-1.
@@ -419,6 +421,15 @@ local function monitor_spec(values, out, override)
     local parts = { ("output = %q"):format(out), ("mode = %q"):format(mode), ("position = %q"):format(get("position")),
         "scale = " .. (tonumber(get("scale")) or 1), "vrr = " .. vrr }
     if get("bitdepth") == "10" then parts[#parts + 1] = "bitdepth = 10" end
+    -- ── display.hdr / display.colorspace: Hyprland's colour management preset (cm). Written only once one of them
+    --    was set for this output, so Hyprland's own default stays until then. Both are checked against the schema.
+    local hdr, cs = get("hdr"), get("colorspace")
+    local set_here = override and (override.key == "display.hdr@" .. out or override.key == "display.colorspace@" .. out)
+    if hdr == true or set_here or values["display.colorspace@" .. out] ~= nil or values["display.hdr@" .. out] ~= nil then
+        local cm = hdr == true and "hdr" or ({ srgb = "srgb", wide = "wide", edid = "edid", auto = "auto" })[cs] or "srgb"
+        parts[#parts + 1] = ("cm = %q"):format(cm)
+        if cm == "hdr" and get("bitdepth") ~= "10" then parts[#parts + 1] = "bitdepth = 10" end
+    end
     return "hl.monitor({ " .. table.concat(parts, ", ") .. " })"
 end
 local function configured_outputs(values)
@@ -671,9 +682,14 @@ local SYSTEM_ACTIONS = {
     ["bt-fast"] = { on = true, off = true },
     dns = { auto = true, cloudflare = true, quad9 = true },
     ["mac-random"] = { on = true, off = true },
+    -- input.polling_rate, network.tailscale, network.firewall
+    mousepoll = { auto = true, fast = true },
+    tailscale = { on = true, off = true },
+    firewall = { on = true, off = true },
 }
 local SYSTEM_RANGES = {   -- whole numbers from MIN to MAX (settings-apply has the same globs)
     snapshots = { 2, 50 },
+    ["charge-limit"] = { 50, 100 },   -- power.charge_limit
 }
 local function system_allowed(act, v)
     if SYSTEM_ACTIONS[act] then return SYSTEM_ACTIONS[act][v] == true end
@@ -703,6 +719,49 @@ appliers["headset"] = function(s, values, key)
         if on and not loaded then os.execute("pactl load-module module-switch-on-connect >/dev/null 2>&1")
         elseif not on and loaded then os.execute("pactl unload-module module-switch-on-connect >/dev/null 2>&1") end
     end
+end
+
+-- ── night light, preferred output, Game/Chat outputs (display.night_light, audio.priority, audio.game_chat).
+--    Every value was checked by valid() first; the files below only ever get fixed text or a pattern-checked name.
+local NIGHT_CONF = CONFIG .. "/hypr/hyprsunset.conf"
+local NIGHT_MARK = "# Written by olymparch-settings (display.night_light)"
+appliers["nightlight"] = function(s, values, key)
+    local on = value_of(values, key) == true
+    local mine = read(NIGHT_CONF)
+    if mine == nil or mine:sub(1, #NIGHT_MARK) == NIGHT_MARK then   -- your own hyprsunset.conf is left alone
+        write(NIGHT_CONF, NIGHT_MARK .. "\n# Warmer from 20:00, normal again at 07:00\n" ..
+            "profile {\n    time = 7:00\n    identity = true\n}\n\nprofile {\n    time = 20:00\n    temperature = 4000\n}\n")
+    end
+    if not os.getenv("WAYLAND_DISPLAY") then return end
+    os.execute("pkill -x hyprsunset >/dev/null 2>&1")
+    if on and have("hyprsunset") then os.execute("setsid -f hyprsunset >/dev/null 2>&1 </dev/null") end
+end
+appliers["wpprio"] = function(s, values, key)
+    local name = value_of(values, key)
+    local path = CONFIG .. "/wireplumber/wireplumber.conf.d/90-olymparch-priority.conf"
+    if name == "" then os.remove(path)
+    else
+        if not name:match("^[%w_.:-]+$") then die("bad device name", 5) end
+        local rule = ('  { matches = [ { node.name = "%s" } ]\n    actions = { update-props = { priority.session = 3000, priority.driver = 3000 } } }\n'):format(name)
+        write(path, "# Written by olymparch-settings (audio.priority): this output wins whenever it is connected\n" ..
+            "monitor.alsa.rules = [\n" .. rule .. "]\nmonitor.bluez.rules = [\n" .. rule .. "]\n")
+    end
+    os.execute("systemctl --user restart wireplumber.service >/dev/null 2>&1")
+end
+appliers["gamechat"] = function(s, values, key)
+    local path = CONFIG .. "/pipewire/pipewire.conf.d/olymparch-game-chat.conf"
+    if value_of(values, key) == true then
+        local function sink(name, desc)
+            return ("  { name = libpipewire-module-loopback\n    args = {\n      node.description = %q\n" ..
+                "      capture.props = { node.name = %q media.class = \"Audio/Sink\" audio.position = [ FL FR ] }\n" ..
+                "      playback.props = { node.name = %q node.description = %q node.passive = true }\n    }\n  }\n"):format(desc, name, name .. ".out", desc)
+        end
+        write(path, "# Written by olymparch-settings (audio.game_chat): two outputs, Game and Chat, that play on the default output\n" ..
+            "context.modules = [\n" .. sink("olymparch_game", "Game") .. sink("olymparch_chat", "Chat") .. "]\n")
+    else
+        os.remove(path)
+    end
+    os.execute("systemctl --user restart pipewire.service pipewire-pulse.service wireplumber.service >/dev/null 2>&1")
 end
 
 local function apply(key, values, override)
@@ -1048,6 +1107,7 @@ elseif cmd == "items" or cmd == "pick" then
         local id = arg[3] or die("usage: pick KEY ID", 2)
         if key == "network.wifi" and (#id > 32 or id == "" or id:find("%c")) then die("not a network name", 2) end
         if key == "bluetooth.devices" and not id:match("^%x%x:%x%x:%x%x:%x%x:%x%x:%x%x$") then die("not a device address", 2) end
+        if key == "audio.per_app" and not (id:match("^%d+$") and #id <= 9) then die("not a stream id", 2) end
     end
     if key == "network.wifi" then
         if not have("nmcli") then print("! nonm NetworkManager (nmcli) is not installed"); os.exit(0) end
@@ -1149,6 +1209,42 @@ elseif cmd == "items" or cmd == "pick" then
             end
             os.exit(os.execute("timeout 15 bluetoothctl connect " .. q .. " >/dev/null 2>&1") and 0 or 1)
         end
+    -- ── audio.per_app: every app playing sound (PipeWire output streams), ID = the node id; STATE «level» makes the
+    --    window show − / + next to it. pick audio.per_app ID up|down|mute: only ids that are such a stream right now.
+    elseif key == "audio.per_app" then
+        if not have("wpctl") then print("! nowp PipeWire (wpctl) is not installed"); os.exit(0) end
+        local function streams()
+            local ok, dump = pcall(json.decode, capture("pw-dump"))
+            local list = {}
+            for _, o in ipairs(ok and type(dump) == "table" and dump or {}) do
+                local p = type(o) == "table" and o.info and type(o.info.props) == "table" and o.info.props
+                if p and p["media.class"] == "Stream/Output/Audio" and math.tointeger(o.id) then
+                    local name = p["application.name"] or p["node.description"] or p["node.name"] or ("#" .. o.id)
+                    list[#list + 1] = { id = math.tointeger(o.id), name = clean(tostring(name)):sub(1, 60), media = clean(tostring(p["media.name"] or "")):sub(1, 60) }
+                end
+            end
+            table.sort(list, function(a, b) return a.id < b.id end)
+            return list
+        end
+        if cmd == "items" then
+            local list = streams()
+            if #list == 0 then print("! nostreams No app is playing sound right now"); os.exit(0) end
+            for _, st in ipairs(list) do
+                local v = capture(("wpctl get-volume %d"):format(st.id))
+                local vol = tonumber(v:match("Volume: ([%d.]+)")) or 0
+                local muted = v:find("MUTED") ~= nil
+                print(table.concat({ tostring(st.id), "level", st.name, ("%d %%%s%s"):format(math.floor(vol * 100 + 0.5),
+                    muted and " · muted" or "", st.media ~= "" and st.media ~= st.name and (" · " .. st.media) or "") }, "\t"))
+            end
+        else
+            local id = math.tointeger(tonumber(arg[3]))
+            local how = ({ up = "set-volume -l 1.5 %d 5%%+", down = "set-volume %d 5%%-", mute = "set-mute %d toggle" })[arg[4] or "mute"]
+            if not how then die("expected up, down or mute", 2) end
+            local found = false
+            for _, st in ipairs(streams()) do if st.id == id then found = true end end
+            if not found then die("no app plays sound with id " .. tostring(id), 3) end
+            os.exit(os.execute("wpctl " .. how:format(id) .. " >/dev/null 2>&1") and 0 or 1)
+        end
     else
         die(key .. " has no list", 2)
     end
@@ -1172,13 +1268,18 @@ elseif cmd == "wired" then
 -- settings that need a program this machine doesn't have (the window hides them): one key per line
 elseif cmd == "missing" then
     local function exists(f)   -- needs_file / unless_file: a fixed path from the schema; ~/ is the home folder
+        if f:find("BAT*", 1, true) then   -- any battery: BAT0 … BAT3
+            for i = 0, 3 do if exists(f:gsub("BAT%*", "BAT" .. i)) then return true end end
+            return false
+        end
         local h = io.open((f:gsub("^~/", HOME .. "/")))
         if h then h:close() end
         return h ~= nil
     end
     for _, s in ipairs(schema.settings) do
         if (s.needs and not have(s.needs)) or (s.needs_file and not exists(s.needs_file))
-            or (s.unless_file and exists(s.unless_file)) then print(s.key) end
+            or (s.unless_file and exists(s.unless_file))
+            or (s.unless and have(s.unless)) then print(s.key) end   -- unless: an «Install …» row, gone once it is there
     end
 
 -- what a choice can be on this machine: VALUE <tab> LABEL per line (default apps, terminals)
@@ -1345,6 +1446,56 @@ elseif cmd == "view" then
             print("")
             out(capture("timeout 15 " .. sh_quote(oly) .. " modell"))   -- lists the models; changes nothing
         end
+    -- ── input.controllers, input.device_profiles, bluetooth.adapter, power.cpu_limits (read-only)
+    elseif name == "controllers" then
+        -- every input device with a joystick handler (pads, wheels, sticks, pedals); wheels and sticks by their axes
+        local n = 0
+        for blk in ((read("/proc/bus/input/devices") or "") .. "\n\n"):gmatch("(.-)\n\n") do
+            local dname = blk:match('N: Name="([^"\n]*)"')
+            local handlers = blk:match("H: Handlers=([^\n]*)") or ""
+            local js = handlers:match("(js%d+)")
+            if dname and js then
+                n = n + 1
+                local kind = dname:lower():find("wheel") and L("wheel", "ratt") or (dname:lower():find("stick") or dname:lower():find("hotas")) and L("stick", "spak") or L("controller", "kontroller")
+                print(("%-44s %-10s %s"):format(dname:gsub("%c", " "):sub(1, 44), kind, js .. " " .. (handlers:match("(event%d+)") or "")))
+            end
+        end
+        if n == 0 then print(L("No controllers connected", "Ingen kontrollere er koblet til")) end
+        print("")
+        print(L("Steam maps them per game (Steam → Settings → Controller)", "Steam styrer dem per spill (Steam → Innstillinger → Kontroller)"))
+    elseif name == "input-devices" then
+        local ok, d = pcall(json.decode, os.getenv("HYPRLAND_INSTANCE_SIGNATURE") and capture("hyprctl devices -j") or "{}")
+        d = ok and type(d) == "table" and d or {}
+        for _, part in ipairs({ { "mice", L("Mice and touchpads", "Mus og styreplater") }, { "keyboards", L("Keyboards", "Tastatur") }, { "tablets", L("Tablets", "Brett") } }) do
+            local list = type(d[part[1]]) == "table" and d[part[1]] or {}
+            if #list > 0 then
+                print(part[2])
+                for _, x in ipairs(list) do if type(x) == "table" and type(x.name) == "string" then print("  " .. x.name:gsub("%c", " ")) end end
+            end
+        end
+        print("")
+        print(L("Speed and acceleration in Settings → Mouse apply to all of them", "Fart og akselerasjon i Innstillinger → Mus gjelder alle"))
+    elseif name == "bluetooth-adapters" then
+        local list = have("bluetoothctl") and capture("timeout 5 bluetoothctl list") or ""
+        if not list:find("Controller") then print(L("No Bluetooth adapter", "Ingen Bluetooth-adapter")) else out(list) end
+    elseif name == "cpu" then
+        local c = "/sys/devices/system/cpu/cpu0/cpufreq/"
+        local function f(p) return ((read(p) or ""):gsub("%s+$", "")) end
+        local function mhz(p) local k = tonumber(f(p)); return k and ("%d MHz"):format(k // 1000) or "?" end
+        print(L("driver: ", "driver: ") .. (f(c .. "scaling_driver") ~= "" and f(c .. "scaling_driver") or "?"))
+        print("governor: " .. (f(c .. "scaling_governor") ~= "" and f(c .. "scaling_governor") or "?"))
+        local epp = f(c .. "energy_performance_preference")
+        if epp ~= "" then print(L("energy preference (EPP): ", "energipreferanse (EPP): ") .. epp) end
+        local boost = f("/sys/devices/system/cpu/cpufreq/boost")
+        local noturbo = f("/sys/devices/system/cpu/intel_pstate/no_turbo")
+        if boost ~= "" then print("boost: " .. (boost == "1" and L("on", "på") or L("off", "av")))
+        elseif noturbo ~= "" then print("turbo: " .. (noturbo == "0" and L("on", "på") or L("off", "av"))) end
+        print(L("range: ", "område: ") .. mhz(c .. "scaling_min_freq") .. " – " .. mhz(c .. "scaling_max_freq") ..
+            L(" (hardware: ", " (maskinvare: ") .. mhz(c .. "cpuinfo_min_freq") .. " – " .. mhz(c .. "cpuinfo_max_freq") .. ")")
+        if have("powerprofilesctl") then print(L("power profile: ", "strømprofil: ") .. capture("powerprofilesctl get"):gsub("%s+$", "")) end
+        print("")
+        print(L("Change them with the power profile above; the limits come from the CPU driver",
+                "Endres med strømprofilen over; grensene kommer fra CPU-driveren"))
     else
         die("no view " .. name, 2)
     end

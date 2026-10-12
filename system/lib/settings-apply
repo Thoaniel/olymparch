@@ -9,6 +9,10 @@
 #   dns auto|cloudflare|quad9        /etc/NetworkManager/conf.d/30-olymparch-dns.conf (global DNS)
 #   mac-random on|off                /etc/NetworkManager/conf.d/30-olymparch-mac.conf (Wi-Fi MAC per network)
 #   snapshots 2…50                   NUMBER_LIMIT in /etc/snapper/configs/root (snapper set-config)
+#   mousepoll auto|fast              usbhid mousepoll (fast = 1 ms) now and at boot (modprobe.d + tmpfiles.d)
+#   tailscale on|off                 tailscaled.service enabled and started (the user becomes its operator) or stopped
+#   firewall on|off                  nftables.service with Arch's /etc/nftables.conf, or stopped (rules flushed)
+#   charge-limit 50…100              charge_control_end_threshold of every battery, now and at boot (tmpfiles.d)
 set -euo pipefail
 export PATH=/usr/bin LC_ALL=C
 umask 022
@@ -20,7 +24,9 @@ case "$action:$value" in
     bt-mode:dual | bt-mode:le | bt-mode:bredr | bt-fast:on | bt-fast:off | \
     dns:auto | dns:cloudflare | dns:quad9 | \
     mac-random:on | mac-random:off | \
-    snapshots:[2-9] | snapshots:[1-4][0-9] | snapshots:50) ;;
+    snapshots:[2-9] | snapshots:[1-4][0-9] | snapshots:50 | \
+    mousepoll:auto | mousepoll:fast | tailscale:on | tailscale:off | firewall:on | firewall:off | \
+    charge-limit:[5-9][0-9] | charge-limit:100) ;;
     *) echo "settings-apply: not allowed: $action $value" >&2; exit 2 ;;
 esac
 log() { printf '%s settings-apply %s %s (uid %s)\n' "$(date '+%F %T')" "$action" "$value" "${PKEXEC_UID:-?}" >>/var/log/olymparch-settings.log; }
@@ -88,6 +94,50 @@ case "$action" in
     snapshots)
         [ -f /etc/snapper/configs/root ] || { echo "settings-apply: no snapper config root" >&2; exit 3; }
         snapper --no-dbus -c root set-config "NUMBER_LIMIT=$value"
+        ;;
+    # ── input.polling_rate, network.tailscale, network.firewall, power.charge_limit
+    mousepoll)
+        n=$([ "$value" = fast ] && echo 1 || echo 0)   # 0 = what the mouse asks for
+        if [ "$value" = fast ]; then
+            mkdir -p /etc/modprobe.d /etc/tmpfiles.d
+            printf '# Written by Settings (input.polling_rate)\noptions usbhid mousepoll=1\n' >/etc/modprobe.d/50-olymparch-mousepoll.conf
+            printf '# Written by Settings (input.polling_rate): usbhid built in\nw /sys/module/usbhid/parameters/mousepoll - - - - 1\n' >/etc/tmpfiles.d/50-olymparch-mousepoll.conf
+        else
+            rm -f /etc/modprobe.d/50-olymparch-mousepoll.conf /etc/tmpfiles.d/50-olymparch-mousepoll.conf
+        fi
+        if [ -w /sys/module/usbhid/parameters/mousepoll ]; then echo "$n" >/sys/module/usbhid/parameters/mousepoll; fi
+        ;;
+    tailscale)
+        [ -x /usr/bin/tailscaled ] || { echo "settings-apply: tailscale is not installed" >&2; exit 3; }
+        if [ "$value" = on ]; then
+            systemctl enable --now tailscaled.service
+            user=$(id -nu "${PKEXEC_UID:-}" 2>/dev/null || true)
+            if [[ $user =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then   # «tailscale up» then works without sudo
+                for _ in 1 2 3 4 5 6 7 8 9 10; do tailscale set --operator="$user" 2>/dev/null && break; sleep 1; done
+            fi
+        else
+            systemctl disable --now tailscaled.service
+        fi
+        ;;
+    firewall)
+        [ -x /usr/bin/nft ] || { echo "settings-apply: nftables is not installed" >&2; exit 3; }
+        if [ "$value" = on ]; then systemctl enable --now nftables.service; else systemctl disable --now nftables.service; fi
+        ;;
+    charge-limit)
+        found=0
+        for f in /sys/class/power_supply/BAT*/charge_control_end_threshold; do
+            [ -w "$f" ] || continue
+            echo "$value" >"$f"
+            found=1
+        done
+        [ $found = 1 ] || { echo "settings-apply: no battery with a charge limit" >&2; exit 3; }
+        if [ "$value" = 100 ]; then
+            rm -f /etc/tmpfiles.d/50-olymparch-charge-limit.conf
+        else
+            mkdir -p /etc/tmpfiles.d
+            printf '# Written by Settings (power.charge_limit)\nw /sys/class/power_supply/BAT*/charge_control_end_threshold - - - - %s\n' "$value" \
+                >/etc/tmpfiles.d/50-olymparch-charge-limit.conf
+        fi
         ;;
 esac
 log

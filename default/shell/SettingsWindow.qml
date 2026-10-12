@@ -59,7 +59,9 @@ Scope {
             win.setItems(key, { lines: lines, message: msgs.join("\n"), busy: "" });
         });
     }
-    function pickItem(key, it) {
+    function pickItem(key, it, how) {
+        // ── a «level» row (audio.per_app): − / + / mute, then the list again with the new volume
+        if (it.state === "level") { Settings.run(["pick", key, it.id, how || "mute"], () => win.loadItems(key, false)); return; }
         setItems(key, { busy: (it.state === "on" ? I18n.t("settings.items.disconnecting", "Disconnecting %1 …") : I18n.t("settings.items.connecting", "Connecting %1 …")).arg(it.name) });
         Settings.run(["pick", key, it.id], () => win.loadItems(key, false));
     }
@@ -81,7 +83,7 @@ Scope {
         const k = keyOf(s);
         if (pending && pending.key === k) return pending.value;
         const v = Settings.get(k);
-        if (s.options_from === "audio.sinks" && !v) return Pipewire.defaultAudioSink ? Pipewire.defaultAudioSink.name : "";
+        if (s.options_from === "audio.sinks" && !v && !s.options) return Pipewire.defaultAudioSink ? Pipewire.defaultAudioSink.name : "";
         if (s.options_from === "audio.sources" && !v) return Pipewire.defaultAudioSource ? Pipewire.defaultAudioSource.name : "";
         return v;
     }
@@ -163,7 +165,14 @@ Scope {
     }
     Timer { id: reopen; interval: 200; onTriggered: win.open = true }
     function act(s) {
-        Settings.run(["run", s.key], (out, code) => { if (s.output) { win.outputKey = s.key; win.output = out.trim(); win.outputError = false; } });
+        Settings.run(["run", s.key], (out, code) => {
+            if (s.output) { win.outputKey = s.key; win.output = out.trim(); win.outputError = false; }
+            // ── an «Install …» row (unless): once installed it goes and the setting it was for shows
+            if (s.unless) {
+                if (code) { win.outputKey = s.key; win.output = I18n.t("settings.install.failed", "Not installed: see /var/log/olymparch-install-app.log"); win.outputError = true; }
+                win.loadMissing();
+            }
+        });
     }
     function resetPage() {
         for (const s of Settings.schema.settings.filter(s => s.page === page && s.type !== "action" && !s.readonly)) {
@@ -802,7 +811,7 @@ Scope {
                                                 onActiveFocusChanged: if (activeFocus) list.show(row)
                                                 Keys.onReturnPressed: win.loadItems(row.s.key, true)
                                                 Keys.onSpacePressed: win.loadItems(row.s.key, true)
-                                                Text { id: scanText; anchors.centerIn: parent; text: I18n.t("settings.items.scan", "Search again"); font { family: win.theme.mono; pixelSize: win.theme.px(12); bold: true } color: scanBtn.activeFocus ? win.theme.goldHi : win.theme.text }
+                                                Text { id: scanText; anchors.centerIn: parent; text: row.s.key === "audio.per_app" ? I18n.t("settings.items.refresh", "Refresh") : I18n.t("settings.items.scan", "Search again"); font { family: win.theme.mono; pixelSize: win.theme.px(12); bold: true } color: scanBtn.activeFocus ? win.theme.goldHi : win.theme.text }
                                                 MouseArea { anchors.fill: parent; onClicked: win.loadItems(row.s.key, true) }
                                             }
                                             Text {
@@ -834,6 +843,9 @@ Scope {
                                                 onActiveFocusChanged: if (activeFocus) list.show(row)
                                                 Keys.onReturnPressed: win.pickItem(row.s.key, modelData)
                                                 Keys.onSpacePressed: win.pickItem(row.s.key, modelData)
+                                                Keys.onLeftPressed: e => { if (it.level) win.pickItem(row.s.key, modelData, "down"); else e.accepted = false; }
+                                                Keys.onRightPressed: e => { if (it.level) win.pickItem(row.s.key, modelData, "up"); else e.accepted = false; }
+                                                readonly property bool level: modelData.state === "level"
                                                 Rectangle { visible: it.on; width: 2; height: parent.height; color: win.theme.gold }
                                                 Text {
                                                     anchors { left: parent.left; leftMargin: 10; right: itAct.left; rightMargin: 8; verticalCenter: parent.verticalCenter }
@@ -844,6 +856,7 @@ Scope {
                                                 }
                                                 Text {
                                                     id: itAct
+                                                    visible: !it.level
                                                     anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
                                                     text: it.on ? I18n.t("settings.items.disconnect", "Disconnect ›")
                                                         : it.modelData.state === "saved" ? I18n.t("settings.items.connect", "Connect ›")
@@ -852,6 +865,25 @@ Scope {
                                                     color: it.activeFocus ? win.theme.goldHi : win.theme.muted
                                                 }
                                                 MouseArea { anchors.fill: parent; onClicked: win.pickItem(row.s.key, it.modelData) }
+                                                // ── volume per app: − and + (←/→), clicking the name mutes
+                                                Row {
+                                                    visible: it.level
+                                                    z: 2
+                                                    anchors { right: parent.right; rightMargin: 4; verticalCenter: parent.verticalCenter }
+                                                    spacing: 4
+                                                    Repeater {
+                                                        model: [{ how: "down", text: "−" }, { how: "up", text: "+" }]
+                                                        delegate: Rectangle {
+                                                            id: volBtn
+                                                            required property var modelData
+                                                            width: 26; height: 20
+                                                            color: volArea.containsMouse ? win.theme.surface : "transparent"
+                                                            border.color: volArea.containsMouse ? win.theme.gold : win.theme.line
+                                                            Text { anchors.centerIn: parent; text: volBtn.modelData.text; font { family: win.theme.mono; pixelSize: win.theme.px(13); bold: true } color: volArea.containsMouse ? win.theme.goldHi : win.theme.text }
+                                                            MouseArea { id: volArea; anchors.fill: parent; hoverEnabled: true; onClicked: win.pickItem(row.s.key, it.modelData, volBtn.modelData.how) }
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
