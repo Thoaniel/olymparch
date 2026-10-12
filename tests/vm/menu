@@ -153,7 +153,7 @@ check cowsay-out '! pacman -Q cowsay'
 keys "clear; for a in 'install yay' 'install -Syu' 'install --overwrite=*' 'install /tmp/x.pkg.tar.zst' 'install https://evil.example/x.pkg.tar.zst' 'install sl;id' 'install a b' 'install xorg' 'remove linux' 'remove systemd' 'remove hyprland' 'remove glibc'; do sudo /usr/lib/olymparch/packages \$a >/dev/null 2>\$HOME/err; echo \"\$? \$a: \$(cat \$HOME/err)\"; done | tee \$HOME/refused\n" 2
 keys "$PW\n" 6
 shot nekter "Hjelperen (som root) nekter: AUR, -Syu, --overwrite, filer, URL-er, ; og mellomrom, grupper, linux/systemd/hyprland/glibc (kode 2)"
-check refused '[ \$(grep -c "^2 " ~/refused) = 12 ] && ! pacman -Q yay'
+check refused '[ $(grep -c "^2 " ~/refused) = 12 ] && ! pacman -Q yay'
 keys "clear\n" 0.3
 
 # ── the shortcut list: as it is, searched, and after a shortcut is moved
@@ -166,7 +166,7 @@ keys "olymparch-settings set keys.cheatsheet 'SUPER + J'; olymparch-settings add
 press meta_l+j; sleep 2
 shot hurtigtaster-flyttet "Hurtigtastlisten flyttet til Super+J, og en egen (Super+B = firefox) er med"
 press esc; sleep 1
-check moved 'hyprctl binds -j | grep -q "\"key\": \"J\""'
+check moved 'olymparch-settings get keys.cheatsheet | grep -qx "SUPER + J" && hyprctl binds -j | grep -qi "key.: .j."'
 keys "olymparch-settings reset keys.cheatsheet; clear\n" 2
 
 # The shell's own log on the serial console, for debugging
