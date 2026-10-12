@@ -62,6 +62,7 @@ hl.bind(mod .. " + L", hl.dsp.exec_cmd("olymparch-lock"))
 hl.bind(mod .. " + Q", hl.dsp.window.close())
 hl.bind(mod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mod .. " + SHIFT + M", hl.dsp.exit())
+hl.bind(mod .. " + SHIFT + G", hl.dsp.exec_cmd("olymparch-game add-focused"))   -- this window is a game
 for i = 1, 10 do
     local key = i % 10
     hl.bind(mod .. " + " .. key, hl.dsp.focus({ workspace = i }))
@@ -82,4 +83,10 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("/usr/lib/olymparch/launch-shell")
     hl.exec_cmd("udiskie --automount --notify --no-tray")   -- USB disks: mounted, with Open / Eject in the notification
     hl.exec_cmd("sh -c 'f=$HOME/.config/hypr/hypridle.conf; [ -f \"$f\" ] || f=/usr/share/olymparch/idle/hypridle.conf; exec hypridle -c \"$f\"'")
+end)
+
+-- Games need no launch options: every new window is traced back to its process, and a game gets gamemode
+-- (and with it spillmodus: bar hidden, do not disturb). See olymparch-game-hook.
+hl.on("window.open", function(w)
+    hl.exec_cmd("olymparch-game-hook window " .. tostring(w.address) .. " " .. tostring(w.pid or 0))
 end)

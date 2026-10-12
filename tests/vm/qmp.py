@@ -3,6 +3,7 @@
   qmp.py SOCKET screendump OUT.png
   qmp.py SOCKET keys "text to type\n"      types with US qcodes
   qmp.py SOCKET press down down ret alt_r+2   named qcodes; + makes a chord
+  qmp.py SOCKET click X Y W H             left click at pixel X,Y of a W x H screen (needs -device usb-tablet)
   qmp.py SOCKET quit
 """
 import json
@@ -59,5 +60,13 @@ if __name__ == "__main__":
             time.sleep(0.12)
     elif op == "cmd":   # qmp.py SOCKET cmd NAME '{"json": "arguments"}'
         print(json.dumps(q.cmd(sys.argv[3], **(json.loads(sys.argv[4]) if len(sys.argv) > 4 else {}))))
+    elif op == "click":
+        x, y, w, h = (int(v) for v in sys.argv[3:7])
+        q.cmd("input-send-event", events=[{"type": "abs", "data": {"axis": "x", "value": x * 32767 // (w - 1)}},
+                                          {"type": "abs", "data": {"axis": "y", "value": y * 32767 // (h - 1)}}])
+        time.sleep(0.3)
+        for down in (True, False):
+            q.cmd("input-send-event", events=[{"type": "btn", "data": {"down": down, "button": "left"}}])
+            time.sleep(0.1)
     elif op == "quit":
         q.cmd("quit")

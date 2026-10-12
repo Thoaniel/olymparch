@@ -12,7 +12,7 @@ install -Dm755 -t profile/airootfs/usr/local/bin bin/olymparch-*
 # Olymparch defaults (Hyprland config, shell, wallpaper) for the installer to copy onto the new system
 share=profile/airootfs/usr/share/olymparch
 mkdir -p "$share"
-cp -r default/hypr default/shell default/lock default/idle default/branding default/foot default/i18n default/systemd default/apps system "$share/"
+cp -r default/hypr default/shell default/lock default/idle default/branding default/foot default/i18n default/systemd default/apps default/games system "$share/"
 # Boot screen (Plymouth theme for every pixel size) and the Limine wallpapers, made by art/bootart.py
 rm -rf -- build/plymouth
 uv run -q --no-project --with pillow python art/bootart.py build/plymouth >/dev/null

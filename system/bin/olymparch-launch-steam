@@ -1,0 +1,18 @@
+#!/bin/bash
+# Start Steam the Olymparch way (the Steam menu entry runs this):
+# 1. Proton changes queued since Steam last ran go into its config.vdf (Steam rewrites that file when it exits).
+# 2. The watcher that notices games crashing early (olymparch-game watch) starts.
+# 3. Steam runs under MangoHud: every game gets it, hidden until Shift+F12. No global MANGOHUD=1, which crashes
+#    some Vulkan apps outside games.
+set -euo pipefail
+if ! pgrep -u "$(id -u)" -x steam >/dev/null; then
+    olymparch-proton apply || true
+fi
+setsid -f olymparch-game watch </dev/null >/dev/null 2>&1
+user_conf=${XDG_CONFIG_HOME:-$HOME/.config}/MangoHud/MangoHud.conf
+if [ ! -f "$user_conf" ] && [ -f /usr/share/olymparch/games/MangoHud.conf ]; then
+    export MANGOHUD_CONFIGFILE=/usr/share/olymparch/games/MangoHud.conf
+fi
+mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/olymparch/mangohud"
+if command -v mangohud >/dev/null; then exec mangohud /usr/bin/steam "$@"; fi
+exec /usr/bin/steam "$@"

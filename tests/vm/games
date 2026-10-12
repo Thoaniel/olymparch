@@ -1,0 +1,169 @@
+#!/bin/bash
+# VM test: games without setup. Copies this repo's shell, Hyprland config and olymparch-game* into a copy of the
+# installed disk, installs gamemode/mangohud/python with pacman, then plays pretend:
+#   1. a "game" (a terminal started with SteamAppId=4242) opens: gamemode active, bar hidden, do not disturb on
+#   2. it exits: within 5 s gamemode lets go, the bar is back, notifications show again
+#   3. Super+Shift+G makes the focused program a game
+#   4. a Steam game (a fake `reaper SteamLaunch AppId=4343`) dies without a window: GE-Proton is queued and
+#      written to config.vdf, a notification offers «Undo», and clicking it puts Valve's default back
+# Negative cases: another user's (root's) window with SteamAppId and root's fake reaper are ignored.
+set -uo pipefail
+cd "$(dirname "$0")/../.."
+. dev/env
+SRC=${OLYMPARCH_BASE:-tests/vm/out/install-disk}   # a read-only installed disk to test on (overlay)
+[ -f "$SRC/disk.qcow2" ] || { echo "kjør tests/vm/install-disk først" >&2; exit 2; }
+O=tests/vm/out/games
+rm -rf -- tests/vm/out/games
+mkdir -p "$O"
+cp "$SRC/vars.fd" "$O/vars.fd"
+qemu-img create -q -f qcow2 -b "$(realpath "$SRC/disk.qcow2")" -F qcow2 "$O/disk.qcow2"
+QMP=$O/qmp.sock
+. tests/vm/lib.sh
+PW='olymp-test-123'
+SHELLP=/usr/share/olymparch/shell
+trap 'kill "$QPID" 2>/dev/null' EXIT
+t0=$SECONDS
+fails=()
+check() {  # check "what" CONDITION...: remember a failed check, keep going
+    local what=$1; shift
+    if "$@"; then echo "  ok: $what"; else echo "  FEIL: $what"; fails+=("$what"); fi
+}
+bar_gold() {  # gold pixels in the bar's title (bolt and "OL"), clear of window borders and the gap in the middle
+    python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/probe.ppm" 2>/dev/null || { echo 0; return; }
+    read -r W H < <(head -c 32 "$O/probe.ppm" | tr -s ' \n' ' ' | awk '{print $2, $3}')
+    python3 -I tests/vm/pixels.py "$O/probe.ppm" $((W / 2 - 60)) 12 $((W / 2 - 8)) 28 | sed -E 's/gold=([0-9]+).*/\1/'
+}
+status_to_log() {  # status_to_log TAG: gamemoded -s and the shell's spillmodus state onto the serial console
+    keys "{ gamemoded -s; qs ipc -p $SHELLP call olymparch status; echo \"bar layers: \$(hyprctl layers | grep -c olymparch-bar)\"; } >/tmp/st.txt 2>&1; sudo sh -c 'while read -r l; do echo \"<2>$1: \$l\" >/dev/kmsg; done </tmp/st.txt; echo \"<2>$1-DONE\" >/dev/kmsg'\n" 1.5
+    keys "$PW\n" 1
+    wait_for "$1-DONE" 20
+}
+vm boot.log -virtfs local,path="$PWD",mount_tag=olysrc,security_model=none,readonly=on,id=src \
+    -device qemu-xhci -device usb-tablet
+unlock_and_desktop "$PW"
+
+# --- Put this repo's files in place, install gamemode, mangohud and python
+press meta_l+ret; sleep 2
+keys "( set -e; sudo mount -t 9p -o trans=virtio,ro olysrc /mnt; sudo cp -r /mnt/default/shell/. $SHELLP/; sudo cp -r /mnt/default/i18n /mnt/default/games /usr/share/olymparch/; sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/; sudo install -m755 /mnt/system/bin/olymparch-* /usr/bin/; sudo install -m644 /mnt/default/games/gamemode.ini /etc/gamemode.ini; sudo pacman -Sy --noconfirm --needed gamemode mangohud python; sudo usermod -aG gamemode zeus ) && r=OK || r=FAIL; hyprctl reload >/dev/null; pkill -x quickshell; echo \"<2>GAMES-SETUP-\$r\" | sudo tee /dev/kmsg; exit\n" 1.5
+keys "$PW\n" 1
+shot oppsett "Filene fra repoet kopieres inn, og gamemode, mangohud og python installeres med pacman"
+wait_for 'GAMES-SETUP-' 400 || finish "FAIL · oppsettet ble ikke ferdig"
+seen 'GAMES-SETUP-OK' || { shot oppsett-feil "Oppsettet feilet"; finish "FAIL · oppsettet feilet (pacman?)"; }
+sleep 6
+shot skrivebord "Skrivebordet før spillet: baren er synlig"
+g_before=$(bar_gold)
+check "baren synlig før spillet (gull i tittelen: $g_before)" test "$g_before" -gt 20
+
+# --- 1. A game opens
+press meta_l+ret; sleep 2
+keys "setsid -f env SteamAppId=4242 foot -T fakegame sh -c 'echo; echo \"  FAKE GAME   SteamAppId=4242\"; echo \"  (avslutter om 45 s)\"; sleep 45'; exit\n" 0.5
+game_t=$SECONDS
+sleep 6
+shot spill-startet "Et «spill» (SteamAppId=4242) åpner et vindu: baren er skjult"
+g_game=$(bar_gold)
+check "baren skjult mens spillet kjører (gull i tittelen: $g_game)" test "$g_game" -lt 5
+press meta_l+ret; sleep 2
+keys "gamemoded -s; qs ipc -p $SHELLP call olymparch status; tail -n 2 ~/.local/state/olymparch/games.log; notify-send Discord 'Ny melding (holdes tilbake)'\n" 2
+shot spill-status "Under spillet: gamemoded er aktiv, spillmodus og «ikke forstyrr» er på, og varselet fra Discord vises ikke"
+status_to_log GS1
+check "gamemode aktiv under spillet" seen 'GS1: gamemode is active'
+check "spillmodus og ikke forstyrr på under spillet" seen 'GS1: \{"gamemode":true,"dnd":true\}'
+check "bar-laget er borte fra Hyprland under spillet" seen 'GS1: bar layers: 0'
+keys "exit\n" 1
+
+# --- 2. The game exits; gamemoded lets go within 5 s
+while ((SECONDS - game_t < 54)); do sleep 1; done
+shot spill-slutt "Spillet er avsluttet: innen 5 s er gamemode av og baren tilbake"
+g_after=$(bar_gold)
+check "baren tilbake etter spillet (gull i tittelen: $g_after)" test "$g_after" -gt 20
+press meta_l+ret; sleep 2
+status_to_log GS2
+check "gamemode av etter spillet" seen 'GS2: gamemode is inactive'
+check "spillmodus og ikke forstyrr av etter spillet" seen 'GS2: \{"gamemode":false,"dnd":false\}'
+check "bar-laget er tilbake etter spillet" seen 'GS2: bar layers: [1-9]'
+keys "clear; notify-send Discord 'Ny melding (vises igjen)'\n" 1.5
+shot varsel-igjen "Etter spillet vises varsler igjen"
+
+# --- Negative: a window of another user (root) with SteamAppId is never a game of ours
+keys "sudo -v\n" 1.5
+keys "$PW\n" 1
+keys "clear; sudo env SteamAppId=4545 XDG_RUNTIME_DIR=\$XDG_RUNTIME_DIR WAYLAND_DISPLAY=\$WAYLAND_DISPLAY setsid -f foot -T rootgame sh -c 'echo; echo \"  ROOTGAME  (root, SteamAppId=4545)\"; sleep 20'\n" 1.5
+sleep 4
+press meta_l+left; sleep 1
+shot root-vindu "Et vindu som root eier, med SteamAppId=4545: ignoreres, baren er fortsatt synlig"
+g_root=$(bar_gold)
+check "annen brukers vindu gir ikke spillmodus (gull i tittelen: $g_root)" test "$g_root" -gt 20
+keys "grep -q \"pid=.*not this user\" ~/.local/state/olymparch/games.log && ! grep -q 'appid=4545' ~/.local/state/olymparch/games.log && echo '<2>ROOT-IGNORED' | sudo tee /dev/kmsg >/dev/null\n" 1.5
+wait_for 'ROOT-IGNORED' 10
+check "hooken logget at root-vinduet ble ignorert" seen 'ROOT-IGNORED'
+keys "sudo pkill -x foot -U 0; clear\n" 3
+
+# --- 3. Super+Shift+G: the focused program becomes a game
+keys "clear; cp /usr/bin/foot /tmp/minigame; setsid -f /tmp/minigame -T minigame sh -c 'echo; echo \"  MINIGAME  (ingen Steam, ingen env)\"; sleep 40'\n" 3
+shot minigame "Et program Olymparch ikke kjenner som spill: baren er fortsatt synlig"
+g_mini=$(bar_gold)
+check "ukjent program er ikke et spill (gull i tittelen: $g_mini)" test "$g_mini" -gt 20
+press meta_l+shift+g; sleep 4
+shot super-shift-g "Super+Shift+G: «Added as a game: minigame», og spillmodus slår inn (baren skjules)"
+g_tag=$(bar_gold)
+check "Super+Shift+G gir spillmodus (gull i tittelen: $g_tag)" test "$g_tag" -lt 5
+press meta_l+left; sleep 1
+keys "clear; olymparch-game list; gamemoded -s\n" 1.5
+shot games-conf "games.conf har fått minigame, og gamemode er aktiv"
+keys "grep -x minigame ~/.config/olymparch/games.conf && echo '<2>GAMES-TAGGED' | sudo tee /dev/kmsg >/dev/null\n" 1.5
+keys "$PW\n" 1
+wait_for 'GAMES-TAGGED' 10
+check "Super+Shift+G skrev minigame i games.conf" seen 'GAMES-TAGGED'
+status_to_log GS3
+check "gamemode aktiv for minigame" seen 'GS3: gamemode is active'
+check "baren skjult for minigame" seen 'GS3: bar layers: 0'
+keys "clear; olymparch-game remove minigame; pkill -x minigame\n" 1
+sleep 8
+
+# --- 4. Proton self-repair: a Steam game that dies before it shows a window
+keys "clear; S=~/.local/share/Steam; mkdir -p \$S/config \$S/steamapps \$S/compatibilitytools.d/GE-Proton10-25; echo '\"InstallConfigStore\" { \"Software\" { \"Valve\" { \"Steam\" { \"CompatToolMapping\" { } } } } }' >\$S/config/config.vdf; echo '\"AppState\" { \"appid\" \"4343\" \"name\" \"Hades II\" }' >\$S/steamapps/appmanifest_4343.acf; cp /usr/bin/bash /tmp/reaper; setsid -f olymparch-game watch; sleep 1; setsid -f /tmp/reaper -c 'sleep 4; true' SteamLaunch AppId=4343; olymparch-game check 4343\n" 1
+shot proton-start "En falsk Steam-start (reaper SteamLaunch AppId=4343) som dør etter 4 s uten vindu"
+sleep 14
+shot proton-varsel "Varselet: Hades II åpnet aldri et vindu, neste start bruker GE-Proton10-25, med knappen «Undo»"
+python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/toast.ppm"
+keys "clear; olymparch-game check 4343; grep -A3 4343 \$S/config/config.vdf\n" 1.5
+shot proton-byttet "olymparch-game check: GE-Proton10-25 er skrevet i config.vdf (Steam kjører ikke)"
+keys "grep -q GE-Proton10-25 \$S/config/config.vdf && echo '<2>PROTON-QUEUED' | sudo tee /dev/kmsg >/dev/null\n" 1.5
+keys "$PW\n" 1
+wait_for 'PROTON-QUEUED' 10
+check "GE-Proton skrevet i config.vdf etter krasj" seen 'PROTON-QUEUED'
+# Click «Undo» on the toast: find the button in the screenshot taken while the toast was up
+read -r bx by sw sh < <(python3 -I tests/vm/find-button.py "$O/toast.ppm")
+if [ -n "${bx:-}" ] && [ "$bx" != none ]; then
+    python3 -I tests/vm/qmp.py "$QMP" click "$bx" "$by" "$sw" "$sh"
+    sleep 2
+fi
+keys "clear; olymparch-game check 4343; grep -c GE-Proton \$S/config/config.vdf; true\n" 1.5
+shot proton-angret "Etter klikk på «Undo»: Valves standard-Proton igjen"
+keys "grep -q GE-Proton \$S/config/config.vdf || echo '<2>PROTON-UNDONE' | sudo tee /dev/kmsg >/dev/null\n" 1.5
+keys "$PW\n" 1
+wait_for 'PROTON-UNDONE' 10
+check "«Undo» satte Valves standard tilbake (knapp ved ${bx:-?},${by:-?})" seen 'PROTON-UNDONE'
+
+# --- Negative: root's fake Steam game that dies early is not ours to repair
+# (alongside our own 4747, which must be noticed, so the watcher is shown to be running)
+keys "sudo -v\n" 1.5
+keys "$PW\n" 1
+keys "clear; setsid -f olymparch-game watch; sudo setsid -f /tmp/reaper -c 'sleep 4; true' SteamLaunch AppId=4646; setsid -f /tmp/reaper -c 'sleep 4; true' SteamLaunch AppId=4747\n" 18
+keys "clear; olymparch-game check 4646; olymparch-game check 4747 | grep fail; grep -q 4747 ~/.local/state/olymparch/proton/state.json && ! grep -q 4646 ~/.local/state/olymparch/proton/state.json && echo '<2>ROOT-REAPER-IGNORED' | sudo tee /dev/kmsg >/dev/null\n" 1.5
+shot root-reaper "Root eier «reaper SteamLaunch AppId=4646», zeus eier 4747; begge dør etter 4 s: bare 4747 telles som feil"
+wait_for 'ROOT-REAPER-IGNORED' 10
+check "watcheren ignorerer en annen brukers Steam-spill" seen 'ROOT-REAPER-IGNORED'
+
+# --- Logs onto the serial console, for debugging
+keys "clear; sudo sh -c 'cat /home/zeus/.local/state/olymparch/games.log /home/zeus/.local/state/olymparch/proton/state.json; tail -n 30 /home/zeus/.local/state/olymparch/shell.log' | while IFS= read -r l; do echo \"<2>LOG: \$l\" | sudo tee /dev/kmsg >/dev/null; done; echo '<2>LOG-DONE' | sudo tee /dev/kmsg >/dev/null\n" 1
+keys "$PW\n" 1
+wait_for 'LOG-DONE' 30
+grep -aoE 'LOG: .*' "$O/$LOG" | sed 's/\x1b\[[0-9;]*m//g' >"$O/logs.txt"
+errors=$(awk '/Launching config/ {n = 0} /ERROR|TypeError|ReferenceError/ {n++} END {print n + 0}' "$O/logs.txt")
+check "ingen feil i skall-loggen ($errors)" test "$errors" = 0
+
+if [ ${#fails[@]} = 0 ]; then
+    finish "PASS · spill uten oppsett: gamemode, spillmodus, Super+Shift+G og Proton-angre på $((SECONDS - t0)) s"
+fi
+finish "FAIL · ${fails[*]}"

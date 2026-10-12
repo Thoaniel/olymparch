@@ -1,0 +1,435 @@
+#!/usr/bin/env python3
+"""Olymparch: pick Proton per game, and repair it when a game crashes. Python stdlib only.
+
+  olymparch-proton check APPID          what Olymparch knows: anti-cheat, table, current tool, queued change, failures
+  olymparch-proton get APPID            the compat tool Steam uses for the game ("default" = Valve's choice)
+  olymparch-proton set APPID TOOL       pin TOOL (or "default"); written to Steam's config when Steam is not running
+  olymparch-proton apply                write queued changes (and the monthly table) into config.vdf; Steam must be off
+  olymparch-proton failed APPID SECS WHY   the game died early or never showed a window: queue the next Proton
+  olymparch-proton ok APPID             the game ran fine: forget its failures
+  olymparch-proton undo APPID           take back the last automatic change
+  olymparch-proton restart-steam        close Steam, apply the queue, start it again
+
+Steam rewrites config.vdf when it exits, so changes are queued and applied by olymparch-launch-steam before Steam
+starts. Order after a crash: Valve's default -> newest installed GE-Proton -> Proton Experimental. Games whose
+anti-cheat blocks Linux never cycle.
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+HOME = Path.home()
+STEAM = Path(os.environ.get("OLYMPARCH_STEAM_ROOT", HOME / ".local/share/Steam"))
+CONFIG = STEAM / "config/config.vdf"
+SHARE = Path(os.environ.get("OLYMPARCH_SHARE", "/usr/share/olymparch"))
+STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", HOME / ".local/state")) / "olymparch/proton"
+STATE = STATE_DIR / "state.json"
+QUEUE = STATE_DIR / "queue.json"
+CHAIN = ["default", "GE-Proton", "proton_experimental"]
+APPID_RE = re.compile(r"[0-9]{1,10}")
+TOOL_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}")  # compat tool names go into config.vdf: no quotes
+
+
+# ---- i18n: English in the code, other languages from /usr/share/olymparch/i18n/<lang>.json -------------------
+def _lang():
+    lang = os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG") or ""
+    return "nb" if lang[:2] in ("nb", "no", "nn") else "en"
+
+
+try:
+    _DICT = json.loads((SHARE / "i18n" / f"{_lang()}.json").read_text())
+except (OSError, ValueError):
+    _DICT = {}
+
+
+def t(key, fallback, **kw):
+    return _DICT.get(key, fallback).format(**kw)
+
+
+# ---- VDF (Valve KeyValues text): keeps order and the raw text of every string, so a round trip is exact -------
+_TOKEN = re.compile(r'\s+|//[^\n]*|"((?:\\.|[^"\\])*)"|([{}])|([^\s{}"]+)')
+
+
+def vdf_parse(text):
+    pos, stack, root, key = 0, [], [], None
+    cur = root
+    while pos < len(text):
+        m = _TOKEN.match(text, pos)
+        if not m:
+            raise ValueError(f"VDF: unexpected text at {pos}")
+        pos = m.end()
+        quoted, brace, bare = m.group(1), m.group(2), m.group(3)
+        if brace == "{":
+            if key is None:
+                raise ValueError("VDF: { without a key")
+            node = []
+            cur.append([key, node])
+            stack.append(cur)
+            cur, key = node, None
+        elif brace == "}":
+            cur, key = stack.pop(), None
+        elif quoted is not None or bare is not None:
+            s = quoted if quoted is not None else bare
+            if bare is not None and s.startswith("[") and key is None and cur:
+                continue  # a platform conditional like [$WIN32] after a value
+            if key is None:
+                key = s
+            else:
+                cur.append([key, s])
+                key = None
+    if stack:
+        raise ValueError("VDF: missing }")
+    return root
+
+
+def vdf_dump(node, depth=0):
+    out, tab = [], "\t" * depth
+    for k, v in node:
+        if isinstance(v, list):
+            out.append(f'{tab}"{k}"\n{tab}{{\n{vdf_dump(v, depth + 1)}{tab}}}\n')
+        else:
+            out.append(f'{tab}"{k}"\t\t"{v}"\n')
+    return "".join(out)
+
+
+def vdf_get(node, key):
+    for k, v in node:
+        if k.lower() == key.lower():
+            return v
+    return None
+
+
+def vdf_child(node, key):
+    """The sub-table KEY of NODE (case-insensitive, as Steam reads it); created when missing."""
+    v = vdf_get(node, key)
+    if isinstance(v, list):
+        return v
+    v = []
+    node.append([key, v])
+    return v
+
+
+def compat_mapping(root):
+    n = vdf_child(root, "InstallConfigStore")
+    for k in ("Software", "Valve", "Steam", "CompatToolMapping"):
+        n = vdf_child(n, k)
+    return n
+
+
+# ---- Steam ----------------------------------------------------------------------------------------------------
+def steam_running():
+    for p in Path("/proc").glob("[0-9]*"):
+        try:
+            if p.stat().st_uid == os.getuid() and (p / "comm").read_text().strip() == "steam":
+                return True
+        except OSError:
+            pass
+    return False
+
+
+def read_config():
+    return vdf_parse(CONFIG.read_text(errors="replace")) if CONFIG.exists() else []
+
+
+def current_tool(appid, root=None):
+    entry = vdf_get(compat_mapping(read_config() if root is None else root), appid)
+    name = vdf_get(entry, "name") if isinstance(entry, list) else None
+    return name or "default"
+
+
+def library_dirs():
+    dirs = [STEAM / "steamapps"]
+    lf = STEAM / "steamapps/libraryfolders.vdf"
+    try:
+        for _, lib in vdf_get(vdf_parse(lf.read_text()), "libraryfolders") or []:
+            path = vdf_get(lib, "path") if isinstance(lib, list) else None
+            if path:
+                dirs.append(Path(path) / "steamapps")
+    except (OSError, ValueError):
+        pass
+    return dirs
+
+
+def game_name(appid):
+    for d in library_dirs():
+        try:
+            st = vdf_get(vdf_parse((d / f"appmanifest_{appid}.acf").read_text()), "AppState")
+            if st and vdf_get(st, "name"):
+                return vdf_get(st, "name")
+        except (OSError, ValueError):
+            pass
+    return f"App {appid}"
+
+
+def installed(appid):
+    return any((d / f"appmanifest_{appid}.acf").exists() for d in library_dirs())
+
+
+def newest_ge():
+    """Internal name of the newest GE-Proton in compatibilitytools.d, or None."""
+    found = []
+    for d in (STEAM / "compatibilitytools.d").glob("GE-Proton*"):
+        name = d.name
+        try:
+            tools = vdf_get(vdf_parse((d / "compatibilitytool.vdf").read_text()), "compatibilitytools")
+            name = (vdf_get(tools, "compat_tools") or [[d.name]])[0][0]
+        except (OSError, ValueError, IndexError, TypeError):
+            pass
+        if not TOOL_RE.fullmatch(name):
+            continue
+        nums = tuple(int(x) for x in re.findall(r"\d+", d.name))
+        found.append((nums, name))
+    return max(found)[1] if found else None
+
+
+def chain_class(tool):
+    if tool.startswith("GE-Proton"):
+        return "GE-Proton"
+    return tool if tool in CHAIN else "other"
+
+
+def resolve(cls):
+    return newest_ge() if cls == "GE-Proton" else cls
+
+
+def pretty(tool):
+    return {"default": t("proton.default", "Valve's default Proton"), "proton_experimental": "Proton Experimental"}.get(tool, tool)
+
+
+# ---- lists shipped with Olymparch -----------------------------------------------------------------------------
+def table(name):
+    rows = {}
+    try:
+        for line in (SHARE / "games" / name).read_text().splitlines():
+            if line.strip() and not line.startswith("#"):
+                k, _, v = line.partition("\t")
+                rows[k.strip()] = v.strip()
+    except OSError:
+        pass
+    return rows
+
+
+def anticheat_denied(appid):
+    return appid in table("anticheat-denied.tsv")
+
+
+# ---- state ----------------------------------------------------------------------------------------------------
+def load(path):
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def save(path, data):
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, indent=1, sort_keys=True))
+    tmp.replace(path)
+
+
+def queue_tool(appid, tool):
+    q = load(QUEUE)
+    q[appid] = tool
+    save(QUEUE, q)
+    if not steam_running():
+        apply()
+
+
+def apply():
+    """Write the queue (and the monthly table, once per game) into config.vdf. Only while Steam is off."""
+    if steam_running():
+        print("Steam is running; changes stay queued until it is closed.", file=sys.stderr)
+        return 3
+    q, st = load(QUEUE), load(STATE)
+    for appid, tool in table("proton-table.tsv").items():
+        if not APPID_RE.fullmatch(appid):
+            continue
+        s = st.setdefault(appid, {})
+        if appid not in q and not s.get("table") and installed(appid) and not anticheat_denied(appid):
+            tool = resolve(chain_class(tool)) if chain_class(tool) != "other" else tool
+            if tool:
+                q[appid] = tool
+                s["table"] = tool
+    if not q:
+        save(STATE, st)
+        return 0
+    if not CONFIG.exists():
+        return 0  # Steam has not run yet; keep the queue
+    root = read_config()
+    mapping = compat_mapping(root)
+    for appid, tool in q.items():
+        if not (APPID_RE.fullmatch(appid) and TOOL_RE.fullmatch(tool)):
+            continue  # the queue file is ours, but never trust it into config.vdf
+        mapping[:] = [kv for kv in mapping if kv[0] != appid]
+        if tool != "default":
+            mapping.append([appid, [["name", tool], ["config", ""], ["priority", "250"]]])
+    backup = CONFIG.with_name("config.vdf.olymparch-bak")
+    backup.write_bytes(CONFIG.read_bytes())
+    tmp = CONFIG.with_name("config.vdf.olymparch-tmp")
+    tmp.write_text(vdf_dump(root))
+    tmp.replace(CONFIG)
+    save(QUEUE, {})
+    save(STATE, st)
+    return 0
+
+
+def notify(summary, body, actions=(), on_action=None):
+    """A notification; with actions it waits in the background and runs on_action(key)."""
+    args = ["notify-send", "-a", "Olymparch", summary, body]
+    if not actions:
+        subprocess.run(args, check=False)
+        return
+    if os.fork():
+        return
+    os.setsid()
+    for k, label in actions:
+        args[1:1] = ["-A", f"{k}={label}"]
+    res = subprocess.run(args[:1] + ["--wait"] + args[1:], capture_output=True, text=True, check=False)
+    key = res.stdout.strip()
+    if key and on_action:
+        on_action(key)
+    os._exit(0)
+
+
+def failed(appid, secs, why):
+    name, st = game_name(appid), load(STATE)
+    s = st.setdefault(appid, {})
+    s["fails"] = s.get("fails", 0) + 1
+    s["last_fail"] = int(time.time())
+    if anticheat_denied(appid):
+        if not s.get("ac_told"):
+            s["ac_told"] = True
+            notify(t("proton.ac_title", "{game} cannot run on Linux", game=name),
+                   t("proton.ac_body", "Its anti-cheat blocks Linux. Changing Proton will not help."))
+        save(STATE, st)
+        return 0
+    if "pinned" in s:  # the user chose this tool (Undo or Settings); never change it behind their back
+        save(STATE, st)
+        return 0
+    cur = load(QUEUE).get(appid) or current_tool(appid)
+    tried = s.setdefault("tried", [])
+    if chain_class(cur) not in tried:
+        tried.append(chain_class(cur))
+    nxt = None
+    for cls in CHAIN:
+        if cls not in tried and resolve(cls):
+            nxt = resolve(cls)
+            break
+    if why == "nowindow":
+        what = t("proton.nowindow", "{game} never opened a window with {tool}.", game=name, tool=pretty(cur))
+    else:
+        what = t("proton.crashed", "{game} stopped after {secs} s with {tool}.", game=name, secs=secs, tool=pretty(cur))
+    if not nxt:
+        save(STATE, st)
+        notify(t("proton.none_title", "No Proton version worked for {game}", game=name),
+               what + " " + t("proton.none_body", "Olymparch has tried them all. Check ProtonDB for tips."))
+        return 0
+    s["prev"] = cur
+    s["auto"] = nxt
+    save(STATE, st)
+    queue_tool(appid, nxt)
+    body = what + " " + t("proton.next", "Next start uses {tool}.", tool=pretty(nxt))
+    actions = [("undo", t("proton.undo", "Undo"))]
+    if steam_running():
+        actions.append(("restart", t("proton.restart", "Restart Steam")))
+
+    def act(key):
+        if key == "undo":
+            undo(appid)
+        elif key == "restart":
+            restart_steam()
+    notify(t("proton.switched_title", "Proton changed for {game}", game=name), body, actions, act)
+    return 0
+
+
+def ok(appid):
+    st = load(STATE)
+    if appid in st:
+        st[appid].pop("fails", None)
+        st[appid].pop("tried", None)
+        save(STATE, st)
+    return 0
+
+
+def undo(appid):
+    st = load(STATE)
+    s = st.get(appid, {})
+    prev = s.pop("prev", None)
+    if prev is None:
+        print("Nothing to undo.", file=sys.stderr)
+        return 1
+    s.pop("auto", None)
+    s["tried"] = []
+    s["fails"] = 0
+    s["pinned"] = prev  # the user chose this one
+    save(STATE, st)
+    queue_tool(appid, prev)
+    return 0
+
+
+def restart_steam():
+    if steam_running():
+        subprocess.run(["steam", "-shutdown"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for _ in range(60):
+            if not steam_running():
+                break
+            time.sleep(1)
+    apply()
+    subprocess.Popen(["olymparch-launch-steam"], start_new_session=True,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return 0
+
+
+def check(appid):
+    s = load(STATE).get(appid, {})
+    denied = table("anticheat-denied.tsv").get(appid)
+    rows = [
+        ("game", game_name(appid)),
+        ("anti-cheat", "blocks Linux" if denied else "not known to block Linux"),
+        ("table", table("proton-table.tsv").get(appid, "-")),
+        ("proton", current_tool(appid)),
+        ("queued", load(QUEUE).get(appid, "-")),
+        ("failures", str(s.get("fails", 0))),
+        ("last automatic change", f'{s["prev"]} -> {s["auto"]}' if s.get("auto") else "-"),
+    ]
+    for k, v in rows:
+        print(f"{k + ':':<24}{v}")
+    return 0
+
+
+def main(argv):
+    cmd, args = (argv[1] if len(argv) > 1 else "help"), argv[2:]
+    need = {"check": 1, "get": 1, "set": 2, "apply": 0, "failed": 3, "ok": 1, "undo": 1, "restart-steam": 0}
+    bad = bool(need.get(cmd)) and not APPID_RE.fullmatch(args[0] if args else "")
+    if cmd not in need or len(args) != need[cmd] or bad or (cmd == "set" and not TOOL_RE.fullmatch(args[1])):
+        print(__doc__.strip(), file=sys.stderr)
+        return 2
+    if cmd == "check":
+        return check(args[0])
+    if cmd == "get":
+        print(current_tool(args[0]))
+        return 0
+    if cmd == "set":  # by hand (Settings): pin it, so a crash never changes it again
+        st = load(STATE)
+        st.setdefault(args[0], {})["pinned"] = args[1]
+        save(STATE, st)
+        queue_tool(args[0], args[1])
+        return 0
+    if cmd == "apply":
+        return apply()
+    if cmd == "failed":
+        return failed(args[0], args[1], args[2])
+    if cmd == "ok":
+        return ok(args[0])
+    if cmd == "undo":
+        return undo(args[0])
+    return restart_steam()
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
