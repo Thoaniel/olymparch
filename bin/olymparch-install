@@ -222,6 +222,7 @@ arch-chroot /mnt systemctl --global enable olymparch-downloads.path olymparch-di
 arch-chroot /mnt systemctl enable clamav-freshclam.service >/dev/null 2>&1 || true
 install -Dm644 /usr/share/olymparch/apps/olymparch-extract.desktop /mnt/usr/share/applications/olymparch-extract.desktop
 install -Dm644 /usr/share/olymparch/apps/mimeapps.list /mnt/etc/xdg/mimeapps.list
+install -Dm644 /usr/share/olymparch/audio/olymparch-switch-on-connect.conf /mnt/etc/pipewire/pipewire-pulse.conf.d/50-olymparch-switch-on-connect.conf
 # English folder names in every language: the event units watch ~/Downloads
 arch-chroot /mnt sudo -u "$USERNAME" env LC_ALL=C xdg-user-dirs-update >/dev/null 2>&1 || mkdir -p "/mnt/home/$USERNAME/Downloads"
 install -Dm644 /usr/share/olymparch/idle/olymparch-lock.pam /mnt/etc/pam.d/olymparch-lock
