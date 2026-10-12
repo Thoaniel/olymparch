@@ -475,6 +475,7 @@ end
 local function write_idle(values)
     local lock = math.floor(tonumber(value_of(values, "account.lock_minutes")) or 0)
     local off = math.floor(tonumber(value_of(values, "power.screen_off_minutes")) or 0)
+    local sleep = math.floor(tonumber(value_of(values, "power.suspend")) or 0)
     local t = { "# Written by olymparch-settings (Settings → Account and lock, Power). Delete it to use",
         "# /usr/share/olymparch/idle/hypridle.conf again. Apps, video and games that inhibit idle stop these timers.",
         "general {",
@@ -495,6 +496,13 @@ local function write_idle(values)
         t[#t + 1] = ("    timeout = %d                      # %d min: screens off"):format(off * 60, off)
         t[#t + 1] = "    on-timeout = hyprctl dispatch 'hl.dsp.dpms({ action = \"disable\" })'"
         t[#t + 1] = "    on-resume = hyprctl dispatch 'hl.dsp.dpms({ action = \"enable\" })'"
+        t[#t + 1] = "}"
+    end
+    if sleep > 0 then   -- before_sleep_cmd above locks first
+        t[#t + 1] = ""
+        t[#t + 1] = "listener {"
+        t[#t + 1] = ("    timeout = %d                      # %d min: sleep"):format(sleep * 60, sleep)
+        t[#t + 1] = "    on-timeout = systemctl suspend"
         t[#t + 1] = "}"
     end
     write(FILES.idle, table.concat(t, "\n") .. "\n")
@@ -954,7 +962,7 @@ elseif cmd == "apply" then
         save_values(values)
         write_hypr(values)
         write_monitors(values)
-        if values["account.lock_minutes"] ~= nil or values["power.screen_off_minutes"] ~= nil then write_idle(values) end
+        if values["account.lock_minutes"] ~= nil or values["power.screen_off_minutes"] ~= nil or values["power.suspend"] ~= nil then write_idle(values) end
         if os.getenv("HYPRLAND_INSTANCE_SIGNATURE") then os.execute("hyprctl reload >/dev/null 2>&1") end
     end
 

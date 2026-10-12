@@ -189,7 +189,7 @@ with tempfile.TemporaryDirectory() as home:
         "appearance.gaps_in": "1 }) os.execute('touch PWNED') --",
         "keyboard.layout": evil, "keyboard.variant": evil, "keyboard.options": "a\nos.execute('x')",
         "display.position@Virtual-1": evil, "display.scale@Virtual-1": "1 }) os.execute('x') --",
-        "display.resolution@Bad\"Out": "1920x1080", "account.lock_minutes": "5\nlistener {",
+        "display.resolution@Bad\"Out": "1920x1080", "account.lock_minutes": "5\nlistener {", "power.suspend": 99999,
         "appearance.rounding": 4, "keyboard.model": "pc105",
     }))
     env = {k: v for k, v in os.environ.items() if k not in ("HYPRLAND_INSTANCE_SIGNATURE", "WAYLAND_DISPLAY", "XDG_CONFIG_HOME")}
@@ -199,8 +199,8 @@ with tempfile.TemporaryDirectory() as home:
     written = "".join(p.read_text() for p in conf.rglob("*") if p.is_file() and p.name != "settings.json")
     if r.returncode or "os.execute" in written or "PWNED" in written or "listener {\n" in written.split("listener")[0]:
         bad(f"olymparch-settings let a malicious settings.json value through (rc {r.returncode}):\n{written}{r.stderr}")
-    if r.stderr.count("ignoring") != 9:
-        bad(f"olymparch-settings should ignore 9 bad values, said:\n{r.stderr}")
+    if r.stderr.count("ignoring") != 10:
+        bad(f"olymparch-settings should ignore 10 bad values, said:\n{r.stderr}")
     if "rounding = 4" not in written or 'kb_model = "pc105"' not in written:
         bad("olymparch-settings dropped good values next to bad ones")
     for p in conf.rglob("*.lua"):
