@@ -1,0 +1,11 @@
+[Unit]
+Description=Olymparch: daily check whether a backup is due (it does nothing while Backup is off)
+
+[Timer]
+OnStartupSec=10min
+OnCalendar=daily
+RandomizedDelaySec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

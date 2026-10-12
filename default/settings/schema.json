@@ -330,7 +330,7 @@
       "label": { "en": "Shortcut", "nb": "Hurtigtast" }, "description": { "en": "Opens the Zeus window (olympus zeus) in a terminal", "nb": "Åpner Zeus-vinduet (olympus zeus) i en terminal" },
       "apply": { "via": "hypr", "file": "~/.config/olymparch/hypr.lua", "key": "bind" } },
     { "key": "zeus.params", "page": "zeus", "level": "advanced", "type": "text", "default": "", "needs_file": "~/.local/bin/olympus", "ready": true,
-      "label": { "en": "Model parameters", "nb": "Modellparametre" }, "description": { "en": "temperature=0.2, context=16384 (0–2; 2048–262144 tokens). Empty: Olympus' own", "nb": "temperature=0.2, context=16384 (0–2; 2048–262144 tokens). Tom: Olympus' egne" },
+      "label": { "en": "Model parameters", "nb": "Modellparametre" }, "description": { "en": "temperature=0.2, context=16384 (0–2; 2048–262144 tokens). Empty: no change", "nb": "temperature=0.2, context=16384 (0–2; 2048–262144 tokens). Tom: ingen endring" },
       "apply": { "via": "olympus", "file": "~/.olympus/config.toml", "key": "agents.zeus.temperature, llamacpp.ctx_size", "command": "olympus config set …" } },
     { "key": "zeus.vram_limit", "page": "zeus", "level": "advanced", "type": "number", "default": 0, "min": 0, "max": 64, "step": 1, "unit": "GB", "needs_file": "~/.local/bin/olympus", "ready": true,
       "label": { "en": "VRAM limit", "nb": "VRAM-grense" }, "description": { "en": "What local models may use; 0 = the card's memory minus 1 GB. From Zeus' next start", "nb": "Hva lokale modeller kan bruke; 0 = kortets minne minus 1 GB. Fra neste Zeus-start" },

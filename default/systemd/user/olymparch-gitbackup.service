@@ -1,0 +1,9 @@
+[Unit]
+Description=Olymparch: backup to your GitHub repository, when it is on and due (Settings → Backup)
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/olymparch-gitbackup run --if-due
+Nice=10
+IOSchedulingClass=idle

@@ -374,6 +374,15 @@ exit 0
             bad(f"{s['key']}: shown without Olympus (needs_file ~/.local/bin/olympus)")
     if "zeus.install" in hidden:
         bad("zeus.install must show when Olympus is missing")
+# olymparch-gitbackup checks backup.repo and backup.include with the same rules (and the timer only runs it when due)
+gb = root / "system/bin/olymparch-gitbackup"
+r = subprocess.run(["bash", str(gb), "selftest"], capture_output=True, text=True)
+if r.returncode or "selftest ok" not in r.stdout:
+    bad(f"olymparch-gitbackup selftest failed:\n{r.stdout}{r.stderr}")
+if "ExecStart=/usr/bin/olymparch-gitbackup run --if-due" not in (root / "default/systemd/user/olymparch-gitbackup.service").read_text():
+    bad("olymparch-gitbackup.service must run `olymparch-gitbackup run --if-due`")
+if "olymparch-gitbackup.timer" not in (root / "bin/olymparch-install").read_text():
+    bad("bin/olymparch-install must enable olymparch-gitbackup.timer")
 
 # ── Norwegian for every string the shell shows
 nb = json.loads((root / "default/i18n/nb.json").read_text())
