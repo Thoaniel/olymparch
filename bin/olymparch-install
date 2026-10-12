@@ -275,6 +275,8 @@ UNIT
 cat >/mnt/etc/profile.d/zz-olymparch-session.sh <<'SESSION'
 # Olymparch: a login on tty1 starts the desktop
 if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ "$(id -u)" != 0 ]; then
+    # keys that reach this tty must never signal the session: Ctrl+C here would end the whole desktop
+    stty -isig -echo 2>/dev/null
     if command -v start-hyprland >/dev/null 2>&1; then exec start-hyprland; else exec Hyprland; fi
 fi
 SESSION
