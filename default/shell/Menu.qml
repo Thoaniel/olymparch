@@ -22,6 +22,8 @@ Scope {
     property string query: ""
     property var view: null          // a confirm, progress or text page on top of the list
     property int current: 0
+    property real mouseX: -1         // where the pointer last moved (window coordinates)
+    property real mouseY: -1
     readonly property string lang: I18n.lang
     readonly property string shellDir: "/usr/share/olymparch/shell"
     readonly property string helper: "/usr/lib/olymparch/packages"
@@ -69,7 +71,7 @@ Scope {
     onOpenChanged: {
         if (!open) return;
         if (!busy) { view = null; path = []; }
-        query = ""; current = 0; pkgResults = []; pkgError = "";
+        query = ""; current = 0; pkgResults = []; pkgError = ""; mouseX = -1; mouseY = -1;
         probe.running = true;
     }
 
@@ -638,7 +640,15 @@ Scope {
                             anchors.fill: parent
                             hoverEnabled: true
                             enabled: !row.modelData.text && !row.modelData.disabled
-                            onEntered: menu.current = row.index
+                            // only a mouse that really moved picks a row: a still pointer under rows that change
+                            // (typing, going into a level) must not steal the keyboard's choice
+                            onPositionChanged: mouse => {
+                                const p = mapToItem(null, mouse.x, mouse.y);
+                                if (p.x === menu.mouseX && p.y === menu.mouseY) return;
+                                const first = menu.mouseX < 0;   // the first event after opening only says where it is
+                                menu.mouseX = p.x; menu.mouseY = p.y;
+                                if (!first) menu.current = row.index;
+                            }
                             onClicked: menu.activate(row.index)
                         }
                     }

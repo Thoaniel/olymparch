@@ -27,7 +27,7 @@ check() {  # check NAME 'condition': runs in the VM terminal (it needs the keybo
     wait_for "CHK-$1-(OK|NO)" 30
     seen "CHK-$1-OK" || fails+=("$1")
 }
-menu_open() { press meta_l+alt_l+spc; sleep 1.2; }
+menu_open() { press meta_l+alt+spc; sleep 1.2; }
 
 vm boot.log -virtfs local,path="$PWD",mount_tag=olysrc,security_model=none,readonly=on,id=src -device qemu-xhci,id=xhci
 unlock_and_desktop "$PW"
@@ -94,7 +94,7 @@ sleep 1
 shot lukket "Esc på øverste nivå lukker menyen"
 
 # ── the bolt in the bar opens it too
-python3 -I tests/vm/qmp.py "$QMP" click 582 17 1280 800
+python3 -I tests/vm/qmp.py "$QMP" click 590 17 1280 800
 sleep 1.2
 shot lyn "Klikk på lynet i linjen åpner menyen"
 
