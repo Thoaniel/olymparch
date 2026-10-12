@@ -333,8 +333,8 @@ shot dnd-kritisk "Ikke forstyrr på: kritiske varsler vises likevel"
 keys "olymparch-settings set notifications.dnd off; clear\n" 1
 
 # ── Displays, sound, input, network, power, games: the keys that were «coming» (one block, so merges stay easy)
-check_long() { keys " c $1 '$2'\n" 0.3; wait_for "CHK-$1-(OK|NO)" "$3"; seen "CHK-$1-OK" || fails+=("$1"); }   # NAME COND SECONDS
-keys "clear; olymparch-settings set settings.advanced on; clear\n" 1
+# the installs below take minutes: no lock or blank screen meanwhile (an earlier step set 5 min)
+keys "clear; olymparch-settings set account.lock_minutes 0; olymparch-settings set power.screen_off_minutes 0; olymparch-settings set settings.advanced on; clear\n" 2
 # colour space and HDR end up as cm in monitors.lua and Hyprland takes them; games go to the chosen monitor
 check colorspace 'olymparch-settings set display.colorspace@Virtual-1 wide && grep -q "cm = .wide." ~/.config/olymparch/monitors.lua && [ -z "$(hyprctl configerrors | tr -d "[:space:]")" ] && hyprctl monitors | grep -q Virtual-1'
 check hdr 'olymparch-settings set display.hdr@Virtual-1 on && grep -q "cm = .hdr., bitdepth = 10" ~/.config/olymparch/monitors.lua && [ -z "$(hyprctl configerrors | tr -d "[:space:]")" ] && olymparch-settings set display.hdr@Virtual-1 off && grep -q "cm = .wide." ~/.config/olymparch/monitors.lua'
@@ -351,15 +351,20 @@ search nattlys
 shot dev-nattlys-tilbud "Nattlys mangler: «Installer nattlys» med ett klikk"
 press ret; sleep 1
 close_settings
-check_long nightlight-installed 'for i in $(seq 90); do command -v hyprsunset && break; sleep 2; done; command -v hyprsunset && olymparch-settings missing | grep -q display.night_light_install' 200
+# pacman's udev hook makes /dev/kmsg root-only again: open it up once the install is done
+keys "clear; for i in \$(seq 90); do command -v hyprsunset >/dev/null && break; sleep 2; done; echo '$PW' | sudo -S chmod 666 /dev/kmsg; echo '<2>NIGHTLIGHT-DONE' > /dev/kmsg; clear\n" 1
+wait_for 'NIGHTLIGHT-DONE' 240
+check nightlight-installed 'command -v hyprsunset && olymparch-settings missing | grep -q display.night_light_install'
 check nightlight-on 'olymparch-settings set display.night_light on && sleep 1 && pgrep -x hyprsunset && grep -q "temperature = 4000" ~/.config/hypr/hyprsunset.conf'
 keys "clear; olymparch-settings open display\n" 2.5
 search nattlys
 shot dev-nattlys-pa "Nattlys installert og på (hyprsunset kjører; varmere 20–07)"
 close_settings
 check nightlight-off 'olymparch-settings set display.night_light off && sleep 1 && ! pgrep -x hyprsunset'
-check_long tailscale 'olymparch-settings run network.tailscale_install && command -v tailscale && olymparch-settings set network.tailscale on && systemctl is-active -q tailscaled && olymparch-settings set network.tailscale off && ! systemctl is-active -q tailscaled' 300
-check_long firewall 'olymparch-settings run network.firewall_install && command -v nft && olymparch-settings set network.firewall on && systemctl is-active -q nftables && olymparch-settings set network.firewall off && ! systemctl is-active -q nftables' 200
+keys "clear; olymparch-settings run network.tailscale_install; olymparch-settings run network.firewall_install; echo '$PW' | sudo -S chmod 666 /dev/kmsg; echo '<2>INSTALLS-DONE' > /dev/kmsg; clear\n" 1
+wait_for 'INSTALLS-DONE' 400
+check tailscale 'command -v tailscale && olymparch-settings set network.tailscale on && systemctl is-active -q tailscaled && olymparch-settings set network.tailscale off && ! systemctl is-active -q tailscaled'
+check firewall 'command -v nft && olymparch-settings set network.firewall on && systemctl is-active -q nftables && olymparch-settings set network.firewall off && ! systemctl is-active -q nftables'
 keys "clear; olymparch-settings open network\n" 2.5
 search tailscale
 shot dev-nett "Nett: Tailscale og brannmur installert med ett klikk, og av/på"
@@ -405,7 +410,7 @@ keys "clear; olymparch-settings open games\n" 2.5
 search crash
 shot dev-krasj "Spill: rekkefølge ved krasj = GE → Valve → Experimental"
 close_settings
-keys "clear; olymparch-settings reset games.crash_order; olymparch-settings reset display.game_monitor; olymparch-settings set settings.advanced off; clear\n" 1.5
+keys "clear; olymparch-settings reset games.crash_order; olymparch-settings reset display.game_monitor; olymparch-settings reset account.lock_minutes; olymparch-settings reset power.screen_off_minutes; olymparch-settings set settings.advanced off; clear\n" 2
 
 # The shell's own log, for errors
 keys "tail -n 60 ~/.local/state/olymparch/shell.log | while IFS= read -r l; do echo \"<2>QS: \$l\" > /dev/kmsg; done; echo '<2>LOG-DONE' > /dev/kmsg\n" 1
