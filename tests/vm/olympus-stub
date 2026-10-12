@@ -1,0 +1,24 @@
+#!/bin/sh
+# A stand-in for ~/.local/bin/olympus in tests/vm/settings: answers only the calls Settings makes, logs every call
+# to ~/olympus.log, and never downloads or runs a model.
+echo "$*" >>"$HOME/olympus.log"
+case "$1" in
+    --version) echo "olympus 0.0 (test stub)" ;;
+    modell)
+        if [ -z "${2:-}" ]; then
+            cur=$(cat "$HOME/.olympus-stub-model" 2>/dev/null || echo gemma4-26b-a4b)
+            for m in gemma4-26b-a4b qwen35-9b groq/openai/gpt-oss-120b; do
+                case $m in */*) c='☁ ' ;; *) c='  ' ;; esac
+                [ "$m" = "$cur" ] && mark='●' || mark='○'
+                printf '%s %s%-34s %s\n' "$mark" "$c" "$m" "test"
+            done
+            printf '\nBytt med `olympus modell <id>`.\n'
+        else
+            echo "$2" >"$HOME/.olympus-stub-model"
+            echo "Zeus svarer nå med $2."
+        fi ;;
+    config) [ "$2" = get ] && echo gemma4-26b-a4b ;;
+    auth) echo "${3:-anthropic}: ingen nøkkel" ;;
+    zeus | status) echo "Zeus (test stub): $1"; sleep 60 ;;
+esac
+exit 0
