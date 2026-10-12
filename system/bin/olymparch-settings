@@ -185,8 +185,40 @@ local PATTERNS = {   -- strings from the hardware, and free text that goes into 
     ["display.position"] = "^%-?%d+x%-?%d+$", ["keyboard.variant"] = "^[%w_,-]*$", ["keyboard.model"] = "^[%w_-]*$",
     ["keyboard.options"] = "^[%w_,:-]*$",
 }
+-- Shortcuts (keys.*): "SUPER + SHIFT + G" — modifiers from MODS, then one key name. "" = no shortcut.
+-- A key without a modifier is only allowed for keys that type nothing (F1, Print, XF86…).
+local MODS = { SUPER = 1, CTRL = 2, ALT = 3, SHIFT = 4 }
+local function combo_parts(v)
+    if v == "" then return {}, nil end
+    local parts = {}
+    for p in (v .. "+"):gmatch("%s*([^+]-)%s*%+") do parts[#parts + 1] = p end
+    if #parts == 0 or #parts > 5 then return nil end
+    local key = table.remove(parts)
+    local seen = {}
+    for i, m in ipairs(parts) do
+        m = m:upper():gsub("^CONTROL$", "CTRL"):gsub("^MOD4$", "SUPER"):gsub("^WIN$", "SUPER")
+        if not MODS[m] or seen[m] then return nil end
+        seen[m] = true; parts[i] = m
+    end
+    if not key:match("^[%w_]+$") and not key:match("^mouse:%d+$") or #key > 32 then return nil end
+    if #parts == 0 and not (key:match("^[Ff]%d+$") or key:match("^XF86") or key:upper() == "PRINT" or key:upper() == "PAUSE") then return nil end
+    table.sort(parts, function(a, b) return MODS[a] < MODS[b] end)
+    return parts, key
+end
+local function combo_text(v)  -- canonical: mods in a fixed order, letters upper case
+    local mods, key = combo_parts(v)
+    if not mods then return nil end
+    if not key then return "" end
+    if #key == 1 or not key:match("^XF86") then key = key:upper() end
+    mods[#mods + 1] = key
+    return table.concat(mods, " + ")
+end
+
 local function valid(s, v, out)
     if out and not out:match("^[%w_.-]+$") then return false, "bad output name" end
+    if s.widget == "keys" then
+        return type(v) == "string" and combo_text(v) == v, "expected a shortcut like SUPER + SHIFT + G"
+    end
     if s.readonly or s.type == "action" then return false, "cannot be set" end
     if s.type == "bool" then return type(v) == "boolean", "expected on or off" end
     if s.type == "number" then
@@ -264,6 +296,7 @@ local function parse(s, text)
         if (s.min and n < s.min) or (s.max and n > s.max) then die(("%s: %s is outside %s–%s"):format(s.key, text, s.min, s.max), 2) end
         return math.tointeger(n) or n
     end
+    if s.widget == "keys" then return combo_text(text) or text end
     return text
 end
 local function checked(s, out, text)
@@ -271,6 +304,34 @@ local function checked(s, out, text)
     local ok, why = valid(s, v, out)
     if not ok then die(("%s: %s"):format(s.key, why), 2) end
     return v
+end
+
+-- Every key combination a shortcut setting takes ("SUPER + 1" … for one with `each`), as comparable text
+local function combos(s, v)
+    local list = {}
+    local function add(c)
+        local mods, key = combo_parts(c)
+        if mods and key then
+            table.sort(mods, function(a, b) return MODS[a] < MODS[b] end)
+            mods[#mods + 1] = key:lower()
+            list[#list + 1] = table.concat(mods, " + ")
+        end
+    end
+    if v == "" then return list end
+    if s.each then for _, e in ipairs(s.each) do add(v .. " + " .. e) end else add(v) end
+    return list
+end
+-- nil, or the setting that already uses one of the combinations S would take with V
+local function shortcut_conflict(s, v, values)
+    local mine = {}
+    for _, c in ipairs(combos(s, v)) do mine[c] = true end
+    for _, o in ipairs(schema.settings) do
+        if o.key ~= s.key and o.ready and o.apply.key == "bind" then
+            for _, c in ipairs(combos(o, value_of(values, o.key))) do
+                if mine[c] then return o, c end
+            end
+        end
+    end
 end
 
 ---------------------------------------------------------------------------------------------------- Hyprland
@@ -298,12 +359,22 @@ local function hypr_lines(values)  -- the user's hypr and cursor settings, as Lu
         local v = values[s.key]
         if v ~= nil and s.apply.via == "hypr" and s.apply.key ~= "bind" then
             lines[#lines + 1] = "hl.config(" .. lua_table(s.apply.key, v) .. ")   -- " .. s.key
+        elseif v ~= nil and s.apply.key == "bind" and s.ready and v ~= s.default then
+            lines[#lines + 1] = ("    [%q] = %q,"):format(s.key, v)
         elseif v ~= nil and s.apply.via == "cursor" then
             local n = math.tointeger(tonumber(v)) or 24
             lines[#lines + 1] = ('hl.env("XCURSOR_SIZE", "%d")   -- %s'):format(n, s.key)
             lines[#lines + 1] = ('hl.env("HYPRCURSOR_SIZE", "%d")'):format(n)
         end
     end
+    local first, last
+    for i, l in ipairs(lines) do if l:match('^    %["keys%.') then first = first or i; last = i end end
+    if first then   -- shortcuts moved in Settings; an older olymparch.lua without olymparch_keys skips them
+        table.insert(lines, last + 1, "})")
+        table.insert(lines, first, ';(rawget(_G, "olymparch_keys") or function() end)({')
+    end
+    local term = values["apps.terminal"]
+    if term ~= nil and term ~= "" then lines[#lines + 1] = ("hl.env(\"OLYMPARCH_TERMINAL\", %q)   -- apps.terminal"):format(term) end
     return lines
 end
 
@@ -437,7 +508,8 @@ appliers["info"] = function() end
 appliers["hypr"] = function(s, values, key)
     ensure_loader(values)
     write_hypr(values)
-    if s.apply.key ~= "bind" then hyprctl_eval("hl.config(" .. lua_table(s.apply.key, value_of(values, key)) .. ")") end
+    if s.apply.key ~= "bind" then hyprctl_eval("hl.config(" .. lua_table(s.apply.key, value_of(values, key)) .. ")")
+    elseif os.getenv("HYPRLAND_INSTANCE_SIGNATURE") then os.execute("hyprctl reload >/dev/null 2>&1") end   -- binds: the whole config again
 end
 appliers["cursor"] = function(s, values, key)
     ensure_loader(values)
@@ -509,6 +581,10 @@ elseif cmd == "set" then
     local v = checked(s, out, text)
     local try = arg[4] == "--try" and (tonumber(arg[5]) or 15) or nil
     local values = load_values()
+    if s.apply.key == "bind" then
+        local o, c = shortcut_conflict(s, v, values)
+        if o then die(("%s: %s is already %s (%s)"):format(s.key, c:upper(), o.key, label(o)), 4) end
+    end
     if try then
         revert()   -- one question at a time
         local token = ("%d%06d"):format(os.time(), math.random(0, 999999))

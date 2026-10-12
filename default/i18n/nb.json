@@ -41,5 +41,7 @@
   "settings.hw.memory": "MINNE",
   "settings.hw.kernel": "KJERNE",
   "settings.hw.disk": "DISK",
-  "settings.hw.monitors": "SKJERMER"
+  "settings.hw.monitors": "SKJERMER",
+  "settings.keys.press": "Trykk tastene · Esc avbryter · ⌫ ingen",
+  "settings.keys.none": "Ingen hurtigtast"
 }

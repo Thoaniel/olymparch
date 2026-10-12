@@ -24,6 +24,7 @@ Scope {
     property var about: ({})             // olymparch-settings about
     property string outputKey: ""        // the last action with output (doctor …) and what it printed
     property string output: ""
+    property bool outputError: false     // output is why a change was refused
     property var pending: null           // a --try waiting for «Keep»: { key, value, text, token }
     property int countdown: 0
 
@@ -93,7 +94,12 @@ Scope {
                 win.refreshMonitors();
             });
         } else {
-            Settings.set(key, value, () => { if (s.page === "display") win.refreshMonitors(); });
+            Settings.run(["set", key, String(value)], (out, code, err) => {
+                if (s.page === "display") win.refreshMonitors();
+                // a refused value (a shortcut that is taken …): say why under the row
+                if (code) { win.outputKey = s.key; win.output = err.replace(/^olymparch-settings: /gm, "").trim(); win.outputError = true; }
+                else if (win.outputError && win.outputKey === s.key) win.outputKey = "";
+            });
         }
     }
     function keep() { if (pending) Settings.run(["keep"], () => answered()); }
@@ -106,7 +112,7 @@ Scope {
     }
     Timer { id: reopen; interval: 200; onTriggered: win.open = true }
     function act(s) {
-        Settings.run(["run", s.key], (out, code) => { if (s.output) { win.outputKey = s.key; win.output = out.trim(); } });
+        Settings.run(["run", s.key], (out, code) => { if (s.output) { win.outputKey = s.key; win.output = out.trim(); win.outputError = false; } });
     }
     function resetPage() {
         for (const s of Settings.schema.settings.filter(s => s.page === page && s.type !== "action" && !s.readonly)) {
@@ -453,7 +459,7 @@ Scope {
                                     y: 7
                                     width: row.width - 316
                                     height: Math.max(26, sw.visible ? sw.height : seg.visible ? seg.height : sel.visible ? sel.height
-                                                           : sld.visible ? sld.height : fld.visible ? fld.height : btn.visible ? btn.height : info2.height)
+                                                           : sld.visible ? sld.height : fld.visible ? fld.height : btn.visible ? btn.height : kc.visible ? kc.height : info2.height)
                                     opacity: row.ready ? 1 : 0.45
                                     enabled: row.ready
 
@@ -660,6 +666,65 @@ Scope {
                                         }
                                     }
 
+                                    // ── shortcut: click (or Enter) and press the keys; Esc cancels, Backspace = no shortcut
+                                    Rectangle {
+                                        id: kc
+                                        visible: row.w === "keys"
+                                        property bool listening: false
+                                        width: Math.max(200, kcText.implicitWidth + 24); height: 26
+                                        color: listening ? "#17130b" : "#0d0d12"
+                                        border.color: listening || activeFocus ? win.theme.gold : win.theme.line
+                                        activeFocusOnTab: visible && row.ready
+                                        onActiveFocusChanged: { if (activeFocus) list.show(row); else listening = false; }
+                                        // Qt key → Hyprland key name (shifted digits on a US layout give the digit back)
+                                        function keyName(e) {
+                                            const k = e.key;
+                                            if (k >= Qt.Key_A && k <= Qt.Key_Z) return String.fromCharCode(k);
+                                            if (k >= Qt.Key_0 && k <= Qt.Key_9) return String.fromCharCode(k);
+                                            if (k >= Qt.Key_F1 && k <= Qt.Key_F24) return "F" + (k - Qt.Key_F1 + 1);
+                                            const shifted = e.text ? "!@#$%^&*()".indexOf(e.text) : -1;
+                                            if (shifted >= 0) return "1234567890"[shifted];
+                                            const named = {
+                                                [Qt.Key_Return]: "RETURN", [Qt.Key_Enter]: "RETURN", [Qt.Key_Space]: "SPACE", [Qt.Key_Comma]: "COMMA",
+                                                [Qt.Key_Period]: "PERIOD", [Qt.Key_Minus]: "MINUS", [Qt.Key_Equal]: "EQUAL", [Qt.Key_Slash]: "SLASH",
+                                                [Qt.Key_Backslash]: "BACKSLASH", [Qt.Key_Semicolon]: "SEMICOLON", [Qt.Key_Apostrophe]: "APOSTROPHE",
+                                                [Qt.Key_BracketLeft]: "BRACKETLEFT", [Qt.Key_BracketRight]: "BRACKETRIGHT", [Qt.Key_Tab]: "TAB",
+                                                [Qt.Key_Delete]: "DELETE", [Qt.Key_Insert]: "INSERT", [Qt.Key_Home]: "HOME", [Qt.Key_End]: "END",
+                                                [Qt.Key_PageUp]: "PRIOR", [Qt.Key_PageDown]: "NEXT", [Qt.Key_Print]: "PRINT", [Qt.Key_Pause]: "PAUSE",
+                                                [Qt.Key_Left]: "LEFT", [Qt.Key_Right]: "RIGHT", [Qt.Key_Up]: "UP", [Qt.Key_Down]: "DOWN", [Qt.Key_QuoteLeft]: "GRAVE"
+                                            };
+                                            return named[k] || "";
+                                        }
+                                        Keys.onPressed: e => {
+                                            if (!listening) {
+                                                if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter || e.key === Qt.Key_Space) { listening = true; e.accepted = true; }
+                                                return;
+                                            }
+                                            e.accepted = true;
+                                            if (e.key === Qt.Key_Escape) { listening = false; return; }
+                                            if (e.key === Qt.Key_Backspace && !e.modifiers) { listening = false; win.change(row.s, ""); return; }
+                                            const name = keyName(e);
+                                            if (!name) return;   // a modifier on its own: wait for the key
+                                            const m = [];
+                                            if (e.modifiers & Qt.MetaModifier) m.push("SUPER");
+                                            if (e.modifiers & Qt.ControlModifier) m.push("CTRL");
+                                            if (e.modifiers & Qt.AltModifier) m.push("ALT");
+                                            if (e.modifiers & Qt.ShiftModifier) m.push("SHIFT");
+                                            m.push(name);
+                                            listening = false;
+                                            win.change(row.s, m.join(" + "));
+                                        }
+                                        Text {
+                                            id: kcText
+                                            anchors { left: parent.left; leftMargin: 9; verticalCenter: parent.verticalCenter }
+                                            text: kc.listening ? I18n.t("settings.keys.press", "Press the keys · Esc cancels · ⌫ none")
+                                                : (row.value === "" ? I18n.t("settings.keys.none", "No shortcut") : String(row.value))
+                                            font { family: win.theme.mono; pixelSize: 12; bold: !kc.listening && row.value !== "" }
+                                            color: kc.listening ? win.theme.goldHi : row.value === "" ? win.theme.muted : (kc.activeFocus ? win.theme.goldHi : win.theme.text)
+                                        }
+                                        MouseArea { anchors.fill: parent; onClicked: { kc.forceActiveFocus(); kc.listening = !kc.listening; } }
+                                    }
+
                                     // shown, not set (About)
                                     Text {
                                         id: info2
@@ -714,14 +779,14 @@ Scope {
                                     width: parent.width
                                     height: outText.implicitHeight + 16
                                     color: "#0d0d12"
-                                    border.color: win.theme.line
+                                    border.color: win.outputError ? win.theme.red : win.theme.line
                                     Text {
                                         id: outText
                                         x: 10; y: 8; width: parent.width - 20
                                         text: win.outputKey === row.s.key ? win.output : ""
                                         wrapMode: Text.Wrap
                                         font { family: win.theme.mono; pixelSize: 12 }
-                                        color: win.theme.text
+                                        color: win.outputError ? win.theme.red : win.theme.text
                                         textFormat: Text.PlainText
                                     }
                                 }
