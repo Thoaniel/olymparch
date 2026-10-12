@@ -231,6 +231,11 @@ arch-chroot /mnt systemctl --global enable olymparch-downloads.path olymparch-di
 arch-chroot /mnt systemctl enable clamav-freshclam.service >/dev/null 2>&1 || true
 install -Dm644 /usr/share/olymparch/apps/olymparch-extract.desktop /mnt/usr/share/applications/olymparch-extract.desktop
 install -Dm644 /usr/share/olymparch/apps/mimeapps.list /mnt/etc/xdg/mimeapps.list
+# Torrents: magnet links and .torrent files → Zeus or a torrent app, else a one-click Transmission offer
+install -Dm644 /usr/share/olymparch/apps/olymparch-open-torrent.desktop /mnt/usr/share/applications/olymparch-open-torrent.desktop
+install -Dm755 /usr/share/olymparch/system/lib/install-app /mnt/usr/lib/olymparch/install-app
+install -Dm644 /usr/share/olymparch/system/polkit/org.olymparch.install-app.policy /mnt/usr/share/polkit-1/actions/org.olymparch.install-app.policy
+install -Dm644 /usr/share/olymparch/system/polkit/50-olymparch-install-app.rules /mnt/usr/share/polkit-1/rules.d/50-olymparch-install-app.rules
 install -Dm644 /usr/share/olymparch/audio/olymparch-switch-on-connect.conf /mnt/etc/pipewire/pipewire-pulse.conf.d/50-olymparch-switch-on-connect.conf
 # English folder names in every language: the event units watch ~/Downloads
 arch-chroot /mnt sudo -u "$USERNAME" env LC_ALL=C xdg-user-dirs-update >/dev/null 2>&1 || mkdir -p "/mnt/home/$USERNAME/Downloads"

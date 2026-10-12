@@ -1,0 +1,79 @@
+#!/bin/bash
+# Torrents go to the right app. Registered for magnet: links and .torrent files (default/apps/mimeapps.list), so
+# the browser, the file manager and xdg-open all end up here:
+#   1. Zeus, when Olympus is installed and has a download command (olympus download LINK|FILE)
+#   2. else the first torrent app found: Transmission, qBittorrent, Fragments, Deluge
+#   3. else a notification that offers to install Transmission with one click (pkexec /usr/lib/olymparch/install-app)
+#
+#   olymparch-open-torrent MAGNET-LINK | FILE.torrent | file:///…/FILE.torrent
+# The link is untrusted (any web page can hand one over): it is checked here and only ever passed as one argument,
+# never through a shell.
+set -uo pipefail
+L() { case ${LANG:-} in nb* | nn* | no*) printf '%s' "$2" ;; *) printf '%s' "$1" ;; esac; }
+say() { echo "olymparch-open-torrent: $*" >&2; }
+bad() {
+    say "refused: $1"
+    notify-send -a Olymparch "$(L "Not a torrent" "Ikke en torrent")" "$(L "Olymparch did not open it: $1" "Olymparch åpnet den ikke: $2")"
+    exit 2
+}
+[ $# = 1 ] || { echo "bruk: olymparch-open-torrent MAGNETLENKE | FIL.torrent" >&2; exit 2; }
+arg=$1
+
+# ── what is it, and is it what it says?
+magnet='^magnet:\?[][A-Za-z0-9._~:/?#@!&()*+,;=%-]+$'   # URI characters only: no spaces, quotes, $ or backslashes
+btih='[?&]xt=urn:bt(ih|mh):[A-Za-z0-9]{32,68}(&|$)'         # BitTorrent v1 (hex or base32) or v2 (multihash)
+if [[ $arg == magnet:* ]]; then
+    (( ${#arg} <= 8192 )) || bad "the link is too long" "lenken er for lang"
+    [[ $arg =~ $magnet ]] || bad "the magnet link has characters a link cannot have" "magnetlenken har tegn en lenke ikke kan ha"
+    [[ $arg =~ $btih ]] || bad "the magnet link has no torrent hash" "magnetlenken har ingen torrent-hash"
+    target=$arg
+else
+    path=$arg
+    if [[ $path == file://* ]]; then
+        path=${path#file://}
+        path=${path#localhost}
+        [[ $path == *\\* ]] && bad "bad file name" "ugyldig filnavn"
+        path=$(printf '%b' "${path//%/\\x}")   # percent-decoding; backslashes were refused above
+    fi
+    [[ $path == /* ]] || path=$PWD/$path
+    path=$(realpath -e -- "$path" 2>/dev/null) || bad "the file does not exist" "filen finnes ikke"
+    [ -f "$path" ] && [ -r "$path" ] || bad "not a readable file" "ikke en lesbar fil"
+    size=$(stat -c %s -- "$path")
+    (( size > 0 && size <= 10 * 1024 * 1024 )) || bad "not a .torrent file (size)" "ikke en .torrent-fil (størrelse)"
+    # bencoded: a dictionary with an info dictionary
+    [ "$(head -c 1 -- "$path")" = d ] && grep -qa '4:info' -- "$path" || bad "not a .torrent file" "ikke en .torrent-fil"
+    target=$path
+fi
+
+# ── 1. Zeus
+oly=$HOME/.local/bin/olympus
+if [ -x "$oly" ] && "$oly" download --help >/dev/null 2>&1; then
+    say "→ Zeus (olympus download)"
+    exec "$oly" download -- "$target"
+fi
+
+# ── 2. a torrent app
+for app in transmission-gtk qbittorrent fragments deluge-gtk deluge; do
+    if command -v "$app" >/dev/null 2>&1; then
+        say "→ $app"
+        setsid -f "$app" "$target" >/dev/null 2>&1 </dev/null
+        exit 0
+    fi
+done
+
+# ── 3. nothing yet: offer Transmission (small, GTK) with one click
+say "→ no torrent app; offering Transmission"
+choice=$(notify-send -a Olymparch -w \
+    --action=install="$(L "Install Transmission" "Installer Transmission")" --action=later="$(L "Not now" "Ikke nå")" \
+    "$(L "No torrent app" "Ingen torrent-app")" \
+    "$(L "Transmission is small and opens the link as soon as it is installed." \
+         "Transmission er liten og åpner lenken så snart den er installert.")")
+[ "$choice" = install ] || exit 0
+if pkexec /usr/lib/olymparch/install-app torrent && command -v transmission-gtk >/dev/null 2>&1; then
+    say "→ transmission-gtk (just installed)"
+    setsid -f transmission-gtk "$target" >/dev/null 2>&1 </dev/null
+else
+    notify-send -u critical -a Olymparch "$(L "Transmission was not installed" "Transmission ble ikke installert")" \
+        "$(L "See /var/log/olymparch-install-app.log" "Se /var/log/olymparch-install-app.log")"
+    exit 1
+fi

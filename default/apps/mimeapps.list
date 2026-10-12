@@ -25,3 +25,5 @@ application/vnd.rar=olymparch-extract.desktop
 application/x-compressed-tar=olymparch-extract.desktop
 application/x-xz-compressed-tar=olymparch-extract.desktop
 application/x-zstd-compressed-tar=olymparch-extract.desktop
+x-scheme-handler/magnet=olymparch-open-torrent.desktop
+application/x-bittorrent=olymparch-open-torrent.desktop

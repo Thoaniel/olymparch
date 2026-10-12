@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Open torrent
+Name[nb]=Åpne torrent
+Comment=Sends magnet links and .torrent files to Zeus or a torrent app
+Comment[nb]=Sender magnetlenker og .torrent-filer til Zeus eller en torrent-app
+Exec=olymparch-open-torrent %u
+NoDisplay=true
+MimeType=x-scheme-handler/magnet;application/x-bittorrent;

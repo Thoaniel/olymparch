@@ -1,0 +1,19 @@
+#!/bin/bash
+# pkexec helper behind one-click app offers (the «Install Transmission» button): pkexec /usr/lib/olymparch/install-app APP
+# Takes an app ID from the fixed list below, never a package name or a path, and installs only those packages
+# from the configured repositories. Everything is logged to /var/log/olymparch-install-app.log.
+set -euo pipefail
+export PATH=/usr/bin LC_ALL=C
+[ "$(id -u)" = 0 ] || { echo "install-app: run through pkexec" >&2; exit 1; }
+[ $# = 1 ] || { echo "bruk: install-app APP" >&2; exit 2; }
+case $1 in
+    torrent) pkgs=(transmission-gtk) ;;
+    *) echo "install-app: ukjent app" >&2; exit 2 ;;
+esac
+exec </dev/null 9>/run/olymparch-install-app.lock
+flock 9
+{
+    printf '\n== %s install-app %s (uid %s)\n' "$(date '+%F %T')" "$1" "${PKEXEC_UID:-?}"
+    for _ in $(seq 60); do [ -e /var/lib/pacman/db.lck ] || break; sleep 2; done   # another install is running
+    pacman -S --noconfirm --needed -- "${pkgs[@]}"
+} >>/var/log/olymparch-install-app.log 2>&1
