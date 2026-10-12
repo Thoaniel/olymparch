@@ -50,9 +50,19 @@ shot ny-kombinasjon "Skjerm nr. 2 kobles til (headless OLYTEST): varsel «Ny skj
 check new-combo '[ "$(olymparch-settings profiles | grep -c "^[* ] [^ ]")" = 2 ] && olymparch-settings profiles | grep -q "^\* .*+" && hyprctl layers | grep -q olymparch-notifications'
 check new-defaults '! grep -q OLYTEST ~/.config/olymparch/settings.json'
 
+# the bar on this (QEMU's) monitor still drawn after a layout change: gold pixels in its top 34 rows
+bar_drawn() {
+    sleep 2
+    python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/bar.ppm"
+    local g; g=$(python3 -I tests/vm/pixels.py "$O/bar.ppm" 0 0 1280 34 | sed -E 's/gold=([0-9]+).*/\1/')
+    (( ${g:-0} > 20 )) || fails+=("bar-$1(gold=${g:-0})")
+}
+
 # 3. the layout, set the way Settings → Displays does it
 keys "clear; olymparch-settings set display.position@OLYTEST 1280x0; olymparch-settings set display.scale@OLYTEST 2; olymparch-settings profiles; hyprctl monitors | grep -E '^Monitor|at |scale'\n" 4
+press meta_l+1; sleep 1   # the moved monitor takes the focus (as in step 5); the checks type into the terminal
 shot oppsett-lagret "OLYTEST satt til 1280x0, skala 200 %: lagret for kombinasjonen (olymparch-settings profiles)"
+bar_drawn saved
 check saved 'olymparch-settings profiles | grep -A3 "^\* .*+" | grep -q "position=1280x0 scale=2"'
 check applied 'hyprctl monitors | grep -A12 "^Monitor OLYTEST" | grep -q "at 1280x0" && hyprctl monitors | grep -A12 "^Monitor OLYTEST" | grep -q "scale: 2$"'
 
@@ -65,6 +75,7 @@ check removed 'olymparch-settings profiles | grep -q "^\* [^+]*$" && ! grep -q O
 keys "clear; hyprctl output create headless OLYTEST; sleep 3; hyprctl monitors | grep -E '^Monitor|at |scale'; grep OLYTEST ~/.config/olymparch/monitors.lua\n" 4
 press meta_l+1; sleep 1   # a monitor that comes back takes the focus; the checks type into the terminal
 shot tilbake "OLYTEST koblet til igjen: 1280x0 og skala 2 kommer tilbake av seg selv"
+bar_drawn restored
 check restored 'hyprctl monitors | grep -A12 "^Monitor OLYTEST" | grep -q "at 1280x0" && hyprctl monitors | grep -A12 "^Monitor OLYTEST" | grep -q "scale: 2$" && grep -q "display.scale@OLYTEST.: .2" ~/.config/olymparch/settings.json'
 
 # 6. the notification's button opens Settings on Skjermer (OLYTEST unplugged first: it is invisible here, and

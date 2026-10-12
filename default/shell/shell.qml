@@ -7,6 +7,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
+import Quickshell.Io
 
 ShellRoot {
     id: root
@@ -44,97 +45,109 @@ ShellRoot {
         onTriggered: root.frame = (root.frame + 1) % root.frames
     }
 
-    Variants {
-        model: Quickshell.screens
+    // The wallpaper and the bar per monitor. Rebuilt after the monitor layout changes (olymparch-settings calls
+    // «screens»): a panel on an output that moved can otherwise stay blank.
+    LazyLoader {
+        id: panels
+        active: true
+        Scope {
+            Variants {
+                model: Quickshell.screens
 
-        PanelWindow {
-            required property var modelData
-            screen: modelData
-            WlrLayershell.layer: WlrLayer.Background
-            WlrLayershell.namespace: "olymparch-wallpaper"
-            exclusionMode: ExclusionMode.Ignore
-            anchors { top: true; bottom: true; left: true; right: true }
-            color: "#08080c"
+                PanelWindow {
+                    required property var modelData
+                    screen: modelData
+                    WlrLayershell.layer: WlrLayer.Background
+                    WlrLayershell.namespace: "olymparch-wallpaper"
+                    exclusionMode: ExclusionMode.Ignore
+                    anchors { top: true; bottom: true; left: true; right: true }
+                    color: "#08080c"
 
-            Image {
-                anchors.fill: parent
-                readonly property string set: parent.height >= 1300 ? "1440" : "1080"
-                source: `file://${root.art}/${set}/frame-${String(root.frame).padStart(2, "0")}.png`
-                fillMode: Image.PreserveAspectCrop
-                smooth: false
-                cache: true
-                asynchronous: false
-            }
-        }
-    }
-
-    Variants {
-        model: Quickshell.screens
-
-        PanelWindow {
-            required property var modelData
-            screen: modelData
-            visible: Settings.get("appearance.bar") !== false && !gameMode.active
-            WlrLayershell.namespace: "olymparch-bar"
-            anchors { top: true; left: true; right: true }
-            implicitHeight: 34
-            color: root.bg
-
-            Rectangle { anchors { left: parent.left; right: parent.right; bottom: parent.bottom } height: 1; color: root.line }
-
-            Row {
-                anchors { left: parent.left; leftMargin: 6; verticalCenter: parent.verticalCenter }
-                Repeater {
-                    model: Hyprland.workspaces
-                    delegate: Item {
-                        required property HyprlandWorkspace modelData
-                        width: 28; height: 32
-                        visible: modelData.id > 0
-                        Text {
-                            anchors.centerIn: parent
-                            text: parent.modelData.id
-                            font { family: root.mono; pixelSize: 13; bold: parent.modelData.focused }
-                            color: parent.modelData.focused ? root.goldHi : root.muted
-                        }
-                        Rectangle {
-                            visible: parent.modelData.focused
-                            anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-                            height: 2; color: root.gold
-                        }
-                        MouseArea { anchors.fill: parent; onClicked: Hyprland.dispatch(`hl.dsp.focus({ workspace = ${parent.modelData.id} })`) }
+                    Image {
+                        anchors.fill: parent
+                        readonly property string set: parent.height >= 1300 ? "1440" : "1080"
+                        source: `file://${root.art}/${set}/frame-${String(root.frame).padStart(2, "0")}.png`
+                        fillMode: Image.PreserveAspectCrop
+                        smooth: false
+                        cache: true
+                        asynchronous: false
                     }
                 }
             }
 
-            // The wordmark gives way (only the bolt stays) when the right side grows into it on a narrow screen
-            Row {
-                id: wordmark
-                anchors.centerIn: parent
-                spacing: 10
-                Text {
-                    text: "\uf0e7"
-                    font { family: "Symbols Nerd Font Mono"; pixelSize: 15 }
-                    color: root.gold
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-                Text {
-                    visible: barStatus.x > (parent.parent.width + wordmarkFull.advanceWidth) / 2 + 24
-                    text: "OLYMPARCH"
-                    font { family: root.mono; pixelSize: 13; bold: true; letterSpacing: 2 }
-                    color: root.gold
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-            }
-            TextMetrics { id: wordmarkFull; font { family: root.mono; pixelSize: 13; bold: true; letterSpacing: 2 } text: "OLYMPARCH  " }
+            Variants {
+                model: Quickshell.screens
 
-            BarStatus {
-                id: barStatus
-                theme: root
-                clockFormat: (Settings.get("appearance.clock_format") === "12h" ? "ddd d%1 MMM  h:mm AP" : "ddd d%1 MMM  HH:mm")
-                    .arg(Qt.locale().name.startsWith("nb") || Qt.locale().name.startsWith("nn") ? "." : "")
-                anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
+                PanelWindow {
+                    required property var modelData
+                    screen: modelData
+                    visible: Settings.get("appearance.bar") !== false && !gameMode.active
+                    WlrLayershell.namespace: "olymparch-bar"
+                    anchors { top: true; left: true; right: true }
+                    implicitHeight: 34
+                    color: root.bg
+
+                    Rectangle { anchors { left: parent.left; right: parent.right; bottom: parent.bottom } height: 1; color: root.line }
+
+                    Row {
+                        anchors { left: parent.left; leftMargin: 6; verticalCenter: parent.verticalCenter }
+                        Repeater {
+                            model: Hyprland.workspaces
+                            delegate: Item {
+                                required property HyprlandWorkspace modelData
+                                width: 28; height: 32
+                                visible: modelData.id > 0
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: parent.modelData.id
+                                    font { family: root.mono; pixelSize: 13; bold: parent.modelData.focused }
+                                    color: parent.modelData.focused ? root.goldHi : root.muted
+                                }
+                                Rectangle {
+                                    visible: parent.modelData.focused
+                                    anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+                                    height: 2; color: root.gold
+                                }
+                                MouseArea { anchors.fill: parent; onClicked: Hyprland.dispatch(`hl.dsp.focus({ workspace = ${parent.modelData.id} })`) }
+                            }
+                        }
+                    }
+
+                    // The wordmark gives way (only the bolt stays) when the right side grows into it on a narrow screen
+                    Row {
+                        id: wordmark
+                        anchors.centerIn: parent
+                        spacing: 10
+                        Text {
+                            text: "\uf0e7"
+                            font { family: "Symbols Nerd Font Mono"; pixelSize: 15 }
+                            color: root.gold
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Text {
+                            visible: barStatus.x > (parent.parent.width + wordmarkFull.advanceWidth) / 2 + 24
+                            text: "OLYMPARCH"
+                            font { family: root.mono; pixelSize: 13; bold: true; letterSpacing: 2 }
+                            color: root.gold
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+                    TextMetrics { id: wordmarkFull; font { family: root.mono; pixelSize: 13; bold: true; letterSpacing: 2 } text: "OLYMPARCH  " }
+
+                    BarStatus {
+                        id: barStatus
+                        theme: root
+                        clockFormat: (Settings.get("appearance.clock_format") === "12h" ? "ddd d%1 MMM  h:mm AP" : "ddd d%1 MMM  HH:mm")
+                            .arg(Qt.locale().name.startsWith("nb") || Qt.locale().name.startsWith("nn") ? "." : "")
+                        anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
+                    }
+                }
             }
         }
+    }
+    IpcHandler {
+        target: "shell"
+        function screens(): void { panels.active = false; Qt.callLater(() => panels.active = true); }
     }
 
     GameMode { id: gameMode }

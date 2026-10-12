@@ -227,6 +227,12 @@ local function load_values()
     return v
 end
 local SHELL = "/usr/share/olymparch/shell"
+local function shell_call_target(target, ...)  -- one of the running shell's IpcHandlers
+    if not os.getenv("WAYLAND_DISPLAY") then return end
+    local args = {}
+    for i, a in ipairs({ ... }) do args[i] = sh_quote(a) end
+    os.execute("qs ipc -p " .. SHELL .. " call " .. sh_quote(target) .. " " .. table.concat(args, " ") .. " >/dev/null 2>&1")
+end
 local function shell_call(...)  -- the running shell's IpcHandler "settings"
     if not os.getenv("WAYLAND_DISPLAY") then return end
     local args = {}
@@ -453,6 +459,7 @@ appliers["monitor"] = function(s, values, key, override)
     if not override then write_monitors(values) end
     local out = key:match("@(.+)$")
     hyprctl_eval(monitor_spec(values, out, override))
+    shell_call_target("shell", "screens")   -- panels on a moved output are rebuilt
 end
 appliers["idle"] = function(s, values) write_idle(values) end
 appliers["audio"] = function(s, values, key)
@@ -635,6 +642,7 @@ local function monitors_changed()
     ensure_loader(values)
     write_monitors(values)
     for _, m in ipairs(mons) do hyprctl_eval(monitor_spec(values, m.name)) end
+    shell_call_target("shell", "screens")
     data.current = key
     if not prof then data.profiles[key] = snapshot(values, mons) end
     save_profiles(data)
