@@ -117,7 +117,7 @@ Row {
     Cell { visible: status.micInUse && status.privacyIndicator; icon: "\u{F036C}"; alert: true }
     Cell { visible: status.camInUse && status.privacyIndicator; icon: "\u{F0100}"; alert: true }
     Cell {
-        visible: zeusCheck.installed
+        visible: zeusCheck.installed && Settings.get("zeus.enabled") !== false
         icon: ""
         label: "Zeus"
         tint: status.theme.gold

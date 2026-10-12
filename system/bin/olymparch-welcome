@@ -8,7 +8,9 @@ case ${LANG:-} in nb*|nn*|no*) nb=1 ;; *) nb=0 ;; esac
 t() { if [ $nb = 1 ]; then printf '%s' "$2"; else printf '%s' "$1"; fi; }
 
 olympus=$HOME/.local/bin/olympus
-if [ -x "$olympus" ] && [ ! -e "$state/zeus-set-up" ]; then
+# Settings → Zeus switched off: no offer
+zeus_on=$(olymparch-settings get zeus.enabled 2>/dev/null || echo true)
+if [ -x "$olympus" ] && [ ! -e "$state/zeus-set-up" ] && [ "$zeus_on" != false ] && [ "$zeus_on" != off ]; then
     sleep 5   # the shell's notification server comes up with the session
     answer=$(notify-send -w -a Zeus \
         --action=setup="$(t "Set up Zeus" "Sett opp Zeus")" --action=later="$(t "Later" "Senere")" \
