@@ -39,5 +39,10 @@
     "#c4acd1",
     "#96c8c4",
     "#ffffff"
+  ],
+  "backgrounds": [
+    { "id": "owl", "name": { "en": "Owl on the olive branch", "nb": "Ugla på olivengrenen" } },
+    { "id": "parthenon", "name": { "en": "Parthenon by moonlight", "nb": "Parthenon i måneskinn" } },
+    { "id": "sign", "name": { "en": "Sign in the stars", "nb": "Tegn på himmelen" } }
   ]
 }

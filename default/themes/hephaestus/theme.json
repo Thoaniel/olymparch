@@ -39,5 +39,10 @@
     "#d1a2c5",
     "#a3beb8",
     "#ffffff"
+  ],
+  "backgrounds": [
+    {"id": "forge", "name": {"en": "The forge", "nb": "Smia"}},
+    {"id": "volcano", "name": {"en": "Etna at night", "nb": "Etna om natten"}},
+    {"id": "sign", "name": {"en": "Sign in the stars", "nb": "Tegn på himmelen"}}
   ]
 }

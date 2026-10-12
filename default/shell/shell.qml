@@ -58,10 +58,17 @@ ShellRoot {
         const cp = parseInt(themeData.glyph || "f0e7", 16);
         return (cp >= 0xe000 && cp <= 0xf8ff) || (cp >= 0xf0000 && cp <= 0xffffd) ? String.fromCodePoint(cp) : "\uf0e7";
     }
-    readonly property string art: /^\/[^\0]*$/.test(themeData.wallpaper || "") && (themeData.wallpaper || "").indexOf("..") < 0 ? themeData.wallpaper : "/usr/share/olymparch/wallpaper"
-    readonly property int frames: Math.max(1, Math.min(48, themeData.frames || 48))
+    // ── Background: the theme's (theme.json names it: frames in a folder, or one picture of yours), or the one the
+    //    background picker (Super+Ctrl+Space) is trying. Paths are only taken whole and absolute, never with «..».
+    property var bgPreview: null   // an entry from `olymparch-theme background list --json` while the picker tries it
+    readonly property var bgNow: bgPreview || themeData
+    function safePath(p) { return typeof p === "string" && /^\/[^\0]*$/.test(p) && p.indexOf("..") < 0; }
+    readonly property string art: safePath(bgNow.wallpaper || bgNow.dir) ? (bgNow.wallpaper || bgNow.dir) : "/usr/share/olymparch/wallpaper"
+    readonly property string picture: safePath(bgNow.image) ? bgNow.image : ""
+    readonly property int frames: picture ? 1 : Math.max(1, Math.min(48, bgNow.frames || 48))
     onFramesChanged: frame = 0
-    readonly property bool has1440: !themeData.sets || themeData.sets.indexOf("1440") >= 0
+    onArtChanged: frame = 0
+    readonly property bool has1440: !bgNow.sets || bgNow.sets.indexOf("1440") >= 0
     // ── end Theme
     // Settings → Accessibility → Text size: every font in the shell is theme.px(size)
     readonly property real fontScale: ({ "125": 1.25, "150": 1.5 })[Settings.get("accessibility.text_size")] || 1
@@ -73,8 +80,9 @@ ShellRoot {
         Quickshell.execDetached(["olymparch-settings", "set", "notifications.dnd", dndSetting ? "off" : "on"]);
     }
 
-    // One frame counter for every monitor. Torch 8 fps, Calm 4 fps, Off (or reduced motion) stays on frame 00.
-    // It stops while every workspace in view has windows.
+    // One frame counter for every monitor and every background. Torch 8 fps, Calm 4 fps, Off (or reduced motion)
+    // stays on frame 00; a still background (one frame, or a picture) never ticks. It stops while every workspace in
+    // view has windows.
     readonly property string wallpaper: Settings.get("accessibility.reduced_motion") === true ? "off" : Settings.get("appearance.wallpaper")
     onWallpaperChanged: if (wallpaper === "off") frame = 0
     property int frame: 0
@@ -85,7 +93,7 @@ ShellRoot {
     Timer {
         interval: root.wallpaper === "calm" ? 250 : 125
         repeat: true
-        running: root.templeVisible && root.wallpaper !== "off"
+        running: root.templeVisible && root.wallpaper !== "off" && root.frames > 1
         onTriggered: root.frame = (root.frame + 1) % root.frames
     }
 
@@ -110,9 +118,11 @@ ShellRoot {
                     Image {
                         anchors.fill: parent
                         readonly property string set: parent.height >= 1300 && root.has1440 ? "1440" : "1080"
-                        source: `file://${root.art}/${set}/frame-${String(root.frame).padStart(2, "0")}.png`
+                        // a picture of yours fills the screen (cropped, smoothed); pixel-art frames stay sharp
+                        source: root.picture ? "file://" + encodeURI(root.picture)
+                                             : `file://${root.art}/${set}/frame-${String(root.frame).padStart(2, "0")}.png`
                         fillMode: Image.PreserveAspectCrop
-                        smooth: false
+                        smooth: root.picture !== ""
                         cache: true
                         asynchronous: false
                     }
@@ -220,4 +230,5 @@ ShellRoot {
     ThemePicker { theme: root }   // Super+Ctrl+Shift+Space
     // ── AI agents (olymparch-mcp): the approval card for what an agent wants to change; none while a game runs
     McpApproval { theme: root; gameActive: gameMode.active }
+    BackgroundPicker { theme: root }   // Super+Ctrl+Space
 }

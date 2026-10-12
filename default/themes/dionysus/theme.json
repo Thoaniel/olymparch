@@ -39,5 +39,10 @@
     "#cd9cd6",
     "#9fb8ca",
     "#ffffff"
+  ],
+  "backgrounds": [
+    {"id": "vineyard", "name": {"en": "Vineyard at dusk", "nb": "Vinmark i skumringen"}},
+    {"id": "grapes", "name": {"en": "Grapes and wine", "nb": "Druer og vin"}},
+    {"id": "sign", "name": {"en": "Sign in the stars", "nb": "Tegn på himmelen"}}
   ]
 }

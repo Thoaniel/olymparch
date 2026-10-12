@@ -95,5 +95,12 @@
   "mcp.arguments": "ARGUMENTER FRA AGENTEN",
   "settings.items.noclients": "Ingen agent har koblet til ennå",
   "settings.items.nogrants": "Ingen ennå: «Alltid» på et godkjenningskort legger dem til her",
-  "settings.items.nomcp": "olymparch-mcp er ikke installert"
+  "settings.items.nomcp": "olymparch-mcp er ikke installert",
+  "bg.title": "BAKGRUNNER",
+  "bg.hint": "←→ prøv · Enter behold · Esc tilbake · klikk to ganger for å beholde",
+  "bg.yours": "Dine egne: legg PNG-, JPEG- eller WebP-bilder i ~/.config/olymparch/backgrounds/%1/",
+  "bg.live": "levende",
+  "bg.still": "stille",
+  "bg.picture": "ditt bilde",
+  "bg.picture_all": "ditt bilde · alle temaer"
 }

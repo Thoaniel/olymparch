@@ -36,6 +36,8 @@ ShellRoot {
     readonly property color field: Qt.tint(bg, Qt.rgba(1, 1, 1, light ? 0 : 0.02))
     readonly property string art: /^\/[^\0]*$/.test(themeData.wallpaper || "") && (themeData.wallpaper || "").indexOf("..") < 0 ? themeData.wallpaper : "/usr/share/olymparch/wallpaper"
     readonly property bool has1440: !themeData.sets || themeData.sets.indexOf("1440") >= 0
+    // a picture of yours as the background (olymparch-theme checked it): shown on the lock screen too
+    readonly property string picture: /^\/[^\0]*$/.test(themeData.image || "") && (themeData.image || "").indexOf("..") < 0 ? themeData.image : ""
     // ── end Theme
     readonly property string mono: "JetBrains Mono"
     property string password: ""
@@ -86,9 +88,9 @@ ShellRoot {
 
             Image {
                 anchors.fill: parent
-                source: `file://${root.art}/${parent.height >= 1300 && root.has1440 ? "1440" : "1080"}/frame-00.png`
+                source: root.picture ? "file://" + encodeURI(root.picture) : `file://${root.art}/${parent.height >= 1300 && root.has1440 ? "1440" : "1080"}/frame-00.png`
                 fillMode: Image.PreserveAspectCrop
-                smooth: false
+                smooth: root.picture !== ""
             }
 
             SystemClock { id: clock; precision: SystemClock.Minutes }

@@ -24,7 +24,8 @@
 --   olymparch-settings about | files | check | pending | wired
 --   olymparch-settings add keyboard.custom_keys 'KEYS = COMMAND'   a shortcut of your own (pick … KEYS removes it)
 --   olymparch-settings report                  a prefilled GitHub issue in the browser; you send it yourself
--- Per-monitor keys take the output after @, such as display.scale@DP-1.
+-- Per-monitor keys take the output after @, such as display.scale@DP-1; per-theme ones the theme, such as
+-- appearance.background@hades.
 
 local HOME = os.getenv("HOME") or "."
 local CONFIG = os.getenv("XDG_CONFIG_HOME") or (HOME .. "/.config")
@@ -288,6 +289,19 @@ CHECKS["themes"] = function(v)
     end
     return false, "no theme called " .. v .. " (olymparch-theme list)"
 end
+-- Backgrounds (appearance.background@THEME): which background a theme uses. "temple", a scene id of the theme, or a
+--   picture: mine:FILE (~/.config/olymparch/backgrounds/THEME/), all:FILE (…/backgrounds/all/) or pack:FILE (the
+--   theme's own backgrounds/ folder). Only the form is checked here; olymparch-theme checks the file (PNG, JPEG or
+--   WebP by its first bytes, at most 20 MiB, no symlink) before the shell sees it, and falls back to the temple.
+CHECKS["backgrounds"] = function(v)
+    if #v >= 1 and #v <= 32 and v:match("^[a-z0-9-]+$") then return true end
+    local where, file = v:match("^(%l+):(.+)$")
+    if (where == "mine" or where == "all" or where == "pack") and #file <= 100 and file:match("^[%w][%w _.,()+-]*$")
+        and not file:find("%.%.") and (file:lower():match("%.png$") or file:lower():match("%.jpe?g$") or file:lower():match("%.webp$")) then
+        return true
+    end
+    return false, "expected a background id (olymparch-theme background list)"
+end
 -- ── end Themes
 
 -- ── lists (type "list") and text with rules of its own. Own shortcuts: { "SUPER + B", "firefox" }, a canonical
@@ -340,6 +354,7 @@ local SHADERS = { grayscale = SHADER_DIR .. "grayscale.frag", protanopia = SHADE
 
 local function valid(s, v, out)
     if out and not out:match("^[%w_.-]+$") then return false, "bad output name" end
+    if out and s.per == "theme" and (#out > 32 or not out:match("^[a-z0-9-]+$")) then return false, "bad theme id" end
     if s.type == "list" then return valid_list(s, v) end
     if VALIDATORS[s.key] then return type(v) == "string" and VALIDATORS[s.key](v) == true, "not a valid value" end
     local custom = CHECKS[s.key] or CHECKS[s.options_from or ""]
@@ -382,7 +397,7 @@ local function load_values()
         local base, out = k:match("^([^@]+)@?(.*)$")
         local s = byKey[base]
         local good, why = false, "unknown setting"
-        if s and (out ~= "") == (s.per == "monitor") then good, why = valid(s, x, out ~= "" and out or nil) end
+        if s and (out ~= "") == (s.per ~= nil) then good, why = valid(s, x, out ~= "" and out or nil) end
         if not good then
             io.stderr:write(("olymparch-settings: ignoring %s in %s: %s\n"):format(k, FILES.settings, why))
             v[k] = nil
@@ -414,7 +429,9 @@ local function entry(key)
     base = base or key
     local s = byKey[base] or die("unknown setting: " .. base .. " (olymparch-settings list shows them all)", 2)
     if s.per == "monitor" and not out then die(base .. " is per monitor: use " .. base .. "@OUTPUT (hyprctl monitors)", 2) end
-    if s.per ~= "monitor" and out then die(base .. " is not per monitor", 2) end
+    if s.per == "theme" and not out then die(base .. " is per theme: use " .. base .. "@THEME (olymparch-theme list)", 2) end
+    if not s.per and out then die(base .. " is not per monitor", 2) end
+    if s.per == "theme" and not out:match("^[a-z0-9-]+$") then die("a theme id is a-z, 0-9 and -", 2) end
     return s, out
 end
 
@@ -1291,7 +1308,7 @@ elseif cmd == "list" then
     for _, s in ipairs(schema.settings) do
         if not page or s.page == page then
             local shown = {}
-            if s.per == "monitor" then
+            if s.per then   -- per monitor or per theme: every one that is set
                 for k in pairs(values) do if k:match("^[^@]+") == s.key then shown[#shown + 1] = k end end
                 table.sort(shown)
                 if #shown == 0 then shown = { s.key } end

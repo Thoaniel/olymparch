@@ -39,5 +39,10 @@
     "#cfa5dc",
     "#a2c1d0",
     "#ffffff"
+  ],
+  "backgrounds": [
+    { "id": "seafoam", "name": { "en": "Shell in the sea foam", "nb": "Skjellet i havskummet" } },
+    { "id": "roses", "name": { "en": "Falling rose petals", "nb": "Roser og kronblad" } },
+    { "id": "sign", "name": { "en": "Sign in the stars", "nb": "Tegn på himmelen" } }
   ]
 }

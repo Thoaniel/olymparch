@@ -39,5 +39,10 @@
     "#b9aee7",
     "#8bcada",
     "#ffffff"
+  ],
+  "backgrounds": [
+    { "id": "sandals", "name": { "en": "Winged sandals", "nb": "Bevingede sandaler" } },
+    { "id": "caduceus", "name": { "en": "The herald's staff", "nb": "Hermesstaven" } },
+    { "id": "sign", "name": { "en": "Sign in the stars", "nb": "Tegn på himmelen" } }
   ]
 }
