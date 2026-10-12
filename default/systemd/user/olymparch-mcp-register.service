@@ -1,0 +1,14 @@
+# At login: the token for the local address, and the server and skills added to the AI agents that are installed
+# (Claude Code, Hermes Agent, OpenClaw), when Settings → AI agents → Register automatically is on. Idempotent; it
+# never overwrites an entry of yours. olymparch-mcp unregister removes what it added.
+[Unit]
+Description=Register Olymparch's MCP server with the AI agents
+
+[Service]
+Type=oneshot
+# the agents usually live in ~/.local/bin (or npm's ~/.npm-global/bin), which the user manager has no PATH for
+Environment=PATH=%h/.local/bin:%h/.npm-global/bin:/usr/local/bin:/usr/bin
+ExecStart=/usr/bin/olymparch-mcp register --auto
+
+[Install]
+WantedBy=default.target

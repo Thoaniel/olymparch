@@ -301,6 +301,26 @@ local LIST_ITEM = {
     end,
     ["notifications.apps"] = function(x) return type(x) == "string" and x ~= "" and #x <= 80 and not x:find("%c") end,
 }
+-- ── AI agents (olymparch-mcp, Settings → AI agents). A client is the name an agent gives itself, made safe by
+--    olymparch-mcp (a-z 0-9 . _ -); a grant is { "CLIENT@stdio|http", "TOOL" }; a policy is { "TOOL", ask|always|never }.
+local function ai_client(x) return type(x) == "string" and #x <= 40 and x:match("^[a-z0-9][a-z0-9._-]*$") ~= nil end
+local function ai_tool(x) return type(x) == "string" and #x <= 48 and x:match("^[a-z][a-z0-9_]*$") ~= nil end
+LIST_ITEM["ai.blocked_clients"] = ai_client
+LIST_ITEM["ai.policy"] = function(x)
+    return type(x) == "table" and #x == 2 and ai_tool(x[1]) and (x[2] == "ask" or x[2] == "always" or x[2] == "never")
+end
+LIST_ITEM["ai.grants"] = function(x)
+    if type(x) ~= "table" or #x ~= 2 or type(x[1]) ~= "string" then return false end
+    local c, t = x[1]:match("^(.+)@(%a+)$")
+    return c ~= nil and ai_client(c) and (t == "stdio" or t == "http") and ai_tool(x[2])
+end
+local function mcp_cmd()   -- olymparch-mcp next to this script (the repo, tests), else on PATH
+    local mine = script_dir() .. "/olymparch-mcp"
+    local f = io.open(mine)
+    if f then f:close(); return mine end
+    return "olymparch-mcp"
+end
+-- ── end AI agents
 local function valid_list(s, v)
     local item = LIST_ITEM[s.key]
     if type(v) ~= "table" or not item or #v > 100 then return false, "expected a list" end
@@ -1001,6 +1021,8 @@ end
 
 -- ── clipboard history (privacy.clipboard_history, privacy.clipboard_max): olymparch-tool restarts the watcher with
 --    the new limit, or stops it and wipes the history. It reads both values from settings.json itself.
+-- ── AI agents: olymparch-mcp apply turns the HTTP socket on or off and registers or unregisters, as ai.* say
+appliers["mcp"] = function() os.execute(sh_quote(mcp_cmd()) .. " apply >/dev/null 2>&1") end
 appliers["clipboard"] = function(s, values, key)
     if have("olymparch-tool") then os.execute("olymparch-tool clip-apply >/dev/null 2>&1") end
 end
@@ -1349,6 +1371,97 @@ elseif cmd == "profiles" then
 -- ── lists the window shows as rows you click: Wi-Fi networks, Bluetooth devices.
 --   items KEY [--scan]   one per line: ID <tab> STATE (on, saved, new) <tab> NAME <tab> DETAIL; or "! MESSAGE"
 --   pick KEY ID          connect / disconnect what was clicked
+-- ── AI agents: the lists on Settings → AI agents (clients, «always» grants, policy per tool)
+elseif (cmd == "items" or cmd == "pick") and (arg[2] or ""):match("^ai%.") then
+    local key = arg[2]
+    if not LIST_ITEM[key] then die(key .. " has no list", 2) end
+    local nb = (os.getenv("LANG") or ""):match("^n[bno]")
+    local function T(en, no) return nb and no or en end
+    local values = load_values()
+    local list = values[key] or {}
+    local id = arg[3]
+    if cmd == "pick" and (not id or #id > 100 or id:find("%c")) then die("usage: pick " .. key .. " ID", 2) end
+    if key == "ai.blocked_clients" then   -- the agents that connected (olymparch-mcp clients) and the blocked ones
+        local names, detail = {}, {}
+        local function add(n, d) if ai_client(n) and not detail[n] then detail[n] = d or ""; names[#names + 1] = n end end
+        for l in capture(sh_quote(mcp_cmd()) .. " clients"):gmatch("[^\n]+") do
+            local n, t, tr = l:match("^([^\t]+)\t(%d+)\t(%S*)$")
+            if n then add(n, T("last ", "sist ") .. os.date("%d.%m %H:%M", tonumber(t)) .. " · " .. tr) end
+        end
+        for _, n in ipairs(list) do add(n) end
+        local blocked = {}
+        for _, n in ipairs(list) do blocked[n] = true end
+        if cmd == "items" then
+            if #names == 0 then print("! noclients No agent has connected yet"); os.exit(0) end
+            for _, n in ipairs(names) do
+                print(table.concat({ n, blocked[n] and "off" or "on", n,
+                    (blocked[n] and T("blocked", "blokkert") or T("allowed", "tillatt")) .. (detail[n] ~= "" and (" · " .. detail[n]) or ""),
+                    blocked[n] and T("Allow ›", "Tillat ›") or T("Block ›", "Blokker ›") }, "\t"))
+            end
+            os.exit(0)
+        end
+        if not ai_client(id) then die("not a client name", 2) end
+        local new = {}
+        for _, n in ipairs(list) do if n ~= id then new[#new + 1] = n end end
+        if not blocked[id] then new[#new + 1] = id end
+        values[key] = new
+    elseif key == "ai.grants" then
+        if cmd == "items" then
+            if #list == 0 then print("! nogrants None yet: «Always» on an approval card adds one here"); os.exit(0) end
+            for _, g in ipairs(list) do
+                print(table.concat({ g[1] .. " " .. g[2], "on", g[1] .. " → " .. g[2], "", T("Take back ›", "Trekk tilbake ›") }, "\t"))
+            end
+            os.exit(0)
+        end
+        local new, found = {}, false
+        for _, g in ipairs(list) do if g[1] .. " " .. g[2] == id then found = true else new[#new + 1] = g end end
+        if not found then die("no such grant", 3) end
+        values[key] = new
+    else   -- ai.policy: every tool; reading is «always» by default, the rest «ask»; only changes are stored
+        local tools, risk = {}, {}
+        for l in capture(sh_quote(mcp_cmd()) .. " tools --tsv"):gmatch("[^\n]+") do
+            local n, r, t = l:match("^([^\t]+)\t([^\t]+)\t(.*)$")
+            if n and ai_tool(n) then tools[#tools + 1] = { n, r, t }; risk[n] = r end
+        end
+        local cur = {}
+        for _, p in ipairs(list) do cur[p[1]] = p[2] end
+        local function default(r) return r == "read" and "always" or "ask" end
+        if cmd == "items" then
+            if #tools == 0 then print("! nomcp olymparch-mcp is not installed"); os.exit(0) end
+            local WORD = { ask = T("Ask", "Spør"), always = T("Always", "Alltid"), never = T("Never", "Aldri") }
+            local RISK = { read = T("read", "lese"), change = T("change", "endring"), sensitive = T("sensitive", "sensitiv") }
+            for _, t in ipairs(tools) do
+                print(table.concat({ t[1], cur[t[1]] and "on" or "default", t[3], t[1] .. " · " .. (RISK[t[2]] or t[2]),
+                    WORD[cur[t[1]] or default(t[2])] .. " ›" }, "\t"))
+            end
+            os.exit(0)
+        end
+        if not risk[id] then die("not a tool", 2) end
+        local nxt = ({ ask = "always", always = "never", never = "ask" })[cur[id] or default(risk[id])]
+        local new = {}
+        for _, p in ipairs(list) do if p[1] ~= id then new[#new + 1] = p end end
+        if nxt ~= default(risk[id]) then new[#new + 1] = { id, nxt } end
+        values[key] = new
+    end
+    local ok, why = valid(byKey[key], values[key])
+    if not ok then die(key .. ": " .. why, 2) end
+    save_values(values)
+
+-- «Always» on an approval card (olymparch-mcp writes it, nothing else): add ai.grants 'CLIENT@TRANSPORT TOOL'
+elseif cmd == "add" and arg[2] == "ai.grants" then
+    local client, tool = (arg[3] or ""):match("^(%S+) (%S+)$")
+    local item = { client, tool }
+    if not client or not LIST_ITEM["ai.grants"](item) then die("usage: add ai.grants 'CLIENT@stdio|http TOOL'", 2) end
+    local values = load_values()
+    local list = values["ai.grants"] or {}
+    for _, g in ipairs(list) do if g[1] == client and g[2] == tool then print("already"); os.exit(0) end end
+    list[#list + 1] = item
+    while #list > 100 do table.remove(list, 1) end
+    values["ai.grants"] = list
+    save_values(values)
+    print("added " .. client .. " " .. tool)
+-- ── end AI agents
+
 elseif cmd == "items" or cmd == "pick" then
     local key = arg[2] or die("usage: " .. cmd .. " KEY …", 2)
     local function clean(t) return ((t or ""):gsub("%c", " ")) end

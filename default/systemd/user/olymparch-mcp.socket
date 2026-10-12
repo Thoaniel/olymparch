@@ -1,0 +1,12 @@
+# AI agents (olymparch-mcp): the local MCP address http://127.0.0.1:47110/mcp, ready from login. Only this PC
+# (127.0.0.1), and only with the token in $XDG_RUNTIME_DIR/olymparch-mcp/token. Settings → AI agents switches it.
+[Unit]
+Description=Olymparch MCP server for AI agents (local HTTP)
+
+[Socket]
+ListenStream=127.0.0.1:47110
+Accept=no
+FreeBind=no
+
+[Install]
+WantedBy=sockets.target

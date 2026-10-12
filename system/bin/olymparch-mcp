@@ -1,0 +1,1911 @@
+#!/usr/bin/env python3
+"""olymparch-mcp: the whole of Olymparch as an MCP server, for AI agents (Claude Code, Hermes Agent, OpenClaw, Zeus in
+Olympus) on this PC. Python 3 standard library only.
+
+  olymparch-mcp                    MCP over stdin/stdout (what the agents start; protocol 2025-06-18)
+  olymparch-mcp http [--port N]    MCP over streamable HTTP on 127.0.0.1 only, with a bearer token
+                                   (olymparch-mcp.socket starts it at login; the token is in
+                                   $XDG_RUNTIME_DIR/olymparch-mcp/token, 0600, never on a command line)
+  olymparch-mcp register [--auto]  add the server and the skills to the agents that are installed (idempotent;
+                                   --auto: only when Settings → AI agents → Register automatically is on)
+  olymparch-mcp unregister         remove exactly what register added
+  olymparch-mcp apply              Settings changed ai.*: the HTTP socket on/off, register/unregister
+  olymparch-mcp status | tools [--tsv] | audit [N] | clients
+
+Safety, in short (docs in default/skills/olymparch/SKILL.md and the comments below):
+- Every tool maps onto an Olymparch command with a fixed argv; nothing runs through a shell, and there is no tool
+  that runs a command of the agent's choosing. Every argument is checked against the tool's JSON schema first.
+- Each tool has a risk: read | change | sensitive. change and sensitive ones wait for the user to answer a card in
+  the shell (McpApproval.qml): «Tillat én gang», «Alltid for KLIENT/VERKTØY», «Avvis»; 60 s without an answer =
+  denied; while a game runs the card is never shown and the call is denied at once. The card has no keyboard focus
+  and is a layer surface: no tool here can focus, click or type into it.
+- Settings → AI agents decides: the server on/off, blocked clients, a policy per tool (ask/always/never), the
+  «always» grants (per client and tool), and shows the audit log (~/.local/state/olymparch/mcp-audit.log: client,
+  tool, a summary of the arguments without secrets, the decision and the result, never file or clipboard content).
+- The agents cannot change ai.* settings, accounts or backups through settings_set.
+"""
+import base64
+import fcntl
+import hmac
+import json
+import math
+import os
+import re
+import secrets
+import shutil
+import socket
+import stat
+import subprocess
+import sys
+import threading
+import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+VERSION = "1.0"
+PROTOCOLS = ("2025-06-18", "2025-11-25", "2025-03-26", "2024-11-05")   # the first is what we answer with otherwise
+PORT = 47110
+MAX_MESSAGE = 1 << 20          # bytes in one JSON-RPC message (stdio line or HTTP body)
+APPROVAL_SECONDS = 60
+try:   # tests make it shorter; it can never be longer
+    APPROVAL_SECONDS = max(1, min(60, int(os.environ.get("OLYMPARCH_MCP_APPROVAL_SECONDS", "60"))))
+except ValueError:
+    pass
+MAX_SESSIONS = 16              # HTTP
+SHELL_DIR = "/usr/share/olymparch/shell"
+SKILLS_SRC = "/usr/share/olymparch/skills"
+EXE = "/usr/bin/olymparch-mcp"
+
+SELF = os.path.realpath(__file__)
+HERE = os.path.dirname(SELF)
+HOME = os.path.realpath(os.path.expanduser("~"))
+STATE = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.join(HOME, ".local/state"), "olymparch")
+AUDIT = os.path.join(STATE, "mcp-audit.log")
+SEEN = os.path.join(STATE, "mcp-clients.json")
+MANIFEST = os.path.join(STATE, "mcp-registered.json")
+RUNTIME = os.environ.get("XDG_RUNTIME_DIR") or ""
+RUN = os.path.join(RUNTIME, "olymparch-mcp") if RUNTIME else ""
+TOKEN = os.path.join(RUN, "token") if RUN else ""
+ANSWERS = os.path.join(RUN, "answers") if RUN else ""
+NB = (os.environ.get("LANG") or "").startswith(("nb", "nn", "no"))
+
+
+def L(en, nb):
+    return nb if NB else en
+
+
+def log(msg):  # stderr only: stdout belongs to the protocol
+    sys.stderr.write("olymparch-mcp: " + msg + "\n")
+    sys.stderr.flush()
+
+
+# ──────────────────────────────────────────────────────────────────────────────────────────────── running commands
+def cmd(name):
+    """An Olymparch command next to this script (the repo, tests) or on PATH; a system tool on PATH."""
+    if name.startswith("olymparch"):
+        mine = os.path.join(HERE, name)
+        if os.path.isfile(mine) and os.access(mine, os.X_OK):
+            return mine
+    return shutil.which(name) or name
+
+
+def have(name):
+    return shutil.which(name) is not None or (name.startswith("olymparch") and os.path.isfile(os.path.join(HERE, name)))
+
+
+def run(argv, timeout=30, data=None, limit=262144, binary=False):
+    """argv as a list, never a shell. → (exit code, stdout, stderr); stdout capped at LIMIT bytes."""
+    try:
+        p = subprocess.run(argv, input=data, capture_output=True, timeout=timeout, cwd=HOME,
+                           stdin=None if data is not None else subprocess.DEVNULL)
+    except FileNotFoundError:
+        return 127, (b"" if binary else ""), f"{argv[0]}: not installed"
+    except subprocess.TimeoutExpired:
+        return 124, (b"" if binary else ""), f"{os.path.basename(argv[0])}: timed out after {timeout} s"
+    out = p.stdout[:limit]
+    err = p.stderr[:4096].decode("utf-8", "replace")
+    return p.returncode, (out if binary else out.decode("utf-8", "replace")), err
+
+
+def detach(argv):
+    """Start a program for the user (a terminal, an app) and don't wait for it."""
+    try:
+        subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         start_new_session=True, cwd=HOME)
+        return True
+    except OSError:
+        return False
+
+
+# ──────────────────────────────────────────────────────────────────────────────────────────────── settings
+def settings(*args, timeout=30):
+    return run([cmd("olymparch-settings"), *args], timeout=timeout)
+
+
+def setting(key, default=None):
+    rc, out, _ = settings("get", key)
+    if rc != 0:
+        return default
+    out = out.strip()
+    if out in ("true", "false"):
+        return out == "true"
+    if out.startswith("["):
+        try:
+            return json.loads(out)
+        except ValueError:
+            return default
+    return out
+
+
+def schema_path():
+    p = os.environ.get("OLYMPARCH_SETTINGS_SCHEMA") or "/usr/share/olymparch/settings/schema.json"
+    if not os.path.isfile(p):
+        p = os.path.join(HERE, "../../default/settings/schema.json")
+    return p
+
+
+def schema():
+    with open(schema_path(), encoding="utf-8") as f:
+        return json.load(f)
+
+
+# Keys an agent may never set: its own permissions, the account, backups (where data goes), the terminal command.
+DENIED_KEYS = re.compile(r"^(ai|account|backup)\.|^apps\.terminal$|^keyboard\.custom_keys$")
+
+# ──────────────────────────────────────────────────────────────────────────────────────────────── secrets & audit
+SECRET_KEY = re.compile(r"pass|token|secret|auth|cookie|api_?key|private", re.I)
+SECRET_VALUE = re.compile(r"[A-Za-z0-9+_=-]{32,}")   # token-like words: masked in the audit log only
+
+
+# Text a client controls never reaches the card, the log or Settings with anything that could change how it looks:
+# ANSI sequences, control characters (C0, C1), bidi overrides and isolates, zero-width characters and line breaks go.
+ANSI = re.compile(r"\x1b(\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(\x07|\x1b\\)?|.)?")
+INVISIBLE = re.compile("[\x00-\x1f\x7f-\x9f\u061c\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff\ufff9-\ufffb]")
+
+
+def plain(s):
+    return re.sub(r" {2,}", " ", INVISIBLE.sub(" ", ANSI.sub("", s))).strip()
+
+
+def short(v, n=60):
+    s = v if isinstance(v, str) else json.dumps(v, ensure_ascii=False)
+    s = plain(s)
+    return s if len(s) <= n else s[: n // 3] + "…" + s[-(n - n // 3 - 1):]   # the middle goes: the end (a file name) stays
+
+
+def summarize(tool, args):
+    """The arguments for the card and the log: one «field: value» line per argument (at most 6, 90 characters each),
+    plain text only, secrets as ***. Never file or clipboard content: those tools have no such arguments."""
+    t = TOOLS.get(tool)
+    if t and t.summary:
+        args = t.summary(args)
+    lines = []
+    for k, v in list((args or {}).items())[:6]:
+        k = short(str(k), 24)
+        lines.append(f"{k}: ***" if SECRET_KEY.search(k) else f"{k}: {short(v, 88 - len(k))}")
+    return "\n".join(lines)
+
+
+def private_dir(path):
+    """mkdir -p PATH with mode 0700, and refuse a symlink or a folder that is not ours."""
+    os.makedirs(path, mode=0o700, exist_ok=True)
+    st = os.lstat(path)
+    if not stat.S_ISDIR(st.st_mode) or st.st_uid != os.getuid():
+        raise OSError(f"{path} is not a private folder of yours")
+    if st.st_mode & 0o077:
+        os.chmod(path, 0o700)
+    return path
+
+
+_audit_lock = threading.Lock()
+
+
+def audit(session, tool, summary, decision, result):
+    entry = {"time": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "client": session.client_name,
+             "transport": session.transport, "tool": short(tool, 48), "args": SECRET_VALUE.sub("***", summary),
+             "decision": decision, "result": SECRET_VALUE.sub("***", short(result, 160))}
+    line = json.dumps(entry, ensure_ascii=False) + "\n"
+    with _audit_lock:
+        try:
+            private_dir(STATE)
+            fd = os.open(AUDIT, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX)
+                if os.fstat(fd).st_size > 1 << 20:   # 1 MB, then one old copy
+                    os.replace(AUDIT, AUDIT + ".1")
+                    os.close(fd)
+                    fd = os.open(AUDIT, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+                    fcntl.flock(fd, fcntl.LOCK_EX)
+                os.write(fd, line.encode())
+            finally:
+                os.close(fd)
+        except OSError as e:
+            log(f"audit log: {e}")
+
+
+def remember_client(session):
+    """~/.local/state/olymparch/mcp-clients.json: who connected, for Settings → AI agents → Clients."""
+    try:
+        private_dir(STATE)
+        try:
+            with open(SEEN, encoding="utf-8") as f:
+                seen = json.load(f)
+            if not isinstance(seen, dict):
+                seen = {}
+        except (OSError, ValueError):
+            seen = {}
+        seen[session.client_name] = {"last": int(time.time()), "transport": session.transport,
+                                     "title": short(session.client_title, 40)}
+        if len(seen) > 50:
+            for k in sorted(seen, key=lambda k: seen[k].get("last", 0))[:-50]:
+                del seen[k]
+        tmp = SEEN + f".{os.getpid()}.tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(seen, f)
+        os.replace(tmp, SEEN)
+    except OSError:
+        pass
+
+
+# ──────────────────────────────────────────────────────────────────────────────────────────────── argument checks
+CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")       # \t and \n only where a field says multiline
+CONTROL_LINE = re.compile(r"[\x00-\x1f\x7f]")
+
+
+class BadArgs(Exception):
+    pass
+
+
+def check(schema_, value, where="arguments"):
+    """A small JSON Schema subset: object (properties, required, additionalProperties false), string (minLength,
+    maxLength, pattern, enum, x-multiline), integer, number, boolean. Every tool schema uses only these."""
+    t = schema_.get("type")
+    if t == "object":
+        if not isinstance(value, dict):
+            raise BadArgs(f"{where}: expected an object")
+        props = schema_.get("properties", {})
+        for k in value:
+            if k not in props:
+                raise BadArgs(f"{where}: unknown argument «{short(k, 40)}»")
+        for k in schema_.get("required", []):
+            if k not in value:
+                raise BadArgs(f"{where}: «{k}» is required")
+        for k, v in value.items():
+            check(props[k], v, k)
+        return
+    if t == "string":
+        if not isinstance(value, str):
+            raise BadArgs(f"{where}: expected text")
+        if len(value) < schema_.get("minLength", 0) or len(value) > schema_.get("maxLength", 1000):
+            raise BadArgs(f"{where}: length must be {schema_.get('minLength', 0)}–{schema_.get('maxLength', 1000)}")
+        if (CONTROL if schema_.get("x-multiline") else CONTROL_LINE).search(value):
+            raise BadArgs(f"{where}: control characters are not allowed")
+        if "enum" in schema_ and value not in schema_["enum"]:
+            raise BadArgs(f"{where}: expected one of {', '.join(schema_['enum'])}")
+        if "pattern" in schema_ and not re.fullmatch(schema_["pattern"], value):
+            raise BadArgs(f"{where}: not a valid value")
+        return
+    if t in ("integer", "number"):
+        ok = isinstance(value, int) and not isinstance(value, bool)
+        if t == "number":
+            ok = ok or (isinstance(value, float) and math.isfinite(value))
+        if not ok:
+            raise BadArgs(f"{where}: expected {'a whole number' if t == 'integer' else 'a number'}")
+        if value < schema_.get("minimum", -math.inf) or value > schema_.get("maximum", math.inf):
+            raise BadArgs(f"{where}: must be {schema_.get('minimum')}–{schema_.get('maximum')}")
+        return
+    if t == "boolean":
+        if not isinstance(value, bool):
+            raise BadArgs(f"{where}: expected true or false")
+        return
+    raise BadArgs(f"{where}: unsupported schema")
+
+
+# ──────────────────────────────────────────────────────────────────────────────────────────────── tools
+class Tool:
+    def __init__(self, name, risk, title, fn, description, props, required, summary, hints):
+        self.name, self.risk, self.title, self.fn = name, risk, title, fn
+        self.description, self.summary, self.hints = description, summary, hints
+        self.schema = {"type": "object", "properties": props, "required": list(required), "additionalProperties": False}
+
+    def listing(self):
+        h = self.hints
+        return {
+            "name": self.name,
+            "title": self.title[0],
+            "description": f"[{self.risk}] " + self.description + (
+                "" if self.risk == "read" else " The user must approve this call on their screen (up to 60 s); a "
+                "denial is final for this request: do not retry it at once."),
+            "inputSchema": public_schema(self.schema),
+            # destructiveHint follows the risk (true = sensitive, false = change), as Olympus reads it
+            "annotations": {"title": self.title[0], "readOnlyHint": self.risk == "read",
+                            **({} if self.risk == "read" else {"destructiveHint": self.risk == "sensitive",
+                                                              "idempotentHint": h.get("idempotent", False)}),
+                            "openWorldHint": h.get("open_world", False), "risk": self.risk},
+            "risk": self.risk,
+            "_meta": {"risk": self.risk, "olymparch/risk": self.risk},
+        }
+
+
+TOOLS = {}
+
+
+def public_schema(sch):
+    """The schema as clients see it: without our own x-… keywords."""
+    if isinstance(sch, dict):
+        return {k: public_schema(v) for k, v in sch.items() if not k.startswith("x-")}
+    return sch
+
+
+# openWorldHint: true when a tool returns text someone else wrote (files, clipboard, the screen, reminder and
+# notification text, the web): clients treat that as untrusted. Local state the system keeps (settings, themes,
+# windows, packages) is false.
+def tool(name, risk, title_en, title_nb, description, props=None, required=(), summary=None, **hints):
+    assert risk in ("read", "change", "sensitive") and re.fullmatch(r"[a-z][a-z0-9_]{0,47}", name)
+
+    def deco(fn):
+        TOOLS[name] = Tool(name, risk, (title_en, title_nb), fn, description, props or {}, required, summary, hints)
+        return fn
+    return deco
+
+
+class ToolError(Exception):
+    """A tool ran but failed: returned to the agent as a result with isError."""
+
+
+def text(s):
+    return {"content": [{"type": "text", "text": s if s.strip() else L("(nothing)", "(ingenting)")}]}
+
+
+def ran(rc_out_err, ok_codes=(0,)):
+    rc, out, err = rc_out_err
+    if rc not in ok_codes:
+        raise ToolError((err.strip() or out.strip() or f"exit code {rc}")[:2000])
+    return text(out.rstrip() + (("\n" + err.strip()) if err.strip() and rc != 0 else ""))
+
+
+def S(maxlen=200, pattern=None, desc="", enum=None, minlen=0, multiline=False):
+    d = {"type": "string", "maxLength": maxlen, "minLength": minlen}
+    if pattern:
+        d["pattern"] = pattern
+    if enum:
+        d["enum"] = list(enum)
+    if desc:
+        d["description"] = desc
+    if multiline:
+        d["x-multiline"] = True
+    return d
+
+
+def I(lo, hi, desc=""):
+    return {"type": "integer", "minimum": lo, "maximum": hi, **({"description": desc} if desc else {})}
+
+
+KEY = r"[a-z][a-z0-9_]*\.[a-z0-9_.]+(@[A-Za-z0-9_.-]{1,40})?"
+ADDRESS = r"0x[0-9a-f]{1,16}"
+
+# ── system
+@tool("system_info", "read", "System information", "Systeminformasjon",
+      "Olymparch version, CPU, graphics, memory, kernel, disk and monitors (olymparch-settings about).")
+def t_system_info(a, s):
+    return ran(settings("about"))
+
+
+@tool("system_doctor", "read", "Check the system", "Sjekk systemet",
+      "Runs olymparch doctor: one ✓/✗ line per check (Hyprland, shell, sound, settings, disk space, snapshots, "
+      "network, failed services). Use it first when something is wrong.")
+def t_doctor(a, s):
+    rc, out, err = run([cmd("olymparch-doctor")], timeout=90)
+    if rc == 127:
+        raise ToolError(err)
+    return text(out)
+
+
+@tool("hardware_plan", "read", "Hardware and drivers", "Maskinvare og drivere",
+      "What olymparch-hw found (CPU, GPU, rules that match, drivers they need): olymparch-hw plan --summary.")
+def t_hw(a, s):
+    return ran(run([cmd("olymparch-hw"), "plan", "--summary"], timeout=60))
+
+
+# ── settings
+@tool("settings_list", "read", "List settings", "Vis innstillinger",
+      "Every setting: key, value, page, label. Optionally only one page (display, audio, appearance, keyboard, "
+      "notifications, …). Read the resource olymparch://settings/schema for types, options and limits.",
+      {"page": S(32, r"[a-z_]{1,32}", "a page id, such as appearance")})
+def t_settings_list(a, s):
+    if a.get("page") == "ai":
+        raise ToolError(L("Settings → AI agents is for the user only", "Innstillinger → AI-agenter er bare for brukeren"))
+    r = ran(settings("list", *([a["page"]] if a.get("page") else [])))
+    r["content"][0]["text"] = "\n".join(l for l in r["content"][0]["text"].splitlines() if not l.startswith("ai."))
+    return r
+
+
+@tool("settings_get", "read", "Read a setting", "Les en innstilling",
+      "The value of one setting (yours, or the default). Per-monitor keys take @OUTPUT, like display.scale@DP-1.",
+      {"key": S(80, KEY)}, ("key",))
+def t_settings_get(a, s):
+    if a["key"].startswith("ai."):   # grants, blocks and policy: an agent must not learn whom it could pose as
+        raise ToolError(L("Settings → AI agents is for the user only", "Innstillinger → AI-agenter er bare for brukeren"))
+    return ran(settings("get", a["key"]))
+
+
+def _settable(key):
+    if DENIED_KEYS.search(key):
+        raise ToolError(L(f"{key} can only be changed by the user in Settings", f"{key} kan bare endres av brukeren i Innstillinger"))
+
+
+@tool("settings_set", "change", "Change a setting", "Endre en innstilling",
+      "Store and apply one setting through olymparch-settings (validated against the schema; a bad value is "
+      "refused). Values are text: on/off for switches, numbers as digits. Not allowed: ai.*, account.*, backup.*, "
+      "apps.terminal and your own shortcuts.",
+      {"key": S(80, KEY), "value": S(200, desc="the new value as text")}, ("key", "value"),
+      summary=lambda a: {"key": a.get("key", ""), "value": "***" if SECRET_KEY.search(a.get("key", "")) else a.get("value", "")},
+      idempotent=True)
+def t_settings_set(a, s):
+    _settable(a["key"])
+    rc, out, err = settings("set", a["key"], a["value"], timeout=120)
+    if rc != 0:
+        raise ToolError(err.strip().replace("olymparch-settings: ", "") or f"exit code {rc}")
+    return text(out.strip() or L(f"{a['key']} is now {a['value']}", f"{a['key']} er nå {a['value']}"))
+
+
+@tool("settings_reset", "change", "Reset a setting", "Tilbakestill en innstilling",
+      "Put one setting back to its default.", {"key": S(80, KEY)}, ("key",), idempotent=True)
+def t_settings_reset(a, s):
+    _settable(a["key"])
+    return ran(settings("reset", a["key"], timeout=120))
+
+
+# ── look: themes and backgrounds
+@tool("themes_list", "read", "List themes", "Vis temaer",
+      "The themes (built-in and installed) as JSON, and which one is in use (olymparch-theme list --json).")
+def t_themes(a, s):
+    if not have("olymparch-theme"):
+        raise ToolError(L("themes need olymparch-theme (update Olymparch)", "temaer trenger olymparch-theme (oppdater Olymparch)"))
+    return ran(run([cmd("olymparch-theme"), "list", "--json"]))
+
+
+@tool("theme_set", "change", "Change theme", "Bytt tema", "Use a theme by its id (from themes_list).",
+      {"id": S(40, r"[a-z0-9][a-z0-9_-]{0,39}")}, ("id",), idempotent=True)
+def t_theme_set(a, s):
+    if not have("olymparch-theme"):
+        raise ToolError(L("themes need olymparch-theme (update Olymparch)", "temaer trenger olymparch-theme (oppdater Olymparch)"))
+    return ran(run([cmd("olymparch-theme"), "set", a["id"]], timeout=60))
+
+
+def _wallpaper_entry():
+    for e in schema().get("settings", []):
+        if e.get("key") == "appearance.wallpaper":
+            return e
+    raise ToolError("appearance.wallpaper is missing from the schema")
+
+
+@tool("backgrounds_list", "read", "List backgrounds", "Vis bakgrunner",
+      "The live wallpaper choices (appearance.wallpaper) and the one in use.")
+def t_backgrounds(a, s):
+    e = _wallpaper_entry()
+    cur = setting("appearance.wallpaper", e.get("default"))
+    lines = [f"{'*' if o['value'] == cur else ' '} {o['value']}\t{o['label'].get('nb' if NB else 'en', o['value'])}"
+             for o in e.get("options", [])]
+    return text("\n".join(lines))
+
+
+@tool("background_set", "change", "Change background", "Bytt bakgrunn",
+      "Use one of the wallpaper choices from backgrounds_list.", {"value": S(40, r"[a-z0-9_-]{1,40}")}, ("value",),
+      idempotent=True)
+def t_background_set(a, s):
+    if a["value"] not in [o["value"] for o in _wallpaper_entry().get("options", [])]:
+        raise ToolError(L("not one of the backgrounds (backgrounds_list)", "ikke en av bakgrunnene (backgrounds_list)"))
+    return ran(settings("set", "appearance.wallpaper", a["value"]))
+
+
+# ── windows and workspaces (Hyprland). Only real windows (hyprctl clients): the shell's layers (bar, notifications,
+#    the approval card) are not windows and can never be focused, moved or closed from here.
+def hypr_json(what):
+    rc, out, err = run(["hyprctl", "-j", what])
+    if rc != 0:
+        raise ToolError(err.strip() or "Hyprland is not running")
+    try:
+        return json.loads(out)
+    except ValueError:
+        raise ToolError("hyprctl gave no JSON") from None
+
+
+def hypr_dispatch(lua):
+    rc, out, err = run(["hyprctl", "dispatch", lua])
+    if rc != 0 or out.strip().lower().startswith(("error", "invalid", "unknown")):
+        raise ToolError((err.strip() or out.strip() or "dispatch failed")[:400])
+
+
+def _window(address):
+    for c in hypr_json("clients"):
+        if isinstance(c, dict) and c.get("address") == address and c.get("mapped", True):
+            return c
+    raise ToolError(L(f"no window {address} (windows_list)", f"ingen vindu {address} (windows_list)"))
+
+
+@tool("windows_list", "read", "List windows", "Vis vinduer",
+      "Open windows: address, app class, title, workspace, monitor, floating, fullscreen, focused.")
+def t_windows(a, s):
+    out = []
+    for c in hypr_json("clients"):
+        if not isinstance(c, dict) or not c.get("mapped", True):
+            continue
+        out.append({"address": c.get("address"), "class": c.get("class"), "title": short(c.get("title") or "", 120),
+                    "workspace": (c.get("workspace") or {}).get("id"), "monitor": c.get("monitor"),
+                    "floating": c.get("floating"), "fullscreen": bool(c.get("fullscreen")),
+                    "focused": c.get("focusHistoryID") == 0})
+    return {"content": [{"type": "text", "text": json.dumps(out, ensure_ascii=False, indent=1)}],
+            "structuredContent": {"windows": out}}
+
+
+@tool("workspaces_list", "read", "List workspaces", "Vis arbeidsflater",
+      "Workspaces with their monitor and number of windows, and the active one.")
+def t_workspaces(a, s):
+    ws = [{"id": w.get("id"), "name": w.get("name"), "monitor": w.get("monitor"), "windows": w.get("windows")}
+          for w in hypr_json("workspaces") if isinstance(w, dict)]
+    active = hypr_json("activeworkspace").get("id")
+    res = {"workspaces": ws, "active": active}
+    return {"content": [{"type": "text", "text": json.dumps(res, ensure_ascii=False)}], "structuredContent": res}
+
+
+@tool("window_focus", "change", "Focus a window", "Gi et vindu fokus", "Focus a window by its address (windows_list).",
+      {"address": S(18, ADDRESS)}, ("address",), idempotent=True)
+def t_window_focus(a, s):
+    c = _window(a["address"])
+    hypr_dispatch(f'hl.dsp.focus({{ window = "address:{a["address"]}" }})')
+    return text(L(f"focused {c.get('class')}", f"fokus på {c.get('class')}"))
+
+
+@tool("window_move", "change", "Move a window", "Flytt et vindu", "Move a window to workspace 1–10.",
+      {"address": S(18, ADDRESS), "workspace": I(1, 10)}, ("address", "workspace"), idempotent=True)
+def t_window_move(a, s):
+    c = _window(a["address"])
+    hypr_dispatch(f'hl.dsp.window.move({{ workspace = {int(a["workspace"])}, window = "address:{a["address"]}" }})')
+    return text(L(f"moved {c.get('class')} to workspace {a['workspace']}", f"flyttet {c.get('class')} til arbeidsflate {a['workspace']}"))
+
+
+@tool("window_close", "change", "Close a window", "Lukk et vindu",
+      "Ask a window to close (like Super+Q; the app may ask to save first).", {"address": S(18, ADDRESS)}, ("address",),
+      destructive=True)
+def t_window_close(a, s):
+    c = _window(a["address"])
+    hypr_dispatch(f'hl.dsp.window.close({{ window = "address:{a["address"]}" }})')
+    return text(L(f"asked {c.get('class')} to close", f"ba {c.get('class')} om å lukke"))
+
+
+@tool("workspace_focus", "change", "Switch workspace", "Bytt arbeidsflate", "Show workspace 1–10.",
+      {"workspace": I(1, 10)}, ("workspace",), idempotent=True)
+def t_workspace_focus(a, s):
+    hypr_dispatch(f"hl.dsp.focus({{ workspace = {int(a['workspace'])} }})")
+    return text(L(f"workspace {a['workspace']}", f"arbeidsflate {a['workspace']}"))
+
+
+# ── apps: the same .desktop entries the menu shows
+def desktop_entries():
+    dirs = [os.path.join(os.environ.get("XDG_DATA_HOME") or os.path.join(HOME, ".local/share"), "applications")]
+    for d in (os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share").split(":"):
+        if d:
+            dirs.append(os.path.join(d, "applications"))
+    dirs += ["/var/lib/flatpak/exports/share/applications", os.path.join(HOME, ".local/share/flatpak/exports/share/applications")]
+    found = {}
+    for d in dirs:
+        if not os.path.isdir(d):
+            continue
+        for root, _, files in os.walk(d):
+            for f in files:
+                if not f.endswith(".desktop"):
+                    continue
+                rel = os.path.relpath(os.path.join(root, f), d).replace("/", "-")
+                if rel in found:
+                    continue   # the first directory wins, like the menu
+                found[rel] = os.path.join(root, f)
+    apps = {}
+    for app_id, path in found.items():
+        try:
+            with open(path, encoding="utf-8", errors="replace") as fh:
+                head = fh.read(65536)
+        except OSError:
+            continue
+        fields, section = {}, None
+        for line in head.splitlines():
+            if line.startswith("["):
+                section = line.strip()
+                continue
+            if section == "[Desktop Entry]" and "=" in line:
+                k, v = line.split("=", 1)
+                fields.setdefault(k.strip(), v.strip())
+        if fields.get("Type") != "Application" or fields.get("NoDisplay") == "true" or fields.get("Hidden") == "true":
+            continue
+        name = fields.get("Name[nb]" if NB else "Name") or fields.get("Name") or app_id
+        apps[app_id] = {"id": app_id, "name": short(name, 60), "comment": short(fields.get("Comment", ""), 100), "path": path}
+    return apps
+
+
+@tool("apps_list", "read", "List apps", "Vis apper", "Apps in the menu: id (the .desktop file), name, comment.",
+      {"query": S(60, desc="only apps whose name or id contains this")})
+def t_apps(a, s):
+    q = (a.get("query") or "").lower()
+    apps = sorted((x for x in desktop_entries().values() if q in x["name"].lower() or q in x["id"].lower()),
+                  key=lambda x: x["name"].lower())[:300]
+    return text("\n".join(f"{x['id']}\t{x['name']}\t{x['comment']}" for x in apps))
+
+
+@tool("app_launch", "change", "Start an app", "Start en app", "Start an app from the menu by its id (apps_list).",
+      {"id": S(120, r"[A-Za-z0-9._+-]{1,112}\.desktop")}, ("id",), open_world=True)
+def t_app_launch(a, s):
+    app = desktop_entries().get(a["id"])
+    if not app:
+        raise ToolError(L("no such app (apps_list)", "fant ikke appen (apps_list)"))
+    if have("gio") and detach(["gio", "launch", app["path"]]):
+        return text(L(f"started {app['name']}", f"startet {app['name']}"))
+    if have("gtk-launch") and detach(["gtk-launch", a["id"]]):
+        return text(L(f"started {app['name']}", f"startet {app['name']}"))
+    raise ToolError("neither gio nor gtk-launch is installed")
+
+
+# ── notifications, media, volume
+@tool("notification_send", "change", "Show a notification", "Vis et varsel",
+      "A notification from you to the user (no buttons). The sender is shown as «AI · <your name>».",
+      {"summary": S(120, minlen=1), "body": S(500, multiline=True)}, ("summary",),
+)
+def t_notify(a, s):
+    # never --action, never critical, the sender is the agent's name: a notification can't pass for the approval card
+    body = "\n".join(plain(l) for l in a.get("body", "").split("\n"))[:500]
+    return ran(run(["notify-send", "-a", f"AI · {s.client_name}", "-u", "normal", "--", plain(a["summary"]) or "…", body]))
+
+
+@tool("media_control", "change", "Control media", "Styr avspilling", "Play/pause, next, previous or stop the player the bar shows.",
+      {"action": S(12, enum=("play-pause", "next", "previous", "stop"))}, ("action",))
+def t_media(a, s):
+    return ran(run([cmd("olymparch-media"), a["action"]]))
+
+
+@tool("volume_get", "read", "Read the volume", "Les volumet", "The default output's volume and mute state (wpctl).")
+def t_volume_get(a, s):
+    return ran(run(["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"]))
+
+
+@tool("volume_set", "change", "Change the volume", "Endre volumet",
+      "Set the default output's volume in percent (0–150) and/or mute it.",
+      {"percent": I(0, 150), "muted": {"type": "boolean"}}, idempotent=True)
+def t_volume_set(a, s):
+    if "percent" not in a and "muted" not in a:
+        raise ToolError("give percent and/or muted")
+    if "percent" in a:
+        ran(run(["wpctl", "set-volume", "-l", "1.5", "@DEFAULT_AUDIO_SINK@", f"{int(a['percent'])}%"]))
+    if "muted" in a:
+        ran(run(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "1" if a["muted"] else "0"]))
+    return ran(run(["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"]))
+
+
+# ── screen: screenshot, OCR, colour (olymparch-tool's programs)
+def _grab(scale):
+    time.sleep(0.6)   # the approval card is gone from the screen first
+    rc, png, err = run(["grim", "-s", str(scale), "-t", "png", "-"], timeout=20, limit=16 << 20, binary=True)
+    if rc != 0 or not png.startswith(b"\x89PNG"):
+        raise ToolError(err.strip() or "grim failed")
+    return png
+
+
+@tool("screenshot", "sensitive", "Take a screenshot", "Ta et skjermbilde",
+      "A picture of the whole screen (half size, PNG). Everything visible is included: the user approves each one.",
+      {"scale": {"type": "number", "minimum": 0.25, "maximum": 1, "description": "default 0.5"}}, open_world=True)
+def t_screenshot(a, s):
+    png = _grab(a.get("scale", 0.5))
+    if len(png) > 8 << 20:
+        raise ToolError("the screenshot is larger than 8 MB; use a smaller scale")
+    return {"content": [{"type": "image", "data": base64.b64encode(png).decode(), "mimeType": "image/png"}]}
+
+
+@tool("ocr_screen", "sensitive", "Read text on the screen", "Les tekst på skjermen",
+      "The text on the whole screen (tesseract, English + Norwegian).", open_world=True)
+def t_ocr(a, s):
+    png = _grab(1)
+    rc, out, err = run(["tesseract", "stdin", "stdout", "-l", "eng+nor"], data=png, timeout=90, limit=65536)
+    if rc != 0:
+        raise ToolError(err.strip() or "tesseract failed")
+    return text(out.strip())
+
+
+@tool("colour_pick", "change", "Pick a colour", "Velg en farge",
+      "The user clicks a point on the screen (hyprpicker); returns #rrggbb. Waits up to 60 s.")
+def t_colour(a, s):
+    rc, out, err = run(["hyprpicker", "-f", "hex"], timeout=60)
+    m = re.search(r"#?([0-9a-fA-F]{6})\s*$", out)
+    if rc != 0 or not m:
+        raise ToolError(err.strip() or L("no colour picked", "ingen farge valgt"))
+    return text("#" + m.group(1).lower())
+
+
+@tool("clipboard_read", "sensitive", "Read the clipboard", "Les utklippstavlen",
+      "The text on the clipboard now (at most 64 KB). Never what a password manager marked as secret.", open_world=True)
+def t_clipboard(a, s):
+    rc, types, err = run(["wl-paste", "--list-types"])
+    if rc != 0:
+        raise ToolError(L("the clipboard is empty", "utklippstavlen er tom"))
+    types = types.split()
+    if "x-kde-passwordManagerHint" in types:
+        raise ToolError(L("the clipboard holds a password; not shown", "utklippstavlen har et passord; vises ikke"))
+    for t in ("text/plain;charset=utf-8", "UTF8_STRING", "text/plain"):
+        if t in types:
+            rc, out, err = run(["wl-paste", "--no-newline", "--type", t], limit=65536)
+            if rc == 0:
+                return text(out)
+    raise ToolError(L("the clipboard holds no text", "utklippstavlen har ingen tekst"))
+
+
+# ── web apps
+WEBAPP_NAME = r"[A-Za-z0-9 ._-]{1,40}"
+
+
+def _host(url):
+    m = re.match(r"https://([^/:]+)", url)
+    return m.group(1) if m else "?"
+
+
+@tool("webapps_list", "read", "List web apps", "Vis webapper", "ID, name and address of every web app (olymparch-webapp list).")
+def t_webapps(a, s):
+    return ran(run([cmd("olymparch-webapp"), "list"]))
+
+
+@tool("webapp_add", "change", "Add a web app", "Legg til en webapp",
+      "A site in its own window, in the menu (olymparch-webapp add). Fetches the site's icon over https. "
+      "Never replaces an existing web app.",
+      {"name": S(40, WEBAPP_NAME), "url": S(160, r"https://[A-Za-z0-9.-]{1,80}(:[0-9]{1,5})?(/[^\s\"'\\<>`]*)?")},
+      ("name", "url"), summary=lambda a: {"name": a.get("name", ""), "host": _host(a.get("url", "")), "url": a.get("url", "")},
+      open_world=True)
+def t_webapp_add(a, s):
+    rc, out, _ = run([cmd("olymparch-webapp"), "list"])
+    want = a["name"].strip().lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", want).strip("-")
+    for line in out.splitlines():   # never replace an app of the user's (its menu entry would open the new address)
+        f = line.split("\t")
+        if len(f) >= 2 and (f[0].lower() == slug or f[1].strip().lower() == want):
+            raise ToolError(L(f"a web app called {f[1]} exists; the user can remove it first",
+                              f"en webapp som heter {f[1]} finnes; brukeren kan fjerne den først"))
+    return ran(run([cmd("olymparch-webapp"), "add", a["name"], a["url"]], timeout=120))
+
+
+@tool("webapp_remove", "change", "Remove a web app", "Fjern en webapp",
+      "Remove a web app, its icon and its login (olymparch-webapp remove).", {"id": S(40, WEBAPP_NAME)}, ("id",), destructive=True)
+def t_webapp_remove(a, s):
+    return ran(run([cmd("olymparch-webapp"), "remove", a["id"]], timeout=60))
+
+
+# ── packages: search; install = the one-click catalog helper; removal and updates in a terminal the user sees
+PKG = r"[a-z0-9][a-z0-9@._+-]{0,63}"
+
+
+def catalog():
+    for p in ("/usr/share/olymparch/menu/catalog.json", os.path.join(HERE, "../../default/menu/catalog.json")):
+        if os.path.isfile(p):
+            with open(p, encoding="utf-8") as f:
+                return json.load(f).get("apps", [])
+    return []
+
+
+@tool("packages_search", "read", "Search packages", "Søk etter pakker", "Search the Arch repositories (pacman -Ss).",
+      {"query": S(64, PKG)}, ("query",))
+def t_pkg_search(a, s):
+    rc, out, err = run(["pacman", "-Ss", "--", a["query"]], timeout=60, limit=65536)
+    if rc not in (0, 1):
+        raise ToolError(err.strip())
+    return text("\n".join(out.splitlines()[:300]) or L("nothing found", "fant ingenting"))
+
+
+@tool("packages_catalog", "read", "Optional apps", "Valgfrie apper",
+      "The apps Olymparch offers with one click (the menu's catalog): app id, name, installed or not.")
+def t_pkg_catalog(a, s):
+    lines = []
+    for x in catalog():
+        nf = (x.get("needs_file") or "").replace("~", HOME, 1)
+        installed = (x.get("needs") and have(x["needs"])) or (nf and os.path.exists(nf))
+        lines.append(f"{x.get('install') or '-'}\t{(x.get('name') or {}).get('nb' if NB else 'en', x.get('id'))}\t"
+                     f"{'installed' if installed else 'not installed'}")
+    return text("\n".join(lines))
+
+
+@tool("package_install", "sensitive", "Install an app", "Installer en app",
+      "Install one app from packages_catalog by its app id (the same as the menu's Install button: "
+      "pkexec /usr/lib/olymparch/install-app ID, official repositories only). Never a package name.",
+      {"app": S(40, r"[a-z0-9-]{1,40}")}, ("app",), open_world=True, idempotent=True)
+def t_pkg_install(a, s):
+    if a["app"] not in {x.get("install") for x in catalog() if x.get("install")}:
+        raise ToolError(L("not an app id from packages_catalog", "ikke en app-id fra packages_catalog"))
+    return ran(run(["pkexec", "/usr/lib/olymparch/install-app", a["app"]], timeout=1800))
+
+
+def terminal(argv):
+    if not detach(["foot", "-e", *argv]):
+        raise ToolError("could not open a terminal (foot)")
+
+
+@tool("package_remove", "change", "Remove a package", "Fjern en pakke",
+      "Opens a terminal with «sudo pacman -Rs PACKAGE»: the user reads it, types the password and answers there.",
+      {"package": S(64, PKG)}, ("package",), destructive=True)
+def t_pkg_remove(a, s):
+    terminal(["sudo", "pacman", "-Rs", "--", a["package"]])
+    return text(L("a terminal is open for the user; it asks before anything is removed",
+                  "en terminal er åpnet for brukeren; den spør før noe fjernes"))
+
+
+@tool("updates_check", "read", "Check for updates", "Se etter oppdateringer",
+      "Which packages can be updated (checkupdates with its own database copy: nothing on the system changes).")
+def t_updates(a, s):
+    if not have("checkupdates"):
+        raise ToolError("checkupdates (pacman-contrib) is missing")
+    db = os.path.join(os.environ.get("XDG_CACHE_HOME") or os.path.join(HOME, ".cache"), "olymparch/checkup-db")
+    os.makedirs(db, exist_ok=True)
+    env_rc = subprocess.run(["checkupdates"], capture_output=True, timeout=180, cwd=HOME, stdin=subprocess.DEVNULL,
+                            env={**os.environ, "CHECKUPDATES_DB": db})
+    if env_rc.returncode == 2:
+        return text(L("no updates", "ingen oppdateringer"))
+    if env_rc.returncode != 0:
+        raise ToolError(env_rc.stderr.decode("utf-8", "replace")[:400] or "checkupdates failed")
+    return text(env_rc.stdout.decode("utf-8", "replace")[:65536])
+
+
+@tool("update_open", "change", "Update the system", "Oppdater systemet",
+      "Opens a terminal with «olymparch update» for the user: snapshot first, it asks before installing.")
+def t_update_open(a, s):
+    terminal([cmd("olymparch"), "update"])
+    return text(L("a terminal with olymparch update is open for the user", "en terminal med olymparch update er åpnet for brukeren"))
+
+
+# ── snapshots
+@tool("snapshots_list", "read", "List snapshots", "Vis øyeblikksbilder", "snapper's snapshots and how much space they may use.")
+def t_snapshots(a, s):
+    return ran(settings("view", "snapshots", timeout=60))
+
+
+@tool("rollback_open", "change", "Roll back", "Rull tilbake",
+      "Opens a terminal where the user picks a snapshot to make the system (olymparch-rollback). Never automatic.")
+def t_rollback(a, s):
+    terminal([cmd("olymparch-rollback")])
+    return text(L("a terminal is open for the user to pick a snapshot", "en terminal er åpnet der brukeren velger et øyeblikksbilde"))
+
+
+# ── games
+@tool("games_list", "read", "List games", "Vis spill", "Programs counted as games (spillmodus) and the known emulators.")
+def t_games(a, s):
+    return ran(run([cmd("olymparch-game"), "list"]))
+
+
+@tool("game_add", "change", "Add a game", "Legg til et spill", "Count a program (process or file name) as a game.",
+      {"name": S(64, r"[^/#\x00-\x1f\x7f-][^/\x00-\x1f\x7f]{0,63}")}, ("name",), idempotent=True)
+def t_game_add(a, s):
+    return ran(run([cmd("olymparch-game"), "add", a["name"]]))
+
+
+# ── reminders
+@tool("reminders_list", "read", "List reminders", "Vis påminnelser", "Reminders waiting: id, when, text.",
+      open_world=True)
+def t_reminders(a, s):
+    return ran(run([cmd("olymparch-remind"), "list"]))
+
+
+@tool("reminder_add", "change", "Add a reminder", "Lag en påminnelse",
+      "A notification later: when = 10m, 1h30m, 45s, 2d or a time like 14:30 (tomorrow if it has passed).",
+      {"when": S(16, r"([0-9]{1,2}:[0-9]{2}|([0-9]{1,4}[smhd]?){1,4})"), "text": S(200, minlen=1)}, ("when", "text"))
+def t_reminder_add(a, s):
+    return ran(run([cmd("olymparch-remind"), a["when"], f"{plain(a['text'])} (AI · {s.client_name})"]))
+
+
+@tool("reminder_cancel", "change", "Cancel a reminder", "Avlys en påminnelse", "Cancel one by its id (reminders_list).",
+      {"id": S(40, r"olymparch-remind-[0-9]{1,20}")}, ("id",), destructive=True)
+def t_reminder_cancel(a, s):
+    return ran(run([cmd("olymparch-remind"), "cancel", a["id"]]))
+
+
+# ── files: read and list only, inside the home folder, never hidden files or folders (.ssh, .gnupg, .config …),
+#    never key or password stores, never through a symlink that leads out. TOCTOU: the file is opened without
+#    following a symlink and must be the same inode that was checked.
+SECRET_FILES = re.compile(r"(^id_[a-z0-9]+(\.pub)?$|\.(kdbx|kdb|pem|key|p12|pfx|gpg|age|asc|keystore|jks|ovpn)$|"
+                          r"^(credentials|secrets?|passwords?)(\.[a-z]+)?$)", re.I)
+
+
+def home_path(p):
+    if "\x00" in p or len(p) > 4096:
+        raise ToolError("bad path")
+    if p == "~" or p == "":
+        p = HOME
+    elif p.startswith("~/"):
+        p = os.path.join(HOME, p[2:])
+    elif not p.startswith("/"):
+        p = os.path.join(HOME, p)
+    real = os.path.realpath(p)
+    for candidate in (os.path.normpath(p), real):
+        rel = os.path.relpath(candidate, HOME)
+        if rel == ".":
+            continue
+        if rel.startswith("..") or os.path.isabs(rel):
+            raise ToolError(L("only files in your home folder", "bare filer i hjemmemappen"))
+        for part in rel.split(os.sep):
+            if part.startswith("."):
+                raise ToolError(L("hidden files and folders are off limits", "skjulte filer og mapper er ikke tillatt"))
+        if SECRET_FILES.search(os.path.basename(candidate)):
+            raise ToolError(L("key and password files are off limits", "nøkkel- og passordfiler er ikke tillatt"))
+    return real
+
+
+def _shown_path(p):   # what the card shows: the path that would really be read, never the raw text
+    try:
+        return _display(home_path(p))
+    except ToolError:
+        return "(refused)"
+
+
+def _display(path):
+    return "~" + path[len(HOME):] if path.startswith(HOME) else path
+
+
+@tool("files_list", "read", "List a folder", "Vis en mappe",
+      "Files and folders in a folder in the home folder (not hidden ones): name, kind, size. ~ is the home folder.",
+      {"path": S(1024, desc="like ~/Documents")}, summary=lambda a: {"folder": _shown_path(a.get("path") or "~")},
+      open_world=True)
+def t_files_list(a, s):
+    p = home_path(a.get("path") or "~")
+    if not os.path.isdir(p):
+        raise ToolError(L("not a folder", "ikke en mappe"))
+    rows = []
+    try:
+        with os.scandir(p) as it:
+            for e in it:
+                if e.name.startswith(".") or SECRET_FILES.search(e.name):
+                    continue
+                try:
+                    st = e.stat(follow_symlinks=False)
+                except OSError:
+                    continue
+                kind = "link" if stat.S_ISLNK(st.st_mode) else "dir" if stat.S_ISDIR(st.st_mode) else "file"
+                rows.append((e.name, kind, st.st_size))
+                if len(rows) >= 500:
+                    break
+    except PermissionError:
+        raise ToolError(L("no access", "ingen tilgang")) from None
+    rows.sort(key=lambda r: (r[1] != "dir", r[0].lower()))
+    return text(f"{_display(p)}:\n" + "\n".join(f"{k}\t{n}\t{sz}" for n, k, sz in rows))
+
+
+@tool("files_read", "sensitive", "Read a file", "Les en fil",
+      "A text file in the home folder (not hidden ones, not key or password files), at most 256 KB per call; "
+      "offset and max_bytes page through bigger files.",
+      {"path": S(1024, minlen=1), "offset": I(0, 1 << 40), "max_bytes": I(1, 262144, "default 65536")}, ("path",),
+      summary=lambda a: {"file": _shown_path(a.get("path", ""))}, open_world=True)
+def t_files_read(a, s):
+    p = home_path(a["path"])
+    try:
+        before = os.stat(p)
+        fd = os.open(p, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except OSError as e:
+        raise ToolError(e.strerror or "cannot open") from None
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode) or (st.st_dev, st.st_ino) != (before.st_dev, before.st_ino):
+            raise ToolError(L("not a regular file", "ikke en vanlig fil"))
+        os.lseek(fd, a.get("offset", 0), os.SEEK_SET)
+        data = os.read(fd, a.get("max_bytes", 65536))
+    finally:
+        os.close(fd)
+    if b"\x00" in data:
+        raise ToolError(L("a binary file; only text can be read", "en binærfil; bare tekst kan leses"))
+    more = a.get("offset", 0) + len(data) < st.st_size
+    return text(data.decode("utf-8", "replace") + (f"\n[… {st.st_size} bytes in all; continue with offset "
+                                                   f"{a.get('offset', 0) + len(data)}]" if more else ""))
+
+
+# ──────────────────────────────────────────────────────────────────────────────────────────────── resources
+def resources():
+    return [
+        {"uri": "olymparch://settings/schema", "name": "settings-schema", "title": "Olymparch settings schema",
+         "description": "Every setting: key, page, type, options, limits, labels (en/nb).", "mimeType": "application/json"},
+        {"uri": "olymparch://system/summary", "name": "system-summary", "title": "System summary",
+         "description": "Version, CPU, GPU, memory, kernel, disk, monitors.", "mimeType": "text/plain"},
+    ]
+
+
+def read_resource(uri):
+    if uri == "olymparch://settings/schema":
+        with open(schema_path(), encoding="utf-8") as f:
+            return {"uri": uri, "mimeType": "application/json", "text": f.read()}
+    if uri == "olymparch://system/summary":
+        rc, out, err = settings("about")
+        return {"uri": uri, "mimeType": "text/plain", "text": out if rc == 0 else err}
+    return None
+
+
+# ──────────────────────────────────────────────────────────────────────────────────────────────── approval
+CLIENT_NAME = re.compile(r"[^a-z0-9._-]+")
+
+
+def client_key(name):
+    n = CLIENT_NAME.sub("-", (name or "").lower()).strip("-.")[:40]
+    return n if n and n[0].isalnum() else "unknown"
+
+
+def policy(session, t):
+    """→ (decision, why) for a call: allow | ask | deny."""
+    bad = object()   # the settings can't be read: no (fail closed)
+    enabled, blocked, pols, grants = (setting(k, bad) for k in ("ai.enabled", "ai.blocked_clients", "ai.policy", "ai.grants"))
+    if any(x is bad for x in (enabled, blocked, pols, grants)) or not all(isinstance(x, list) for x in (blocked, pols, grants)):
+        return "deny", "settings unreadable"
+    if enabled is not True:
+        return "deny", "off"
+    if session.client_name in blocked:
+        return "deny", "blocked"
+    pol = {p[0]: p[1] for p in pols if isinstance(p, list) and len(p) == 2}.get(t.name)
+    pol = pol or ("always" if t.risk == "read" else "ask")
+    if pol == "never":
+        return "deny", "policy never"
+    if pol == "always":
+        return "allow", "policy always" if t.risk != "read" else "read"
+    if [session.client_id, t.name] in grants:
+        return "allow", "always grant"
+    return "ask", ""
+
+
+def qs():
+    return os.environ.get("OLYMPARCH_MCP_QS") or shutil.which("qs") or "/usr/bin/qs"   # OLYMPARCH_MCP_QS: tests only
+
+
+_card_lock = threading.Lock()
+
+
+def ask_user(session, t, summary, req=None):
+    """The card in the shell; → (decision, why). The answer comes back as a file the shell writes in our private
+    runtime folder, named by a random id; nothing the agent can reach writes there."""
+    if not RUN:
+        return "deny", "no XDG_RUNTIME_DIR"
+    if not _card_lock.acquire(timeout=APPROVAL_SECONDS):   # one card per server at a time
+        return "deny", "busy"
+    rid = secrets.token_hex(16)
+    client_id = session.client_id   # fixed now: the grant goes to the client the card named
+    try:
+        private_dir(RUN)
+        private_dir(ANSWERS)
+        answer = os.path.join(ANSWERS, rid)
+        session.pending.add(rid)
+        rc, out, err = run([qs(), "ipc", "-p", SHELL_DIR, "call", "mcp", "ask", rid, session.client_name,
+                            session.transport, t.name, t.title[0] + "\x1f" + t.title[1], t.risk, summary[:600]], timeout=10)
+        state = out.strip()
+        if rc != 0 or state not in ("shown", "game", "off"):
+            return "deny", "no approval card (is the desktop running?)"
+        if state == "game":
+            return "deny", "game mode"
+        if state == "off":
+            return "deny", "off"
+        deadline = time.monotonic() + APPROVAL_SECONDS
+        token = (req or {}).get("progressToken")
+        if token is not None and session.notify:
+            session.notify({"jsonrpc": "2.0", "method": "notifications/progress", "params": {
+                "progressToken": token, "progress": 0, "message": L("Waiting for the user's approval on the desktop …",
+                                                                  "Venter på godkjenning i skrivebordet …")}})
+        while time.monotonic() < deadline:
+            time.sleep(0.15)
+            if session.is_cancelled((req or {}).get("id")):
+                run([qs(), "ipc", "-p", SHELL_DIR, "call", "mcp", "cancel", rid], timeout=10)
+                return "deny", "cancelled by the client"
+            try:
+                fd = os.open(answer, os.O_RDONLY | os.O_NOFOLLOW)
+            except FileNotFoundError:
+                continue
+            except OSError:
+                break
+            try:
+                data = os.read(fd, 128).decode("ascii", "replace").split()
+            finally:
+                os.close(fd)
+                os.unlink(answer)
+            if len(data) == 2 and data[0] == rid and data[1] in ("once", "always", "deny"):
+                if data[1] == "always":
+                    rc, _, err = settings("add", "ai.grants", f"{client_id} {t.name}")
+                    if rc != 0:
+                        log(f"could not store the grant: {err.strip()}")
+                    return "allow", "approved always"
+                return ("allow", "approved once") if data[1] == "once" else ("deny", "denied by the user")
+            break
+        run([qs(), "ipc", "-p", SHELL_DIR, "call", "mcp", "cancel", rid], timeout=10)
+        return "deny", "timeout"
+    finally:
+        session.pending.discard(rid)
+        try:
+            os.unlink(os.path.join(ANSWERS, rid))
+        except OSError:
+            pass
+        _card_lock.release()
+
+
+# ──────────────────────────────────────────────────────────────────────────────────────────────── protocol
+class RpcError(Exception):
+    def __init__(self, code, message, data=None):
+        super().__init__(message)
+        self.code, self.message, self.data = code, message, data
+
+
+_limits, _limits_lock = {}, threading.Lock()
+_denials = {}   # (client id, tool) → (consecutive denials, cooldown until)
+
+
+class Session:
+    def __init__(self, transport):
+        self.transport = transport
+        self.client_name, self.client_title = "unknown", ""
+        self.initialized = False
+        self.protocol = PROTOCOLS[0]
+        self.pending = set()
+        self.calls = []            # times of recent calls (rate limit)
+        self.asks = []             # times of recent cards
+        self.denials = {}          # tool → (consecutive denials, cooldown until)
+        self.last = time.monotonic()
+        self.lock = threading.Lock()
+        self.cancelled = set()      # JSON-RPC ids the client cancelled (notifications/cancelled)
+        self.notify = None          # stdio: send a notification (progress while a card waits)
+
+    def is_cancelled(self, rid):
+        return rid is not None and rid in self.cancelled
+
+    @property
+    def client_id(self):
+        return f"{self.client_name}@{self.transport}"
+
+    def rate(self, kind, limit, window):
+        now = time.monotonic()
+        with _limits_lock:   # per client, shared by its connections (a new HTTP session starts nothing over)
+            lst = _limits.setdefault(self.client_id, {"ask": [], "call": []})[kind]
+            lst[:] = [x for x in lst if now - x < window]
+            if len(lst) >= limit:
+                return False
+            lst.append(now)
+            return True
+
+    def cancel_cards(self):
+        for rid in list(self.pending):
+            run([qs(), "ipc", "-p", SHELL_DIR, "call", "mcp", "cancel", rid], timeout=5)
+
+
+def call_tool(session, params, req_id=None):
+    name = params.get("name")
+    args = params.get("arguments", {})
+    if not session.rate("call", 30, 10):   # before anything is logged: refusals can't flood the audit log
+        raise RpcError(-32000, "Too many calls; wait a few seconds.")
+    if not isinstance(name, str) or name not in TOOLS:
+        audit(session, short(str(name), 48), "", "refused", "unknown tool")
+        raise RpcError(-32602, f"Unknown tool: {short(str(name), 48)}")
+    t = TOOLS[name]
+    if args is None:
+        args = {}
+    try:
+        check(t.schema, args)
+    except BadArgs as e:
+        audit(session, name, "", "refused", f"invalid arguments: {e}")
+        raise RpcError(-32602, f"Invalid arguments for {name}: {e}") from None
+    summary = summarize(name, args)
+    # What can never work is refused before any card: a key the agent may not set, a path outside what it may read
+    try:
+        if name in ("settings_set", "settings_reset"):
+            _settable(args["key"])
+        if name in ("files_read", "files_list"):
+            home_path(args.get("path") or "~")
+    except ToolError as e:
+        audit(session, name, summary, "refused", str(e))
+        return {"content": [{"type": "text", "text": str(e)}], "isError": True,
+                "structuredContent": {"denied": True, "reason": "not allowed"}}
+    decision, why = policy(session, t)
+    if decision == "ask":
+        count, until = _denials.get((session.client_id, name), (0, 0))
+        if until > time.monotonic():
+            decision, why = "deny", "cooldown after repeated denials"
+        elif not session.rate("ask", 6, 60):
+            decision, why = "deny", "too many approval requests"
+        else:
+            meta = params.get("_meta") if isinstance(params.get("_meta"), dict) else {}
+            tok = meta.get("progressToken")
+            decision, why = ask_user(session, t, summary, {"id": req_id, "progressToken": tok if isinstance(tok, (str, int)) and not isinstance(tok, bool) else None})
+            if decision == "deny" and why in ("denied by the user", "timeout"):
+                count += 1
+                _denials[(session.client_id, name)] = (count, time.monotonic() + 120 if count >= 3 else 0)
+            elif decision == "allow":
+                _denials.pop((session.client_id, name), None)
+    if decision != "allow":
+        audit(session, name, summary, f"denied ({why})", "")
+        msg = {
+            "game mode": L("Denied: the user is playing a game. Do not ask again until they are back.",
+                           "Avvist: brukeren spiller nå. Ikke spør igjen før de er tilbake."),
+            "timeout": L("Denied: the user did not answer within 60 s.", "Avvist: brukeren svarte ikke innen 60 s."),
+            "off": L("Denied: AI agents are switched off in Settings → AI agents.", "Avvist: AI-agenter er slått av i Innstillinger → AI-agenter."),
+        }.get(why, L(f"Denied ({why}). Ask the user in the chat what to do instead; do not retry at once.",
+                     f"Avvist ({why}). Spør brukeren i chatten hva du skal gjøre i stedet; ikke prøv igjen med en gang."))
+        return {"content": [{"type": "text", "text": msg}], "isError": True,
+                "structuredContent": {"denied": True, "reason": why}}
+    try:
+        result = t.fn(args, session)
+        size = sum(len(c.get("text", "")) + len(c.get("data", "")) for c in result.get("content", []))
+        audit(session, name, summary, f"allowed ({why})", f"ok ({size} bytes)")
+        return result
+    except ToolError as e:
+        audit(session, name, summary, f"allowed ({why})", f"error: {e}")
+        return {"content": [{"type": "text", "text": str(e)}], "isError": True}
+    except Exception as e:   # a bug here must not kill the server
+        log(f"{name}: {type(e).__name__}: {e}")
+        audit(session, name, summary, f"allowed ({why})", f"error: internal {type(e).__name__}")
+        return {"content": [{"type": "text", "text": f"internal error ({type(e).__name__})"}], "isError": True}
+
+
+INSTRUCTIONS = (
+    "Olymparch is the user's Arch Linux gaming desktop (Hyprland). These tools control it. Prefer them over shell "
+    "commands, never use sudo yourself. read tools run at once; change and sensitive tools show the user an approval "
+    "card and may be denied: then stop and ask the user in the chat. Settings: read the resource "
+    "olymparch://settings/schema before settings_set. Troubleshooting: start with system_doctor.")
+
+
+def handle(session, msg):
+    """One JSON-RPC message → the response (a dict) or None for notifications and responses."""
+    if isinstance(msg, list):
+        raise RpcError(-32600, "batches are not supported")
+    if not isinstance(msg, dict) or msg.get("jsonrpc") != "2.0":
+        raise RpcError(-32600, "not a JSON-RPC 2.0 message")
+    if "method" not in msg:
+        return None   # a response to a request of ours (we send none): ignored
+    method = msg["method"]
+    is_request = "id" in msg
+    rid = msg.get("id")
+    if is_request and not ((isinstance(rid, str) and len(rid) <= 200) or (isinstance(rid, int) and not isinstance(rid, bool))):
+        raise RpcError(-32600, "id must be a string or an integer")
+    if not isinstance(method, str) or len(method) > 100:
+        raise RpcError(-32600, "bad method")
+    params = msg.get("params", {})
+    if params is None:
+        params = {}
+    if not isinstance(params, dict):
+        raise RpcError(-32602, "params must be an object")
+    if not is_request:
+        if method == "notifications/initialized":
+            session.initialized = True
+        elif method == "notifications/cancelled":   # stop waiting for the card; the call is not run, no answer is sent
+            r = params.get("requestId")
+            if (isinstance(r, str) and len(r) <= 200) or (isinstance(r, int) and not isinstance(r, bool)):
+                with session.lock:
+                    session.cancelled.add(r)
+                    if len(session.cancelled) > 1000:
+                        session.cancelled.clear()
+        return None   # notifications/cancelled and others: nothing to do
+    result = dispatch(session, method, params, rid)
+    if session.is_cancelled(rid):
+        return None
+    return {"jsonrpc": "2.0", "id": rid, "result": result}
+
+
+def dispatch(session, method, params, rid=None):
+    if method == "initialize":
+        if session.initialized or session.client_name != "unknown":
+            raise RpcError(-32600, "already initialized: a connection keeps the name it started with")
+        info = params.get("clientInfo") or {}
+        if not isinstance(info, dict) or not isinstance(info.get("name", ""), str):
+            raise RpcError(-32602, "clientInfo.name must be text")
+        session.client_name = client_key(info.get("name"))
+        session.client_title = info.get("title") if isinstance(info.get("title"), str) else ""
+        want = params.get("protocolVersion")
+        session.protocol = want if want in PROTOCOLS else PROTOCOLS[0]
+        remember_client(session)
+        if setting("ai.enabled", True) is not True:
+            audit(session, "initialize", "", "refused", "switched off")
+            raise RpcError(-32001, L("Olymparch's MCP server is switched off (Settings → AI agents)",
+                                     "Olymparchs MCP-server er slått av (Innstillinger → AI-agenter)"))
+        if session.client_name in (setting("ai.blocked_clients", []) or []):
+            audit(session, "initialize", "", "refused", "blocked client")
+            raise RpcError(-32001, L("this client is blocked in Settings → AI agents", "denne klienten er blokkert i Innstillinger → AI-agenter"))
+        session.initialized = True   # lenient: some clients send tools/list before notifications/initialized
+        audit(session, "initialize", f"protocol {short(str(want), 20)}", "connected", "ok")
+        return {"protocolVersion": session.protocol,
+                "capabilities": {"tools": {"listChanged": False}, "resources": {"subscribe": False, "listChanged": False}},
+                "serverInfo": {"name": "olymparch", "title": "Olymparch", "version": VERSION},
+                "instructions": INSTRUCTIONS}
+    if method == "ping":
+        return {}
+    if not session.initialized:
+        raise RpcError(-32002, "not initialized: send initialize first")
+    if method == "tools/list":
+        return {"tools": [t.listing() for t in TOOLS.values()]}
+    if method == "tools/call":
+        return call_tool(session, params, rid)
+    if method == "resources/list":
+        return {"resources": resources()}
+    if method == "resources/templates/list":
+        return {"resourceTemplates": []}
+    if method == "resources/read":
+        uri = params.get("uri")
+        r = read_resource(uri) if isinstance(uri, str) else None
+        if not r:
+            raise RpcError(-32002, "Resource not found", {"uri": short(str(uri), 80)})
+        return {"contents": [r]}
+    raise RpcError(-32601, f"Method not found: {short(method, 60)}")
+
+
+def respond(session, raw):
+    """bytes of one message → bytes of the response, or None."""
+    try:
+        msg = json.loads(raw)
+    except (ValueError, UnicodeDecodeError):
+        return {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Parse error"}}
+    rid = msg.get("id") if isinstance(msg, dict) else None
+    if isinstance(rid, (bool, float, dict, list)):
+        rid = None
+    try:
+        return handle(session, msg)
+    except RpcError as e:
+        if isinstance(msg, dict) and "method" in msg and "id" not in msg:
+            return None   # never answer a notification, not even with an error
+        err = {"code": e.code, "message": e.message}
+        if e.data is not None:
+            err["data"] = e.data
+        return {"jsonrpc": "2.0", "id": rid, "error": err}
+    except Exception as e:
+        log(f"internal error: {type(e).__name__}: {e}")
+        return {"jsonrpc": "2.0", "id": rid, "error": {"code": -32603, "message": "Internal error"}}
+
+
+# ──────────────────────────────────────────────────────────────────────────────────────────────── stdio
+def serve_stdio():
+    session = Session("stdio")
+    out_lock = threading.Lock()
+    workers = threading.BoundedSemaphore(4)
+    threads = []
+
+    def send(obj):
+        if obj is None:
+            return
+        data = (json.dumps(obj, ensure_ascii=False) + "\n").encode()
+        with out_lock:
+            sys.stdout.buffer.write(data)
+            sys.stdout.buffer.flush()
+
+    session.notify = send
+
+    def work(raw):
+        try:
+            send(respond(session, raw))
+        finally:
+            workers.release()
+
+    inp = sys.stdin.buffer
+    while True:
+        line = inp.readline(MAX_MESSAGE + 1)
+        if not line:
+            break
+        if len(line) > MAX_MESSAGE and not line.endswith(b"\n"):
+            while True:   # skip the rest of the oversized line
+                more = inp.readline(MAX_MESSAGE)
+                if not more or more.endswith(b"\n"):
+                    break
+            send({"jsonrpc": "2.0", "id": None, "error": {"code": -32600, "message": "message too large"}})
+            continue
+        if not line.strip():
+            continue
+        if b'"tools/call"' in line:   # may wait for the user: in a thread, so ping and the rest still answer
+            if not workers.acquire(blocking=False):
+                try:
+                    rid = json.loads(line).get("id")
+                except (ValueError, AttributeError):
+                    rid = None
+                send({"jsonrpc": "2.0", "id": rid if isinstance(rid, (str, int)) and not isinstance(rid, bool) else None,
+                      "error": {"code": -32000, "message": "busy: too many calls at once"}})
+                continue
+            th = threading.Thread(target=work, args=(line,), daemon=True)
+            th.start()
+            threads.append(th)
+            threads[:] = [x for x in threads if x.is_alive()]
+        else:
+            send(respond(session, line))
+    session.cancel_cards()
+    for th in threads:
+        th.join(timeout=1)
+
+
+# ──────────────────────────────────────────────────────────────────────────────────────────────── HTTP
+def ensure_token():
+    if not RUN:
+        raise SystemExit("olymparch-mcp: XDG_RUNTIME_DIR is not set; the HTTP endpoint needs it for the token")
+    private_dir(RUN)
+    try:
+        fd = os.open(TOKEN, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        os.write(fd, (secrets.token_urlsafe(32) + "\n").encode())
+        os.close(fd)
+    except FileExistsError:
+        pass
+    st = os.lstat(TOKEN)
+    if not stat.S_ISREG(st.st_mode) or st.st_uid != os.getuid() or st.st_mode & 0o077:
+        raise SystemExit(f"olymparch-mcp: {TOKEN} is not a private file of yours; remove it")
+    with open(TOKEN, encoding="ascii") as f:
+        return f.read().strip()
+
+
+class Http(BaseHTTPRequestHandler):
+    server_version = "olymparch-mcp"
+    sys_version = ""
+    protocol_version = "HTTP/1.1"
+    timeout = 30
+
+    def log_message(self, *a):   # never log requests (headers carry the token)
+        pass
+
+    def reply(self, code, body=None, headers=None):
+        data = b"" if body is None else (json.dumps(body, ensure_ascii=False).encode() if not isinstance(body, bytes) else body)
+        self.send_response(code)
+        for k, v in (headers or {}).items():
+            self.send_header(k, v)
+        if body is not None:
+            self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        if code >= 400:   # never read on after a refusal (the body may still be on its way)
+            self.close_connection = True
+            self.send_header("Connection", "close")
+        self.end_headers()
+        if data and self.command != "HEAD":
+            self.wfile.write(data)
+
+    def gate(self):
+        """Host, Origin, path and token, before anything is read. → True to go on."""
+        port = self.server.server_address[1]
+        hosts = {f"127.0.0.1:{port}", f"localhost:{port}", f"[::1]:{port}"}
+        if (self.headers.get("Host") or "") not in hosts:
+            self.reply(403, {"error": "bad Host"})
+            return False
+        origin = self.headers.get("Origin")
+        if origin is not None and origin not in {f"http://{h}" for h in hosts}:
+            self.reply(403, {"error": "bad Origin"})
+            return False
+        if self.path.split("?")[0] != "/mcp":
+            self.reply(404, {"error": "not found"})
+            return False
+        auth = self.headers.get("Authorization") or ""
+        given = auth[7:].strip() if auth.startswith("Bearer ") else ""
+        if not given or not hmac.compare_digest(given.encode(), self.server.token.encode()):
+            with self.server.lock:
+                now = time.monotonic()
+                self.server.failures = [t for t in self.server.failures if now - t < 60] + [now]
+                slow = len(self.server.failures) > 10
+            if slow:
+                time.sleep(1)
+            self.reply(401, {"error": "token required"}, {"WWW-Authenticate": 'Bearer realm="olymparch-mcp"'})
+            return False
+        return True
+
+    def session(self):
+        sid = self.headers.get("Mcp-Session-Id")
+        if not sid:
+            self.reply(400, {"error": "Mcp-Session-Id required"})
+            return None
+        with self.server.lock:
+            s = self.server.sessions.get(sid)
+        if not s:
+            self.reply(404, {"error": "unknown session"})
+            return None
+        s.last = time.monotonic()
+        return s
+
+    def do_GET(self):
+        if self.gate():
+            self.reply(405, {"error": "no server-sent events; POST JSON-RPC to /mcp"}, {"Allow": "POST, DELETE"})
+
+    def do_DELETE(self):
+        if not self.gate():
+            return
+        s = self.session()
+        if s:
+            with self.server.lock:
+                self.server.sessions.pop(self.headers.get("Mcp-Session-Id"), None)
+            s.cancel_cards()
+            self.reply(204)
+
+    def do_PUT(self):
+        if self.gate():
+            self.reply(405, {"error": "method not allowed"}, {"Allow": "POST, DELETE"})
+
+    do_PATCH = do_OPTIONS = do_HEAD = do_PUT
+
+    def do_POST(self):
+        self.connection.settimeout(30)
+        if not self.gate():
+            return
+        ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+        if ctype != "application/json":
+            return self.reply(415, {"error": "Content-Type must be application/json"})
+        accept = self.headers.get("Accept") or ""
+        if "application/json" not in accept and "*/*" not in accept:
+            return self.reply(406, {"error": "Accept must include application/json"})
+        try:
+            length = int(self.headers.get("Content-Length") or "-1")
+        except ValueError:
+            length = -1
+        if length < 0:
+            return self.reply(411, {"error": "Content-Length required"})
+        if length > MAX_MESSAGE:
+            return self.reply(413, {"error": "message too large"})
+        raw = self.rfile.read(length)
+        try:
+            msg = json.loads(raw)
+        except (ValueError, UnicodeDecodeError):
+            return self.reply(400, {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Parse error"}})
+        version = self.headers.get("MCP-Protocol-Version")
+        if isinstance(msg, dict) and msg.get("method") == "initialize":
+            s = Session("http")
+            resp = respond(s, raw)
+            if resp and "result" in resp:
+                sid = secrets.token_urlsafe(24)
+                with self.server.lock:
+                    now = time.monotonic()
+                    for k in [k for k, v in self.server.sessions.items() if now - v.last > 3600]:
+                        del self.server.sessions[k]
+                    if len(self.server.sessions) >= MAX_SESSIONS:
+                        return self.reply(503, {"error": "too many sessions"})
+                    self.server.sessions[sid] = s
+                return self.reply(200, resp, {"Mcp-Session-Id": sid})
+            return self.reply(200 if resp else 202, resp)
+        s = self.session()
+        if not s:
+            return
+        if version is not None and version not in PROTOCOLS:
+            return self.reply(400, {"error": "unsupported MCP-Protocol-Version"})
+        resp = respond(s, raw)
+        if resp is None:
+            return self.reply(202)
+        self.reply(200, resp)
+
+
+def listener(port):
+    """The socket systemd passed us (olymparch-mcp.socket), else our own; both 127.0.0.1 only."""
+    if os.environ.get("LISTEN_PID") == str(os.getpid()) and os.environ.get("LISTEN_FDS") == "1":
+        sock = socket.socket(fileno=3)
+        addr = sock.getsockname()
+        if addr[0] not in ("127.0.0.1", "::1"):
+            raise SystemExit(f"olymparch-mcp: refusing to serve on {addr[0]}: 127.0.0.1 only")
+        return sock, True
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(("127.0.0.1", port))
+    sock.listen(16)
+    return sock, False
+
+
+def serve_http(port):
+    if setting("ai.enabled", True) is not True:
+        raise SystemExit("olymparch-mcp: switched off in Settings → AI agents")
+    token = ensure_token()
+    sock, activated = listener(port)
+
+    class Server(ThreadingHTTPServer):
+        daemon_threads = True
+        slots = threading.BoundedSemaphore(32)   # at most 32 connections at once; the rest are closed at once
+
+        def process_request(self, request, client_address):
+            if not self.slots.acquire(blocking=False):
+                self.shutdown_request(request)
+                return
+            super().process_request(request, client_address)
+
+        def process_request_thread(self, request, client_address):
+            try:
+                super().process_request_thread(request, client_address)
+            finally:
+                self.slots.release()
+
+    srv = Server(("127.0.0.1", port), Http, bind_and_activate=False)
+    srv.socket.close()
+    srv.socket = sock
+    srv.server_address = sock.getsockname()[:2]
+    srv.token, srv.sessions, srv.lock, srv.failures = token, {}, threading.Lock(), []
+    srv.timeout = 60
+    log(f"listening on http://127.0.0.1:{srv.server_address[1]}/mcp (token in {TOKEN})")
+    if activated:   # started by the socket: stop after 30 idle minutes; the socket starts us again
+        def idle():
+            while True:
+                time.sleep(60)
+                with srv.lock:
+                    busy = any(time.monotonic() - s.last < 1800 for s in srv.sessions.values())
+                if not busy and time.monotonic() - srv.started > 1800:
+                    srv.shutdown()
+                    return
+        srv.started = time.monotonic()
+        threading.Thread(target=idle, daemon=True).start()
+    srv.serve_forever()
+
+
+# ──────────────────────────────────────────────────────────────────────────────────────────────── registration
+SKILLS = ("olymparch", "olymparch-settings", "olymparch-look", "olymparch-windows-apps", "olymparch-packages",
+          "olymparch-troubleshooting")
+HERMES_BEGIN = "# >>> olymparch-mcp (added by olymparch-mcp register; olymparch-mcp unregister removes it)"
+HERMES_END = "# <<< olymparch-mcp"
+
+
+def exe():
+    return EXE if os.path.isfile(EXE) else SELF
+
+
+def skills_src():
+    if os.path.isdir(SKILLS_SRC):
+        return SKILLS_SRC
+    return os.path.realpath(os.path.join(HERE, "../../default/skills"))
+
+
+def load_manifest():
+    try:
+        with open(MANIFEST, encoding="utf-8") as f:
+            m = json.load(f)
+            return m if isinstance(m, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_manifest(m):
+    private_dir(STATE)
+    tmp = MANIFEST + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(m, f, indent=1, sort_keys=True)
+    os.replace(tmp, MANIFEST)
+
+
+def atomic_write(path, text_):
+    d = os.path.dirname(path)
+    os.makedirs(d, exist_ok=True)
+    tmp = os.path.join(d, f".{os.path.basename(path)}.olymparch-{os.getpid()}")
+    mode = stat.S_IMODE(os.stat(path).st_mode) if os.path.exists(path) else 0o600
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, mode)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(text_)
+    os.replace(tmp, path)
+
+
+def hermes_add(path, command):
+    """~/.hermes/config.yaml, mcp_servers: our entry as a marked block; the rest of the file is left as it is."""
+    path = os.path.realpath(path)   # a dotfile manager's symlink stays a symlink
+    try:
+        with open(path, encoding="utf-8") as f:
+            lines = f.read().splitlines()
+    except FileNotFoundError:
+        lines = []
+    if any(HERMES_BEGIN in l for l in lines):
+        return "already"
+    top = next((i for i, l in enumerate(lines) if re.match(r"^mcp_servers:\s*(#.*)?$", l)), None)
+    if any(re.match(r"^mcp_servers:\s*\S", l) and not re.match(r"^mcp_servers:\s*#", l) for l in lines):
+        return "skipped: mcp_servers is not a block mapping; add it yourself"
+    indent = "  "
+    if top is not None:
+        for l in lines[top + 1:]:
+            if l.strip() and not l.lstrip().startswith("#"):
+                m = re.match(r"^(\s+)\S", l)
+                if m:
+                    indent = m.group(1)
+                break
+        # an olymparch entry of the user's own under mcp_servers
+        i = top + 1
+        while i < len(lines) and (not lines[i].strip() or lines[i].startswith((" ", "\t", "#"))):
+            if re.match(rf"^{indent}olymparch\s*:", lines[i]):
+                return "exists (yours; left alone)"
+            i += 1
+    block = [indent + HERMES_BEGIN, f"{indent}olymparch:", f"{indent * 2}command: {json.dumps(command)}",
+             f"{indent * 2}args: []", indent + HERMES_END]
+    if top is None:
+        if lines and lines[-1].strip():
+            lines.append("")
+        lines += ["mcp_servers:  " + HERMES_BEGIN.replace("# >>>", "# >>> key:")] + block
+    else:
+        lines[top + 1:top + 1] = block
+    atomic_write(path, "\n".join(lines) + "\n")
+    return "added"
+
+
+def hermes_remove(path):
+    path = os.path.realpath(path)
+    try:
+        with open(path, encoding="utf-8") as f:
+            lines = f.read().splitlines()
+    except FileNotFoundError:
+        return "gone"
+    out, skip = [], False
+    for l in lines:
+        if HERMES_BEGIN.replace("# >>>", "# >>> key:") in l:
+            continue   # the mcp_servers: line we added ourselves
+        if HERMES_BEGIN in l:
+            skip = True
+            continue
+        if skip:
+            if HERMES_END in l:
+                skip = False
+            continue
+        out.append(l)
+    if out != lines:
+        while out and not out[-1].strip():
+            out.pop()
+        atomic_write(path, "\n".join(out) + "\n")
+        return "removed"
+    return "gone"
+
+
+def link_skills(base, m, key):
+    src = skills_src()
+    done = m.setdefault(key, [])
+    out = []
+    for name in SKILLS:
+        target, link = os.path.join(src, name), os.path.join(base, name)
+        if not os.path.isfile(os.path.join(target, "SKILL.md")):
+            continue
+        if os.path.islink(link):
+            if os.path.realpath(link) == os.path.realpath(target):
+                if link not in done:
+                    done.append(link)
+                continue
+            out.append(f"{link}: exists (yours; left alone)")
+            continue
+        if os.path.exists(link):
+            out.append(f"{link}: exists (yours; left alone)")
+            continue
+        os.makedirs(base, exist_ok=True)
+        os.symlink(target, link)
+        done.append(link)
+    return out
+
+
+def register(auto):
+    if auto and (setting("ai.enabled", True) is not True or setting("ai.auto_register", True) is not True):
+        print(L("automatic registration is off (Settings → AI agents)", "automatisk registrering er av (Innstillinger → AI-agenter)"))
+        return 0
+    if RUN:
+        try:
+            ensure_token()
+        except SystemExit as e:
+            log(str(e))
+    m = load_manifest()
+    lines = []
+    command = exe()
+    # Claude Code: the documented CLI, user scope (it keeps it in ~/.claude.json)
+    if have("claude"):
+        if run(["claude", "mcp", "get", "olymparch"], timeout=60)[0] == 0:
+            lines.append("Claude Code: " + ("registered" if m.get("claude") else "exists (yours; left alone)"))
+        else:
+            rc, out, err = run(["claude", "mcp", "add", "--scope", "user", "--transport", "stdio", "olymparch", "--", command], timeout=60)
+            if rc == 0:
+                m["claude"] = True
+            lines.append("Claude Code: " + ("added (user scope)" if rc == 0 else f"failed: {short(err or out, 100)}"))
+        lines += link_skills(os.path.join(HOME, ".claude/skills"), m, "claude_skills")
+    # Hermes Agent: ~/.hermes/config.yaml, mcp_servers (the documented format), skills in ~/.hermes/skills
+    if have("hermes"):
+        hermes_home = os.environ.get("HERMES_HOME") or os.path.join(HOME, ".hermes")
+        try:
+            r = hermes_add(os.path.join(hermes_home, "config.yaml"), command)
+        except OSError as e:
+            r = f"failed: {e}"
+        if r == "added":
+            m["hermes"] = os.path.join(hermes_home, "config.yaml")
+        lines.append(f"Hermes Agent: {r}")
+        lines += link_skills(os.path.join(hermes_home, "skills"), m, "hermes_skills")
+    # OpenClaw: its own CLI writes ~/.openclaw/openclaw.json (mcp.servers.olymparch); skills in ~/.openclaw/skills
+    if have("openclaw"):
+        if run(["openclaw", "mcp", "show", "olymparch", "--json"], timeout=60)[0] == 0:
+            lines.append("OpenClaw: " + ("registered" if m.get("openclaw") else "exists (yours; left alone)"))
+        else:
+            rc, out, err = run(["openclaw", "mcp", "set", "olymparch", json.dumps({"command": command, "args": []})], timeout=60)
+            if rc == 0:
+                m["openclaw"] = True
+            lines.append("OpenClaw: " + ("added" if rc == 0 else f"failed (tried again at next login): {short(err or out, 100)}"))
+        lines += link_skills(os.path.join(os.environ.get("OPENCLAW_STATE_DIR") or os.path.join(HOME, ".openclaw"), "skills"), m, "openclaw_skills")
+    # Olympus (Zeus) finds /usr/bin/olymparch-mcp by itself ([mcp] autodetect); nothing to write
+    if have("olympus") or os.path.exists(os.path.join(HOME, ".local/bin/olympus")):
+        lines.append("Olympus (Zeus): " + L("finds olymparch-mcp by itself", "finner olymparch-mcp selv"))
+    save_manifest(m)
+    print("\n".join(lines) if lines else L("no agents found (claude, hermes, openclaw, olympus)",
+                                           "fant ingen agenter (claude, hermes, openclaw, olympus)"))
+    return 0
+
+
+def unregister():
+    m = load_manifest()
+    lines = []
+    if m.pop("claude", None) and have("claude"):
+        rc, out, err = run(["claude", "mcp", "remove", "olymparch", "--scope", "user"], timeout=60)
+        lines.append("Claude Code: " + ("removed" if rc == 0 else f"failed: {short(err or out, 100)}"))
+    if m.get("hermes"):
+        lines.append("Hermes Agent: " + hermes_remove(m.pop("hermes")))
+    if m.pop("openclaw", None) and have("openclaw"):
+        rc, out, err = run(["openclaw", "mcp", "unset", "olymparch"], timeout=60)
+        lines.append("OpenClaw: " + ("removed" if rc == 0 else f"failed: {short(err or out, 100)}"))
+    src = os.path.realpath(skills_src())
+    for key in ("claude_skills", "hermes_skills", "openclaw_skills"):
+        for link in m.pop(key, []):
+            if os.path.islink(link) and os.path.realpath(link).startswith(src + os.sep):
+                os.unlink(link)
+                lines.append(f"{link}: removed")
+    save_manifest(m)
+    print("\n".join(lines) if lines else L("nothing was registered", "ingenting var registrert"))
+    return 0
+
+
+def apply_settings():
+    enabled = setting("ai.enabled", True) is True
+    http = setting("ai.http", True) is True
+    if have("systemctl"):
+        verb = ["enable", "--now"] if enabled and http else ["disable", "--now"]
+        run(["systemctl", "--user", *verb, "olymparch-mcp.socket"], timeout=30)
+        if not (enabled and http):
+            run(["systemctl", "--user", "stop", "olymparch-mcp.service"], timeout=30)
+    if setting("ai.auto_register", True) is True and enabled:
+        return register(auto=True)
+    if setting("ai.auto_register", True) is not True:
+        return unregister()
+    return 0
+
+
+def status():
+    m = load_manifest()
+    print(f"{L('server', 'server')}: {L('on', 'på') if setting('ai.enabled', True) is True else L('off', 'av')}")
+    print(f"stdio: {exe()}")
+    state = run(["systemctl", "--user", "is-active", "olymparch-mcp.socket"])[1].strip() if have("systemctl") else "?"
+    print(f"http: http://127.0.0.1:{PORT}/mcp ({state}); token: {TOKEN or '-'}")
+    print(f"{L('registered with', 'registrert hos')}: " + (", ".join(k for k in ("claude", "hermes", "openclaw") if m.get(k)) or "-"))
+    print(f"{L('audit log', 'logg')}: {AUDIT}")
+    return 0
+
+
+def show_audit(n):
+    try:
+        with open(AUDIT, encoding="utf-8") as f:
+            rows = f.read().splitlines()[-n:]
+    except FileNotFoundError:
+        print(L("no calls yet", "ingen kall ennå"))
+        return 0
+    for r in reversed(rows):
+        try:
+            e = json.loads(r)
+            print(plain(f"{e['time'][5:16].replace('T', ' ')}  {e['client']}/{e['transport']}  {e['tool']}  "
+                        f"{e['args'].replace(chr(10), ' · ')[:70]}  → {e['decision']}  {e['result'][:60]}"))
+        except (ValueError, KeyError, TypeError):
+            continue
+    return 0
+
+
+def main(argv):
+    sub = argv[1] if len(argv) > 1 else "stdio"
+    if sub in ("stdio", "--stdio"):
+        serve_stdio()
+    elif sub == "http":
+        port = PORT
+        if len(argv) > 3 and argv[2] == "--port" and argv[3].isdigit() and 1024 <= int(argv[3]) <= 65535:
+            port = int(argv[3])
+        serve_http(port)
+    elif sub == "register":
+        return register(auto="--auto" in argv)
+    elif sub == "unregister":
+        return unregister()
+    elif sub == "apply":
+        return apply_settings()
+    elif sub == "status":
+        return status()
+    elif sub == "tools":
+        for t in TOOLS.values():
+            print(f"{t.name}\t{t.risk}\t{t.title[1 if NB else 0]}" if "--tsv" in argv else f"{t.name:18} {t.risk:9} {t.title[1 if NB else 0]}")
+    elif sub == "audit":
+        return show_audit(int(argv[2]) if len(argv) > 2 and argv[2].isdigit() else 30)
+    elif sub == "clients":
+        try:
+            with open(SEEN, encoding="utf-8") as f:
+                seen = json.load(f)
+        except (OSError, ValueError):
+            seen = {}
+        for k, v in sorted(seen.items()):
+            if isinstance(v, dict) and client_key(k) == k:
+                print(f"{k}\t{v.get('last', 0)}\t{client_key(str(v.get('transport', '')))}")
+    elif sub in ("-h", "--help", "help"):
+        print(__doc__.split("\n\nSafety")[0])
+    else:
+        sys.stderr.write("usage: olymparch-mcp [stdio | http [--port N] | register [--auto] | unregister | apply | status | tools | audit [N] | clients]\n")
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv))
+    except KeyboardInterrupt:
+        sys.exit(130)
+    except BrokenPipeError:
+        sys.exit(0)

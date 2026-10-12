@@ -1,0 +1,544 @@
+#!/usr/bin/env python3
+"""olymparch-mcp without a VM: protocol conformance and every refusal.
+
+  tests/mcp-check        exit 0 and «mcp-check: N checks OK», or 1 and one line per failure
+
+Runs system/bin/olymparch-mcp in a throw-away HOME with stand-ins on PATH (qs answers the approval card as the
+test says, hyprctl/wpctl/notify-send/systemctl/claude/hermes/openclaw only log), so nothing on this machine is
+touched. Checks: initialize / version negotiation, tools/list (a risk on every tool), tools/call, JSON-RPC errors,
+argument validation, path traversal and hidden files, approvals (once, always, denied, timed out, game mode,
+cancelled), policy and blocked clients, ai.* keys refused, the audit log (no secrets, no content), HTTP (token,
+Origin, Host, session, sizes) and registration with the agents (idempotent, reversible, never over yours).
+"""
+import json
+import os
+import shutil
+import socket
+import subprocess
+import sys
+import tempfile
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+MCP = str(ROOT / "system/bin/olymparch-mcp")
+SETTINGS = str(ROOT / "system/bin/olymparch-settings")
+fails, oks = [], 0
+
+
+def ok(cond, what):
+    global oks
+    if cond:
+        oks += 1
+    else:
+        fails.append(what)
+    return cond
+
+
+tmp = Path(tempfile.mkdtemp(prefix="mcp-check-"))
+home = tmp / "home"
+stubs = tmp / "stubs"
+run_dir = tmp / "run"
+for d in (home, stubs, run_dir):
+    d.mkdir(mode=0o700)
+os.chmod(run_dir, 0o700)
+
+STUB = {
+    # the approval card: $HOME/answer says what «the user» does: once | always | deny | none (no answer) | game
+    "qs": r'''#!/bin/bash
+echo "$*" >>"$HOME/qs.log"
+[ "$5" = mcp ] || exit 1
+case $6 in
+  ask) printf '%s\0' "$@" >"$HOME/last-ask"
+       a=$(cat "$HOME/answer" 2>/dev/null || echo none)
+       if [ "$a" = game ]; then echo game; exit 0; fi
+       echo shown
+       if [ "$a" != none ]; then (sleep 0.3; d=$XDG_RUNTIME_DIR/olymparch-mcp/answers; printf '%s %s\n' "$7" "$a" >"$d/.$7"; mv "$d/.$7" "$d/$7") & fi ;;
+  cancel) : ;;
+esac''',
+    "hyprctl": '''#!/bin/bash
+echo "$*" >>"$HOME/hyprctl.log"
+case "$*" in
+  "-j clients") echo '[{"address":"0x5a1","class":"foot","title":"term","workspace":{"id":1},"monitor":0,"mapped":true,"floating":false,"fullscreen":0,"focusHistoryID":0}]' ;;
+  "-j workspaces") echo '[{"id":1,"name":"1","monitor":"Virtual-1","windows":1}]' ;;
+  "-j activeworkspace") echo '{"id":1}' ;;
+  dispatch*) echo ok ;;
+esac''',
+    "notify-send": '#!/bin/bash\nprintf "%s|" "$@" >>"$HOME/notify.log"; echo >>"$HOME/notify.log"',
+    "wpctl": '#!/bin/bash\necho "$*" >>"$HOME/wpctl.log"; echo "Volume: 0.40"',
+    "systemctl": '#!/bin/bash\necho "$*" >>"$HOME/systemctl.log"',
+    "claude": r'''#!/bin/bash
+echo "$*" >>"$HOME/claude.log"
+case "$1 $2" in
+  "mcp get") [ -f "$HOME/claude-has-olymparch" ] ;;
+  "mcp add") touch "$HOME/claude-has-olymparch" ;;
+  "mcp remove") rm -f "$HOME/claude-has-olymparch" ;;
+esac''',
+    "hermes": '#!/bin/bash\necho "$*" >>"$HOME/hermes.log"',
+    "openclaw": r'''#!/bin/bash
+echo "$*" >>"$HOME/openclaw.log"
+case "$1 $2" in
+  "mcp show") [ -f "$HOME/openclaw-has-olymparch" ] ;;
+  "mcp set") printf '%s' "$4" >"$HOME/openclaw-has-olymparch" ;;
+  "mcp unset") rm -f "$HOME/openclaw-has-olymparch" ;;
+esac''',
+}
+for name, body in STUB.items():
+    p = stubs / name
+    p.write_text(body + "\n")
+    p.chmod(0o755)
+
+ENV = {
+    "HOME": str(home), "PATH": f"{stubs}:/usr/bin:/bin", "LANG": "C.UTF-8", "XDG_RUNTIME_DIR": str(run_dir),
+    "XDG_CONFIG_HOME": str(home / ".config"), "XDG_STATE_HOME": str(home / ".local/state"),
+    "XDG_DATA_HOME": str(home / ".local/share"), "XDG_DATA_DIRS": str(tmp / "nodata"),
+    "OLYMPARCH_MCP_QS": str(stubs / "qs"), "OLYMPARCH_MCP_APPROVAL_SECONDS": "3",
+    "OLYMPARCH_SETTINGS_SCHEMA": str(ROOT / "default/settings/schema.json"),
+}
+AUDIT = home / ".local/state/olymparch/mcp-audit.log"
+
+
+def answer(a):
+    (home / "answer").write_text(a)
+
+
+def cli(*args):
+    return subprocess.run([MCP, *args], env=ENV, capture_output=True, text=True, timeout=60)
+
+
+def settings(*args):
+    return subprocess.run([SETTINGS, *args], env=ENV, capture_output=True, text=True, timeout=60)
+
+
+class Stdio:
+    def __init__(self, name="mcp-check"):
+        self.p = subprocess.Popen([MCP], env=ENV, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.n = 0
+        self.name = name
+
+    def send(self, obj):
+        self.p.stdin.write((obj if isinstance(obj, bytes) else json.dumps(obj).encode()) + b"\n")
+        self.p.stdin.flush()
+
+    def read(self, timeout=20):
+        import select
+        r, _, _ = select.select([self.p.stdout], [], [], timeout)
+        if not r:
+            return None
+        line = self.p.stdout.readline()
+        return json.loads(line) if line else None
+
+    def req(self, method, params=None, timeout=20):
+        self.n += 1
+        msg = {"jsonrpc": "2.0", "id": self.n, "method": method}
+        if params is not None:
+            msg["params"] = params
+        self.send(msg)
+        while True:
+            r = self.read(timeout)
+            if r is None or r.get("id") == self.n:
+                return r
+
+    def init(self, version="2025-06-18"):
+        r = self.req("initialize", {"protocolVersion": version, "capabilities": {}, "clientInfo": {"name": self.name, "version": "1"}})
+        self.send({"jsonrpc": "2.0", "method": "notifications/initialized"})
+        return r
+
+    def call(self, name, args=None, timeout=20):
+        return self.req("tools/call", {"name": name, "arguments": args or {}}, timeout)
+
+    def close(self):
+        try:
+            self.p.stdin.close()
+            self.p.wait(10)
+        except Exception:
+            self.p.kill()
+
+
+def text_of(r):
+    return "".join(c.get("text", "") for c in (r or {}).get("result", {}).get("content", []))
+
+
+def is_error(r):
+    return bool((r or {}).get("result", {}).get("isError"))
+
+
+def err_code(r):
+    return (r or {}).get("error", {}).get("code")
+
+
+try:
+    # ── protocol
+    s = Stdio()
+    r = s.req("tools/list")
+    ok(err_code(r) == -32002, f"tools/list before initialize: {r}")
+    r = s.init()
+    res = (r or {}).get("result", {})
+    ok(res.get("protocolVersion") == "2025-06-18" and res.get("serverInfo", {}).get("name") == "olymparch"
+       and "tools" in res.get("capabilities", {}), f"initialize: {r}")
+    tools = s.req("tools/list")["result"]["tools"]
+    ok(len(tools) >= 40, f"only {len(tools)} tools")
+    for t in tools:
+        a, risk = t.get("annotations", {}), t.get("_meta", {}).get("olymparch/risk")
+        ok(risk in ("read", "change", "sensitive") and t.get("risk") == risk and a.get("risk") == risk, f"{t['name']}: no risk")
+        ok(a.get("readOnlyHint") == (risk == "read") and (risk == "read" or a.get("destructiveHint") == (risk == "sensitive")),
+           f"{t['name']}: hints don't match risk {risk}")
+        ok(risk != "read" or "destructiveHint" not in a, f"{t['name']}: a read tool with destructiveHint (clients read it as a change)")
+        ok(len(t["name"]) <= 50 and t["name"].replace("_", "").isalnum() and t["name"].islower(), f"bad name {t['name']}")
+        ok(t["inputSchema"].get("type") == "object" and t["inputSchema"].get("additionalProperties") is False
+           and "x-multiline" not in json.dumps(t["inputSchema"]), f"{t['name']}: schema")
+        ok(not any(w in t["name"] for w in ("shell", "exec", "command", "run_")), f"{t['name']}: looks like a raw shell tool")
+    names = {t["name"]: t for t in tools}
+    for n in ("clipboard_read", "files_read", "screenshot", "package_install"):
+        ok(names.get(n, {}).get("risk") == "sensitive", f"{n} must be sensitive")
+    for n in ("clipboard_read", "files_read", "files_list", "screenshot", "ocr_screen", "reminders_list", "webapp_add"):
+        ok(names.get(n, {}).get("annotations", {}).get("openWorldHint") is True, f"{n}: openWorldHint must be true")
+    for n in ("settings_get", "settings_list", "themes_list", "backgrounds_list", "system_info", "windows_list",
+              "workspaces_list", "packages_search", "packages_catalog", "volume_get"):
+        ok(names.get(n, {}).get("annotations", {}).get("openWorldHint") is False, f"{n}: openWorldHint must be false")
+    ok(s.req("ping").get("result") == {}, "ping")
+    s.send(b"{not json")
+    ok(err_code(s.read()) == -32700, "parse error")
+    s.send(b'[{"jsonrpc":"2.0","id":1,"method":"ping"}]')
+    ok(err_code(s.read()) == -32600, "batch refused")
+    s.send({"jsonrpc": "1.0", "id": 5, "method": "ping"})
+    ok(err_code(s.read()) == -32600, "jsonrpc 1.0 refused")
+    s.send({"jsonrpc": "2.0", "id": True, "method": "ping"})
+    ok(err_code(s.read()) == -32600, "boolean id refused")
+    ok(err_code(s.req("server/discover")) == -32601, "unknown method → -32601")
+    ok(err_code(s.req("tools/call", {"name": "shell", "arguments": {"cmd": "id"}})) == -32602, "unknown tool")
+    ok(err_code(s.req("tools/call", {"name": "settings_get", "arguments": {"key": "x", "extra": 1}})) == -32602, "extra argument")
+    ok(err_code(s.call("settings_get", {"key": 5})) == -32602, "wrong type")
+    ok(err_code(s.call("settings_get", {"key": "a.b; rm -rf ~"})) == -32602, "pattern")
+    ok(err_code(s.call("settings_get", {})) == -32602, "required argument")
+    ok(err_code(s.call("window_move", {"address": "0x5a1", "workspace": 11})) == -32602, "maximum")
+    ok(err_code(s.call("window_focus", {"address": "0x5a1\" }) os.execute(\"x\") --"})) == -32602, "Lua injection in address")
+    ok(err_code(s.call("notification_send", {"summary": "a\u0007b"})) == -32602, "control characters")
+    ok(err_code(s.call("files_read", {"path": "~/x", "max_bytes": 10 ** 6})) == -32602, "size cap")
+    ok(err_code(s.req("resources/read", {"uri": "file:///etc/passwd"})) == -32002, "unknown resource")
+    rs = s.req("resources/list")["result"]["resources"]
+    ok({x["uri"] for x in rs} == {"olymparch://settings/schema", "olymparch://system/summary"}, "resources/list")
+    sch = s.req("resources/read", {"uri": "olymparch://settings/schema"})["result"]["contents"][0]
+    ok('"ai.enabled"' in sch["text"], "schema resource")
+    s.send({"jsonrpc": "2.0", "method": "notifications/whatever"})
+    ok(s.req("ping").get("id") == s.n, "a notification gets no answer")
+
+    # ── read tools need no card
+    answer("none")
+    r = s.call("settings_get", {"key": "notifications.duration"})
+    ok(text_of(r).strip() == "6" and not is_error(r), f"settings_get: {r}")
+    r = s.call("windows_list")
+    ok(r["result"]["structuredContent"]["windows"][0]["address"] == "0x5a1", "windows_list")
+    ok(not (home / "qs.log").exists(), "a read tool asked for approval")
+
+    # ── files: home only, no hidden, no secrets, no symlink escapes, no binaries
+    (home / "Documents").mkdir()
+    (home / "Documents/note.txt").write_text("hello olymparch\n")
+    (home / ".ssh").mkdir()
+    (home / ".ssh/id_ed25519").write_text("PRIVATE KEY")
+    (home / "Documents/id_rsa").write_text("PRIVATE KEY")
+    (home / "Documents/vault.kdbx").write_text("x")
+    (home / "Documents/bin.dat").write_bytes(b"\x00\x01\x02")
+    os.symlink(home / ".ssh", home / "Documents/keys")
+    os.symlink("/etc", home / "Documents/etc")
+    os.symlink(home / ".ssh/id_ed25519", home / "Documents/innocent.txt")
+    answer("once")
+    r = s.call("files_read", {"path": "~/Documents/note.txt"})
+    ok("hello olymparch" in text_of(r) and not is_error(r), f"files_read: {r}")
+    for bad in ("../../etc/passwd", "/etc/passwd", "~/.ssh/id_ed25519", "~/Documents/keys/id_ed25519", "~/Documents/etc/passwd",
+                "~/Documents/innocent.txt", "~/Documents/id_rsa", "~/Documents/vault.kdbx", "~/Documents/bin.dat",
+                "~/.config/olymparch/settings.json", "~/Documents/../.ssh/id_ed25519", str(home) + "/../" + home.name + "/.ssh/id_ed25519"):
+        r = s.call("files_read", {"path": bad})
+        ok(is_error(r) and "PRIVATE" not in text_of(r), f"files_read {bad} was not refused: {text_of(r)[:80]}")
+    r = s.call("files_list", {"path": "~/Documents"})
+    ok("note.txt" in text_of(r) and "id_rsa" not in text_of(r) and "vault" not in text_of(r), f"files_list: {text_of(r)}")
+    ok(is_error(s.call("files_list", {"path": "~/.ssh"})), "files_list ~/.ssh")
+    ok(is_error(s.call("files_list", {"path": "/"})), "files_list /")
+
+    # ── approvals (a new connection: the cards for files_read above count against the limit of 6 a minute)
+    s.close()
+    s = Stdio()
+    s.init()
+    def qs_asks():
+        return sum(" ask " in l for l in (home / "qs.log").read_text().splitlines()) if (home / "qs.log").exists() else 0
+
+    answer("once")
+    n0 = qs_asks()
+    r = s.call("settings_set", {"key": "notifications.duration", "value": "9"})
+    ok(not is_error(r) and settings("get", "notifications.duration").stdout.strip() == "9", f"approved once: {r}")
+    ok(qs_asks() == n0 + 1, "approved once: one card")
+    answer("deny")
+    r = s.call("settings_set", {"key": "notifications.duration", "value": "12"})
+    ok(is_error(r) and r["result"].get("structuredContent", {}).get("denied") is True
+       and settings("get", "notifications.duration").stdout.strip() == "9", f"denied: {r}")
+    answer("none")
+    t0 = time.time()
+    r = s.call("settings_set", {"key": "notifications.duration", "value": "13"})
+    ok(is_error(r) and "60 s" in text_of(r) and 2 < time.time() - t0 < 10, f"timeout: {r}")
+    ok(" cancel " in (home / "qs.log").read_text(), "timeout closes the card")
+    answer("game")
+    t0 = time.time()
+    r = s.call("volume_set", {"percent": 30})
+    ok(is_error(r) and "game" in text_of(r) and time.time() - t0 < 2 and not (home / "wpctl.log").exists(), f"game mode: {r}")
+    answer("always")
+    r = s.call("volume_set", {"percent": 30})
+    ok(not is_error(r) and "mcp-check@stdio" in settings("get", "ai.grants").stdout, f"always: {r}")
+    answer("deny")
+    n0 = qs_asks()
+    r = s.call("volume_set", {"percent": 35})
+    ok(not is_error(r) and qs_asks() == n0, "an «always» grant asks no more")
+    settings("pick", "ai.grants", "mcp-check@stdio volume_set")
+    r = s.call("volume_set", {"percent": 36})
+    ok(is_error(r) and qs_asks() == n0 + 1, "a revoked grant asks again")
+    # policy never: no card at all
+    settings("pick", "ai.policy", "media_control")   # ask → always
+    settings("pick", "ai.policy", "media_control")   # always → never
+    n0 = qs_asks()
+    r = s.call("media_control", {"action": "next"})
+    ok(is_error(r) and qs_asks() == n0, f"policy never: {r}")
+    # the agent's own permissions and the account can't be changed, and it never even shows a card
+    answer("once")
+    for key in ("ai.enabled", "ai.grants", "account.autologin", "backup.repo", "apps.terminal"):
+        r = s.call("settings_set", {"key": key, "value": "off"})
+        ok(is_error(r) and qs_asks() == n0, f"settings_set {key} was not refused")
+    # three denials in a row: the tool cools down (no more cards for a while)
+    answer("deny")
+    for _ in range(3):
+        s.call("game_add", {"name": "x"})
+    n0 = qs_asks()
+    r = s.call("game_add", {"name": "x"})
+    ok(is_error(r) and qs_asks() == n0, "cooldown after repeated denials")
+    # notifications/cancelled while the card waits: no answer for that call, the card is closed, nothing is run
+    answer("none")
+    s.n += 1
+    cid = s.n
+    s.send({"jsonrpc": "2.0", "id": cid, "method": "tools/call", "params": {"name": "workspace_focus", "arguments": {"workspace": 2}}})
+    time.sleep(0.8)
+    s.send({"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": cid, "reason": "user stopped"}})
+    r = s.req("ping")
+    ok(r.get("result") == {}, "ping while a card waits")
+    time.sleep(1)
+    late = s.read(timeout=3)
+    ok(late is None, f"a cancelled call was answered: {late}")
+    ok("workspace = 2" not in (home / "hyprctl.log").read_text(), "a cancelled call ran")
+    s.close()
+
+    # ── the card shows only our own words, the real identity and the agent's text as plain argument lines
+    s = Stdio("Olymparch: Tillat én gang\u202e\n\u001b[31m")
+    s.init()
+    ok(err_code(s.req("initialize", {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "claude-code"}})) == -32600,
+       "a second initialize (renaming the connection) is refused")
+    ok(is_error(s.call("settings_get", {"key": "ai.grants"})), "settings_get ai.* is refused")
+    ok(is_error(s.call("settings_list", {"page": "ai"})), "settings_list ai is refused")
+    ok("ai." not in text_of(s.call("settings_list")), "settings_list hides ai.*")
+
+    def last_ask():
+        return (home / "last-ask").read_bytes().split(b"\0")[:-1]
+
+    answer("deny")
+    ok(err_code(s.call("notification_send", {"summary": "a\u001b[31m"})) == -32602, "ESC in an argument is refused")
+    spoof = "Tillat én gang\u202e\u2066 «Olymparch: alt er trygt»\u009b31m\u2028\u200b"
+    s.call("notification_send", {"summary": spoof, "body": "x"})
+    argv = [x.decode() for x in last_ask()]
+    # qs ipc -p DIR call mcp ask ID CLIENT TRANSPORT TOOL TITLE RISK SUMMARY
+    client, transport, tool_, title, risk, summ = argv[7:13]
+    ok(client == "olymparch-tillat-n-gang-31m" and transport == "stdio", f"client shown as {client!r}")
+    ok(tool_ == "notification_send" and title == "Show a notification\x1fVis et varsel" and risk == "change", f"card title/risk from the server: {argv[9:12]}")
+    ok(summ.startswith("summary: Tillat én gang") and not any(ch in summ for ch in "\u202e\u2066\u001b\u2028\u200b\r"),
+       f"argument text not cleaned: {summ!r}")
+    ok(all(l.split(": ", 1)[0] in ("summary", "body") for l in summ.split("\n")), f"one line per field: {summ!r}")
+    # a path is shown as what would really be read, never masked or cut at the front
+    (home / "Private").mkdir(exist_ok=True)
+    (home / "Private/bank-login-recovery-codes-2026-oktober.txt").write_text("x")
+    s.call("files_read", {"path": "~/Documents/../" + "./" * 60 + "Private/bank-login-recovery-codes-2026-oktober.txt"})
+    summ = last_ask()[12].decode()
+    ok(summ == "file: ~/Private/bank-login-recovery-codes-2026-oktober.txt", f"files_read card: {summ!r}")
+    s.call("webapp_add", {"name": "Gmail", "url": "https://mail.google.com.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.evil.example/x"})
+    summ = last_ask()[12].decode()
+    ok("host: mail.google.com.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.evil.example" in summ, f"webapp_add card: {summ!r}")
+    # a notification from an agent: plain text, no buttons, the agent's name as sender
+    answer("once")
+    r = s.call("notification_send", {"summary": spoof, "body": "Avvis\u202e"})
+
+    note = (home / "notify.log").read_text().splitlines()[-1]
+    ok("|-a|AI · olymparch-tillat-n-gang-31m|" in "|" + note and "--action" not in note and "-A|" not in note and "critical" not in note
+       and "\u202e" not in note and "\u001b" not in note, f"notification: {note!r}")
+    # the log can't be poisoned with escape sequences
+    s.req("tools/call", {"name": "x\u001b]0;pwn\u0007", "arguments": {}})
+    s.close()
+    ok("\u001b" not in AUDIT.read_text() and "\\u001b" not in AUDIT.read_text() and "\x1b" not in cli("audit", "50").stdout,
+       "escape sequences in the audit log")
+    # settings that can't be read: every call is denied (fail closed)
+    sj = home / ".config/olymparch/settings.json"
+    saved = sj.read_text()
+    sj.write_text("{ not json")
+    s = Stdio()
+    s.init()
+    r = s.call("settings_get", {"key": "notifications.duration"})
+    ok(is_error(r) and "unreadable" in text_of(r), f"fail closed: {r}")
+    s.close()
+    sj.write_text(saved)
+
+    # ── the audit log: client, tool, decision, result; never content or secrets
+    answer("once")
+    s = Stdio()
+    s.init()
+    secret = "sk-" + "A1b2C3d4" * 6
+    s.call("notification_send", {"summary": "token " + secret, "body": "body text"})
+    s.call("files_read", {"path": "~/Documents/note.txt"})
+    s.close()
+    log = AUDIT.read_text()
+    rows = [json.loads(l) for l in log.splitlines()]
+    ok(all({"time", "client", "transport", "tool", "args", "decision", "result"} <= set(x) for x in rows), "audit fields")
+    ok(secret not in log and "hello olymparch" not in log and "PRIVATE" not in log, "a secret or content in the audit log")
+    ok(any(x["tool"] == "settings_set" and "approved once" in x["decision"] for x in rows), "audit: approved once")
+    ok(any("denied (denied by the user)" == x["decision"] for x in rows), "audit: denied")
+    ok(any("timeout" in x["decision"] for x in rows) and any("game mode" in x["decision"] for x in rows), "audit: timeout, game")
+    ok(any(x["decision"] == "refused" and "unknown tool" in x["result"] for x in rows), "audit: unknown tool")
+    ok(oct(AUDIT.stat().st_mode & 0o777) == "0o600", "audit log is 0600")
+    ok("settings_set" in cli("audit", "5").stdout or "notification_send" in cli("audit", "5").stdout, "olymparch-mcp audit")
+
+    # ── blocked client, server off
+    settings("pick", "ai.blocked_clients", "evil-agent")
+    s = Stdio("Evil Agent")
+    r = s.init()
+    ok(err_code(r) == -32001, f"blocked client: {r}")
+    s.close()
+    settings("set", "ai.enabled", "off")
+    s = Stdio()
+    ok(err_code(s.init()) == -32001, "server switched off")
+    s.close()
+    settings("set", "ai.enabled", "on")
+
+    # ── HTTP: 127.0.0.1 only, token, Origin, Host, sessions, sizes
+    with socket.socket() as sk:
+        sk.bind(("127.0.0.1", 0))
+        port = sk.getsockname()[1]
+    hp = subprocess.Popen([MCP, "http", "--port", str(port)], env=ENV, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    tok_file = run_dir / "olymparch-mcp/token"
+    for _ in range(50):
+        if tok_file.exists():
+            try:
+                socket.create_connection(("127.0.0.1", port), 0.2).close()
+                break
+            except OSError:
+                pass
+        time.sleep(0.1)
+    token = tok_file.read_text().strip()
+    ok(oct(tok_file.stat().st_mode & 0o777) == "0o600" and oct((run_dir / "olymparch-mcp").stat().st_mode & 0o777) == "0o700", "token file modes")
+    ok(token not in " ".join(open(f"/proc/{hp.pid}/cmdline").read().split("\0")), "token on the command line")
+    url = f"http://127.0.0.1:{port}/mcp"
+    INIT = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "http-check"}}}
+
+    def http(method="POST", body=INIT, headers=None, raw=None, path="/mcp"):
+        h = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream", "Authorization": f"Bearer {token}"}
+        h.update(headers or {})
+        h = {k: v for k, v in h.items() if v is not None}
+        data = raw if raw is not None else (json.dumps(body).encode() if body is not None and method == "POST" else None)
+        rq = urllib.request.Request(f"http://127.0.0.1:{port}{path}", data=data, headers=h, method=method)
+        try:
+            with urllib.request.urlopen(rq, timeout=20) as resp:
+                b = resp.read()
+                return resp.status, dict(resp.headers), (json.loads(b) if b else None)
+        except urllib.error.HTTPError as e:
+            return e.code, dict(e.headers), None
+
+    ok(http(headers={"Authorization": None})[0] == 401, "HTTP without a token")
+    ok(http(headers={"Authorization": "Bearer wrong"})[0] == 401, "HTTP with a wrong token")
+    ok(http(headers={"Origin": "http://evil.example"})[0] == 403, "HTTP with a foreign Origin")
+    ok(http(headers={"Origin": "null"})[0] == 403, "HTTP with Origin null")
+    ok(http(headers={"Host": f"evil.example:{port}"})[0] == 403, "HTTP with a foreign Host (DNS rebinding)")
+    ok(http(path="/other")[0] == 404, "HTTP other path")
+    ok(http("GET", None)[0] == 405, "HTTP GET → 405")
+    ok(http("OPTIONS", None)[0] == 405, "HTTP OPTIONS (no CORS)")
+    ok(http(headers={"Content-Type": "text/plain"})[0] == 415, "HTTP wrong Content-Type")
+    with socket.create_connection(("127.0.0.1", port), 5) as c:   # the size is refused before the body is read
+        c.sendall(f"POST /mcp HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nAuthorization: Bearer {token}\r\nContent-Type: application/json\r\n"
+                  f"Accept: application/json\r\nContent-Length: {(1 << 20) + 1}\r\n\r\n".encode())
+        ok(c.recv(100).startswith(b"HTTP/1.1 413"), "HTTP too large")
+    st, hd, body = http(headers={"Origin": f"http://127.0.0.1:{port}"})
+    sid = hd.get("Mcp-Session-Id")
+    ok(st == 200 and sid and body["result"]["protocolVersion"] == "2025-06-18", f"HTTP initialize: {st} {body}")
+    LIST = {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}
+    ok(http(body=LIST)[0] == 400, "HTTP without a session")
+    ok(http(body=LIST, headers={"Mcp-Session-Id": "nope"})[0] == 404, "HTTP unknown session")
+    ok(http(body=LIST, headers={"Mcp-Session-Id": sid, "MCP-Protocol-Version": "1999-01-01"})[0] == 400, "HTTP bad protocol version")
+    st, _, body = http(body=LIST, headers={"Mcp-Session-Id": sid, "MCP-Protocol-Version": "2025-06-18"})
+    ok(st == 200 and len(body["result"]["tools"]) >= 40, "HTTP tools/list")
+    ok(http(body={"jsonrpc": "2.0", "method": "notifications/initialized"}, headers={"Mcp-Session-Id": sid})[0] == 202, "HTTP notification → 202")
+    answer("deny")
+    st, _, body = http(body={"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "workspace_focus", "arguments": {"workspace": 3}}},
+                       headers={"Mcp-Session-Id": sid})
+    ok(st == 200 and body["result"]["isError"] and "http-check" in (home / "qs.log").read_text().splitlines()[-1], "HTTP call asks with the client's name")
+    ok(http("DELETE", None, headers={"Mcp-Session-Id": sid})[0] == 204, "HTTP DELETE session")
+    ok(http(body=LIST, headers={"Mcp-Session-Id": sid})[0] == 404, "HTTP deleted session")
+    hp.terminate()
+    hp.wait(10)
+
+    # ── registration with the agents: only the installed ones, idempotent, reversible, never over yours
+    cli("unregister")   # ai.enabled on above already ran «olymparch-mcp apply», which registered: start clean
+    for f in ("claude.log", "openclaw.log"):
+        (home / f).unlink(missing_ok=True)
+    hermes_cfg = home / ".hermes/config.yaml"
+    hermes_cfg.parent.mkdir(exist_ok=True)
+    hermes_cfg.write_text("model: local\nmcp_servers:\n    github:\n        command: npx\n")
+    r = cli("register")
+    ok(r.returncode == 0, f"register: {r.stderr}")
+    claude_log = (home / "claude.log").read_text()
+    ok("mcp add --scope user --transport stdio olymparch --" in claude_log, f"claude mcp add: {claude_log}")
+    cfg = hermes_cfg.read_text()
+    ok("    olymparch:\n        command:" in cfg and "github:" in cfg and "model: local" in cfg, f"hermes config:\n{cfg}")
+    ok(json.loads((home / "openclaw-has-olymparch").read_text())["command"].endswith("olymparch-mcp"), "openclaw mcp set")
+    for base in (".claude/skills", ".hermes/skills", ".openclaw/skills"):
+        link = home / base / "olymparch"
+        ok(link.is_symlink() and (link / "SKILL.md").exists(), f"skill link in {base}")
+    cli("register")
+    ok((home / "claude.log").read_text().count("mcp add") == 1 and hermes_cfg.read_text().count("olymparch:") == 1, "register twice")
+    r = cli("unregister")
+    ok(hermes_cfg.read_text() == "model: local\nmcp_servers:\n    github:\n        command: npx\n", f"hermes after unregister:\n{hermes_cfg.read_text()}")
+    ok(not (home / "claude-has-olymparch").exists() and not (home / "openclaw-has-olymparch").exists(), "claude/openclaw removed")
+    ok(not (home / ".claude/skills/olymparch").exists(), "skills removed")
+    # entries of the user's own are left alone
+    hermes_cfg.write_text("mcp_servers:\n  olymparch:\n    command: /opt/mine\n")
+    (home / "claude-has-olymparch").write_text("")
+    (home / ".claude/skills/olymparch").mkdir(parents=True)
+    r = cli("register")
+    ok("exists (yours" in r.stdout and hermes_cfg.read_text() == "mcp_servers:\n  olymparch:\n    command: /opt/mine\n", f"own entries: {r.stdout}")
+    cli("unregister")
+    ok((home / "claude-has-olymparch").exists() and (home / ".claude/skills/olymparch").is_dir(), "unregister removed the user's own")
+    # a new config file (no mcp_servers yet) and --auto respecting the setting
+    hermes_cfg.write_text("model: local\n")
+    settings("set", "ai.auto_register", "off")
+    r = cli("register", "--auto")
+    ok("mcp_servers" not in hermes_cfg.read_text(), "register --auto with the setting off")
+    settings("set", "ai.auto_register", "on")
+    cli("register", "--auto")
+    ok("mcp_servers:" in hermes_cfg.read_text() and "olymparch:" in hermes_cfg.read_text(), "register --auto")
+    cli("unregister")
+    ok(hermes_cfg.read_text() == "model: local\n", f"hermes key removed again:\n{hermes_cfg.read_text()}")
+
+    # ── the skills (Agent Skills format): name = folder, a description, and only tools that exist
+    import re
+    skill_dirs = sorted(p for p in (ROOT / "default/skills").iterdir() if p.is_dir())
+    src = Path(MCP).read_text()
+    listed = set(re.search(r"SKILLS = \(([^)]*)\)", src).group(1).replace('"', "").replace(",", " ").split())
+    ok({p.name for p in skill_dirs} == listed, f"skills on disk {[p.name for p in skill_dirs]} vs SKILLS {listed}")
+    for d in skill_dirs:
+        t = (d / "SKILL.md").read_text()
+        m = re.match(r"---\n(.*?)\n---\n", t, re.S)
+        fm = m.group(1) if m else ""
+        name = re.search(r"^name: (.+)$", fm, re.M)
+        desc = re.search(r"^description: (.+)$", fm, re.M)
+        ok(name and name.group(1) == d.name and re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", d.name) and len(d.name) <= 64, f"{d.name}: name")
+        ok(desc and 20 <= len(desc.group(1)) <= 1024, f"{d.name}: description")
+        for tool_ in re.findall(r"`([a-z]+_[a-z_]+)`", t):
+            ok(tool_ in names or "." in tool_, f"{d.name}: mentions unknown tool {tool_}")
+finally:
+    shutil.rmtree(tmp, ignore_errors=True)
+
+for f in fails:
+    print("FAIL:", f)
+print(f"mcp-check: {oks} checks OK" if not fails else f"mcp-check: {len(fails)} of {oks + len(fails)} checks failed")
+sys.exit(1 if fails else 0)

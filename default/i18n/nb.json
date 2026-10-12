@@ -82,5 +82,18 @@
   "theme.title": "GUDENE PÅ OLYMPEN",
   "theme.hint": "←↑↓→ velg · Enter bruk · Esc lukk · Innstillinger → Utseende",
   "theme.light": "LYST",
-  "theme.in_use": "I BRUK"
+  "theme.in_use": "I BRUK",
+  "mcp.asks": "EN AI-AGENT BER OM LOV",
+  "mcp.change": "ENDRING",
+  "mcp.sensitive": "SENSITIV",
+  "mcp.tool": "Verktøy: %1",
+  "mcp.once": "Tillat én gang",
+  "mcp.always": "Alltid for %1",
+  "mcp.deny": "Avvis",
+  "mcp.left": "Avvises om %1 s",
+  "mcp.self_named": "(navn oppgitt av klienten)",
+  "mcp.arguments": "ARGUMENTER FRA AGENTEN",
+  "settings.items.noclients": "Ingen agent har koblet til ennå",
+  "settings.items.nogrants": "Ingen ennå: «Alltid» på et godkjenningskort legger dem til her",
+  "settings.items.nomcp": "olymparch-mcp er ikke installert"
 }
