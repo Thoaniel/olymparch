@@ -6,6 +6,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
+import Quickshell.Hyprland
 
 Scope {
     id: picker
@@ -119,6 +120,8 @@ Scope {
                     id: grid
                     theme: picker.theme
                     columns: Math.min(picker.perRow, Math.max(1, picker.items.length))
+                    // as wide as fits: up to six side by side, never wider than the screen (minus the frame)
+                    thumbW: Math.max(120, Math.min(192, Math.floor((panel.parent.width - 48 - 40 - (columns - 1) * spacing) / columns)))
                     items: picker.items
                     current: (picker.items[picker.was] || {}).id || ""
                     cursor: picker.cursor
