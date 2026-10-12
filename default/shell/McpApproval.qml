@@ -91,7 +91,7 @@ Scope {
                     required property var modelData
                     readonly property bool sensitive: modelData.risk === "sensitive"
                     readonly property color accent: sensitive ? mcp.theme.red : mcp.theme.gold
-                    readonly property int left: Math.max(0, Math.ceil(mcp.seconds - (mcp.now - modelData.started) / 1000))
+                    readonly property int remaining: Math.max(0, Math.ceil(mcp.seconds - (mcp.now - modelData.started) / 1000))
                     property bool armed: false
                     Timer { interval: 900; running: true; onTriggered: card.armed = true }
                     width: cards.width
@@ -227,10 +227,10 @@ Scope {
                             width: parent.width
                             height: 16
                             Rectangle { y: 2; width: parent.width; height: 2; color: mcp.theme.line }
-                            Rectangle { y: 2; width: parent.width * card.left / mcp.seconds; height: 2; color: card.accent }
+                            Rectangle { y: 2; width: parent.width * card.remaining / mcp.seconds; height: 2; color: card.accent }
                             Text {
                                 anchors { right: parent.right; bottom: parent.bottom }
-                                text: I18n.t("mcp.left", "Denied in %1 s").arg(card.left)
+                                text: I18n.t("mcp.left", "Denied in %1 s").arg(card.remaining)
                                 font { family: mcp.theme.mono; pixelSize: mcp.theme.px(10) }
                                 color: mcp.theme.muted
                             }
