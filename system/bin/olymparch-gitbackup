@@ -247,7 +247,7 @@ cmd_restore() {
     # shellcheck disable=SC2064
     trap "rm -rf -- '$work'" EXIT
     say "$(L "Fetching" "Henter") $url …"
-    git clone -q --depth 1 -- "$url" "$work/repo" || { say "$(L "Could not fetch the repository" "Fikk ikke hentet repoet")"; WAIT=1 wait_enter; exit 1; }
+    git clone -q --depth 1 --branch main -- "$url" "$work/repo" || { say "$(L "Could not fetch the repository" "Fikk ikke hentet repoet")"; WAIT=1 wait_enter; exit 1; }
     [ -f "$work/repo/$FILE" ] || { say "$(L "No backup in that repository" "Ingen backup i det repoet")"; WAIT=1 wait_enter; exit 1; }
     say "$(L "Backup from" "Backup fra"): $(git -C "$work/repo" log -1 --format=%cd --date=format:'%F %R')"
     # age is authenticated encryption: only an archive made with this key decrypts, and any change to it makes age fail.
