@@ -71,7 +71,7 @@ keys "clear; bash /mnt/tests/vm/apps-guest.sh; pacman -Q $pk | column -c 150; pa
 wait_for 'CHK: DONE' 60
 shot pakker "pacman -Q: alt som ble krysset av er installert; LocalSend, Steam, Discord og Code er ikke"
 for k in PKGS LEAN NVIM SHELL CLOUD; do seen "CHK: $k-OK" || fails+=("$k"); done
-keys "clear; bash -ic 'type -t z; echo \$STARSHIP_SHELL; bind -X | grep -c fzf'; grep -hE '^(Name|Exec|Icon)=' ~/.local/share/applications/webapp-*.desktop\n" 3
+keys "clear; bash -ic 'type -t z; echo \$STARSHIP_SHELL; type -t __fzf_history__; rg --version | head -n 1'; grep -hE '^(Name|Exec|Icon)=' ~/.local/share/applications/webapp-*.desktop\n" 3
 shot skall-og-webapper "Ny bash: zoxide (z), starship og fzf er på; de to skyspill-webappene"
 keys "clear; nvim /etc/xdg/nvim/init.lua\n" 3
 shot neovim "Neovim med Olymparchs standardoppsett (linjenumre, gull på linjenummeret)"
