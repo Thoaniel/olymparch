@@ -41,11 +41,14 @@ Scope {
             if (!/^[0-9a-f]{32}$/.test(id)) return "bad";
             if (Settings.get("ai.enabled") === false) return "off";
             if (mcp.gameActive) return "game";
-            const clean = (s, n) => String(s).replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, n);
+            // nothing that changes how text looks: control characters (C0, C1), bidi overrides, zero-width, line breaks
+            const bad = /[\u0000-\u001f\u007f-\u009f\u061c\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff\ufff9-\ufffb]/g;
+            const clean = (s, n) => String(s).replace(bad, " ").replace(/ {2,}/g, " ").trim().slice(0, n);
+            const lines = String(summary).split("\n").slice(0, 6).map(l => clean(l, 90)).filter(l => l.length > 0);
             mcp.requests = mcp.requests.filter(r => r.id !== id).concat([{
                 id: id, client: clean(client, 40), transport: transport === "http" ? "http" : "stdio",
                 tool: clean(tool, 48), title: clean(title, 60), risk: risk === "sensitive" ? "sensitive" : "change",
-                summary: clean(summary, 300), started: Date.now()
+                summary: lines.join("\n"), started: Date.now()
             }]);
             return "shown";
         }
@@ -135,9 +138,9 @@ Scope {
                                 }
                             }
                         }
-                        Text {
+                        Text {   // who: the name is what the agent says it is; the transport is ours
                             width: parent.width
-                            text: card.modelData.client + "  ·  " + card.modelData.transport
+                            text: card.modelData.client + "  ·  " + card.modelData.transport + "  " + I18n.t("mcp.self_named", "(name given by the client)")
                             font { family: mcp.theme.mono; pixelSize: mcp.theme.px(12) }
                             color: mcp.theme.muted
                             elide: Text.ElideRight
@@ -150,6 +153,12 @@ Scope {
                             color: mcp.theme.text
                             wrapMode: Text.Wrap
                             textFormat: Text.PlainText
+                        }
+                        Text {   // what follows comes from the agent: framed, plain text, one line per field
+                            visible: card.modelData.summary.length > 0
+                            text: I18n.t("mcp.arguments", "ARGUMENTS FROM THE AGENT")
+                            font { family: mcp.theme.mono; pixelSize: mcp.theme.px(10); bold: true; letterSpacing: 1 }
+                            color: mcp.theme.muted
                         }
                         Rectangle {   // exactly what it wants to do
                             visible: card.modelData.summary.length > 0
@@ -164,7 +173,7 @@ Scope {
                                 font { family: mcp.theme.mono; pixelSize: mcp.theme.px(12) }
                                 color: mcp.theme.text
                                 wrapMode: Text.WrapAnywhere
-                                maximumLineCount: 4
+                                maximumLineCount: 12
                                 elide: Text.ElideRight
                                 textFormat: Text.PlainText
                             }

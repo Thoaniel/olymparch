@@ -87,6 +87,8 @@
   "mcp.always": "Alltid for %1",
   "mcp.deny": "Avvis",
   "mcp.left": "Avvises om %1 s",
+  "mcp.self_named": "(navn oppgitt av klienten)",
+  "mcp.arguments": "ARGUMENTER FRA AGENTEN",
   "settings.items.noclients": "Ingen agent har koblet til ennå",
   "settings.items.nogrants": "Ingen ennå: «Alltid» på et godkjenningskort legger dem til her",
   "settings.items.nomcp": "olymparch-mcp er ikke installert"

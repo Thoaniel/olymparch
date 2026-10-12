@@ -153,24 +153,36 @@ DENIED_KEYS = re.compile(r"^(ai|account|backup)\.|^apps\.terminal$|^keyboard\.cu
 
 # ──────────────────────────────────────────────────────────────────────────────────────────────── secrets & audit
 SECRET_KEY = re.compile(r"pass|token|secret|auth|cookie|api_?key|private", re.I)
-SECRET_VALUE = re.compile(r"[A-Za-z0-9+/_=-]{32,}")
+SECRET_VALUE = re.compile(r"[A-Za-z0-9+_=-]{32,}")   # token-like words: masked in the audit log only
+
+
+# Text a client controls never reaches the card, the log or Settings with anything that could change how it looks:
+# ANSI sequences, control characters (C0, C1), bidi overrides and isolates, zero-width characters and line breaks go.
+ANSI = re.compile(r"\x1b(\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(\x07|\x1b\\)?|.)?")
+INVISIBLE = re.compile("[\x00-\x1f\x7f-\x9f\u061c\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff\ufff9-\ufffb]")
+
+
+def plain(s):
+    return re.sub(r" {2,}", " ", INVISIBLE.sub(" ", ANSI.sub("", s))).strip()
 
 
 def short(v, n=60):
     s = v if isinstance(v, str) else json.dumps(v, ensure_ascii=False)
-    s = SECRET_VALUE.sub("***", s.replace("\n", " ").replace("\t", " "))
-    return s if len(s) <= n else s[: n - 1] + "…"
+    s = plain(s)
+    return s if len(s) <= n else s[: n // 3] + "…" + s[-(n - n // 3 - 1):]   # the middle goes: the end (a file name) stays
 
 
 def summarize(tool, args):
-    """The arguments as one short line for the card and the log: never content, never secrets."""
+    """The arguments for the card and the log: one «field: value» line per argument (at most 6, 90 characters each),
+    plain text only, secrets as ***. Never file or clipboard content: those tools have no such arguments."""
     t = TOOLS.get(tool)
     if t and t.summary:
-        return t.summary(args)
-    parts = []
-    for k, v in (args or {}).items():
-        parts.append(f"{k}=***" if SECRET_KEY.search(k) else f"{k}={short(v)}")
-    return ", ".join(parts)[:300]
+        args = t.summary(args)
+    lines = []
+    for k, v in list((args or {}).items())[:6]:
+        k = short(str(k), 24)
+        lines.append(f"{k}: ***" if SECRET_KEY.search(k) else f"{k}: {short(v, 88 - len(k))}")
+    return "\n".join(lines)
 
 
 def private_dir(path):
@@ -189,8 +201,8 @@ _audit_lock = threading.Lock()
 
 def audit(session, tool, summary, decision, result):
     entry = {"time": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "client": session.client_name,
-             "transport": session.transport, "tool": tool, "args": summary, "decision": decision,
-             "result": short(result, 160)}
+             "transport": session.transport, "tool": short(tool, 48), "args": SECRET_VALUE.sub("***", summary),
+             "decision": decision, "result": SECRET_VALUE.sub("***", short(result, 160))}
     line = json.dumps(entry, ensure_ascii=False) + "\n"
     with _audit_lock:
         try:
@@ -400,13 +412,19 @@ def t_hw(a, s):
       "notifications, …). Read the resource olymparch://settings/schema for types, options and limits.",
       {"page": S(32, r"[a-z_]{1,32}", "a page id, such as appearance")})
 def t_settings_list(a, s):
-    return ran(settings("list", *([a["page"]] if a.get("page") else [])))
+    if a.get("page") == "ai":
+        raise ToolError(L("Settings → AI agents is for the user only", "Innstillinger → AI-agenter er bare for brukeren"))
+    r = ran(settings("list", *([a["page"]] if a.get("page") else [])))
+    r["content"][0]["text"] = "\n".join(l for l in r["content"][0]["text"].splitlines() if not l.startswith("ai."))
+    return r
 
 
 @tool("settings_get", "read", "Read a setting", "Les en innstilling",
       "The value of one setting (yours, or the default). Per-monitor keys take @OUTPUT, like display.scale@DP-1.",
       {"key": S(80, KEY)}, ("key",))
 def t_settings_get(a, s):
+    if a["key"].startswith("ai."):   # grants, blocks and policy: an agent must not learn whom it could pose as
+        raise ToolError(L("Settings → AI agents is for the user only", "Innstillinger → AI-agenter er bare for brukeren"))
     return ran(settings("get", a["key"]))
 
 
@@ -420,7 +438,7 @@ def _settable(key):
       "refused). Values are text: on/off for switches, numbers as digits. Not allowed: ai.*, account.*, backup.*, "
       "apps.terminal and your own shortcuts.",
       {"key": S(80, KEY), "value": S(200, desc="the new value as text")}, ("key", "value"),
-      summary=lambda a: f"{a.get('key')} = {'***' if SECRET_KEY.search(a.get('key', '')) else short(a.get('value', ''), 80)}",
+      summary=lambda a: {"key": a.get("key", ""), "value": "***" if SECRET_KEY.search(a.get("key", "")) else a.get("value", "")},
       idempotent=True)
 def t_settings_set(a, s):
     _settable(a["key"])
@@ -531,7 +549,7 @@ def t_workspaces(a, s):
 
 
 @tool("window_focus", "change", "Focus a window", "Gi et vindu fokus", "Focus a window by its address (windows_list).",
-      {"address": S(18, ADDRESS)}, ("address",), summary=lambda a: a.get("address", ""), idempotent=True)
+      {"address": S(18, ADDRESS)}, ("address",), idempotent=True)
 def t_window_focus(a, s):
     c = _window(a["address"])
     hypr_dispatch(f'hl.dsp.focus({{ window = "address:{a["address"]}" }})')
@@ -548,7 +566,7 @@ def t_window_move(a, s):
 
 @tool("window_close", "change", "Close a window", "Lukk et vindu",
       "Ask a window to close (like Super+Q; the app may ask to save first).", {"address": S(18, ADDRESS)}, ("address",),
-      summary=lambda a: a.get("address", ""), destructive=True)
+      destructive=True)
 def t_window_close(a, s):
     c = _window(a["address"])
     hypr_dispatch(f'hl.dsp.window.close({{ window = "address:{a["address"]}" }})')
@@ -629,9 +647,11 @@ def t_app_launch(a, s):
 @tool("notification_send", "change", "Show a notification", "Vis et varsel",
       "A notification from you to the user (no buttons). The sender is shown as «AI · <your name>».",
       {"summary": S(120, minlen=1), "body": S(500, multiline=True)}, ("summary",),
-      summary=lambda a: short(a.get("summary", ""), 60))
+)
 def t_notify(a, s):
-    return ran(run(["notify-send", "-a", f"AI · {s.client_name}", "-u", "normal", "--", a["summary"], a.get("body", "")]))
+    # never --action, never critical, the sender is the agent's name: a notification can't pass for the approval card
+    body = "\n".join(plain(l) for l in a.get("body", "").split("\n"))[:500]
+    return ran(run(["notify-send", "-a", f"AI · {s.client_name}", "-u", "normal", "--", plain(a["summary"]) or "…", body]))
 
 
 @tool("media_control", "change", "Control media", "Styr avspilling", "Play/pause, next, previous or stop the player the bar shows.",
@@ -718,16 +738,31 @@ def t_clipboard(a, s):
 WEBAPP_NAME = r"[A-Za-z0-9 ._-]{1,40}"
 
 
+def _host(url):
+    m = re.match(r"https://([^/:]+)", url)
+    return m.group(1) if m else "?"
+
+
 @tool("webapps_list", "read", "List web apps", "Vis webapper", "ID, name and address of every web app (olymparch-webapp list).")
 def t_webapps(a, s):
     return ran(run([cmd("olymparch-webapp"), "list"]))
 
 
 @tool("webapp_add", "change", "Add a web app", "Legg til en webapp",
-      "A site in its own window, in the menu (olymparch-webapp add). Fetches the site's icon over https.",
-      {"name": S(40, WEBAPP_NAME), "url": S(300, r"https://[A-Za-z0-9.-]{1,253}(:[0-9]{1,5})?(/[^\s\"'\\<>`]*)?")},
-      ("name", "url"), open_world=True)
+      "A site in its own window, in the menu (olymparch-webapp add). Fetches the site's icon over https. "
+      "Never replaces an existing web app.",
+      {"name": S(40, WEBAPP_NAME), "url": S(160, r"https://[A-Za-z0-9.-]{1,80}(:[0-9]{1,5})?(/[^\s\"'\\<>`]*)?")},
+      ("name", "url"), summary=lambda a: {"name": a.get("name", ""), "host": _host(a.get("url", "")), "url": a.get("url", "")},
+      open_world=True)
 def t_webapp_add(a, s):
+    rc, out, _ = run([cmd("olymparch-webapp"), "list"])
+    want = a["name"].strip().lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", want).strip("-")
+    for line in out.splitlines():   # never replace an app of the user's (its menu entry would open the new address)
+        f = line.split("\t")
+        if len(f) >= 2 and (f[0].lower() == slug or f[1].strip().lower() == want):
+            raise ToolError(L(f"a web app called {f[1]} exists; the user can remove it first",
+                              f"en webapp som heter {f[1]} finnes; brukeren kan fjerne den først"))
     return ran(run([cmd("olymparch-webapp"), "add", a["name"], a["url"]], timeout=120))
 
 
@@ -853,7 +888,7 @@ def t_reminders(a, s):
       "A notification later: when = 10m, 1h30m, 45s, 2d or a time like 14:30 (tomorrow if it has passed).",
       {"when": S(16, r"([0-9]{1,2}:[0-9]{2}|([0-9]{1,4}[smhd]?){1,4})"), "text": S(200, minlen=1)}, ("when", "text"))
 def t_reminder_add(a, s):
-    return ran(run([cmd("olymparch-remind"), a["when"], a["text"]]))
+    return ran(run([cmd("olymparch-remind"), a["when"], f"{plain(a['text'])} (AI · {s.client_name})"]))
 
 
 @tool("reminder_cancel", "change", "Cancel a reminder", "Avlys en påminnelse", "Cancel one by its id (reminders_list).",
@@ -893,13 +928,21 @@ def home_path(p):
     return real
 
 
+def _shown_path(p):   # what the card shows: the path that would really be read, never the raw text
+    try:
+        return _display(home_path(p))
+    except ToolError:
+        return "(refused)"
+
+
 def _display(path):
     return "~" + path[len(HOME):] if path.startswith(HOME) else path
 
 
 @tool("files_list", "read", "List a folder", "Vis en mappe",
       "Files and folders in a folder in the home folder (not hidden ones): name, kind, size. ~ is the home folder.",
-      {"path": S(1024, desc="like ~/Documents")}, open_world=True)
+      {"path": S(1024, desc="like ~/Documents")}, summary=lambda a: {"folder": _shown_path(a.get("path") or "~")},
+      open_world=True)
 def t_files_list(a, s):
     p = home_path(a.get("path") or "~")
     if not os.path.isdir(p):
@@ -928,7 +971,7 @@ def t_files_list(a, s):
       "A text file in the home folder (not hidden ones, not key or password files), at most 256 KB per call; "
       "offset and max_bytes page through bigger files.",
       {"path": S(1024, minlen=1), "offset": I(0, 1 << 40), "max_bytes": I(1, 262144, "default 65536")}, ("path",),
-      summary=lambda a: short(a.get("path", ""), 120), open_world=True)
+      summary=lambda a: {"file": _shown_path(a.get("path", ""))}, open_world=True)
 def t_files_read(a, s):
     p = home_path(a["path"])
     try:
@@ -982,17 +1025,21 @@ def client_key(name):
 
 def policy(session, t):
     """→ (decision, why) for a call: allow | ask | deny."""
-    if setting("ai.enabled", True) is not True:
+    bad = object()   # the settings can't be read: no (fail closed)
+    enabled, blocked, pols, grants = (setting(k, bad) for k in ("ai.enabled", "ai.blocked_clients", "ai.policy", "ai.grants"))
+    if any(x is bad for x in (enabled, blocked, pols, grants)) or not all(isinstance(x, list) for x in (blocked, pols, grants)):
+        return "deny", "settings unreadable"
+    if enabled is not True:
         return "deny", "off"
-    if session.client_name in (setting("ai.blocked_clients", []) or []):
+    if session.client_name in blocked:
         return "deny", "blocked"
-    pol = {p[0]: p[1] for p in (setting("ai.policy", []) or []) if isinstance(p, list) and len(p) == 2}.get(t.name)
+    pol = {p[0]: p[1] for p in pols if isinstance(p, list) and len(p) == 2}.get(t.name)
     pol = pol or ("always" if t.risk == "read" else "ask")
     if pol == "never":
         return "deny", "policy never"
     if pol == "always":
         return "allow", "policy always" if t.risk != "read" else "read"
-    if [session.client_id, t.name] in (setting("ai.grants", []) or []):
+    if [session.client_id, t.name] in grants:
         return "allow", "always grant"
     return "ask", ""
 
@@ -1012,6 +1059,7 @@ def ask_user(session, t, summary, req=None):
     if not _card_lock.acquire(timeout=APPROVAL_SECONDS):   # one card per server at a time
         return "deny", "busy"
     rid = secrets.token_hex(16)
+    client_id = session.client_id   # fixed now: the grant goes to the client the card named
     try:
         private_dir(RUN)
         private_dir(ANSWERS)
@@ -1050,7 +1098,7 @@ def ask_user(session, t, summary, req=None):
                 os.unlink(answer)
             if len(data) == 2 and data[0] == rid and data[1] in ("once", "always", "deny"):
                 if data[1] == "always":
-                    rc, _, err = settings("add", "ai.grants", f"{session.client_id} {t.name}")
+                    rc, _, err = settings("add", "ai.grants", f"{client_id} {t.name}")
                     if rc != 0:
                         log(f"could not store the grant: {err.strip()}")
                     return "allow", "approved always"
@@ -1072,6 +1120,10 @@ class RpcError(Exception):
     def __init__(self, code, message, data=None):
         super().__init__(message)
         self.code, self.message, self.data = code, message, data
+
+
+_limits, _limits_lock = {}, threading.Lock()
+_denials = {}   # (client id, tool) → (consecutive denials, cooldown until)
 
 
 class Session:
@@ -1098,8 +1150,8 @@ class Session:
 
     def rate(self, kind, limit, window):
         now = time.monotonic()
-        with self.lock:
-            lst = self.asks if kind == "ask" else self.calls
+        with _limits_lock:   # per client, shared by its connections (a new HTTP session starts nothing over)
+            lst = _limits.setdefault(self.client_id, {"ask": [], "call": []})[kind]
             lst[:] = [x for x in lst if now - x < window]
             if len(lst) >= limit:
                 return False
@@ -1114,6 +1166,8 @@ class Session:
 def call_tool(session, params, req_id=None):
     name = params.get("name")
     args = params.get("arguments", {})
+    if not session.rate("call", 30, 10):   # before anything is logged: refusals can't flood the audit log
+        raise RpcError(-32000, "Too many calls; wait a few seconds.")
     if not isinstance(name, str) or name not in TOOLS:
         audit(session, short(str(name), 48), "", "refused", "unknown tool")
         raise RpcError(-32602, f"Unknown tool: {short(str(name), 48)}")
@@ -1126,9 +1180,6 @@ def call_tool(session, params, req_id=None):
         audit(session, name, "", "refused", f"invalid arguments: {e}")
         raise RpcError(-32602, f"Invalid arguments for {name}: {e}") from None
     summary = summarize(name, args)
-    if not session.rate("call", 30, 10):
-        audit(session, name, summary, "refused", "rate limit")
-        return {"content": [{"type": "text", "text": "Too many calls; wait a few seconds."}], "isError": True}
     # What can never work is refused before any card: a key the agent may not set, a path outside what it may read
     try:
         if name in ("settings_set", "settings_reset"):
@@ -1141,7 +1192,7 @@ def call_tool(session, params, req_id=None):
                 "structuredContent": {"denied": True, "reason": "not allowed"}}
     decision, why = policy(session, t)
     if decision == "ask":
-        count, until = session.denials.get(name, (0, 0))
+        count, until = _denials.get((session.client_id, name), (0, 0))
         if until > time.monotonic():
             decision, why = "deny", "cooldown after repeated denials"
         elif not session.rate("ask", 6, 60):
@@ -1152,9 +1203,9 @@ def call_tool(session, params, req_id=None):
             decision, why = ask_user(session, t, summary, {"id": req_id, "progressToken": tok if isinstance(tok, (str, int)) and not isinstance(tok, bool) else None})
             if decision == "deny" and why in ("denied by the user", "timeout"):
                 count += 1
-                session.denials[name] = (count, time.monotonic() + 120 if count >= 3 else 0)
+                _denials[(session.client_id, name)] = (count, time.monotonic() + 120 if count >= 3 else 0)
             elif decision == "allow":
-                session.denials.pop(name, None)
+                _denials.pop((session.client_id, name), None)
     if decision != "allow":
         audit(session, name, summary, f"denied ({why})", "")
         msg = {
@@ -1226,6 +1277,8 @@ def handle(session, msg):
 
 def dispatch(session, method, params, rid=None):
     if method == "initialize":
+        if session.initialized or session.client_name != "unknown":
+            raise RpcError(-32600, "already initialized: a connection keeps the name it started with")
         info = params.get("clientInfo") or {}
         if not isinstance(info, dict) or not isinstance(info.get("name", ""), str):
             raise RpcError(-32602, "clientInfo.name must be text")
@@ -1592,6 +1645,7 @@ def atomic_write(path, text_):
 
 def hermes_add(path, command):
     """~/.hermes/config.yaml, mcp_servers: our entry as a marked block; the rest of the file is left as it is."""
+    path = os.path.realpath(path)   # a dotfile manager's symlink stays a symlink
     try:
         with open(path, encoding="utf-8") as f:
             lines = f.read().splitlines()
@@ -1629,6 +1683,7 @@ def hermes_add(path, command):
 
 
 def hermes_remove(path):
+    path = os.path.realpath(path)
     try:
         with open(path, encoding="utf-8") as f:
             lines = f.read().splitlines()
@@ -1788,8 +1843,8 @@ def show_audit(n):
     for r in reversed(rows):
         try:
             e = json.loads(r)
-            print(f"{e['time'][5:16].replace('T', ' ')}  {e['client']}/{e['transport']}  {e['tool']}  "
-                  f"{e['args'][:60]}  → {e['decision']}  {e['result'][:60]}".rstrip())
+            print(plain(f"{e['time'][5:16].replace('T', ' ')}  {e['client']}/{e['transport']}  {e['tool']}  "
+                        f"{e['args'].replace(chr(10), ' · ')[:70]}  → {e['decision']}  {e['result'][:60]}"))
         except (ValueError, KeyError, TypeError):
             continue
     return 0

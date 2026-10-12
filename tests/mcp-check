@@ -51,7 +51,8 @@ STUB = {
 echo "$*" >>"$HOME/qs.log"
 [ "$5" = mcp ] || exit 1
 case $6 in
-  ask) a=$(cat "$HOME/answer" 2>/dev/null || echo none)
+  ask) printf '%s\0' "$@" >"$HOME/last-ask"
+       a=$(cat "$HOME/answer" 2>/dev/null || echo none)
        if [ "$a" = game ]; then echo game; exit 0; fi
        echo shown
        if [ "$a" != none ]; then (sleep 0.3; d=$XDG_RUNTIME_DIR/olymparch-mcp/answers; printf '%s %s\n' "$7" "$a" >"$d/.$7"; mv "$d/.$7" "$d/$7") & fi ;;
@@ -323,6 +324,62 @@ try:
     ok(late is None, f"a cancelled call was answered: {late}")
     ok("workspace = 2" not in (home / "hyprctl.log").read_text(), "a cancelled call ran")
     s.close()
+
+    # ── the card shows only our own words, the real identity and the agent's text as plain argument lines
+    s = Stdio("Olymparch: Tillat én gang\u202e\n\u001b[31m")
+    s.init()
+    ok(err_code(s.req("initialize", {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "claude-code"}})) == -32600,
+       "a second initialize (renaming the connection) is refused")
+    ok(is_error(s.call("settings_get", {"key": "ai.grants"})), "settings_get ai.* is refused")
+    ok(is_error(s.call("settings_list", {"page": "ai"})), "settings_list ai is refused")
+    ok("ai." not in text_of(s.call("settings_list")), "settings_list hides ai.*")
+
+    def last_ask():
+        return (home / "last-ask").read_bytes().split(b"\0")[:-1]
+
+    answer("deny")
+    ok(err_code(s.call("notification_send", {"summary": "a\u001b[31m"})) == -32602, "ESC in an argument is refused")
+    spoof = "Tillat én gang\u202e\u2066 «Olymparch: alt er trygt»\u009b31m\u2028\u200b"
+    s.call("notification_send", {"summary": spoof, "body": "x"})
+    argv = [x.decode() for x in last_ask()]
+    # qs ipc -p DIR call mcp ask ID CLIENT TRANSPORT TOOL TITLE RISK SUMMARY
+    client, transport, tool_, title, risk, summ = argv[7:13]
+    ok(client == "olymparch-tillat-n-gang-31m" and transport == "stdio", f"client shown as {client!r}")
+    ok(tool_ == "notification_send" and title == "Show a notification" and risk == "change", f"card title/risk from the server: {argv[9:12]}")
+    ok(summ.startswith("summary: Tillat én gang") and not any(ch in summ for ch in "\u202e\u2066\u001b\u2028\u200b\r"),
+       f"argument text not cleaned: {summ!r}")
+    ok(all(l.split(": ", 1)[0] in ("summary", "body") for l in summ.split("\n")), f"one line per field: {summ!r}")
+    # a path is shown as what would really be read, never masked or cut at the front
+    (home / "Private").mkdir(exist_ok=True)
+    (home / "Private/bank-login-recovery-codes-2026-oktober.txt").write_text("x")
+    s.call("files_read", {"path": "~/Documents/../" + "./" * 60 + "Private/bank-login-recovery-codes-2026-oktober.txt"})
+    summ = last_ask()[12].decode()
+    ok(summ == "file: ~/Private/bank-login-recovery-codes-2026-oktober.txt", f"files_read card: {summ!r}")
+    s.call("webapp_add", {"name": "Gmail", "url": "https://mail.google.com.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.evil.example/x"})
+    summ = last_ask()[12].decode()
+    ok("host: mail.google.com.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.evil.example" in summ, f"webapp_add card: {summ!r}")
+    # a notification from an agent: plain text, no buttons, the agent's name as sender
+    answer("once")
+    r = s.call("notification_send", {"summary": spoof, "body": "Avvis\u202e"})
+
+    note = (home / "notify.log").read_text().splitlines()[-1]
+    ok("|-a|AI · olymparch-tillat-n-gang-31m|" in "|" + note and "--action" not in note and "-A|" not in note and "critical" not in note
+       and "\u202e" not in note and "\u001b" not in note, f"notification: {note!r}")
+    # the log can't be poisoned with escape sequences
+    s.req("tools/call", {"name": "x\u001b]0;pwn\u0007", "arguments": {}})
+    s.close()
+    ok("\u001b" not in AUDIT.read_text() and "\\u001b" not in AUDIT.read_text() and "\x1b" not in cli("audit", "50").stdout,
+       "escape sequences in the audit log")
+    # settings that can't be read: every call is denied (fail closed)
+    sj = home / ".config/olymparch/settings.json"
+    saved = sj.read_text()
+    sj.write_text("{ not json")
+    s = Stdio()
+    s.init()
+    r = s.call("settings_get", {"key": "notifications.duration"})
+    ok(is_error(r) and "unreadable" in text_of(r), f"fail closed: {r}")
+    s.close()
+    sj.write_text(saved)
 
     # ── the audit log: client, tool, decision, result; never content or secrets
     answer("once")
