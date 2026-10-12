@@ -16,7 +16,7 @@
 
 local HOME = os.getenv("HOME") or "."
 local CONFIG = os.getenv("XDG_CONFIG_HOME") or (HOME .. "/.config")
-local RUNTIME = os.getenv("XDG_RUNTIME_DIR") or "/tmp"
+local RUNTIME = os.getenv("XDG_RUNTIME_DIR") or (HOME .. "/.local/state/olymparch")   -- never a shared /tmp
 local SELF = arg[0]
 
 local function script_dir() return (SELF:match("^(.*)/[^/]*$") or ".") end
@@ -148,18 +148,22 @@ local function read(path)
     return s
 end
 local function sh_quote(s) return "'" .. tostring(s):gsub("'", "'\\''") .. "'" end
-local function write(path, text)  -- atomic: a crash never leaves half a file
-    os.execute("mkdir -p " .. sh_quote(path:match("^(.*)/") or "."))
-    local tmp = path .. ".tmp"
-    local f = assert(io.open(tmp, "wb"))
-    f:write(text); f:close()
-    assert(os.rename(tmp, path))
-end
 local function capture(cmd)
     local p = io.popen(cmd .. " 2>/dev/null")
     if not p then return "" end
     local s = p:read("a") or ""; p:close()
     return s
+end
+-- atomic: a crash never leaves half a file. The temp file is made by mktemp next to the target (same directory,
+-- unpredictable name), so nobody can plant a symlink for it.
+local function write(path, text)
+    local dir, name = path:match("^(.*)/([^/]+)$")
+    os.execute("mkdir -p " .. sh_quote(dir))
+    local tmp = capture("mktemp " .. sh_quote(dir .. "/." .. name .. ".XXXXXX")):gsub("%s+$", "")
+    if tmp == "" then die("cannot write " .. path) end
+    local f = assert(io.open(tmp, "wb"))
+    f:write(text); f:close()
+    if not os.rename(tmp, path) then os.remove(tmp); die("cannot write " .. path) end
 end
 local function have(cmd) return os.execute("command -v " .. cmd .. " >/dev/null 2>&1") == true end
 
@@ -173,11 +177,51 @@ end
 local byKey = {}
 for _, s in ipairs(schema.settings) do byKey[s.key] = s end
 
+-- Is V a valid value for setting S (on OUTPUT)? Everything that ends up in Lua, conf files or commands passes
+-- here first, whether it came from the command line, settings.json (hand-edited, Zeus) or the pending file.
+local PATTERNS = {   -- strings from the hardware, and free text that goes into Hyprland
+    ["monitor.resolutions"] = "^%d+x%d+$", ["monitor.rates"] = "^%d+%.?%d*$", monitors = "^[%w_.-]+$",
+    ["audio.sinks"] = "^[%w_.:-]*$", ["audio.sources"] = "^[%w_.:-]*$",
+    ["display.position"] = "^%-?%d+x%-?%d+$", ["keyboard.variant"] = "^[%w_,-]*$", ["keyboard.model"] = "^[%w_-]*$",
+    ["keyboard.options"] = "^[%w_,:-]*$",
+}
+local function valid(s, v, out)
+    if out and not out:match("^[%w_.-]+$") then return false, "bad output name" end
+    if s.readonly or s.type == "action" then return false, "cannot be set" end
+    if s.type == "bool" then return type(v) == "boolean", "expected on or off" end
+    if s.type == "number" then
+        if type(v) ~= "number" or v ~= v then return false, "expected a number" end
+        if (s.min and v < s.min) or (s.max and v > s.max) then return false, ("outside %s–%s"):format(s.min, s.max) end
+        return true
+    end
+    if type(v) ~= "string" then return false, "expected text" end
+    for _, o in ipairs(s.options or {}) do if o.value == v then return true end end
+    if s.type == "choice" and not s.options_from then
+        local list = {}
+        for _, o in ipairs(s.options or {}) do list[#list + 1] = o.value end
+        return false, "expected one of " .. table.concat(list, ", ")
+    end
+    local pat = PATTERNS[s.key] or PATTERNS[s.options_from or ""]
+    if s.key == "display.position" and v == "auto" then return true end
+    if pat then return v:match(pat) ~= nil, "not a valid value" end
+    return #v <= 200 and not v:find("[%c\\]"), "text must be one line, without control characters"
+end
+
 local function load_values()
     local text = read(FILES.settings)
     if not text or text:match("^%s*$") then return {} end
     local ok, v = pcall(json.decode, text)
     if not ok or type(v) ~= "table" then die(FILES.settings .. " is not valid JSON (" .. tostring(v) .. "); fix or delete it") end
+    for k, x in pairs(v) do   -- drop what the schema doesn't allow, so it can never reach a file or a command
+        local base, out = k:match("^([^@]+)@?(.*)$")
+        local s = byKey[base]
+        local good, why = false, "unknown setting"
+        if s and (out ~= "") == (s.per == "monitor") then good, why = valid(s, x, out ~= "" and out or nil) end
+        if not good then
+            io.stderr:write(("olymparch-settings: ignoring %s in %s: %s\n"):format(k, FILES.settings, why))
+            v[k] = nil
+        end
+    end
     return v
 end
 local SHELL = "/usr/share/olymparch/shell"
@@ -219,14 +263,14 @@ local function parse(s, text)
         local n = tonumber(text) or die(s.key .. ": expected a number", 2)
         if (s.min and n < s.min) or (s.max and n > s.max) then die(("%s: %s is outside %s–%s"):format(s.key, text, s.min, s.max), 2) end
         return math.tointeger(n) or n
-    elseif s.type == "choice" then
-        if s.options_from then return text end   -- options come from the hardware (modes, audio devices)
-        for _, o in ipairs(s.options or {}) do if o.value == text then return text end end
-        local list = {}
-        for _, o in ipairs(s.options or {}) do list[#list + 1] = o.value end
-        die(s.key .. ": expected one of " .. table.concat(list, ", "), 2)
     end
     return text
+end
+local function checked(s, out, text)
+    local v = parse(s, text)
+    local ok, why = valid(s, v, out)
+    if not ok then die(("%s: %s"):format(s.key, why), 2) end
+    return v
 end
 
 ---------------------------------------------------------------------------------------------------- Hyprland
@@ -255,8 +299,9 @@ local function hypr_lines(values)  -- the user's hypr and cursor settings, as Lu
         if v ~= nil and s.apply.via == "hypr" and s.apply.key ~= "bind" then
             lines[#lines + 1] = "hl.config(" .. lua_table(s.apply.key, v) .. ")   -- " .. s.key
         elseif v ~= nil and s.apply.via == "cursor" then
-            lines[#lines + 1] = ('hl.env("XCURSOR_SIZE", "%s")   -- %s'):format(v, s.key)
-            lines[#lines + 1] = ('hl.env("HYPRCURSOR_SIZE", "%s")'):format(v)
+            local n = math.tointeger(tonumber(v)) or 24
+            lines[#lines + 1] = ('hl.env("XCURSOR_SIZE", "%d")   -- %s'):format(n, s.key)
+            lines[#lines + 1] = ('hl.env("HYPRCURSOR_SIZE", "%d")'):format(n)
         end
     end
     return lines
@@ -284,7 +329,7 @@ local function monitor_spec(values, out, override)
     end
     local vrr = ({ off = 0, always = 1, fullscreen = 2 })[get("vrr")] or 2
     local parts = { ("output = %q"):format(out), ("mode = %q"):format(mode), ("position = %q"):format(get("position")),
-        "scale = " .. get("scale"), "vrr = " .. vrr }
+        "scale = " .. (tonumber(get("scale")) or 1), "vrr = " .. vrr }
     if get("bitdepth") == "10" then parts[#parts + 1] = "bitdepth = 10" end
     return "hl.monitor({ " .. table.concat(parts, ", ") .. " })"
 end
@@ -344,8 +389,8 @@ local function write_monitors(values)
 end
 
 local function write_idle(values)
-    local lock = tonumber(value_of(values, "account.lock_minutes")) or 0
-    local off = tonumber(value_of(values, "power.screen_off_minutes")) or 0
+    local lock = math.floor(tonumber(value_of(values, "account.lock_minutes")) or 0)
+    local off = math.floor(tonumber(value_of(values, "power.screen_off_minutes")) or 0)
     local t = { "# Written by olymparch-settings (Settings → Account and lock, Power). Delete it to use",
         "# /usr/share/olymparch/idle/hypridle.conf again. Apps, video and games that inhibit idle stop these timers.",
         "general {",
@@ -398,7 +443,7 @@ appliers["cursor"] = function(s, values, key)
     ensure_loader(values)
     write_hypr(values)
     if os.getenv("HYPRLAND_INSTANCE_SIGNATURE") then
-        os.execute("hyprctl setcursor Adwaita " .. sh_quote(value_of(values, key)) .. " >/dev/null 2>&1")
+        os.execute(("hyprctl setcursor Adwaita %d >/dev/null 2>&1"):format(math.tointeger(tonumber(value_of(values, key))) or 24))
     end
 end
 appliers["monitor"] = function(s, values, key, override)
@@ -412,7 +457,7 @@ appliers["audio"] = function(s, values, key)
     local name = value_of(values, key)
     if name == "" then return end
     local id = audio_node(name) or die("no audio device called " .. name .. " (wpctl status -n)")
-    os.execute("wpctl set-default " .. id)
+    os.execute(("wpctl set-default %d"):format(math.tointeger(id) or die("bad PipeWire id")))
 end
 appliers["action"] = function(s)
     os.execute("setsid -f sh -c " .. sh_quote(s.apply.command) .. " >/dev/null 2>&1")
@@ -429,7 +474,11 @@ local function load_pending()
     local text = read(FILES.pending)
     if not text then return nil end
     local ok, v = pcall(json.decode, text)
-    return ok and v or nil
+    if not ok or type(v) ~= "table" or type(v.key) ~= "string" or type(v.token) ~= "string" then return nil end
+    local base, out = v.key:match("^([^@]+)@?(.*)$")
+    local s = byKey[base]
+    if not s or not valid(s, v.value, out ~= "" and out or nil) then return nil end
+    return v
 end
 
 local function revert(token)
@@ -456,13 +505,13 @@ if cmd == "get" then
 elseif cmd == "set" then
     local key, text = arg[2], arg[3]
     if not key or not text then die("usage: set KEY VALUE [--try SECONDS]", 2) end
-    local s = entry(key)
-    local v = parse(s, text)
+    local s, out = entry(key)
+    local v = checked(s, out, text)
     local try = arg[4] == "--try" and (tonumber(arg[5]) or 15) or nil
     local values = load_values()
     if try then
         revert()   -- one question at a time
-        local token = tostring(os.time()) .. tostring(math.random(100000, 999999))
+        local token = ("%d%06d"):format(os.time(), math.random(0, 999999))
         write(FILES.pending, json.flat({ key = key, value = v, token = token, deadline = os.time() + try }))
         apply(key, values, { key = key, value = v })
         os.execute(("setsid -f sh -c %s >/dev/null 2>&1"):format(sh_quote(("sleep %d; exec %s revert --token %s"):format(try, sh_quote(SELF), token))))

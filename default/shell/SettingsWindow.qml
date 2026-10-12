@@ -248,7 +248,7 @@ Scope {
                                 Text {
                                     leftPadding: 14; topPadding: 10; bottomPadding: 4
                                     text: win.tr(grp.modelData.label)
-                                    font { family: win.theme.mono; pixelSize: 10.5; letterSpacing: 1.5 }
+                                    font { family: win.theme.mono; pixelSize: 10; letterSpacing: 1.5 }
                                     color: win.theme.muted
                                 }
                                 Repeater {
@@ -368,7 +368,7 @@ Scope {
                                     }
                                 }
                             }
-                            Text { text: I18n.t("settings.monitors.hint", "Click to choose · position is set below"); font { family: win.theme.mono; pixelSize: 11.5 } color: win.theme.muted }
+                            Text { text: I18n.t("settings.monitors.hint", "Click to choose · position is set below"); font { family: win.theme.mono; pixelSize: 11 } color: win.theme.muted }
                             Text {
                                 topPadding: 6
                                 readonly property var m: win.monitors.find(x => x.name === win.monitor)
@@ -424,7 +424,7 @@ Scope {
                                         width: parent.width
                                         text: win.where(row.s)
                                         elide: Text.ElideMiddle
-                                        font { family: win.theme.mono; pixelSize: 10.5 }
+                                        font { family: win.theme.mono; pixelSize: 10 }
                                         color: win.dim
                                     }
                                 }
@@ -723,7 +723,7 @@ Scope {
                                 text: I18n.t("settings.more", "+ %1 advanced: %2 · shown with «Advanced view»").arg(win.hiddenAdvanced.length)
                                       .arg(win.hiddenAdvanced.map(s => win.tr(s.label)).join(", "))
                                 wrapMode: Text.Wrap
-                                font { family: win.theme.mono; pixelSize: 11.5 }
+                                font { family: win.theme.mono; pixelSize: 11 }
                                 color: win.theme.muted
                             }
                             MouseArea { anchors.fill: parent; onClicked: Settings.set("settings.advanced", true) }
@@ -750,7 +750,7 @@ Scope {
                         readonly property var p: win.pageOf(win.page)
                         text: p ? I18n.t("settings.where", "Saved in %1").arg(p.where) + (p.command ? I18n.t("settings.same", " · same as %1").arg(p.command) : "") : ""
                         elide: Text.ElideRight
-                        font { family: win.theme.mono; pixelSize: 11.5 }
+                        font { family: win.theme.mono; pixelSize: 11 }
                         color: win.theme.muted
                     }
                     Rectangle {

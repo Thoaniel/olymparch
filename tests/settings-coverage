@@ -176,6 +176,43 @@ for k in set(re.findall(r'(?:byKey|values)\["([a-z_]+\.[a-z_.]+)"\]|value_of\(va
     if k not in keys:
         bad(f"olymparch-settings uses {k}, which the schema doesn't have")
 
+# ── olymparch-settings never lets a bad value from settings.json into Lua, conf files or commands
+import os
+import tempfile
+with tempfile.TemporaryDirectory() as home:
+    conf = Path(home, ".config")
+    (conf / "olymparch").mkdir(parents=True)
+    (conf / "hypr").mkdir()
+    evil = 'x") os.execute("touch PWNED") --'
+    (conf / "olymparch/settings.json").write_text(json.dumps({
+        "accessibility.cursor_size": '24") os.execute("touch PWNED") --',
+        "appearance.gaps_in": "1 }) os.execute('touch PWNED') --",
+        "keyboard.layout": evil, "keyboard.variant": evil, "keyboard.options": "a\nos.execute('x')",
+        "display.position@Virtual-1": evil, "display.scale@Virtual-1": "1 }) os.execute('x') --",
+        "display.resolution@Bad\"Out": "1920x1080", "account.lock_minutes": "5\nlistener {",
+        "appearance.rounding": 4, "keyboard.model": "pc105",
+    }))
+    env = {k: v for k, v in os.environ.items() if k not in ("HYPRLAND_INSTANCE_SIGNATURE", "WAYLAND_DISPLAY", "XDG_CONFIG_HOME")}
+    env.update(HOME=home, XDG_RUNTIME_DIR=home, OLYMPARCH_SETTINGS_SCHEMA=str(root / "default/settings/schema.json"))
+    cli_path = str(root / "system/bin/olymparch-settings")
+    r = subprocess.run([cli_path, "apply"], env=env, capture_output=True, text=True)
+    written = "".join(p.read_text() for p in conf.rglob("*") if p.is_file() and p.name != "settings.json")
+    if r.returncode or "os.execute" in written or "PWNED" in written or "listener {\n" in written.split("listener")[0]:
+        bad(f"olymparch-settings let a malicious settings.json value through (rc {r.returncode}):\n{written}{r.stderr}")
+    if r.stderr.count("ignoring") != 9:
+        bad(f"olymparch-settings should ignore 9 bad values, said:\n{r.stderr}")
+    if "rounding = 4" not in written or 'kb_model = "pc105"' not in written:
+        bad("olymparch-settings dropped good values next to bad ones")
+    for p in conf.rglob("*.lua"):
+        if lua and subprocess.run([lua, "-e", f"assert(loadfile({str(p)!r}))"], capture_output=True).returncode:
+            bad(f"{p.name} written by olymparch-settings is not valid Lua")
+    for args in (["set", "keyboard.variant", evil], ["set", "display.position@Virtual-1", evil],
+                 ["set", "display.scale@x;rm", "1"], ["set", "accessibility.cursor_size", "24 && rm -rf ~"]):
+        if subprocess.run([cli_path, *args], env=env, capture_output=True).returncode != 2:
+            bad(f"olymparch-settings {' '.join(args)!r} was not refused")
+    if list(Path(home).rglob("PWNED")) or list(Path(home).rglob(".*.??????")):
+        bad("olymparch-settings left PWNED or temp files behind")
+
 # ── Norwegian for every string the shell shows
 nb = json.loads((root / "default/i18n/nb.json").read_text())
 for f in (root / "default/shell").glob("*.qml"):

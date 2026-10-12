@@ -397,7 +397,7 @@
       "apply": { "via": "stored", "file": "/etc/locale.conf", "key": "LANG" } },
     { "key": "keyboard.layout", "page": "keyboard", "level": "simple", "type": "choice", "widget": "select", "default": "us", "ready": true,
       "options": [ { "value": "us", "label": { "en": "English (US)", "nb": "Engelsk (US)" } }, { "value": "gb", "label": { "en": "English (UK)", "nb": "Engelsk (UK)" } }, { "value": "no", "label": { "en": "Norwegian", "nb": "Norsk" } }, { "value": "se", "label": { "en": "Swedish", "nb": "Svensk" } }, { "value": "dk", "label": { "en": "Danish", "nb": "Dansk" } }, { "value": "fi", "label": { "en": "Finnish", "nb": "Finsk" } }, { "value": "de", "label": { "en": "German", "nb": "Tysk" } }, { "value": "fr", "label": { "en": "French", "nb": "Fransk" } }, { "value": "es", "label": { "en": "Spanish", "nb": "Spansk" } } ],
-      "label": { "en": "Keyboard layout", "nb": "Tastatur" }, "description": { "en": "Several: comma between, such as no,us", "nb": "Flere: komma mellom, som no,us" },
+      "label": { "en": "Keyboard layout", "nb": "Tastatur" }, "description": { "en": "For every keyboard", "nb": "For alle tastatur" },
       "apply": { "via": "hypr", "file": "~/.config/olymparch/hypr.lua", "key": "input.kb_layout" } },
     { "key": "keyboard.timezone", "page": "keyboard", "level": "simple", "type": "text", "default": "", "ready": false,
       "label": { "en": "Time zone", "nb": "Tidssone" }, "description": { "en": "Such as Europe/Oslo", "nb": "Som Europe/Oslo" },
