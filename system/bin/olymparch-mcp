@@ -1576,6 +1576,19 @@ def serve_http(port):
 
     class Server(ThreadingHTTPServer):
         daemon_threads = True
+        slots = threading.BoundedSemaphore(32)   # at most 32 connections at once; the rest are closed at once
+
+        def process_request(self, request, client_address):
+            if not self.slots.acquire(blocking=False):
+                self.shutdown_request(request)
+                return
+            super().process_request(request, client_address)
+
+        def process_request_thread(self, request, client_address):
+            try:
+                super().process_request_thread(request, client_address)
+            finally:
+                self.slots.release()
 
     srv = Server(("127.0.0.1", port), Http, bind_and_activate=False)
     srv.socket.close()
