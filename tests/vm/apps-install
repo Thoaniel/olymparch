@@ -1,0 +1,95 @@
+#!/bin/bash
+# VM test: a full install from the ISO with every option of the wizard's second checklist («More apps and tools»),
+# then checks on the installed system: the packages are there (and nothing that was not ticked), Neovim has
+# Olymparch's default config, fzf/zoxide/starship are on in a new bash, the two cloud-gaming web apps are in the
+# launcher and open in their own window, and LocalSend is skipped cleanly while [olymparch] is not online.
+#   tests/vm/apps-install [ISO]
+set -uo pipefail
+cd "$(dirname "$0")/../.."
+. dev/env
+ISO=${1:-$(ls -t out/*.iso 2>/dev/null | head -n 1)}
+[ -f "$ISO" ] || { echo "fant ingen ISO" >&2; exit 2; }
+O=tests/vm/out/apps-install
+rm -rf -- tests/vm/out/apps-install
+mkdir -p "$O" cache
+cp "$OLYMPARCH_OVMF_VARS" "$O/vars.fd"
+qemu-img create -q -f qcow2 "$O/disk.qcow2" 32G
+PW='olymp-test-123'
+OPTS=lutris,moonlight,minecraft,cloud,obsidian,localsend,neovim,helix,zed,shelltools,tuis,alacritty,kitty,ghostty
+cat >"$O/answers.env" <<EOF
+DISK=/dev/nvme0n1
+DISK_SERIAL=OLYTEST1
+HOSTNAME=olymparch
+USERNAME=zeus
+PASSWORD='$PW'
+KEYMAP=us
+LOCALE=en_US.UTF-8
+TIMEZONE=Europe/Oslo
+OPTIONS=$OPTS
+CMDLINE_EXTRA='console=ttyS0,115200 console=tty0 plymouth.ignore-serial-consoles'
+EOF
+QMP=$O/qmp.sock
+. tests/vm/lib.sh
+trap 'kill "$QPID" 2>/dev/null; python3 -I tests/vm/report.py tests/vm/out/report.html "$O" >/dev/null 2>&1' EXIT
+t0=$SECONDS
+fails=()
+
+# --- 1. install from the live ISO, with the host's package cache
+vm live.log -cdrom "$ISO" -boot d -fw_cfg name=opt/olymparch/answers,file="$O/answers.env" \
+    -virtfs local,path="$(realpath cache)",mount_tag=pkgcache,security_model=none,id=c0
+wait_for 'login:' 120 || { shot live-feil "Live-miljøet kom ikke opp"; finish "FAIL · live-miljøet startet ikke"; }
+sleep 4
+keys 'modprobe qemu_fw_cfg && cp /sys/firmware/qemu_fw_cfg/by_name/opt/olymparch/answers/raw /tmp/answers.env && mount -t 9p -o trans=virtio pkgcache /var/cache/pacman/pkg && OLYMPARCH_TEST=1 OLYMPARCH_HOST_CACHE=1 olymparch-install --answers /tmp/answers.env; echo "<2>INSTALL-EXIT=$?" > /dev/kmsg\n'
+sleep 3
+shot start "Installasjonen startes med alle valgene fra «Flere apper og verktøy»"
+shot_done=0
+for ((i = 0; i < 3600; i++)); do
+    if ((!shot_done)) && { seen 'olymparch-install: Valg' || seen 'olymparch-install: Options'; }; then
+        sleep 20; shot valg "Installasjonen: «Options: lutris, moonlight, minecraft, cloud …»"; shot_done=1
+    fi
+    seen 'INSTALL-EXIT=' && break
+    kill -0 "$QPID" 2>/dev/null || break
+    sleep 1
+done
+code=$(grep -aoE 'INSTALL-EXIT=[0-9]+' "$O/$LOG" | tail -n 1 | cut -d= -f2)
+[ "$code" = 0 ] || { shot feil "Installasjonen stoppet"; finish "FAIL · installasjonen stoppet (kode ${code:-ingen}) etter $((SECONDS - t0)) s"; }
+seen "LocalSend comes from Olymparch's own repo" || fails+=(localsend-skip-message)
+shot ferdig "Installasjonen er ferdig (LocalSend hoppet over: [olymparch] er ikke på nett ennå)"
+keys 'poweroff\n'
+for ((i = 0; i < 60; i++)); do kill -0 "$QPID" 2>/dev/null || break; sleep 1; done
+kill "$QPID" 2>/dev/null; wait "$QPID" 2>/dev/null
+
+# --- 2. the installed system
+vm boot.log -device qemu-xhci,id=xhci -virtfs local,path="$PWD",mount_tag=olysrc,security_model=none,readonly=on,id=src
+unlock_and_desktop "$PW"
+shot skrivebord "Det installerte systemet"
+press meta_l+ret; sleep 2
+pk='lutris moonlight-qt prismlauncher chromium obsidian neovim helix zed fzf zoxide ripgrep starship btop lazygit lazydocker alacritty kitty ghostty'
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo chmod 666 /dev/kmsg && clear\n" 1
+keys "$PW\n" 2
+keys "clear; bash /mnt/tests/vm/apps-guest.sh; pacman -Q $pk | column -c 150; pacman -Q localsend-bin steam discord code 2>&1 | cut -c1-60\n" 3
+wait_for 'CHK: DONE' 60
+shot pakker "pacman -Q: alt som ble krysset av er installert; LocalSend, Steam, Discord og Code er ikke"
+for k in PKGS LEAN NVIM SHELL CLOUD; do seen "CHK: $k-OK" || fails+=("$k"); done
+keys "clear; bash -ic 'type -t z; echo \$STARSHIP_SHELL; bind -X | grep -c fzf'; grep -hE '^(Name|Exec|Icon)=' ~/.local/share/applications/webapp-*.desktop\n" 3
+shot skall-og-webapper "Ny bash: zoxide (z), starship og fzf er på; de to skyspill-webappene"
+keys "clear; nvim /etc/xdg/nvim/init.lua\n" 3
+shot neovim "Neovim med Olymparchs standardoppsett (linjenumre, gull på linjenummeret)"
+keys ":qa\n" 1
+
+# the launcher has the cloud-gaming web apps; GeForce NOW opens in its own window (a watcher in the terminal
+# reports the window's class, as the web app takes the keyboard)
+keys "clear; (for i in \$(seq 90); do hyprctl clients | grep -q 'class: webapp-geforce-now' && { echo '<2>CHK: GFN-WINDOW' >/dev/kmsg; break; }; sleep 2; done &) ; clear\n" 1
+press meta_l+spc; sleep 1.5
+keys "G" 1
+shot meny "Menyen: GeForce NOW (og de andre nye appene)"
+keys "eForce" 1
+press ret
+wait_for 'CHK: GFN-WINDOW' 180 || fails+=(GFN-WINDOW)
+sleep 25   # the page loads
+shot geforce-now "GeForce NOW som webapp i eget vindu (klasse webapp-geforce-now)"
+press meta_l+q; sleep 2   # close the focused window (the web app), back to the terminal
+keys "clear; hyprctl clients | grep -c 'class: webapp-geforce-now'; pgrep -fc -- '--class=webapp-geforce-now'\n" 2
+shot etter "Etter at webappen ble lukket"
+[ ${#fails[@]} = 0 ] && finish "PASS · installert med $OPTS: pakkene, ingenting ekstra, Neovim-oppsett, skallverktøy, skyspill-webapper, LocalSend hoppet over på $((SECONDS - t0)) s"
+finish "FAIL · ${fails[*]}"
