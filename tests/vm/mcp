@@ -1,0 +1,159 @@
+#!/bin/bash
+# VM test: olymparch-mcp, the AI agents' MCP server, and its approval card. On a copy of the installed disk
+# (OLYMPARCH_BASE) with this repo's server, settings, shell, skills and units copied in (tests/vm/mcp-guest.sh):
+#   a stdio client (tests/vm/mcp-guest.py) calls read tools (no card); a change that is approved by clicking
+#   «Tillat én gang» through QMP; one denied with «Avvis»; one nobody answers (60 s → denied, the card goes away);
+#   «Alltid for vm-test/notification_send», a second call without a card, then the grant taken back in Settings →
+#   AI-agenter and the card is back; spillmodus (no card, denied at once); a hidden file refused without a card;
+#   a sensitive call (red card); registration with stand-ins for claude, hermes and openclaw (and unregistering);
+#   the HTTP socket with and without the token. A screenshot of every step (tests/vm/out/mcp/).
+set -uo pipefail
+cd "$(dirname "$0")/../.."
+. dev/env
+SRC=${OLYMPARCH_BASE:-tests/vm/out/install-disk}
+[ -f "$SRC/disk.qcow2" ] || { echo "kjør tests/vm/install-disk først (eller sett OLYMPARCH_BASE)" >&2; exit 2; }
+O=tests/vm/out/mcp
+rm -rf -- tests/vm/out/mcp
+mkdir -p "$O"
+install -m644 "$SRC/vars.fd" "$O/vars.fd"
+qemu-img create -q -f qcow2 -b "$(realpath "$SRC/disk.qcow2")" -F qcow2 "$O/disk.qcow2"
+QMP=$O/qmp.sock
+. tests/vm/lib.sh
+PW='olymp-test-123'
+trap 'kill "$QPID" 2>/dev/null; python3 -I tests/vm/report.py tests/vm/out/report.html "$O" >/dev/null 2>&1' EXIT
+t0=$SECONDS
+ok=()
+fail=()
+vm boot.log -virtfs local,path="$PWD",mount_tag=olysrc,security_model=none,readonly=on,id=src \
+    -device qemu-xhci,id=xhci -device usb-tablet,bus=xhci.0
+unlock_and_desktop "$PW"
+python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/size.ppm"
+read -r W H < <(head -c 20 "$O/size.ppm" | tr -s '\n' ' ' | awk '{print $2, $3}')
+click() { python3 -I tests/vm/qmp.py "$QMP" click "$1" "$2" "$W" "$H"; sleep "${3:-1}"; }
+need() {  # need NAME MARKER SECONDS
+    if wait_for "$2" "$3"; then ok+=("$1"); else fail+=("$1"); fi
+}
+g='python3 /mnt/tests/vm/mcp-guest.py'
+# click button N (0 Tillat én gang, 1 Alltid, 2 Avvis) on the card on screen; after the buttons are armed
+card_click() {
+    local xy
+    sleep 1.5
+    python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/card.ppm"
+    xy=$(python3 -I tests/vm/card-button.py "$O/card.ppm" "$1")
+    echo "knapp $1: $xy" >>"$O/clicks.txt"
+    [ "$xy" = none ] && return 1
+    python3 -I tests/vm/qmp.py "$QMP" move ${xy% *} ${xy#* } "$W" "$H"; sleep 0.6
+    shot "$2" "$3"
+    click ${xy% *} ${xy#* } 1.5
+}
+
+# ── setup: this repo's files in place (as the ISO + installer would), the shell restarted in Norwegian
+press meta_l+ret; sleep 2
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo bash /mnt/tests/vm/mcp-guest.sh setup; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=nb_NO.UTF-8 setsid -f /usr/lib/olymparch/launch-shell; sleep 3; bash /mnt/tests/vm/mcp-guest.sh stubs; clear\n" 1
+keys "$PW\n" 1
+wait_for 'MCP: STUBS-OK' 90 || { shot oppsett-feil "Oppsettet ble ikke ferdig"; finish "FAIL · fikk ikke lagt inn olymparch-mcp"; }
+sleep 3
+
+# ── 1. read tools: no card
+keys "$g read\n" 2
+need lese 'MCP-read-OK' 60
+shot lese "Leseverktøy (systeminfo, innstilling, vinduer, apper, bakgrunner, filer, doctor): svar uten kort"
+
+# ── 2. a change, approved with «Tillat én gang»
+keys "clear; $g once\n" 1
+if wait_for 'MCP-once-CARD' 20; then
+    card_click 0 kort-endring "Kortet: vm-test vil endre appearance.gaps_in = 16; pekeren på «Tillat én gang»" || fail+=(fant-ikke-tillat)
+else fail+=(kort-kom-ikke); fi
+need tillat-en-gang 'MCP-once-DONE ok card=1' 20
+sleep 1.5
+shot tillatt "Tillatt: større mellomrom mellom vinduene, og resultatet i terminalen"
+
+# ── 3. denied with «Avvis»
+keys "clear; $g deny\n" 1
+if wait_for 'MCP-deny-CARD' 20; then
+    card_click 2 kort-avvis "Pekeren på «Avvis» (appearance.rounding = 12)" || fail+=(fant-ikke-avvis)
+fi
+need avvist 'MCP-deny-DONE denied card=1' 20
+shot avvist "Avvist: ingen avrunding, agenten får «denied»"
+
+# ── 4. nobody answers: 60 s, then denied and the card is gone
+keys "clear; $g timeout\n" 1
+wait_for 'MCP-timeout-CARD' 20 && { sleep 2; shot kort-nedtelling "Ingen svarer: kortet teller ned (Avvises om … s)"; sleep 30; shot kort-halvveis "Halvveis: linjen under knappene har krympet"; }
+need tidsavbrudd 'MCP-timeout-DONE denied card=1 t=6[0-9] left=0' 60
+shot tidsavbrudd "60 s uten svar: avvist, kortet er borte, arbeidsflate 1 er fortsatt vist"
+
+# ── 5. «Alltid for vm-test/notification_send», then a call without a card
+keys "clear; $g always\n" 1
+if wait_for 'MCP-always-CARD' 20; then
+    card_click 1 kort-alltid "Pekeren på «Alltid for vm-test/notification_send»" || fail+=(fant-ikke-alltid)
+fi
+need alltid 'MCP-always-DONE ok card=1' 20
+shot alltid-varsel "«Alltid»: varselet fra «AI · vm-test» vises"
+keys "clear; $g again\n" 1
+need uten-kort 'MCP-again-DONE ok card=0' 20
+shot uten-kort "Andre kall: ingen kort, varselet vises med en gang"
+
+# ── 6. Settings → AI agents: the page, the grant taken back by keyboard, the log
+keys "clear; qs ipc -p /usr/share/olymparch/shell call settings page ai\n" 3
+shot innstillinger-ai "Innstillinger → AI-agenter: på/av, registrering, klienter, «Alltid tillatt», logg"
+press ctrl+f; keys "alltid tillatt" 1
+shot innstillinger-sok "Søk: «alltid tillatt»"
+press ret; sleep 0.8
+press ret; sleep 2
+shot innstillinger-trukket "Enter på vm-test@stdio → notification_send: trukket tilbake (listen er tom)"
+press ctrl+f; keys "logg" 1
+press ret; sleep 0.5
+press ret; sleep 3
+shot innstillinger-logg "Logg: siste kall med klient, verktøy, svar og resultat"
+press ctrl+f; keys "per verktøy" 1
+press ret; sleep 1.5
+shot innstillinger-policy "Per verktøy (avansert): Spør / Alltid / Aldri"
+press esc; press esc; sleep 2
+keys "clear; olymparch-settings get ai.grants | grep -q vm-test && echo '<2>MCP: GRANT-STILL' > /dev/kmsg || echo '<2>MCP: GRANT-GONE' > /dev/kmsg\n" 2
+need trukket-i-innstillinger 'MCP: GRANT-GONE' 10
+seen 'MCP: GRANT-STILL' && keys "olymparch-settings pick ai.grants 'vm-test@stdio notification_send'\n" 2
+keys "clear; $g revoked\n" 1
+if wait_for 'MCP-revoked-CARD' 20; then
+    shot kort-igjen "Etter tilbaketrekking: kortet er tilbake"
+    card_click 2 kort-igjen-avvis "Avvis" || true
+fi
+need kort-igjen 'MCP-revoked-DONE denied card=1' 20
+
+# ── 7. spillmodus: no card, denied at once
+keys "clear; qs ipc -p /usr/share/olymparch/shell call olymparch gamemode on; $g game; qs ipc -p /usr/share/olymparch/shell call olymparch gamemode off\n" 1
+need spillmodus 'MCP-game-DONE denied card=0 t=[0-2] ' 20
+shot spillmodus "Spillmodus: avvist med en gang, uten kort (og baren er skjult mens spillet «går»)"
+
+# ── 8. a hidden file: refused before any card; a sensitive call: the red card
+keys "clear; $g sensitive\n" 1
+need skjult-fil 'MCP-sensitive-DONE denied card=0' 20
+keys "clear; printf 'utklipp fra testen' | wl-copy; $g clipboard\n" 1
+if wait_for 'MCP-clipboard-CARD' 20; then
+    sleep 1.5
+    shot kort-sensitiv "Sensitivt (utklippstavlen): rødt kort med merket SENSITIV"
+    card_click 0 kort-sensitiv-tillat "Tillat én gang" || true
+fi
+need sensitiv 'MCP-clipboard-DONE (ok|error) card=1' 20
+shot sensitiv "Utklippstavlen lest etter ja"
+
+# ── 9. registration with the agents (stand-ins), and back
+keys "bash /mnt/tests/vm/mcp-guest.sh register\n" 3
+need registrering 'MCP: REGISTER-OK' 30
+shot registrering "olymparch-mcp register: Claude Code (user scope), Hermes (config.yaml, din github står), OpenClaw, ferdigheter som lenker"
+keys "bash /mnt/tests/vm/mcp-guest.sh unregister\n" 3
+need avregistrering 'MCP: UNREGISTER-OK' 30
+shot avregistrering "olymparch-mcp unregister: bare det Olymparch la til er borte"
+
+# ── 10. the local HTTP address: socket unit, token, Origin
+keys "bash /mnt/tests/vm/mcp-guest.sh http\n" 4
+need http 'MCP: HTTP-OK' 40
+shot http "HTTP på 127.0.0.1:47110: 401 uten nøkkel, 403 med fremmed Origin, initialize med nøkkel; nøkkelfil 600"
+
+# The shell's log, for QML errors
+keys "clear; tail -n 80 ~/.local/state/olymparch/shell.log | while IFS= read -r l; do echo \"<2>QS: \$l\" > /dev/kmsg; done; echo '<2>LOG-DONE' > /dev/kmsg\n" 2
+wait_for 'LOG-DONE' 20
+grep -aoE 'QS: .*' "$O/$LOG" | sed 's/\x1b\[[0-9;]*m//g' >"$O/shell-log.txt"
+errors=$(awk '/Launching config/ {n = 0} /ERROR|TypeError|ReferenceError|McpApproval/ {n++} END {print n + 0}' "$O/shell-log.txt")
+((errors == 0)) && ok+=(skall-logg) || fail+=("skall-logg($errors)")
+summary="ok: ${ok[*]:-}; feil: ${fail[*]:-ingen}"
+finish "$([ ${#fail[@]} = 0 ] && echo PASS || echo FAIL) · olymparch-mcp: $summary på $((SECONDS - t0)) s"

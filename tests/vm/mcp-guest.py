@@ -3,7 +3,7 @@
 reports on the serial console (/dev/kmsg) as «MCP-STEP-OK …» or «MCP-STEP-NO …».
 
   mcp-guest.py read        read tools only: no card
-  mcp-guest.py call TOOL JSON-ARGS [STEP]   one call; reports CARD when the card is on screen, then the result
+  mcp-guest.py STEP        one call (STEPS below); reports CARD when the card is on screen, then the result
 """
 import json
 import subprocess
@@ -53,6 +53,17 @@ def pending():
         return []
 
 
+STEPS = {
+    "once": ("settings_set", {"key": "appearance.gaps_in", "value": "16"}),      # approved: gaps get bigger
+    "deny": ("settings_set", {"key": "appearance.rounding", "value": "12"}),     # denied: no rounding
+    "timeout": ("workspace_focus", {"workspace": 2}),                            # nobody answers
+    "always": ("notification_send", {"summary": "Hei fra VM-testen", "body": "Tillatt med «Alltid»"}),
+    "again": ("notification_send", {"summary": "Andre varsel", "body": "Uten kort: «Alltid» gjelder"}),
+    "revoked": ("notification_send", {"summary": "Tredje varsel", "body": "Kortet er tilbake"}),
+    "game": ("settings_set", {"key": "appearance.gaps_in", "value": "4"}),       # in a game: denied, no card
+    "sensitive": ("files_read", {"path": "~/.bashrc"}),                          # hidden: refused without a card
+    "clipboard": ("clipboard_read", {}),                                         # sensitive: red card
+}
 c = Client()
 c.init()
 step = sys.argv[1]
@@ -67,8 +78,8 @@ if step == "read":
         print(f"{name}: {'ok' if good else 'FEIL'}  {text(r)[:90]}")
     print("kort på skjermen:", pending())
     kmsg(f"MCP-read-{'OK' if ok and not pending() else 'NO'}")
-elif step == "call":
-    name, args, tag = sys.argv[2], json.loads(sys.argv[3]), sys.argv[4]
+elif step in STEPS:
+    (name, args), tag = STEPS[step], step
     box = {}
     t = threading.Thread(target=lambda: box.setdefault("r", c.call(name, args)), daemon=True)
     t0 = time.time()
