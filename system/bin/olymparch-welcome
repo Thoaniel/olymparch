@@ -1,0 +1,22 @@
+#!/bin/bash
+# Hints at login that need the desktop (they are notifications). Started by Hyprland at session start.
+# Zeus: when Olympus is installed but not set up, offer «olympus setup». It asks before downloading any model.
+set -uo pipefail
+state=${XDG_STATE_HOME:-$HOME/.local/state}/olymparch
+mkdir -p "$state"
+case ${LANG:-} in nb*|nn*|no*) nb=1 ;; *) nb=0 ;; esac
+t() { if [ $nb = 1 ]; then printf '%s' "$2"; else printf '%s' "$1"; fi; }
+
+olympus=$HOME/.local/bin/olympus
+if [ -x "$olympus" ] && [ ! -e "$state/zeus-set-up" ]; then
+    sleep 5   # the shell's notification server comes up with the session
+    answer=$(notify-send -w -a Zeus \
+        --action=setup="$(t "Set up Zeus" "Sett opp Zeus")" --action=later="$(t "Later" "Senere")" \
+        "$(t "Zeus is installed" "Zeus er installert")" \
+        "$(t "Setup picks llama.cpp for your graphics card and suggests a model. Nothing is downloaded until you say yes." \
+             "Oppsettet velger llama.cpp for skjermkortet ditt og foreslår en modell. Ingenting lastes ned før du sier ja.")")
+    if [ "$answer" = setup ]; then
+        touch "$state/zeus-set-up"
+        exec foot -e "$olympus" setup
+    fi
+fi

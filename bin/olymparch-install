@@ -22,6 +22,7 @@ die() { step "$(L ERROR FEIL): $*"; exit 1; }
 
 # ---- Options (OPTIONS=games,emu,zeus,discord,spotify,obs,code,hibernate from the wizard) ----------------------
 # Kept in one block: called once after the desktop is in place, before the boot menu and the first snapshot.
+OLYMPUS_COMMIT=741dbb0520f3ebffed781d2e0b135e37d1e42d64   # Zeus: the public Olympus release this ISO installs
 has_opt() { [[ ",${OPTIONS:-}," == *",$1,"* ]]; }
 gpu_vendors() {  # vendor IDs of every display controller (PCI class 0x03xxxx): amd intel nvidia other
     local d
@@ -59,7 +60,8 @@ install_options() {
     has_opt spotify && pkgs+=(spotify-launcher)
     has_opt obs && pkgs+=(obs-studio)
     has_opt code && pkgs+=(code)
-    # zeus: Olympus comes from our own repo (not built yet)
+    # zeus: llama.cpp (Vulkan works on AMD, Intel and NVIDIA) and uv; Olympus itself is installed for the user below
+    has_opt zeus && pkgs+=(uv llama-cpp ggml-vulkan)
     if [ ${#pkgs[@]} -gt 0 ]; then
         sed '/^#\[multilib\]$/,/^#Include/ s/^#//' /etc/pacman.conf >"$conf"
         local opts=(-C "$conf" -G)
@@ -78,6 +80,13 @@ install_options() {
             >/mnt/usr/local/share/applications/steam.desktop
         mkdir -p "$home/.config/olymparch"
         [ -f "$home/.config/olymparch/games.conf" ] || install -m644 "$g/games.conf" "$home/.config/olymparch/games.conf"
+    fi
+    if has_opt zeus; then
+        # Olympus at a pinned commit, as the user (it lives in ~/.local). No model is downloaded here: the first
+        # login offers «olympus setup» (olymparch-welcome), which asks first.
+        arch-chroot /mnt sudo -u "$USERNAME" -H uv tool install -q "git+https://github.com/Thoaniel/olympus@$OLYMPUS_COMMIT" ||
+            step "$(L "Zeus could not be installed now; install it later with: uv tool install git+https://github.com/Thoaniel/olympus" \
+                      "Zeus kunne ikke installeres nå; installer senere med: uv tool install git+https://github.com/Thoaniel/olympus")"
     fi
     if has_opt hibernate && ls /sys/class/power_supply/BAT* >/dev/null 2>&1; then
         # Swap file as big as RAM on its own subvolume (no snapshots, no compression). systemd finds it on resume

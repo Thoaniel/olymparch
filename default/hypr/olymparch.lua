@@ -82,6 +82,7 @@ hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ to
 hl.on("hyprland.start", function()
     hl.exec_cmd("/usr/lib/olymparch/launch-shell")
     hl.exec_cmd("udiskie --automount --notify --no-tray")   -- USB disks: mounted, with Open / Eject in the notification
+    hl.exec_cmd("olymparch-welcome")   -- first-login hints (e.g. set up Zeus)
     hl.exec_cmd("sh -c 'f=$HOME/.config/hypr/hypridle.conf; [ -f \"$f\" ] || f=/usr/share/olymparch/idle/hypridle.conf; exec hypridle -c \"$f\"'")
 end)
 

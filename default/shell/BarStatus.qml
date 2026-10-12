@@ -94,7 +94,7 @@ Row {
         label: "Zeus"
         tint: status.theme.gold
         clickable: true
-        onClicked: Quickshell.execDetached(["foot", "-e", "olympus", "zeus"])
+        onClicked: Quickshell.execDetached(["sh", "-c", 'exec foot -e "$HOME/.local/bin/olympus" zeus'])
     }
     Cell {
         icon: !status.netDevice ? "\u{F092E}"
@@ -134,11 +134,11 @@ Row {
         color: status.theme.text
     }
 
-    // Zeus is optional: the module shows only when Olympus is installed (checked once)
+    // Zeus is optional: the module shows only when Olympus is installed for the user (checked once)
     Process {
         id: zeusCheck
         property bool installed: false
-        command: ["test", "-x", "/usr/bin/olympus"]
+        command: ["sh", "-c", 'test -x "$HOME/.local/bin/olympus"']
         running: true
         onExited: code => installed = code === 0
     }
