@@ -21,9 +21,10 @@ Row {
         return ps.find(p => p.isPlaying) || ps.find(p => p.trackTitle && p.playbackState === MprisPlaybackState.Paused) || null;
     }
     // ---- microphone and camera: a recording stream exists (an app that listens, not one that plays)
-    readonly property var streams: Pipewire.nodes.values.filter(n => n.isStream && n.isSink)
-    readonly property bool micInUse: streams.some(n => (n.type & PwNodeType.Audio) !== 0)
-    readonly property bool camInUse: streams.some(n => (n.type & PwNodeType.Video) !== 0)
+    // (PipeWire's "Stream/Input/Audio" is AudioInStream; the camera one is the same with Video for Audio)
+    readonly property int videoInStream: (PwNodeType.AudioInStream & ~PwNodeType.Audio) | PwNodeType.Video
+    readonly property bool micInUse: Pipewire.nodes.values.some(n => n.type === PwNodeType.AudioInStream)
+    readonly property bool camInUse: Pipewire.nodes.values.some(n => n.type === status.videoInStream)
     // ---- network: the first connected device
     readonly property var netDevice: Networking.devices.values.find(d => d.connected) || null
     readonly property real wifiStrength: {

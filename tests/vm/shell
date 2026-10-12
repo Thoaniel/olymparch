@@ -45,6 +45,17 @@ keys "wpctl set-volume @DEFAULT_AUDIO_SINK@ 65%\n" 0.6
 shot volum "Volumvisningen: 65 %"
 keys "wpctl set-mute @DEFAULT_AUDIO_SINK@ 1\n" 0.6
 shot dempet "Dempet"
+python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/bar-before.ppm"
+red_before=$(python3 -I tests/vm/pixels.py "$O/bar-before.ppm" 640 0 1280 34 | sed -E 's/.*red=([0-9]+).*/\1/')
+
+# The bar: an app that records from the microphone gets a red microphone in the bar
+# (the VM has no sound card: a virtual microphone in PipeWire, nothing is played on the host)
+keys "clear; pw-cli create-node adapter '{ factory.name=support.null-audio-sink node.name=testmic media.class=Audio/Source/Virtual object.linger=true audio.position=[FL FR] }' >/dev/null; sleep 1; pw-record --target testmic /tmp/opptak.wav & sleep 2\n" 1
+shot mikrofon "Et program tar opp fra mikrofonen: rød mikrofon i linjen"
+python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/bar-mic.ppm"
+red_mic=$(python3 -I tests/vm/pixels.py "$O/bar-mic.ppm" 640 0 1280 34 | sed -E 's/.*red=([0-9]+).*/\1/')
+keys "kill %1; clear\n" 2
+shot mikrofon-av "Opptaket er stoppet: mikrofonen er borte fra linjen"
 
 # The lock screen: its own process. Wrong password first, then the right one.
 press meta_l+l; sleep 2
@@ -66,4 +77,5 @@ wait_for 'LOG-DONE' 20
 grep -aoE 'QS: .*' "$O/$LOG" | sed 's/\x1b\[[0-9;]*m//g' >"$O/shell-log.txt"
 # only what happened after the shell's last start counts
 errors=$(awk '/Launching config/ {n = 0} /ERROR|TypeError|ReferenceError/ {n++} END {print n + 0}' "$O/shell-log.txt")
-finish "$([ "$errors" = 0 ] && echo PASS || echo FAIL) · skallet: meny, varsler og volum ($errors feil i skall-loggen) på $((SECONDS - t0)) s"
+mic_ok=$(( ${red_mic:-0} > ${red_before:-0} + 20 ))
+finish "$([ "$errors" = 0 ] && [ $mic_ok = 1 ] && echo PASS || echo FAIL) · skallet: meny, varsler, volum og mikrofon i linjen (røde piksler ${red_before:-?} → ${red_mic:-?}; $errors feil i skall-loggen) på $((SECONDS - t0)) s"
