@@ -92,6 +92,7 @@ local digits, arrows = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "0" }, { "
 shortcut("keys.terminal", mod .. " + RETURN", nil, function(k) hl.bind(k, hl.dsp.exec_cmd("sh -c 'exec \"${OLYMPARCH_TERMINAL:-foot}\"'")) end)
 shortcut("keys.menu", mod .. " + SPACE", nil, function(k) hl.bind(k, hl.dsp.global("olymparch:launcher")) end)
 shortcut("keys.settings", mod .. " + COMMA", nil, function(k) hl.bind(k, hl.dsp.global("olymparch:settings")) end)
+shortcut("keys.themes", mod .. " + CTRL + SHIFT + SPACE", nil, function(k) hl.bind(k, hl.dsp.global("olymparch:themes")) end)   -- the theme picker
 shortcut("keys.lock", mod .. " + L", nil, function(k) hl.bind(k, hl.dsp.exec_cmd("olymparch-lock")) end)
 shortcut("keys.close", mod .. " + Q", nil, function(k) hl.bind(k, hl.dsp.window.close()) end)
 shortcut("keys.float", mod .. " + V", nil, function(k) hl.bind(k, hl.dsp.window.float({ action = "toggle" })) end)
@@ -158,3 +159,15 @@ end)
 for _, event in ipairs({ "hyprland.start", "monitor.added", "monitor.removed" }) do
     hl.on(event, function() hl.exec_cmd("olymparch-settings monitors-changed") end)
 end
+
+-- ── Theme (olymparch-theme, Settings → Appearance → Theme): the active theme's border and background colours are in
+-- ~/.config/olymparch/theme/hypr.lua. Loaded here, so Settings' hypr.lua and your own lines still win. At the start of
+-- the session olymparch-theme writes it (and the shell's, the lock screen's and foot's copies) again, so a new or
+-- updated theme is always in place; its colours are applied live with hyprctl.
+do
+    local f = (os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") or "") .. "/.config") .. "/olymparch/theme/hypr.lua"
+    local ok, err = pcall(dofile, f)
+    if not ok and not tostring(err):find("No such file") then print("olymparch theme: " .. tostring(err)) end
+end
+hl.on("hyprland.start", function() hl.exec_cmd("olymparch-theme apply --quiet") end)
+-- ── end Theme
