@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+"""The Olymparch menu (no VM): the package helper refuses what it must, the catalog is sound, and the menu only
+escalates through the two fixed helpers.
+
+  tests/menu-check        exit 0 and a summary, or 1 and one line per problem
+
+The helper is run as you (never root): every refusal happens before its root check, so a refused request exits 2
+and a request that would be carried out exits 1 («runs through pkexec»). Checks that need the Arch sync databases
+are skipped where pacman is missing (CI on another distribution).
+"""
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+root = Path(__file__).resolve().parent.parent
+problems = []
+bad = problems.append
+helper = root / "system/lib/packages"
+src = helper.read_text()
+have_pacman = shutil.which("pacman") is not None and subprocess.run(
+    ["pacman", "-Si", "sl"], capture_output=True).returncode == 0
+
+
+def run(*args):
+    env = {"PATH": "/usr/bin:/bin", "LC_ALL": "C"}
+    return subprocess.run(["bash", str(helper), *args], capture_output=True, text=True, env=env, timeout=60)
+
+
+# ── the helper's own rules, in its source
+if "export PATH=/usr/bin LC_ALL=C" not in src or '[ "$(id -u)" = 0 ]' not in src:
+    bad("packages: must reset PATH and refuse to install/remove without root")
+if "REPOS=(core extra multilib olymparch)" not in src:
+    bad("packages: the allowed repositories must be exactly core extra multilib olymparch")
+if "^[a-z0-9@._+-]+$" not in src or "!= [-.]*" not in src:
+    bad("packages: names must match ^[a-z0-9@._+-]+$ and not start with - or .")
+code = re.sub(r"#[^\n]*", "", src)
+for flag in ("-dd", "--overwrite", "-Rc", "-Rdd", "--nodeps", "-U ", "-Syu", "-Sy ", "makepkg", "yay", "paru", "curl", "wget"):
+    if flag in code:
+        bad(f"packages: must never use {flag.strip()}")
+pac = re.findall(r"pacman -(S|R)[a-z]* --noconfirm[^\n]*", code)
+if sorted(pac) != ["R", "S"] or 'pacman -S --noconfirm --needed -- "$repo/$name"' not in code or 'pacman -Rs --noconfirm -- "$name"' not in code:
+    bad(f"packages: exactly one install (pacman -S … repo/name) and one remove (pacman -Rs … name) may run with --noconfirm: {pac}")
+for p in ("linux", "systemd", "hyprland", "glibc", "pacman", "sudo", "quickshell", "base"):
+    if not re.search(rf"PROTECTED=\([^)]*\b{re.escape(p)}\b", src):
+        bad(f"packages: {p} must be on the protected list")
+
+# ── refusals (exit 2), run as you
+refuse = [
+    ("install",), ("install", "a", "b"), ("frobnicate", "sl"), ("install", "-Syu"), ("install", "--overwrite=*"),
+    ("install", "-yu"), ("install", ".hidden"), ("install", "/tmp/evil.pkg.tar.zst"), ("install", "./evil.pkg.tar.zst"),
+    ("install", "https://evil.example/x.pkg.tar.zst"), ("install", "file:///tmp/x"), ("install", "sl;rm -rf /"),
+    ("install", "sl rm"), ("install", "sl\nrm"), ("install", "$(id)"), ("install", "SL"), ("install", "extra/sl"),
+    ("install", "a" * 129), ("install", "yay"), ("install", "paru-bin"), ("install", "olymparch-no-such-package-x"),
+    ("install", "xorg"),   # a group, not a package
+    ("remove", "linux"), ("remove", "systemd"), ("remove", "hyprland"), ("remove", "glibc"), ("remove", "pacman"),
+    ("remove", "-Rdd"), ("remove", "linux;id"), ("remove", "/usr/bin/sl"),
+    ("preview", "install", "-Syu"), ("preview", "frob", "sl"), ("preview", "install", "yay"), ("preview", "remove", "systemd"),
+    ("search", "-Syu"), ("search", "a;b"), ("search",), ("removable", "x"),
+]
+for args in refuse:
+    r = run(*args)
+    if r.returncode != 2:
+        bad(f"packages {' '.join(args)!r} was not refused (rc {r.returncode}): {r.stdout[:200]}{r.stderr[:200]}")
+if have_pacman:
+    # a small official package: previewed from extra; install gets as far as «runs through pkexec»
+    r = run("preview", "install", "sl")
+    if r.returncode or not re.match(r"^extra/sl\t", r.stdout):
+        bad(f"packages preview install sl should list extra/sl (rc {r.returncode}): {r.stdout}{r.stderr}")
+    r = run("install", "sl")
+    if r.returncode != 1 or "pkexec" not in r.stderr:
+        bad(f"packages install sl as a user should stop at the root check (rc {r.returncode}): {r.stderr}")
+    r = run("search", "cowsay")
+    if r.returncode or not any(l.startswith("extra/cowsay\t") for l in r.stdout.splitlines()):
+        bad(f"packages search cowsay should find extra/cowsay: {r.stdout[:300]}{r.stderr}")
+    r = run("removable")
+    rem = set(r.stdout.split())
+    if r.returncode or rem & {"linux", "systemd", "hyprland", "glibc", "pacman", "base", "sudo"}:
+        bad(f"packages removable lists system packages: {sorted(rem & {'linux', 'systemd', 'hyprland', 'glibc', 'pacman', 'base', 'sudo'})}")
+
+# ── polkit: scoped to this helper, the active local wheel session
+rules = (root / "system/polkit/50-olymparch-packages.rules").read_text()
+if ('action.id == "org.olymparch.packages"' not in rules or "subject.local && subject.active" not in rules
+        or 'subject.isInGroup("wheel")' not in rules or rules.count("polkit.Result.YES") != 1):
+    bad("50-olymparch-packages.rules must say YES only for org.olymparch.packages, active local wheel")
+pol = (root / "system/polkit/org.olymparch.packages.policy").read_text()
+if '<annotate key="org.freedesktop.policykit.exec.path">/usr/lib/olymparch/packages</annotate>' not in pol or "<allow_any>no</allow_any>" not in pol:
+    bad("org.olymparch.packages.policy must name exactly /usr/lib/olymparch/packages and allow no one else")
+inst = (root / "bin/olymparch-install").read_text()
+for need in ("system/lib/packages /mnt/usr/lib/olymparch/packages", "org.olymparch.packages.policy", "50-olymparch-packages.rules",
+             "/var/lib/olymparch/base-packages"):
+    if need not in inst:
+        bad(f"bin/olymparch-install must install {need}")
+
+# ── the catalog: data only, every install through install-app's fixed list
+ia_ids = set(re.findall(r"^\s+([a-z-]+)\) pkgs=\(", (root / "system/lib/install-app").read_text(), re.M))
+cat = json.loads((root / "default/menu/catalog.json").read_text())
+ids = set()
+for a in cat.get("apps", []):
+    i = a.get("id", "?")
+    if i in ids:
+        bad(f"catalog: {i} listed twice")
+    ids.add(i)
+    for f in ("name", "description"):
+        if not (a.get(f, {}).get("en") and a.get(f, {}).get("nb")):
+            bad(f"catalog: {i} needs {f} in en and nb")
+    if a.get("category") not in {c["id"] for c in cat.get("categories", [])}:
+        bad(f"catalog: {i} has an unknown category {a.get('category')}")
+    if a.get("install") not in ia_ids:
+        bad(f"catalog: {i} installs {a.get('install')!r}, which is not in install-app's list")
+    if not re.fullmatch(r"[a-z0-9][a-z0-9._+-]*", a.get("needs", "")):
+        bad(f"catalog: {i} needs a program name (needs), not {a.get('needs')!r}")
+for c in cat.get("categories", []):
+    if not (c.get("label", {}).get("en") and c.get("label", {}).get("nb")):
+        bad(f"catalog: category {c.get('id')} needs en and nb labels")
+
+# ── the menu escalates only through the two helpers, and only after a confirm step
+menu = (root / "default/shell/Menu.qml").read_text()
+for m in re.finditer(r'"pkexec"\s*,\s*"([^"]+)"', menu):
+    if m.group(1) not in ("/usr/lib/olymparch/packages", "/usr/lib/olymparch/install-app"):
+        bad(f"Menu.qml runs pkexec on {m.group(1)}")
+if re.search(r'\bsudo\b|"pacman"', menu):
+    bad("Menu.qml may not run sudo or pacman itself")
+if menu.count('"pkexec"') != 2:
+    bad("Menu.qml should run pkexec in exactly two places (packages, install-app)")
+if "confirm" not in menu:
+    bad("Menu.qml: installs and removals need a confirm step")
+cheat = (root / "default/shell/Cheatsheet.qml").read_text()
+if '"hyprctl", "binds", "-j"' not in cheat:
+    bad("Cheatsheet.qml must read the live shortcuts from hyprctl binds -j")
+
+# ── the shortcuts
+schema = json.loads((root / "default/settings/schema.json").read_text())
+keys = {s["key"]: s for s in schema["settings"]}
+lua = (root / "default/hypr/olymparch.lua").read_text()
+for k, glob in (("keys.olymparch_menu", "olymparch:menu"), ("keys.cheatsheet", "olymparch:cheatsheet")):
+    if k not in keys:
+        bad(f"schema: {k} is missing")
+    if f'shortcut("{k}"' not in lua or glob not in lua:
+        bad(f"olymparch.lua: {k} must be a shortcut() bound to {glob}")
+    if f'name: "{glob.split(":")[1]}"' not in menu + cheat:
+        bad(f"no GlobalShortcut named {glob.split(':')[1]} in Menu.qml/Cheatsheet.qml")
+
+if problems:
+    print("\n".join(problems))
+    print(f"FAIL · {len(problems)} problem(s)")
+    sys.exit(1)
+print(f"PASS · menu: {len(refuse)} refusals, {len(ids)} catalog apps, polkit scoped"
+      + ("" if have_pacman else " (no pacman: repository checks skipped)"))

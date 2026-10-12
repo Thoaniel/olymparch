@@ -98,6 +98,9 @@ shortcut("keys.float", mod .. " + V", nil, function(k) hl.bind(k, hl.dsp.window.
 shortcut("keys.exit", mod .. " + SHIFT + M", nil, function(k) hl.bind(k, hl.dsp.exit()) end)
 shortcut("keys.add_game", mod .. " + SHIFT + G", nil, function(k) hl.bind(k, hl.dsp.exec_cmd("olymparch-game add-focused")) end)   -- this window is a game
 shortcut("zeus.hotkey", mod .. " + Z", nil, function(k) hl.bind(k, hl.dsp.exec_cmd("olymparch-settings zeus-open")) end)   -- Zeus, when installed
+-- The Olymparch menu (Menu.qml: everything in one list) and the list of shortcuts (Cheatsheet.qml)
+shortcut("keys.olymparch_menu", mod .. " + ALT + SPACE", nil, function(k) hl.bind(k, hl.dsp.global("olymparch:menu")) end)
+shortcut("keys.cheatsheet", mod .. " + K", nil, function(k) hl.bind(k, hl.dsp.global("olymparch:cheatsheet")) end)
 shortcut("keys.workspace", mod, digits, function(m)
     for i = 1, 10 do hl.bind(m .. " + " .. digits[i], hl.dsp.focus({ workspace = i })) end
 end)

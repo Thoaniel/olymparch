@@ -475,6 +475,12 @@
     { "key": "keys.media", "page": "keyboard", "level": "simple", "type": "bool", "default": true, "binds": ["^XF86Audio(RaiseVolume|LowerVolume|Mute|Play|Pause|Next|Prev|Stop)$"], "ready": true,
       "label": { "en": "Media keys", "nb": "Medietaster" }, "description": { "en": "Volume, play/pause, next and previous (playerctl, or the player in the bar)", "nb": "Volum, spill/pause, neste og forrige (playerctl, eller spilleren i baren)" },
       "apply": { "via": "hyprlua", "file": "~/.config/olymparch/hypr.lua", "key": "olymparch_media_keys" } },
+    { "key": "keys.olymparch_menu", "page": "keyboard", "level": "simple", "type": "text", "default": "SUPER + ALT + SPACE", "binds": ["^SUPER \\+ ALT \\+ SPACE$"], "widget": "keys", "ready": true,
+      "label": { "en": "Shortcut: Olymparch menu", "nb": "Hurtigtast: Olymparch-menyen" }, "description": { "en": "Everything in one menu: apps, style, install, tools, setup, update, system, help", "nb": "Alt i én meny: apper, stil, installer, verktøy, oppsett, oppdater, system, hjelp" },
+      "apply": { "via": "hypr", "file": "~/.config/olymparch/hypr.lua", "key": "bind" } },
+    { "key": "keys.cheatsheet", "page": "keyboard", "level": "simple", "type": "text", "default": "SUPER + K", "binds": ["^SUPER \\+ K$"], "widget": "keys", "ready": true,
+      "label": { "en": "Shortcut: list of shortcuts", "nb": "Hurtigtast: liste over hurtigtaster" }, "description": { "en": "Every shortcut that works right now, searchable", "nb": "Alle hurtigtastene som virker nå, søkbart" },
+      "apply": { "via": "hypr", "file": "~/.config/olymparch/hypr.lua", "key": "bind" } },
 
     { "key": "appearance.wallpaper", "page": "appearance", "level": "simple", "type": "choice", "widget": "segmented", "default": "torch", "ready": true,
       "options": [ { "value": "torch", "label": { "en": "Torch", "nb": "Fakkel" } }, { "value": "calm", "label": { "en": "Calm", "nb": "Rolig" } }, { "value": "off", "label": { "en": "Off", "nb": "Av" } } ],

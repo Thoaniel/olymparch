@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- pkexec /usr/lib/olymparch/packages install|remove NAME: the Olymparch menu's Install → Package and Remove.
+     One package from core, extra, multilib or olymparch; never a system package removed.
+     50-olymparch-packages.rules lets the desktop's own (wheel) user do it after confirming in the menu. -->
+<policyconfig>
+  <vendor>Olymparch</vendor>
+  <action id="org.olymparch.packages">
+    <description>Install or remove a package from the official repositories</description>
+    <description xml:lang="nb">Installer eller fjern en pakke fra de offisielle pakkebrønnene</description>
+    <message>Authentication is required to install or remove the package</message>
+    <message xml:lang="nb">Du må logge inn for å installere eller fjerne pakken</message>
+    <icon_name>system-software-install</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/olymparch/packages</annotate>
+  </action>
+</policyconfig>

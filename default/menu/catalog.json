@@ -1,0 +1,26 @@
+{
+  "about": "Apps the Olymparch menu offers under Install → Apps (and lists under Remove once installed). Data only: each app is installed with one click through pkexec /usr/lib/olymparch/install-app <install>, whose fixed list decides the packages (tests/menu-check fails if <install> is not on it). needs = the program that shows it is installed (command -v), also used to find the package to remove. Add an app: an install-app ID first, then an entry here.",
+  "categories": [
+    { "id": "games", "label": { "en": "Games", "nb": "Spill" } },
+    { "id": "internet", "label": { "en": "Internet", "nb": "Internett" } },
+    { "id": "media", "label": { "en": "Media", "nb": "Media" } },
+    { "id": "creative", "label": { "en": "Creative", "nb": "Kreativt" } },
+    { "id": "dev", "label": { "en": "Development", "nb": "Utvikling" } },
+    { "id": "system", "label": { "en": "System", "nb": "System" } },
+    { "id": "accessibility", "label": { "en": "Accessibility", "nb": "Tilgjengelighet" } }
+  ],
+  "apps": [
+    { "id": "transmission", "category": "internet", "install": "torrent", "needs": "transmission-gtk",
+      "name": { "en": "Transmission", "nb": "Transmission" },
+      "description": { "en": "Torrent client", "nb": "Torrent-klient" } },
+    { "id": "tailscale", "category": "internet", "install": "tailscale", "needs": "tailscale",
+      "name": { "en": "Tailscale", "nb": "Tailscale" },
+      "description": { "en": "Private network between your devices", "nb": "Privat nett mellom enhetene dine" } },
+    { "id": "hyprsunset", "category": "system", "install": "nightlight", "needs": "hyprsunset",
+      "name": { "en": "Night light", "nb": "Nattlys" },
+      "description": { "en": "Warmer screen in the evening (hyprsunset)", "nb": "Varmere skjerm om kvelden (hyprsunset)" } },
+    { "id": "orca", "category": "accessibility", "install": "screen-reader", "needs": "orca",
+      "name": { "en": "Orca screen reader", "nb": "Orca skjermleser" },
+      "description": { "en": "Reads the screen aloud", "nb": "Leser skjermen høyt" } }
+  ]
+}

@@ -127,6 +127,8 @@ ShellRoot {
                             font { family: "Symbols Nerd Font Mono"; pixelSize: root.px(15) }
                             color: root.gold
                             anchors.verticalCenter: parent.verticalCenter
+                            // ── the bolt opens the Olymparch menu (Menu.qml)
+                            MouseArea { anchors { fill: parent; margins: -8 } cursorShape: Qt.PointingHandCursor; onClicked: olymparchMenu.toggle() }
                         }
                         Text {
                             visible: barStatus.x > (parent.parent.width + wordmarkFull.advanceWidth) / 2 + 24
@@ -155,7 +157,11 @@ ShellRoot {
     }
 
     GameMode { id: gameMode }
-    Launcher { theme: root }
+    Launcher { id: launcher; theme: root }
+    // ── the Olymparch menu (Super+Alt+Space, the bolt in the bar) and the list of shortcuts (Super+K)
+    Menu { id: olymparchMenu; theme: root; launcher: launcher; cheatsheet: cheatsheet }
+    Cheatsheet { id: cheatsheet; theme: root }
+    // ── (end of the menu block)
     // Settings → Notifications → in games: all (as usual), critical (only those), none (held back until it ends)
     readonly property string inGames: Settings.get("notifications.in_games")
     Notifications {
