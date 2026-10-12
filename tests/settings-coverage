@@ -208,7 +208,8 @@ with tempfile.TemporaryDirectory() as home:
         if lua and subprocess.run([lua, "-e", f"assert(loadfile({str(p)!r}))"], capture_output=True).returncode:
             bad(f"{p.name} written by olymparch-settings is not valid Lua")
     for args in (["set", "keyboard.variant", evil], ["set", "display.position@Virtual-1", evil],
-                 ["set", "display.scale@x;rm", "1"], ["set", "accessibility.cursor_size", "24 && rm -rf ~"]):
+                 ["set", "display.scale@x;rm", "1"], ["set", "accessibility.cursor_size", "24 && rm -rf ~"],
+                 ["set", "updates.snapshots", "51"], ["set", "updates.snapshots", "10; reboot"], ["set", "power.suspend", "-5"]):
         if subprocess.run([cli_path, *args], env=env, capture_output=True).returncode != 2:
             bad(f"olymparch-settings {' '.join(args)!r} was not refused")
     if list(Path(home).rglob("PWNED")) or list(Path(home).rglob(".*.??????")):
@@ -228,17 +229,34 @@ if 'local HELPER = "/usr/lib/olymparch/settings-apply"' not in cli:
     bad("olymparch-settings: HELPER must be /usr/lib/olymparch/settings-apply")
 # the helper and the CLI allow exactly the same actions and values, and the schema stays inside them
 helper = (root / "system/lib/settings-apply").read_text()
-helper_allowed = set(re.findall(r'([a-z-]+:[a-z]+)', helper.split('case "$action:$value" in')[1].split(';;')[0]))
+helper_globs = [g.strip() for g in helper.split('case "$action:$value" in')[1].split(';;')[0].replace("\\", " ").replace(")", " ").split("|")]
+if not helper_globs or any(re.search(r'[*?]|[^a-z0-9:\[\]-]', g) for g in helper_globs):
+    bad(f"settings-apply: allowed values must be fixed words or digit classes, not {helper_globs}")
+from fnmatch import fnmatchcase
+def helper_ok(av):
+    return any(fnmatchcase(av, g) for g in helper_globs)
+cli_sys = cli.split("local SYSTEM_ACTIONS")[1].split("appliers")[0]
 cli_allowed = set()
-for m in re.finditer(r'(?:\["([a-z-]+)"\]|\b([a-z]+)) = \{ ((?:[a-z]+ = true,? ?)+)\}', cli.split("local SYSTEM_ACTIONS")[1].split("appliers")[0]):
+for m in re.finditer(r'(?:\["([a-z-]+)"\]|\b([a-z]+)) = \{ ((?:[a-z]+ = true,? ?)+)\}', cli_sys):
     act = m.group(1) or m.group(2)
     for v in re.findall(r'([a-z]+) = true', m.group(3)):
         cli_allowed.add(f"{act}:{v}")
-if not helper_allowed or helper_allowed != cli_allowed:
-    bad(f"settings-apply allows {sorted(helper_allowed)}, olymparch-settings {sorted(cli_allowed)}: they must match")
+ranges = {(m.group(1) or m.group(2)): (int(m.group(3)), int(m.group(4)))
+          for m in re.finditer(r'(?:\["([a-z-]+)"\]|\b([a-z]+)) = \{ (\d+), (\d+) \}', cli_sys)}
+for act, (lo, hi) in ranges.items():
+    cli_allowed |= {f"{act}:{n}" for n in range(lo, hi + 1)}
+probe = set(cli_allowed) | {f"{a.split(':')[0]}:{x}" for a in cli_allowed for x in ("", "x", "0", "1", "01", "05", "51", "99", "100", "-1", "2a", "on", "off")}
+helper_allowed = {av for av in probe if helper_ok(av)}
+if not cli_allowed or helper_allowed != cli_allowed:
+    bad(f"settings-apply and olymparch-settings must allow the same values; differ on {sorted(helper_allowed ^ cli_allowed)}")
 for s in settings:
     a = s["apply"]
     if a.get("via") == "system":
+        if s["type"] == "number":
+            lo, hi = ranges.get(a.get("action"), (None, None))
+            if (lo, hi) != (s.get("min"), s.get("max")):
+                bad(f"{s['key']}: min/max {s.get('min')}–{s.get('max')} must match SYSTEM_RANGES {lo}–{hi}")
+            continue
         vals = ["on", "off"] if s["type"] == "bool" else [o["value"] for o in s.get("options", [])]
         for v in vals:
             if f"{a.get('action')}:{v}" not in helper_allowed:
