@@ -39,11 +39,6 @@ for id in "${ids[@]}"; do
 done
 wait
 
-check() {  # check NAME 'condition': runs in the VM terminal, the answer comes back on the serial console
-    keys " c $1 '$2'\n" 0.3
-    wait_for "CHK-$1-(OK|NO)" 30
-    seen "CHK-$1-OK" || fails+=("$1")
-}
 bar_pixel() {  # the colour of the bar at x=300 (between the workspaces and the wordmark), as rrggbb
     python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/probe.ppm" 2>/dev/null
     python3 -I -c 'import sys
@@ -78,7 +73,9 @@ for id in "${ids[@]}"; do
     # switch (the terminal closes), then a new terminal in the new colours, and two notifications
     keys "olymparch-theme set $id && sleep 0.5 && exit\n" 2.5
     press meta_l+ret; sleep 1.5
-    check "$id-files" "[ \"\$(olymparch-theme current)\" = $id ] && grep -q '\"id\": \"$id\"' ~/.config/olymparch/theme/theme.json && grep -qi 'background=$bg' ~/.config/olymparch/theme/foot.ini && hyprctl getoption general:col.active_border | grep -qi '$accent'"
+    keys "bash /mnt/tests/vm/theme-check.sh $id $bg $accent\n" 0.3
+    wait_for "CHK-$id-files-(OK|NO)" 20
+    seen "CHK-$id-files-OK" || fails+=("$id-files")
     keys "clear; bash /mnt/tests/vm/palette.sh; notify-send 'Steam' 'Hades II er oppdatert'; notify-send -u critical 'Disk' 'Disken er 95 % full'\n" 1.2
     shot "$id-terminal" "$name: ny terminal i temaets farger, et vanlig og et kritisk varsel"
     press meta_l+2; sleep 1.2
