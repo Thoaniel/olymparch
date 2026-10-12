@@ -95,7 +95,7 @@
       <feDisplacementMap in="SourceGraphic" in2="n" scale="34" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
     <!-- cave rock lit by the lantern: a noise height-field with a point light at the lantern -->
-    <filter id="reliefCave" x="-5%" y="-10%" width="110%" height="120%">
+    <filter id="reliefCave" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
       <feTurbulence type="fractalNoise" baseFrequency="0.006 0.016" numOctaves="6" seed="41" result="h"/>
       <feDiffuseLighting in="h" surfaceScale="14" diffuseConstant="1" lighting-color="#fff" result="l">
         <fePointLight x="1250" y="930" z="320"/>
@@ -106,7 +106,7 @@
       </feComponentTransfer>
       <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.15" k2="0" k3="0" k4="0"/>
     </filter>
-    <filter id="reliefFar" x="-5%" y="-10%" width="110%" height="120%">
+    <filter id="reliefFar" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
       <feTurbulence type="fractalNoise" baseFrequency="0.014 0.006" numOctaves="5" seed="12" result="h"/>
       <feDiffuseLighting in="h" surfaceScale="10" diffuseConstant="1" lighting-color="#fff" result="l">
         <fePointLight x="1330" y="760" z="300"/>

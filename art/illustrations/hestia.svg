@@ -31,18 +31,24 @@
       <stop offset="1" stop-color="#2a3a52"/>
     </linearGradient>
     <linearGradient id="colL" x1="0" y1="0" x2="1" y2="0">  <!-- a column left of the fire: lit on its right -->
-      <stop offset="0" stop-color="#120a06"/>
-      <stop offset="0.45" stop-color="#2e1c10"/>
-      <stop offset="0.8" stop-color="#8a5a30"/>
-      <stop offset="0.92" stop-color="#c88a4a"/>
-      <stop offset="1" stop-color="#5a3a20"/>
+      <stop offset="0" stop-color="#3e2614"/>
+      <stop offset="0.1" stop-color="#1e1108"/>
+      <stop offset="0.3" stop-color="#110905"/>
+      <stop offset="0.55" stop-color="#4a2c16"/>
+      <stop offset="0.78" stop-color="#a87040"/>
+      <stop offset="0.88" stop-color="#e8aa62"/>
+      <stop offset="0.96" stop-color="#b07a44"/>
+      <stop offset="1" stop-color="#6a4224"/>
     </linearGradient>
     <linearGradient id="colR" x1="0" y1="0" x2="1" y2="0">  <!-- right of the fire: lit on its left -->
-      <stop offset="0" stop-color="#5a3a20"/>
-      <stop offset="0.08" stop-color="#c88a4a"/>
-      <stop offset="0.22" stop-color="#8a5a30"/>
-      <stop offset="0.55" stop-color="#2e1c10"/>
-      <stop offset="1" stop-color="#120a06"/>
+      <stop offset="0" stop-color="#6a4224"/>
+      <stop offset="0.04" stop-color="#b07a44"/>
+      <stop offset="0.12" stop-color="#e8aa62"/>
+      <stop offset="0.22" stop-color="#a87040"/>
+      <stop offset="0.45" stop-color="#4a2c16"/>
+      <stop offset="0.7" stop-color="#110905"/>
+      <stop offset="0.9" stop-color="#1e1108"/>
+      <stop offset="1" stop-color="#3e2614"/>
     </linearGradient>
     <linearGradient id="colFade" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#0a0604" stop-opacity="1"/>
@@ -167,9 +173,16 @@
     </filter>
 
     <!-- fluting on a column, 100 px wide: thin dark grooves -->
-    <g id="flutes" fill="#000" opacity="0.28">
-      <rect x="10" y="0" width="4" height="1"/><rect x="26" y="0" width="4" height="1"/><rect x="42" y="0" width="4" height="1"/>
-      <rect x="58" y="0" width="4" height="1"/><rect x="74" y="0" width="4" height="1"/><rect x="88" y="0" width="3" height="1"/>
+    <g id="flutes">
+      <g fill="#000" opacity="0.32">
+        <rect x="8" y="0" width="3" height="1"/><rect x="20" y="0" width="4" height="1"/><rect x="34" y="0" width="5" height="1"/>
+        <rect x="50" y="0" width="5" height="1"/><rect x="65" y="0" width="5" height="1"/><rect x="79" y="0" width="4" height="1"/>
+        <rect x="91" y="0" width="3" height="1"/>
+      </g>
+      <g fill="#ffd8a0" opacity="0.12">
+        <rect x="12" y="0" width="2" height="1"/><rect x="25" y="0" width="2" height="1"/><rect x="40" y="0" width="2.5" height="1"/>
+        <rect x="56" y="0" width="2.5" height="1"/><rect x="71" y="0" width="2.5" height="1"/><rect x="84" y="0" width="2" height="1"/>
+      </g>
     </g>
     <!-- a small clay oil lamp, nozzle to the right, its flame at 34,-14 -->
     <g id="lamp">
@@ -347,12 +360,14 @@
   <!-- ── the lampstand to the right of the hearth: a bronze candelabrum with three lamps -->
   <g transform="translate(1440 1150)">
     <ellipse cx="0" cy="8" rx="80" ry="12" fill="#000" opacity="0.4"/>
-    <path d="M-60 6 L0 -30 L60 6 L50 8 L0 -18 L-50 8 Z" fill="url(#bronze)"/>
-    <rect x="-6" y="-420" width="12" height="400" fill="url(#bronze)"/>
-    <path d="M-80 -420 L80 -420 L70 -404 L-70 -404 Z" fill="url(#bronze)"/>
+    <path d="M-72 8 L-10 -36 L10 -36 L72 8 L58 10 L0 -20 L-58 10 Z" fill="url(#bronze)"/>
+    <ellipse cx="0" cy="-34" rx="16" ry="6" fill="url(#bronze)"/>
+    <rect x="-10" y="-420" width="20" height="390" fill="url(#bronze)"/>
+    <ellipse cx="0" cy="-230" rx="16" ry="7" fill="url(#bronze)"/><ellipse cx="0" cy="-330" rx="13" ry="6" fill="url(#bronze)"/>
+    <path d="M-86 -424 L86 -424 L74 -400 L-74 -400 Z" fill="url(#bronze)"/>
     <use xlink:href="#lamp" transform="translate(-60 -420) scale(0.75)"/>
     <use xlink:href="#lamp" transform="translate(30 -420) scale(0.75)"/>
-    <path d="M-6 -420 L-6 -20" stroke="#ffd08a" stroke-width="2" opacity="0.6"/>
+    <path d="M-9 -400 L-9 -30" stroke="#ffd08a" stroke-width="3" opacity="0.6"/>
   </g>
 
   <!-- ── an amphora in the left foreground, its fire side lit, its shadow thrown away to the left -->

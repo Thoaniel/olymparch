@@ -43,9 +43,9 @@
       <stop offset="1" stop-color="#1c1e2c"/>
     </linearGradient>
     <linearGradient id="bark" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#3a4258"/>
-      <stop offset="0.25" stop-color="#1c2232"/>
-      <stop offset="1" stop-color="#06080e"/>
+      <stop offset="0" stop-color="#05070c"/>
+      <stop offset="0.7" stop-color="#121826"/>
+      <stop offset="1" stop-color="#2a3248"/>
     </linearGradient>
     <linearGradient id="bowWood" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0" stop-color="#f3f6fc"/>
@@ -89,13 +89,13 @@
       <feDisplacementMap in="SourceGraphic" in2="n" scale="26" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
     <filter id="reliefBark" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.06 0.008" numOctaves="4" seed="8" result="h"/>
-      <feDiffuseLighting in="h" surfaceScale="12" diffuseConstant="1" lighting-color="#fff" result="l">
-        <feDistantLight azimuth="220" elevation="38"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.024 0.0045" numOctaves="4" seed="8" result="h"/>
+      <feDiffuseLighting in="h" surfaceScale="22" diffuseConstant="1" lighting-color="#fff" result="l">
+        <feDistantLight azimuth="320" elevation="32"/>
       </feDiffuseLighting>
       <feComponentTransfer in="l" result="lt">
-        <feFuncR type="linear" slope="1.2" intercept="0.12"/><feFuncG type="linear" slope="1.2" intercept="0.12"/>
-        <feFuncB type="linear" slope="1.2" intercept="0.12"/>
+        <feFuncR type="linear" slope="1.15" intercept="0.0"/><feFuncG type="linear" slope="1.15" intercept="0.0"/>
+        <feFuncB type="linear" slope="1.15" intercept="0.0"/>
       </feComponentTransfer>
       <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.1" k2="0" k3="0" k4="0"/>
     </filter>
@@ -136,10 +136,10 @@
     <!-- the hind, facing left (toward the moon), hooves at y 0 -->
     <path id="hind" d="M-90 -300 C-40 -290 20 -284 70 -290 C110 -296 140 -302 162 -290 C184 -278 194 -262 188 -244 L200 -254 L198 -240 L188 -236
       C186 -210 182 -190 176 -170 C172 -150 176 -128 168 -108 L160 -60 L162 -18 L168 0 L150 0 L148 -18 L146 -60 L148 -104
-      C140 -124 134 -140 126 -152 C100 -160 60 -158 20 -152 C-20 -146 -46 -146 -58 -146 L-66 -110 L-72 -60 L-70 -18 L-64 0 L-82 0 L-84 -18 L-86 -60
-      L-90 -112 L-108 -148 C-142 -164 -158 -206 -152 -240 C-160 -280 -176 -320 -196 -352 L-222 -360 L-262 -356 L-276 -362
-      L-280 -374 C-262 -386 -240 -400 -220 -412 L-214 -436 L-196 -462 L-198 -428 L-186 -456 L-182 -420
-      C-160 -380 -130 -330 -90 -300 Z"/>
+      C140 -124 134 -140 126 -152 C100 -160 60 -158 20 -152 C-20 -146 -46 -146 -58 -146 L-68 -106 L-56 -76 L-48 -54 L-50 -44 L-64 -46 L-74 -68
+      L-90 -98 L-98 -120 L-108 -148 C-142 -164 -158 -206 -152 -240 C-160 -280 -176 -320 -196 -352 L-223 -366 L-263 -369 L-276 -377
+      L-278 -390 C-258 -398 -234 -408 -212 -417 L-202 -439 L-180 -462 L-188 -429 L-171 -454 L-173 -418
+      C-168 -384 -140 -334 -90 -300 Z"/>
     <path id="hindFar" d="M-40 -160 L-30 -110 L-36 -60 L-34 -18 L-28 0 L-44 0 L-48 -18 L-50 -60 L-54 -120 Z
       M100 -160 C110 -140 118 -120 112 -100 L104 -60 L106 -18 L112 0 L96 0 L92 -18 L90 -60 L92 -104 C88 -130 84 -150 80 -170 Z"/>
     <!-- a fern frond -->
@@ -276,11 +276,12 @@
       <use xlink:href="#hind" fill="url(#deer)"/>
       <!-- pale throat, chest and belly; darker saddle; shaded haunch -->
       <path d="M-196 -352 C-176 -320 -160 -280 -148 -240 C-150 -200 -136 -164 -108 -148 C-136 -190 -150 -260 -176 -330 Z" fill="#dfe5f0" opacity="0.55"/>
-      <path d="M-58 -146 C-46 -146 -20 -146 20 -152 C60 -158 100 -160 126 -152 C90 -176 40 -180 0 -174 C-30 -170 -50 -160 -58 -146 Z" fill="#c2cde0" opacity="0.12"/>
+      <path d="M-58 -146 C-46 -146 -20 -146 20 -152 C60 -158 100 -160 126 -152 C90 -176 40 -180 0 -174 C-30 -170 -50 -160 -58 -146 Z" fill="#dfe5f0" opacity="0.35" filter="url(#glowS)"/>
       <path d="M-90 -300 C-40 -290 20 -284 70 -290 C110 -296 140 -302 162 -290 C120 -280 40 -272 -70 -284 Z" fill="#0e1018" opacity="0.5"/>
       <path d="M150 -292 C178 -286 192 -268 188 -244 C186 -210 182 -190 176 -170 C150 -190 130 -230 120 -280 Z" fill="#0e1018" opacity="0.45"/>
-      <path d="M-262 -356 L-276 -362 L-280 -374 C-270 -380 -262 -384 -254 -388 Z" fill="#0a0c14" opacity="0.7"/>
+      <path d="M-262 -356 L-276 -362 L-280 -374 C-270 -380 -262 -384 -254 -388 Z" fill="#0a0c14" opacity="0.7" transform="rotate(10 -190 -370)"/>
     </g>
+    <g transform="rotate(10 -190 -370)">
     <!-- antlers (the Ceryneian hind's are gold) -->
     <g fill="none" stroke-linecap="round" stroke-linejoin="round">
       <g stroke="#4a3a14" stroke-width="12">
@@ -300,9 +301,10 @@
     <circle cx="-236" cy="-394" r="2" fill="#f3f6fc"/>
     <circle cx="-276" cy="-370" r="4" fill="#05060a"/>
     <path d="M-280 -374 C-262 -386 -240 -400 -220 -412 L-214 -436" fill="none" stroke="#f3f6fc" stroke-width="3" opacity="0.85"/>
+    </g>
     <path d="M-196 -352 C-176 -320 -160 -280 -148 -240 C-150 -200 -136 -164 -108 -148" fill="none" stroke="#f3f6fc" stroke-width="3" opacity="0.7"/>
-    <path d="M-182 -420 C-160 -380 -130 -330 -90 -300 C-40 -290 20 -284 70 -290 C110 -296 140 -302 162 -290" fill="none" stroke="#c2cde0" stroke-width="2.5" opacity="0.6"/>
-    <path d="M-108 -148 L-90 -112 L-86 -60 L-84 -18" fill="none" stroke="#c2cde0" stroke-width="2.5" opacity="0.55"/>
+    <path d="M-173 -418 C-168 -384 -140 -334 -90 -300 C-40 -290 20 -284 70 -290 C110 -296 140 -302 162 -290" fill="none" stroke="#c2cde0" stroke-width="2.5" opacity="0.6"/>
+    <path d="M-108 -148 L-98 -120 L-90 -98 L-74 -68" fill="none" stroke="#c2cde0" stroke-width="2.5" opacity="0.55"/>
   </g>
   <!-- grass in front of the hind's hooves -->
   <g stroke="#2a3656" stroke-width="3" fill="none" stroke-linecap="round">
@@ -329,7 +331,9 @@
     <path d="M300 960 C340 1000 400 1020 460 1060 C420 1060 360 1040 304 1010 Z" fill="#141a28"/>
   </g>
   <path d="M320 -40 C300 120 290 300 300 480 C310 640 290 800 300 960 C306 1080 330 1200 380 1300" fill="none"
-        stroke="#9aa6c0" stroke-width="5" opacity="0.4"/>
+        stroke="#c2cde0" stroke-width="6" opacity="0.65"/>
+  <path d="M320 -40 C300 120 290 300 300 480 C310 640 290 800 300 960 C306 1080 330 1200 380 1300" fill="none"
+        stroke="#9aa6c0" stroke-width="16" opacity="0.25" filter="url(#glowS)"/>
   <!-- a dark bough overhead frames the top-left -->
   <g fill="#05070e" filter="url(#foliage)">
     <path d="M200 60 C380 90 560 130 760 170 C860 190 940 200 1010 196 C960 220 900 230 840 226 C700 220 560 196 420 180

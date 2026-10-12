@@ -50,8 +50,8 @@
       <stop offset="1" stop-color="#1e0c20"/>
     </linearGradient>
     <linearGradient id="ledgeFace" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#28122e"/>
-      <stop offset="1" stop-color="#0c050e"/>
+      <stop offset="0" stop-color="#2c1630"/>
+      <stop offset="1" stop-color="#140a16"/>
     </linearGradient>
     <radialGradient id="grape" cx="0.4" cy="0.38" r="0.56" fx="0.3" fy="0.28">
       <stop offset="0" stop-color="#e8b8d8"/>
@@ -143,6 +143,17 @@
       <feDisplacementMap in="SourceGraphic" in2="n" scale="26" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
     <!-- relief lit from the afterglow: low, from the left -->
+    <filter id="reliefCalm" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.006 0.012" numOctaves="5" seed="44" result="h"/>
+      <feDiffuseLighting in="h" surfaceScale="7" diffuseConstant="1" lighting-color="#fff" result="l">
+        <feDistantLight azimuth="195" elevation="35"/>
+      </feDiffuseLighting>
+      <feComponentTransfer in="l" result="lt">
+        <feFuncR type="linear" slope="0.5" intercept="0.55"/><feFuncG type="linear" slope="0.5" intercept="0.55"/>
+        <feFuncB type="linear" slope="0.5" intercept="0.55"/>
+      </feComponentTransfer>
+      <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.05" k2="0" k3="0" k4="0"/>
+    </filter>
     <filter id="reliefStone" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
       <feTurbulence type="fractalNoise" baseFrequency="0.02 0.035" numOctaves="5" seed="41" result="h"/>
       <feDiffuseLighting in="h" surfaceScale="9" diffuseConstant="1" lighting-color="#fff" result="l">
@@ -326,41 +337,29 @@
   <path d="M-60 1150 C200 1120 500 1130 800 1150 C1100 1170 1400 1150 1700 1160 C2000 1170 2300 1150 2620 1160 L2620 1440
     L-60 1440 Z" fill="url(#near)"/>
 
-  <!-- ── the stone ledge (front left), its top lit by the afterglow -->
-  <g filter="url(#reliefStone)">
+  <!-- ── the wall in front: a lit coping, then a few big weathered stones in quiet shadow -->
+  <path d="M-60 1180 L2620 1210 L2620 1440 L-60 1440 Z" fill="#0e0610"/>
+  <g filter="url(#reliefCalm)">
     <g filter="url(#rock)">
-      <path d="M-60 1180 L2620 1210 L2620 1440 L-60 1440 Z" fill="#0a040b"/>
       <path d="M-60 1150 L2620 1176 L2620 1214 L-60 1188 Z" fill="url(#ledgeTop)"/>
     </g>
   </g>
-  <!-- the wall's stones: each a little lighter than the joints, lit along its upper lip -->
-  <g filter="url(#reliefStone)">
+  <g filter="url(#reliefCalm)">
     <g filter="url(#rock)">
-      <path d="M-52 1192 L69 1189 L188 1203 L196 1240 L186 1272 L56 1275 L-54 1274 L-59 1236 Z M215 1207 L287 1199 L357 1204 L365 1230 L355 1277 L279 1274 L213 1270 L208 1241 Z M383 1198 L538 1196 L690 1196 L698 1237 L688 1280 L521 1283 L381 1284 L376 1250 Z
-        M717 1213 L787 1200 L855 1202 L863 1250 L853 1285 L779 1289 L715 1288 L710 1246 Z M878 1202 L974 1200 L1068 1210 L1076 1238 L1066 1282 L964 1286 L876 1286 L871 1238 Z M1094 1206 L1163 1201 L1230 1207 L1238 1247 L1228 1288 L1155 1289 L1092 1287 L1087 1242 Z
-        M1257 1203 L1319 1211 L1379 1213 L1387 1242 L1377 1284 L1312 1282 L1255 1287 L1250 1240 Z M1403 1202 L1534 1207 L1663 1208 L1671 1249 L1661 1292 L1520 1286 L1401 1286 L1396 1242 Z M1689 1207 L1776 1204 L1860 1214 L1868 1255 L1858 1287 L1766 1287 L1687 1287 L1682 1252 Z
-        M1887 1210 L1968 1208 L2047 1223 L2055 1259 L2045 1292 L1959 1296 L1885 1288 L1880 1250 Z M2074 1221 L2200 1215 L2325 1216 L2333 1259 L2323 1299 L2187 1301 L2072 1298 L2067 1251 Z M2350 1219 L2426 1219 L2500 1219 L2508 1263 L2498 1301 L2418 1296 L2348 1297 L2343 1266 Z
-        M2527 1214 L2631 1213 L2733 1216 L2741 1261 L2731 1301 L2620 1301 L2525 1303 L2520 1255 Z M-162 1288 L-20 1289 L121 1280 L129 1321 L119 1369 L-35 1372 L-164 1368 L-169 1333 Z M147 1293 L272 1292 L396 1285 L404 1330 L394 1373 L259 1369 L145 1366 L140 1336 Z
-        M422 1292 L549 1286 L674 1297 L682 1329 L672 1367 L536 1371 L420 1370 L415 1339 Z M699 1289 L764 1284 L828 1286 L836 1337 L826 1376 L757 1375 L697 1373 L692 1328 Z M854 1302 L942 1290 L1029 1305 L1037 1337 L1027 1376 L933 1375 L852 1376 L847 1340 Z
-        M1054 1294 L1134 1298 L1211 1291 L1219 1331 L1209 1376 L1125 1376 L1052 1372 L1047 1341 Z M1238 1304 L1349 1294 L1458 1305 L1466 1340 L1456 1380 L1337 1377 L1236 1374 L1231 1336 Z M1481 1300 L1549 1297 L1615 1310 L1623 1346 L1613 1384 L1541 1378 L1479 1376 L1474 1348 Z
-        M1639 1306 L1702 1303 L1764 1308 L1772 1348 L1762 1389 L1695 1388 L1637 1384 L1632 1342 Z M1791 1302 L1914 1308 L2036 1301 L2044 1348 L2034 1385 L1901 1388 L1789 1382 L1784 1347 Z M2061 1318 L2190 1319 L2317 1320 L2325 1345 L2315 1391 L2176 1389 L2059 1386 L2054 1352 Z
-        M2342 1307 L2412 1304 L2480 1317 L2488 1355 L2478 1396 L2404 1393 L2340 1394 L2335 1362 Z M2503 1308 L2652 1316 L2798 1312 L2806 1350 L2796 1394 L2636 1398 L2501 1395 L2496 1356 Z M-102 1380 L23 1377 L146 1372 L154 1421 L144 1456 L10 1461 L-104 1457 L-109 1418 Z
-        M173 1372 L244 1378 L312 1384 L320 1414 L310 1456 L236 1456 L171 1454 L166 1417 Z M339 1388 L461 1378 L581 1392 L589 1427 L579 1453 L448 1455 L337 1451 L332 1427 Z M606 1392 L669 1382 L730 1389 L738 1425 L728 1463 L662 1458 L604 1455 L599 1432 Z
-        M755 1393 L902 1380 L1048 1384 L1056 1421 L1046 1459 L887 1459 L753 1456 L748 1419 Z M1071 1383 L1216 1390 L1358 1382 L1366 1428 L1356 1469 L1200 1468 L1069 1463 L1064 1426 Z M1381 1397 L1473 1390 L1563 1395 L1571 1428 L1561 1468 L1463 1472 L1379 1468 L1374 1434 Z
-        M1586 1395 L1661 1406 L1734 1399 L1742 1437 L1732 1475 L1653 1471 L1584 1471 L1579 1443 Z M1758 1393 L1902 1388 L2043 1393 L2051 1426 L2041 1472 L1886 1467 L1756 1467 L1751 1438 Z M2069 1396 L2132 1398 L2192 1403 L2200 1439 L2190 1482 L2124 1483 L2067 1479 L2062 1443 Z
-        M2219 1403 L2325 1398 L2429 1404 L2437 1440 L2427 1479 L2314 1479 L2217 1478 L2212 1450 Z M2456 1406 L2576 1406 L2694 1410 L2702 1439 L2692 1481 L2563 1479 L2454 1477 L2449 1444 Z" fill="url(#ledgeFace)"/>
+      <path d="M-66 1192 L125 1192 L312 1201 L326 1226 L328 1263 L316 1330 L84 1334 L-70 1324 L-78 1267 L-76 1220 Z
+        M359 1198 L552 1197 L742 1197 L756 1230 L758 1265 L746 1318 L511 1322 L355 1312 L347 1260 L349 1224 Z
+        M789 1210 L978 1202 L1162 1200 L1176 1234 L1178 1272 L1166 1336 L937 1340 L785 1330 L777 1272 L779 1228 Z
+        M1209 1203 L1418 1208 L1622 1200 L1636 1236 L1638 1260 L1626 1326 L1373 1330 L1205 1320 L1197 1265 L1199 1230 Z
+        M1674 1213 L1870 1206 L2062 1205 L2076 1240 L2078 1271 L2066 1340 L1828 1344 L1670 1334 L1662 1281 L1664 1234 Z
+        M2109 1220 L2368 1207 L2622 1211 L2636 1244 L2638 1278 L2626 1332 L2313 1336 L2105 1326 L2097 1267 L2099 1238 Z
+        M-66 1344 L220 1345 L502 1350 L516 1374 L518 1407 L506 1470 L160 1474 L-70 1464 L-78 1410 L-76 1368 Z
+        M549 1335 L792 1324 L1032 1333 L1046 1364 L1048 1404 L1036 1470 L741 1474 L545 1464 L537 1403 L539 1358 Z
+        M1079 1355 L1312 1341 L1542 1354 L1556 1380 L1558 1409 L1546 1470 L1263 1474 L1075 1464 L1067 1404 L1069 1374 Z
+        M1589 1338 L1858 1343 L2122 1337 L2136 1372 L2138 1401 L2126 1470 L1801 1474 L1585 1464 L1577 1412 L1579 1366 Z
+        M2169 1340 L2398 1343 L2622 1342 L2636 1376 L2638 1410 L2626 1470 L2349 1474 L2165 1464 L2157 1413 L2159 1370 Z" fill="url(#ledgeFace)"/>
     </g>
   </g>
-  <path d="M-59 1236 L-52 1192 L69 1189 L188 1203 M208 1241 L215 1207 L287 1199 L357 1204 M376 1250 L383 1198 L538 1196 L690 1196 M710 1246 L717 1213 L787 1200 L855 1202
-        M871 1238 L878 1202 L974 1200 L1068 1210 M1087 1242 L1094 1206 L1163 1201 L1230 1207 M1250 1240 L1257 1203 L1319 1211 L1379 1213 M1396 1242 L1403 1202 L1534 1207 L1663 1208
-        M1682 1252 L1689 1207 L1776 1204 L1860 1214 M1880 1250 L1887 1210 L1968 1208 L2047 1223 M2067 1251 L2074 1221 L2200 1215 L2325 1216 M2343 1266 L2350 1219 L2426 1219 L2500 1219
-        M2520 1255 L2527 1214 L2631 1213 L2733 1216 M-169 1333 L-162 1288 L-20 1289 L121 1280 M140 1336 L147 1293 L272 1292 L396 1285 M415 1339 L422 1292 L549 1286 L674 1297
-        M692 1328 L699 1289 L764 1284 L828 1286 M847 1340 L854 1302 L942 1290 L1029 1305 M1047 1341 L1054 1294 L1134 1298 L1211 1291 M1231 1336 L1238 1304 L1349 1294 L1458 1305
-        M1474 1348 L1481 1300 L1549 1297 L1615 1310 M1632 1342 L1639 1306 L1702 1303 L1764 1308 M1784 1347 L1791 1302 L1914 1308 L2036 1301 M2054 1352 L2061 1318 L2190 1319 L2317 1320
-        M2335 1362 L2342 1307 L2412 1304 L2480 1317 M2496 1356 L2503 1308 L2652 1316 L2798 1312 M-109 1418 L-102 1380 L23 1377 L146 1372 M166 1417 L173 1372 L244 1378 L312 1384
-        M332 1427 L339 1388 L461 1378 L581 1392 M599 1432 L606 1392 L669 1382 L730 1389 M748 1419 L755 1393 L902 1380 L1048 1384 M1064 1426 L1071 1383 L1216 1390 L1358 1382
-        M1374 1434 L1381 1397 L1473 1390 L1563 1395 M1579 1443 L1586 1395 L1661 1406 L1734 1399 M1751 1438 L1758 1393 L1902 1388 L2043 1393 M2062 1443 L2069 1396 L2132 1398 L2192 1403
-        M2212 1450 L2219 1403 L2325 1398 L2429 1404 M2449 1444 L2456 1406 L2576 1406 L2694 1410" stroke="#b07080" stroke-width="2.5" fill="none" opacity="0.3"/>
+  <path d="M-76 1220 L-66 1192 L125 1192 L312 1201 M349 1224 L359 1198 L552 1197 L742 1197 M779 1228 L789 1210 L978 1202 L1162 1200 M1199 1230 L1209 1203 L1418 1208 L1622 1200 M1664 1234 L1674 1213 L1870 1206 L2062 1205 M2099 1238 L2109 1220 L2368 1207 L2622 1211 M-76 1368 L-66 1344 L220 1345 L502 1350 M539 1358 L549 1335 L792 1324 L1032 1333 M1069 1374 L1079 1355 L1312 1341 L1542 1354 M1579 1366 L1589 1338 L1858 1343 L2122 1337 M2159 1370 L2169 1340 L2398 1343 L2622 1342" stroke="#9a6070" stroke-width="2.5" fill="none" opacity="0.28"/>
   <!-- ivy falling over the wall in a few places -->
   <path d="M60 1180 L55 1215 L62 1248 L76 1281 L86 1314 L101 1342 L105 1374 L95 1402 M150 1182 L133 1212 L129 1244 L116 1275 L105 1305 M520 1186 L536 1216 L542 1251 L552 1277 L562 1314 L579 1349 L574 1385 M600 1188 L588 1221 L599 1248 L598 1286 M1300 1196 L1303 1234 L1297 1268 L1290 1294 L1275 1323 L1263 1360 M1700 1200 L1692 1232 L1692 1268 L1705 1302 L1715 1331" stroke="#1a1410" stroke-width="5" fill="none"/>
   <g fill="url(#leaf)" filter="url(#leafVein)">
@@ -397,7 +396,7 @@
 
   <!-- ── on the ledge: the kantharos, a cut cluster, the thyrsus leaning on the wall -->
   <!-- thyrsus: fennel staff wound with ivy, pine cone on top, leaning toward the cup -->
-  <g transform="translate(1110 1176) rotate(9) scale(0.62)">
+  <g transform="translate(1200 1178) rotate(9) scale(0.66)">
     <rect x="-9" y="-490" width="18" height="490" fill="url(#staff)"/>
     <rect x="-9" y="-490" width="4" height="490" fill="#ffc8a0" opacity="0.5"/>
     <path d="M-7 -60 C10 -90 -10 -130 7 -170 C-10 -210 10 -250 -7 -290 C10 -330 -10 -370 7 -410" stroke="#2a2418" stroke-width="5" fill="none"/>
@@ -423,7 +422,7 @@
   </g>
 
   <!-- the kantharos: deep bowl, high handles, black glaze with a terracotta band -->
-  <g transform="translate(880 1164) scale(1.18)">
+  <g transform="translate(860 1166) scale(1.65)">
     <ellipse cx="0" cy="4" rx="90" ry="12" fill="#0a0308" opacity="0.6"/>
     <!-- handles -->
     <path d="M-92 -150 C-150 -170 -160 -90 -84 -78" stroke="#120610" stroke-width="13" fill="none"/>
@@ -448,19 +447,22 @@
     <!-- rim and the wine -->
     <ellipse cx="0" cy="-160" rx="104" ry="18" fill="#1a0a12"/>
     <ellipse cx="0" cy="-157" rx="94" ry="13" fill="url(#wine)"/>
-    <ellipse cx="-30" cy="-160" rx="36" ry="4" fill="#ffb0c8" opacity="0.45"/>
+    <ellipse cx="-30" cy="-158" rx="44" ry="5" fill="#ffb0c8" opacity="0.5"/>
+    <ellipse cx="-40" cy="-158" rx="18" ry="2.2" fill="#fff0e0" opacity="0.9"/>
+    <circle cx="-46" cy="-158" r="10" fill="#ffd0b0" opacity="0.35" filter="url(#glowS)"/>
+    <path d="M-52 -158 L-40 -158 M-46 -164 L-46 -152" stroke="#fff6ea" stroke-width="1.2" opacity="0.8"/>
     <path d="M-104 -160 C-104 -100 -70 -54 -16 -48" stroke="#ffb08a" stroke-width="4" fill="none" opacity="0.75"/>
     <path d="M-104 -160 A104 18 0 0 1 60 -175" stroke="#ffc8a8" stroke-width="2.5" fill="none" opacity="0.7"/>
     <path d="M-84 -150 C-82 -120 -72 -96 -56 -80" stroke="#fff0e0" stroke-width="3" fill="none" opacity="0.35"/>
   </g>
   <!-- a cut cluster lying on the ledge beside the cup, with its leaf -->
-  <g transform="translate(1040 1150) rotate(-62) scale(0.75)">
+  <g transform="translate(1110 1152) rotate(-62) scale(0.75)">
     <use xlink:href="#vleaf" fill="url(#leaf)" filter="url(#leafVein)" transform="translate(-10 -20) rotate(160) scale(0.8)"/>
     <use xlink:href="#cluster"/>
   </g>
   <!-- warm light pooled on the ledge around the cup -->
   <g filter="url(#glow)">
-    <ellipse cx="800" cy="1172" rx="260" ry="14" fill="#ffb08a" opacity="0.4"/>
+    <ellipse cx="800" cy="1174" rx="320" ry="16" fill="#ffb08a" opacity="0.4"/>
   </g>
 
   <!-- ── the old vine at the right: a gnarled trunk on the ledge, a dark mass of leaves, heavy clusters rim-lit

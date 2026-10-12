@@ -336,8 +336,8 @@
   <g transform="translate(300 1330) rotate(-14)">
     <ellipse cx="0" cy="0" rx="236" ry="250" fill="#14140c"/>
     <ellipse cx="0" cy="0" rx="226" ry="240" fill="url(#shield)"/>
-    <ellipse cx="0" cy="0" rx="226" ry="240" fill="none" stroke="#8a7c48" stroke-width="16" opacity="0.6"/>
-    <path d="M-170 -150 A226 240 0 0 1 60 -232" fill="none" stroke="#efe6b8" stroke-width="6" opacity="0.75"/>
+    <ellipse cx="0" cy="0" rx="226" ry="240" fill="none" stroke="#8a7c48" stroke-width="16" opacity="0.42"/>
+    <path d="M-170 -150 A226 240 0 0 1 60 -232" fill="none" stroke="#efe6b8" stroke-width="6" opacity="0.5"/>
     <ellipse cx="0" cy="0" rx="190" ry="202" fill="none" stroke="#1c1a10" stroke-width="5" opacity="0.7"/>
     <!-- bronze boss and a tooled band -->
     <ellipse cx="0" cy="0" rx="150" ry="160" fill="none" stroke="#5a5230" stroke-width="6" opacity="0.6"/>

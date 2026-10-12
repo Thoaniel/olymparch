@@ -205,7 +205,7 @@ import json
 import re
 import sys
 from pathlib import Path
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 o, art, ids = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3:]
 shots = {}
 for p in o.glob("*.png"):
@@ -213,6 +213,10 @@ for p in o.glob("*.png"):
     if m:
         shots[(m.group(1), int(m.group(2)), m.group(3))] = p
 BG, INK = (14, 14, 17), (226, 222, 214)
+try:
+    FONT = ImageFont.load_default(size=16)   # Pillow ≥ 10.1: a FreeType font with æøå
+except TypeError:
+    FONT = ImageFont.load_default()
 def fit(im, w):
     return im.convert("RGB").resize((w, round(im.height * w / im.width)), Image.LANCZOS)
 over = []
@@ -228,7 +232,7 @@ for tid in ids:
              if (tid, n, k) in shots]
     th = max([im.height for _, im in tiles], default=0)
     sheet = Image.new("RGB", (16 + 1600 + 16, 16 + 30 + big.height + 16 + (th + 40 if tiles else 0) * 1 + 16), BG)
-    d = ImageDraw.Draw(sheet)
+    d = ImageDraw.Draw(sheet); d.font = FONT
     d.text((16, 20), f"{t['name']['nb']} · {bg['name']['nb']}  (art/illustrations/{tid}.svg, 1920×1080)", fill=INK)
     sheet.paste(big, (16, 46))
     y = 46 + big.height + 16
@@ -243,7 +247,7 @@ if over:
     rows = (len(over) + cols - 1) // cols
     th = round(tw * 9 / 16)
     ov = Image.new("RGB", (16 + cols * (tw + 16), 16 + rows * (th + 40)), BG)
-    d = ImageDraw.Draw(ov)
+    d = ImageDraw.Draw(ov); d.font = FONT
     for i, (god, name, im) in enumerate(over):
         x, y = 16 + (i % cols) * (tw + 16), 16 + (i // cols) * (th + 40)
         d.text((x, y + 4), f"{god} · {name}", fill=INK)

@@ -192,6 +192,9 @@
       1200 760 Z" fill="#8e2614" opacity="0.5"/>
   </g>
 
+  <!-- solid backing so the displaced hills never show the sky at the frame edges -->
+  <rect y="960" width="2560" height="480" fill="#6a1e14"/>
+  <rect y="1030" width="2560" height="410" fill="#2a0c0a"/>
   <!-- ── far hills in the red haze -->
   <g filter="url(#rock)">
     <path d="M-60 960 L80 935 L200 948 L320 915 L460 930 L600 905 L700 918 L840 900 L960 926 L1100 912 L1240 935 L1380 920
@@ -282,8 +285,12 @@
     <ellipse cx="0" cy="0" rx="250" ry="120" fill="none" stroke="#6a3a18" stroke-width="14" opacity="0.9"/>
     <ellipse cx="0" cy="0" rx="232" ry="108" fill="none" stroke="#2a1408" stroke-width="5" opacity="0.7"/>
     <path d="M-250 0 A250 120 0 0 1 -60 -118" fill="none" stroke="#f3c995" stroke-width="5" opacity="0.8"/>
-    <!-- the device painted on it: a boar's tusk curve in danger red, worn -->
-    <path d="M-80 10 C-40 -50 40 -60 90 -20 C50 -30 10 -20 -20 20 Z" fill="#8e1a14" opacity="0.55"/>
+    <!-- the device painted on it: a coiled serpent in danger red, flaking; a dent here and there -->
+    <path d="M-110 30 C-90 -40 -10 -70 60 -50 C110 -36 130 0 100 26 C70 50 20 40 10 10 C0 -16 40 -26 56 -8" fill="none" stroke="#8e1a14" stroke-width="16" stroke-linecap="round" opacity="0.65"/>
+    <path d="M-110 30 L-140 50 L-118 56 Z" fill="#8e1a14" opacity="0.65"/>
+    <path d="M-100 24 C-80 -36 -10 -60 56 -42" fill="none" stroke="#ff6a4a" stroke-width="3" opacity="0.35"/>
+    <g fill="#2a1006" opacity="0.7"><ellipse cx="-20" cy="-40" rx="10" ry="5"/><ellipse cx="80" cy="10" rx="8" ry="4"/><ellipse cx="-70" cy="-6" rx="7" ry="4"/></g>
+    <path d="M-164 -30 A16 9 0 0 1 -136 -30" fill="none" stroke="#c8864a" stroke-width="2.5" opacity="0.55"/><path d="M-164 -28 A16 9 0 0 0 -136 -28" fill="none" stroke="#0a0302" stroke-width="3" opacity="0.6"/><path d="M106 40 A16 9 0 0 1 134 40" fill="none" stroke="#c8864a" stroke-width="2.5" opacity="0.55"/><path d="M106 42 A16 9 0 0 0 134 42" fill="none" stroke="#0a0302" stroke-width="3" opacity="0.6"/><path d="M146 -40 A16 9 0 0 1 174 -40" fill="none" stroke="#c8864a" stroke-width="2.5" opacity="0.55"/><path d="M146 -38 A16 9 0 0 0 174 -38" fill="none" stroke="#0a0302" stroke-width="3" opacity="0.6"/><path d="M-74 60 A16 9 0 0 1 -46 60" fill="none" stroke="#c8864a" stroke-width="2.5" opacity="0.55"/><path d="M-74 62 A16 9 0 0 0 -46 62" fill="none" stroke="#0a0302" stroke-width="3" opacity="0.6"/><path d="M26 -80 A16 9 0 0 1 54 -80" fill="none" stroke="#c8864a" stroke-width="2.5" opacity="0.55"/><path d="M26 -78 A16 9 0 0 0 54 -78" fill="none" stroke="#0a0302" stroke-width="3" opacity="0.6"/>
   </g>
 
   <!-- grass and earth in front of the fallen shield -->

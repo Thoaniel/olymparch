@@ -55,9 +55,9 @@
       <stop offset="1" stop-color="#6a4e22"/>
     </linearGradient>
     <radialGradient id="petal" cx="0.35" cy="0.35" r="0.75">
-      <stop offset="0" stop-color="#ff9a7a"/>
-      <stop offset="0.5" stop-color="#ff7a5c"/>
-      <stop offset="1" stop-color="#b8321e"/>
+      <stop offset="0" stop-color="#ff7a5c"/>
+      <stop offset="0.45" stop-color="#d8402a"/>
+      <stop offset="1" stop-color="#7a160c"/>
     </radialGradient>
     <linearGradient id="topShade" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#030604" stop-opacity="0.9"/>
@@ -104,8 +104,8 @@
         <feDistantLight azimuth="190" elevation="35"/>
       </feDiffuseLighting>
       <feComponentTransfer in="l" result="lt">
-        <feFuncR type="linear" slope="1" intercept="0.25"/><feFuncG type="linear" slope="1" intercept="0.25"/>
-        <feFuncB type="linear" slope="1" intercept="0.25"/>
+        <feFuncR type="linear" slope="0.6" intercept="0.45"/><feFuncG type="linear" slope="0.6" intercept="0.45"/>
+        <feFuncB type="linear" slope="0.6" intercept="0.45"/>
       </feComponentTransfer>
       <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.05" k2="0" k3="0" k4="0"/>
     </filter>
@@ -151,18 +151,30 @@
         <path d="M-2 -276 L-24 -330 M5 -298 L-14 -360 M9 -320 L-4 -390 M12 -342 L8 -420 M20 -296 L40 -350 M22 -318 L44 -380"/>
       </g>
     </g>
-    <!-- a poppy: four petals, dark heart, a nodding bud on the same stem -->
+    <!-- a poppy seen from the side: a cup of petals, the dark heart showing over the rim, a nodding bud -->
     <g id="poppy">
-      <path d="M0 0 C-4 -60 4 -120 0 -170" fill="none" stroke="#2a3a1e" stroke-width="4"/>
-      <path d="M0 -80 C14 -100 30 -110 40 -140" fill="none" stroke="#2a3a1e" stroke-width="3"/>
-      <ellipse cx="42" cy="-150" rx="7" ry="11" fill="#3a4a26" transform="rotate(30 42 -150)"/>
-      <g transform="translate(0 -184)">
-        <path d="M0 0 C-30 -8 -46 -34 -34 -52 C-20 -66 -4 -50 0 -28 Z" fill="url(#petal)"/>
-        <path d="M0 0 C30 -8 46 -34 34 -52 C20 -66 4 -50 0 -28 Z" fill="url(#petal)"/>
-        <path d="M0 0 C-36 4 -50 -14 -44 -30 C-36 -42 -14 -30 0 -14 Z" fill="#d84a30"/>
-        <path d="M0 0 C36 4 50 -14 44 -30 C36 -42 14 -30 0 -14 Z" fill="#c23a24"/>
-        <ellipse cx="0" cy="-18" rx="11" ry="8" fill="#1a120c"/>
-        <path d="M-34 -52 C-20 -66 -4 -50 0 -28" fill="none" stroke="#ffc0a0" stroke-width="2" opacity="0.6"/>
+      <path d="M0 0 C-6 -50 6 -110 -2 -150" fill="none" stroke="#2a3a1e" stroke-width="5"/>
+      <path d="M0 0 C-6 -50 6 -110 -2 -150" fill="none" stroke="#7a8a4a" stroke-width="1.5" opacity="0.5" transform="translate(-2 0)"/>
+      <path d="M2 -70 C18 -92 34 -100 44 -128" fill="none" stroke="#2a3a1e" stroke-width="3.5"/>
+      <path d="M44 -128 C52 -150 40 -164 34 -150 C30 -140 36 -130 44 -128 Z" fill="#3a4a26"/>
+      <path d="M-2 -40 C-30 -50 -44 -40 -56 -56 C-36 -60 -20 -54 -2 -46 Z" fill="#2e4020"/>
+      <g transform="translate(-2 -150)">
+        <!-- back petals, darker, flaring out -->
+        <path d="M0 -6 C-56 -6 -80 -44 -66 -76 C-50 -100 -14 -92 0 -62 Z" fill="#a82a18"/>
+        <path d="M0 -6 C56 -6 80 -44 66 -76 C50 -100 14 -92 0 -62 Z" fill="#8a2012"/>
+        <!-- the dark heart, the seed head and a ring of stamens -->
+        <ellipse cx="0" cy="-58" rx="22" ry="6" fill="#2a0c0a"/>
+        <g fill="#14080a"><circle cx="-14" cy="-62" r="2.2"/><circle cx="-6" cy="-65" r="2.2"/><circle cx="6" cy="-65" r="2.2"/>
+          <circle cx="14" cy="-62" r="2.2"/></g>
+        <ellipse cx="0" cy="-64" rx="9" ry="6" fill="#6a7a48"/>
+        <ellipse cx="-2" cy="-67" rx="4" ry="2" fill="#b8c080"/>
+        <!-- the front of the cup -->
+        <path d="M-60 -62 C-52 -22 -24 2 0 2 C24 2 52 -22 60 -62 C44 -50 18 -56 0 -50 C-18 -56 -44 -50 -60 -62 Z" fill="url(#petal)"/>
+        <path d="M-60 -62 C-52 -22 -24 2 0 2 C-12 -14 -20 -36 -20 -54 C-34 -52 -48 -52 -60 -62 Z" fill="#ff9a7a" opacity="0.3"/>
+        <path d="M0 2 C-4 -20 -4 -36 0 -50 M22 -4 C28 -22 30 -40 30 -54" fill="none" stroke="#7a1a0e" stroke-width="2" opacity="0.6"/>
+        <path d="M-60 -62 C-44 -50 -18 -56 0 -50 C18 -56 44 -50 60 -62" fill="none" stroke="#ff9a7a" stroke-width="2.5" opacity="0.7"/>
+        <!-- calyx where the cup meets the stem -->
+        <path d="M-8 0 C-6 6 6 6 8 0 Z" fill="#2a3a1e"/>
       </g>
     </g>
     <!-- a stook: sheaves leaned together -->
@@ -261,10 +273,16 @@
   </g>
 
   <!-- ── the far wheat field, rolling toward the hills -->
-  <g filter="url(#tufts)"><g filter="url(#wheat)">
+  <g filter="url(#tufts)"><g>
     <path d="M-60 960 C200 930 420 925 640 935 C860 945 1060 970 1300 975 C1500 980 1700 990 1900 1000 C2150 1012 2400 1000 2700 1010
       L2700 1160 L-60 1160 Z" fill="url(#fieldFar)"/>
   </g></g>
+  <!-- a hint of rows in the far field -->
+  <g fill="none" stroke="#6a5226" stroke-width="14" opacity="0.16" filter="url(#glowS)">
+    <path d="M-60 1000 C300 975 700 980 1100 1005 C1500 1030 2000 1040 2700 1045"/>
+    <path d="M-60 1040 C300 1015 700 1020 1100 1045 C1500 1068 2000 1078 2700 1082"/>
+    <path d="M-60 1080 C300 1058 700 1064 1100 1086 C1500 1106 2000 1114 2700 1118"/>
+  </g>
   <!-- moonlit crest along the field's edge -->
   <path d="M-60 960 C200 930 420 925 640 935 C860 945 1060 970 1300 975" fill="none" stroke="#f6e2a2" stroke-width="5" opacity="0.5" filter="url(#glowS)"/>
   <!-- wind swaths: lighter bands where the ears bend toward the moon -->
@@ -274,11 +292,16 @@
   </g>
 
   <!-- ── the middle field with the stooks -->
-  <g filter="url(#tufts)"><g filter="url(#wheat)">
+  <g filter="url(#tufts)"><g>
     <path d="M-60 1060 C240 1030 500 1020 760 1040 C1000 1058 1200 1090 1450 1090 C1700 1090 1950 1060 2200 1070 C2400 1078 2550 1090 2700 1100
       L2700 1260 L-60 1260 Z" fill="url(#fieldMid)"/>
   </g></g>
   <path d="M-60 1060 C240 1030 500 1020 760 1040 C1000 1058 1200 1090 1450 1090" fill="none" stroke="#f6e2a2" stroke-width="5" opacity="0.45" filter="url(#glowS)"/>
+  <g fill="none" stroke="#5a4420" stroke-width="16" opacity="0.16" filter="url(#glowS)">
+    <path d="M-60 1110 C300 1085 700 1090 1100 1120 C1500 1140 2000 1120 2700 1140"/>
+    <path d="M-60 1160 C300 1138 700 1146 1100 1172 C1500 1190 2000 1176 2700 1190"/>
+    <path d="M-60 1215 C300 1196 700 1204 1100 1226 C1500 1242 2000 1232 2700 1244"/>
+  </g>
   <!-- stooks, the near ones larger, each with a long shadow away from the moon -->
   <g>
     <path d="M1360 1100 L1700 1130 L1690 1140 L1360 1112 Z" fill="#1e2012" opacity="0.5" filter="url(#glowS)"/>
@@ -316,24 +339,20 @@
     <use xlink:href="#ear" transform="translate(2100 1470) rotate(3) scale(0.9)"/>
   </g>
   <g>
-    <use xlink:href="#poppy" transform="translate(240 1440) scale(1.3)"/>
-    <use xlink:href="#poppy" transform="translate(400 1450) rotate(6) scale(1.05)"/>
-    <use xlink:href="#poppy" transform="translate(140 1450) rotate(-8) scale(1.1)"/>
-    <use xlink:href="#poppy" transform="translate(660 1420) scale(0.7)"/>
-    <use xlink:href="#poppy" transform="translate(820 1380) scale(0.5)"/>
-    <use xlink:href="#poppy" transform="translate(980 1330) scale(0.38)"/>
-    <use xlink:href="#poppy" transform="translate(1120 1300) scale(0.32)"/>
-    <use xlink:href="#poppy" transform="translate(2300 1450) rotate(4) scale(1.15)"/>
-    <use xlink:href="#poppy" transform="translate(2160 1440) rotate(-6) scale(0.85)"/>
-    <use xlink:href="#poppy" transform="translate(1960 1400) scale(0.6)"/>
-    <use xlink:href="#poppy" transform="translate(1760 1330) scale(0.4)"/>
+    <use xlink:href="#poppy" transform="translate(1060 1290) scale(0.3)"/>
+    <use xlink:href="#poppy" transform="translate(1660 1300) rotate(4) scale(0.32)"/>
+    <use xlink:href="#poppy" transform="translate(720 1370) rotate(-4) scale(0.5)"/>
+    <use xlink:href="#poppy" transform="translate(1930 1380) rotate(5) scale(0.48)"/>
+    <use xlink:href="#poppy" transform="translate(90 1520) rotate(-8) scale(1)"/>
+    <use xlink:href="#poppy" transform="translate(470 1520) rotate(6) scale(0.95)"/>
+    <use xlink:href="#poppy" transform="translate(260 1690) rotate(-3) scale(1.75)"/>
+    <use xlink:href="#poppy" transform="translate(2130 1520) rotate(-6) scale(0.9)"/>
+    <use xlink:href="#poppy" transform="translate(2380 1700) rotate(4) scale(1.8)"/>
   </g>
-  <!-- poppies scattered farther back as small dots of red -->
-  <g fill="#d84a30">
-    <circle cx="1300" cy="1250" r="6"/><circle cx="1420" cy="1240" r="5"/><circle cx="1560" cy="1262" r="6"/>
-    <circle cx="1640" cy="1236" r="4"/><circle cx="1240" cy="1230" r="4"/><circle cx="1500" cy="1230" r="3.5"/>
-    <circle cx="560" cy="1220" r="4"/><circle cx="700" cy="1250" r="5"/><circle cx="860" cy="1236" r="4"/>
-    <circle cx="420" cy="1240" r="5"/><circle cx="1850" cy="1250" r="5"/><circle cx="1980" cy="1236" r="4"/>
+  <!-- a few poppies far back, only touches of red -->
+  <g fill="#b8402a" opacity="0.8">
+    <circle cx="1300" cy="1250" r="4"/><circle cx="1500" cy="1236" r="3"/><circle cx="860" cy="1236" r="3.5"/>
+    <circle cx="560" cy="1226" r="3"/><circle cx="1840" cy="1250" r="3.5"/>
   </g>
 
   <!-- ── fireflies of the warm evening, very few -->
