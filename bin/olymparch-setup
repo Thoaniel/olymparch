@@ -128,7 +128,10 @@ if [ -x "$hw" ]; then
     empty=$(mktemp -d)
     OLYMPARCH_LANG=$lang "$hw" plan --summary --root "$empty" >/tmp/olymparch-hw.txt 2>&1
     rmdir -- "$empty"
-    whiptail --backtitle "$BT" --title "$(t hw)" --scrolltext --textbox /tmp/olymparch-hw.txt 22 $W || bail
+    # a scroll bar only when it does not fit: with one, Enter scrolls instead of pressing OK
+    scroll=()
+    (( $(wc -l </tmp/olymparch-hw.txt) > 15 )) && scroll=(--scrolltext)
+    whiptail --backtitle "$BT" --title "$(t hw)" "${scroll[@]}" --textbox /tmp/olymparch-hw.txt 22 $W || bail
 fi
 
 # 5. Disk: every whole disk except the one we booted from
