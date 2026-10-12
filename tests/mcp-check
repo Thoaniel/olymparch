@@ -184,6 +184,7 @@ try:
         ok(risk in ("read", "change", "sensitive") and t.get("risk") == risk and a.get("risk") == risk, f"{t['name']}: no risk")
         ok(a.get("readOnlyHint") == (risk == "read") and (risk == "read" or a.get("destructiveHint") == (risk == "sensitive")),
            f"{t['name']}: hints don't match risk {risk}")
+        ok(risk != "read" or "destructiveHint" not in a, f"{t['name']}: a read tool with destructiveHint (clients read it as a change)")
         ok(len(t["name"]) <= 50 and t["name"].replace("_", "").isalnum() and t["name"].islower(), f"bad name {t['name']}")
         ok(t["inputSchema"].get("type") == "object" and t["inputSchema"].get("additionalProperties") is False
            and "x-multiline" not in json.dumps(t["inputSchema"]), f"{t['name']}: schema")

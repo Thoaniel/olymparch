@@ -306,7 +306,8 @@ class Tool:
             "inputSchema": public_schema(self.schema),
             # destructiveHint follows the risk (true = sensitive, false = change), as Olympus reads it
             "annotations": {"title": self.title[0], "readOnlyHint": self.risk == "read",
-                            "destructiveHint": self.risk == "sensitive", "idempotentHint": h.get("idempotent", False),
+                            **({} if self.risk == "read" else {"destructiveHint": self.risk == "sensitive",
+                                                              "idempotentHint": h.get("idempotent", False)}),
                             "openWorldHint": h.get("open_world", False), "risk": self.risk},
             "risk": self.risk,
             "_meta": {"risk": self.risk, "olymparch/risk": self.risk},
