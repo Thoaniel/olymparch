@@ -1,0 +1,105 @@
+#!/bin/bash
+# Games Olymparch should treat as games, and what it knows about a Steam game.
+#   olymparch-game list                 games you added (and the emulators Olymparch knows)
+#   olymparch-game add NAME             count program NAME as a game (process name or file name)
+#   olymparch-game remove NAME
+#   olymparch-game add-focused          the focused window's program (Super+Shift+G); counts at once
+#   olymparch-game check APPID          anti-cheat, Proton table, current Proton, failures (olymparch-proton)
+#   olymparch-game watch                started by olymparch-launch-steam: notices Steam games that crash early
+set -euo pipefail
+share=/usr/share/olymparch/games
+conf=${XDG_CONFIG_HOME:-$HOME/.config}/olymparch/games.conf
+run=${XDG_RUNTIME_DIR:-/tmp}/olymparch/games
+mkdir -p "${conf%/*}" "$run"
+[ -f "$conf" ] || cp "$share/games.conf" "$conf" 2>/dev/null || : >"$conf"
+
+lang=en
+case ${LC_ALL:-${LC_MESSAGES:-${LANG:-}}} in nb* | no* | nn*) lang=nb ;; esac
+t() {  # t KEY "English text": the line from /usr/share/olymparch/i18n/<lang>.json, else the English text
+    local v
+    v=$(sed -nE "s/^[[:space:]]*\"$1\":[[:space:]]*\"(.*)\",?[[:space:]]*$/\1/p" "/usr/share/olymparch/i18n/$lang.json" 2>/dev/null | head -n 1)
+    printf '%s' "${v:-$2}"
+}
+names() { sed -e 's/#.*//' -e 's/[[:space:]]*$//' -e '/^$/d' "$@" 2>/dev/null; }
+
+case ${1:-} in
+    list)
+        echo "$(t game.added_by_you "Added by you") ($conf):"
+        names "$conf" | sed 's/^/  /'
+        echo "$(t game.emulators "Emulators"):"
+        names "$share/emulators.conf" | sed 's/^/  /'
+        ;;
+    add)
+        name=${2:?"usage: olymparch-game add NAME"}
+        names "$conf" | grep -qxF -- "$name" || echo "$name" >>"$conf"
+        echo "$(t game.added "Added as a game:") $name"
+        ;;
+    remove)
+        name=${2:?"usage: olymparch-game remove NAME"}
+        grep -vxF -- "$name" "$conf" >"$conf.tmp" || true
+        mv "$conf.tmp" "$conf"
+        echo "$(t game.removed "No longer a game:") $name"
+        ;;
+    add-focused)
+        pid=$(hyprctl activewindow | awk '$1 == "pid:" {print $2; exit}')
+        [[ ${pid:-} =~ ^[0-9]+$ ]] && [ -r "/proc/$pid/comm" ] || exit 0
+        name=$(<"/proc/$pid/comm")
+        case $name in quickshell | qs | Hyprland) exit 0 ;; esac
+        names "$conf" | grep -qxF -- "$name" || echo "$name" >>"$conf"
+        busctl --user call com.feralinteractive.GameMode /com/feralinteractive/GameMode \
+            com.feralinteractive.GameMode RegisterGameByPID ii $$ "$pid" >/dev/null 2>&1 || true
+        notify-send -a Olymparch "$(t game.added "Added as a game:") $name" \
+            "$(t game.added_body "It gets gamemode and spillmodus from now on. Remove it in Settings → Games.")" || true
+        ;;
+    check)
+        appid=${2:?"usage: olymparch-game check APPID"}
+        exec olymparch-proton check "$appid"
+        ;;
+    watch)
+        # One watcher per session. Every 2 s: which Steam games run (their `reaper SteamLaunch AppId=N`)?
+        # A game that is gone within 30 s, or never showed a window, counts as a failure for its Proton.
+        exec 9>"$run/watch.lock"
+        flock -n 9 || exit 0
+        declare -A since=()
+        idle=0
+        while true; do
+            declare -A now=()
+            for d in /proc/[0-9]*; do
+                [ "$(cat "$d/comm" 2>/dev/null)" = reaper ] || continue
+                cmd=$(tr '\0' ' ' <"$d/cmdline" 2>/dev/null) || continue
+                [[ $cmd == *SteamLaunch* && $cmd =~ AppId=([0-9]+) ]] && now[${BASH_REMATCH[1]}]=1
+            done
+            ts=$(date +%s)
+            for id in "${!now[@]}"; do
+                [ -n "${since[$id]:-}" ] && continue
+                since[$id]=$ts
+            done
+            for id in "${!since[@]}"; do
+                [ -n "${now[$id]:-}" ] && continue
+                secs=$((ts - since[$id]))
+                # the window hook writes the time it saw the game's window; an older one is from an earlier run
+                win=$(cat "$run/$id.window" 2>/dev/null || echo 0)
+                unset "since[$id]"
+                # Wait until gamemode has let go, so the notification is not swallowed by do-not-disturb
+                sleep 6
+                if ((win < ts - secs - 5)); then
+                    olymparch-proton failed "$id" "$secs" nowindow || true
+                elif ((secs < 30)); then
+                    olymparch-proton failed "$id" "$secs" crash || true
+                else
+                    olymparch-proton ok "$id" || true
+                fi
+                rm -f "$run/$id.window"
+            done
+            unset now
+            # Done when Steam has been gone for a while and no game runs
+            if pgrep -u "$(id -u)" -x steam >/dev/null || ((${#since[@]})); then idle=0; else idle=$((idle + 1)); fi
+            ((idle < 15)) || exit 0
+            sleep 2
+        done
+        ;;
+    *)
+        sed -n '2,8s/^# \{0,1\}//p' "$0" >&2
+        exit 2
+        ;;
+esac

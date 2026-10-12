@@ -1,5 +1,6 @@
 // The notification server: the shell is the only one (no mako, dunst or swaync). Toasts top right under the
-// bar, at most 3 at a time, 6 s each (critical ones stay until dismissed).
+// bar, at most 3 at a time, 6 s each (15 s with buttons; critical ones stay until dismissed).
+// Do not disturb (spillmodus): only critical notifications are shown.
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
@@ -8,6 +9,7 @@ import Quickshell.Services.Notifications
 Scope {
     id: notes
     required property var theme
+    property bool dnd: false
 
     NotificationServer {
         id: server
@@ -15,9 +17,12 @@ Scope {
         actionsSupported: true
         bodySupported: true
         onNotification: n => {
+            const critical = n.urgency === NotificationUrgency.Critical;
+            if (notes.dnd && !critical) return;   // not tracked: dropped quietly
             n.tracked = true;
-            if (n.urgency !== NotificationUrgency.Critical) {
-                const t = Qt.createQmlObject("import QtQuick; Timer { interval: 6000; running: true }", notes);
+            if (!critical) {
+                const ms = n.actions.length > 0 ? 15000 : 6000;
+                const t = Qt.createQmlObject(`import QtQuick; Timer { interval: ${ms}; running: true }`, notes);
                 t.triggered.connect(() => { if (n) n.expire(); t.destroy(); });
             }
         }
@@ -51,6 +56,7 @@ Scope {
                     Rectangle { width: 3; height: parent.height; color: parent.critical ? notes.theme.red : notes.theme.gold }
                     Column {
                         id: body
+                        z: 1   // above the dismiss area, so the buttons get their clicks
                         anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12; leftMargin: 16 }
                         spacing: 3
                         Text {
@@ -75,6 +81,28 @@ Scope {
                             maximumLineCount: 4
                             elide: Text.ElideRight
                             textFormat: Text.PlainText
+                        }
+                        Row {   // the sender's buttons, e.g. «Undo»
+                            visible: parent.parent.modelData.actions.length > 0
+                            topPadding: 6
+                            spacing: 8
+                            Repeater {
+                                model: parent.parent.parent.modelData.actions
+                                delegate: Rectangle {
+                                    required property var modelData
+                                    width: label.implicitWidth + 24; height: 28
+                                    color: notes.theme.raised
+                                    border.color: notes.theme.line
+                                    Text {
+                                        id: label
+                                        anchors.centerIn: parent
+                                        text: parent.modelData.text
+                                        font { family: notes.theme.mono; pixelSize: 12; bold: true }
+                                        color: notes.theme.text
+                                    }
+                                    MouseArea { anchors.fill: parent; onClicked: parent.modelData.invoke() }
+                                }
+                            }
                         }
                     }
                     MouseArea { anchors.fill: parent; onClicked: parent.modelData.dismiss() }

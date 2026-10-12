@@ -1,5 +1,21 @@
 {
   "launcher.search": "Søk etter apper …",
   "osd.muted": "dempet",
-  "lock.wrong": "Feil passord"
+  "lock.wrong": "Feil passord",
+  "game.added": "Lagt til som spill:",
+  "game.added_body": "Det får gamemode og spillmodus fra nå av. Fjern det i Innstillinger → Spill.",
+  "game.removed": "Ikke lenger et spill:",
+  "game.added_by_you": "Lagt til av deg",
+  "game.emulators": "Emulatorer",
+  "proton.default": "Valves standard-Proton",
+  "proton.crashed": "{game} stoppet etter {secs} s med {tool}.",
+  "proton.nowindow": "{game} åpnet aldri et vindu med {tool}.",
+  "proton.next": "Neste start bruker {tool}.",
+  "proton.switched_title": "Proton byttet for {game}",
+  "proton.undo": "Angre",
+  "proton.restart": "Start Steam på nytt",
+  "proton.none_title": "Ingen Proton-versjon virket for {game}",
+  "proton.none_body": "Olymparch har prøvd alle. Se ProtonDB for tips.",
+  "proton.ac_title": "{game} kan ikke kjøres på Linux",
+  "proton.ac_body": "Anti-cheaten blokkerer Linux. En annen Proton hjelper ikke."
 }

@@ -1,5 +1,6 @@
 //@ pragma ShellId olymparch
 // Olymparch shell: the animated temple wallpaper, the bar, the menu (Super+Space), notifications and the volume OSD.
+// Spillmodus (GameMode.qml) hides the bar and turns on do not disturb while a game runs.
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
@@ -64,6 +65,7 @@ ShellRoot {
             required property var modelData
             screen: modelData
             WlrLayershell.namespace: "olymparch-bar"
+            visible: !gameMode.active
             anchors { top: true; left: true; right: true }
             implicitHeight: 34
             color: root.bg
@@ -111,7 +113,8 @@ ShellRoot {
         }
     }
 
+    GameMode { id: gameMode }
     Launcher { theme: root }
-    Notifications { theme: root }
+    Notifications { theme: root; dnd: gameMode.dnd }
     Osd { theme: root }
 }

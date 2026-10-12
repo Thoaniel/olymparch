@@ -4,7 +4,8 @@
 #
 #   olymparch-install --answers FILE
 #
-# Answers (bash syntax): DISK, DISK_SERIAL, HOSTNAME, USERNAME, PASSWORD, KEYMAP, LOCALE, TIMEZONE, KERNEL
+# Answers (bash syntax): DISK, DISK_SERIAL, HOSTNAME, USERNAME, PASSWORD, KEYMAP, LOCALE, TIMEZONE, KERNEL,
+# OPTIONS (comma list: games,emu,zeus,discord,spotify,obs,code,hibernate)
 # Safety: DISK_SERIAL must match the disk's serial number, or nothing is touched.
 set -euo pipefail
 
@@ -13,6 +14,82 @@ step() {  # progress line on screen; in tests also on the serial console via the
     if [ "${OLYMPARCH_TEST:-0}" = 1 ]; then echo "<2>olymparch-install: $*" >/dev/kmsg; fi
 }
 die() { step "FEIL: $*"; exit 1; }
+
+# ---- Options (OPTIONS=games,emu,zeus,discord,spotify,obs,code,hibernate from the wizard) ----------------------
+# Kept in one block: called once after the desktop is in place, before the boot menu and the first snapshot.
+has_opt() { [[ ",${OPTIONS:-}," == *",$1,"* ]]; }
+gpu_vendors() {  # vendor IDs of every display controller (PCI class 0x03xxxx): amd intel nvidia other
+    local d
+    for d in /sys/bus/pci/devices/*; do
+        [[ $(cat "$d/class" 2>/dev/null) == 0x03* ]] || continue
+        case $(cat "$d/vendor") in
+            0x1002) echo amd ;; 0x8086) echo intel ;; 0x10de) echo nvidia ;; *) echo other ;;
+        esac
+    done | sort -u
+}
+install_options() {
+    [ -n "${OPTIONS:-}" ] || return 0
+    local pkgs=() conf=/tmp/olymparch-pacman.conf home=/mnt/home/$USERNAME v gpus=''
+    step "Valg: ${OPTIONS//,/, }"
+    if has_opt games; then
+        # Steam is 32-bit: [multilib] on in the new system, and for this install
+        sed -i '/^#\[multilib\]$/,/^#Include/ s/^#//' /mnt/etc/pacman.conf
+        pkgs+=(steam lib32-mesa ttf-liberation gamemode lib32-gamemode mangohud lib32-mangohud gamescope umu-launcher
+               ntsync-autoload lib32-pipewire)
+        # The 32-bit Vulkan driver must match the GPU; named here so pacman never picks one on its own
+        gpus=$(gpu_vendors)
+        for v in $gpus; do
+            case $v in
+                amd) pkgs+=(vulkan-radeon lib32-vulkan-radeon lact) ;;
+                intel) pkgs+=(vulkan-intel lib32-vulkan-intel) ;;
+                nvidia) pkgs+=(lib32-nvidia-utils) ;;
+            esac
+        done
+        [[ $gpus == *amd* || $gpus == *intel* || $gpus == *nvidia* ]] || pkgs+=(vulkan-swrast lib32-vulkan-swrast)
+    fi
+    has_opt emu && pkgs+=(retroarch retroarch-assets-ozone libretro-core-info libretro-snes9x libretro-mgba
+                          libretro-genesis-plus-gx libretro-beetle-psx-hw libretro-mupen64plus-next libretro-flycast
+                          libretro-melonds dolphin-emu ppsspp)
+    has_opt discord && pkgs+=(discord)
+    has_opt spotify && pkgs+=(spotify-launcher)
+    has_opt obs && pkgs+=(obs-studio)
+    has_opt code && pkgs+=(code)
+    # zeus: Olympus comes from our own repo (not built yet)
+    if [ ${#pkgs[@]} -gt 0 ]; then
+        sed '/^#\[multilib\]$/,/^#Include/ s/^#//' /etc/pacman.conf >"$conf"
+        local opts=(-C "$conf" -G)
+        [ "${OLYMPARCH_HOST_CACHE:-0}" = 1 ] && opts+=(-c)
+        pacstrap "${opts[@]}" /mnt "${pkgs[@]}"
+    fi
+    if has_opt games; then
+        local g=/usr/share/olymparch/games
+        install -Dm644 "$g/gamemode.ini" /mnt/etc/gamemode.ini
+        install -Dm644 "$g/sysctl.conf" /mnt/etc/sysctl.d/75-olymparch-gaming.conf
+        arch-chroot /mnt usermod -aG gamemode "$USERNAME"
+        [[ $gpus == *amd* ]] && arch-chroot /mnt systemctl enable lactd >/dev/null 2>&1
+        # Steam starts through our wrapper: queued Proton changes, MangoHud (hidden), the crash watcher
+        mkdir -p /mnt/usr/local/share/applications
+        sed -E 's|^Exec=/usr/bin/steam|Exec=/usr/bin/olymparch-launch-steam|' /mnt/usr/share/applications/steam.desktop \
+            >/mnt/usr/local/share/applications/steam.desktop
+        mkdir -p "$home/.config/olymparch"
+        [ -f "$home/.config/olymparch/games.conf" ] || install -m644 "$g/games.conf" "$home/.config/olymparch/games.conf"
+    fi
+    if has_opt hibernate && ls /sys/class/power_supply/BAT* >/dev/null 2>&1; then
+        # Swap file as big as RAM on its own subvolume (no snapshots, no compression). systemd finds it on resume
+        # through the HibernateLocation EFI variable, so no resume= argument is needed.
+        local mem; mem=$(awk '/^MemTotal:/ {print int($2 / 1024 / 1024 + 1)}' /proc/meminfo)
+        mount -o subvolid=5 /dev/mapper/root /mnt/mnt
+        btrfs -q subvolume create /mnt/mnt/@swap
+        umount /mnt/mnt
+        mkdir -p /mnt/swap
+        mount -o noatime,subvol=@swap /dev/mapper/root /mnt/swap
+        btrfs filesystem mkswapfile --size "${mem}g" /mnt/swap/swapfile >/dev/null
+        printf '/dev/mapper/root  /swap  btrfs  noatime,subvol=@swap  0 0\n/swap/swapfile  none  swap  defaults  0 0\n' \
+            >>/mnt/etc/fstab
+    fi
+    return 0
+}
+# ---- end of options ------------------------------------------------------------------------------------------
 
 [ "${1:-}" = --answers ] && [ -f "${2:-}" ] || die "bruk: olymparch-install --answers FIL"
 CMDLINE_EXTRA='' KERNEL=linux KEYMAP=us LOCALE=en_US.UTF-8 TIMEZONE=UTC HOSTNAME=olymparch
@@ -131,6 +208,8 @@ if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ "$(id -u)" != 0 ];
     if command -v start-hyprland >/dev/null 2>&1; then exec start-hyprland; else exec Hyprland; fi
 fi
 SESSION
+
+install_options
 
 step "Oppstartsmeny (Limine) og øyeblikksbilder"
 uuid=$(blkid -s UUID -o value "$ROOT")
