@@ -1,0 +1,60 @@
+#!/bin/bash
+# VM test: events go to the right tool. On a copy of the installed disk (OLYMPARCH_BASE), with the event pieces
+# copied in from this repo:
+#   download virus check (a clamscan stub flags the EICAR test file; no 200 MB virus database in the test),
+#   disk nearly full (threshold lowered), archive → extracted with one click, USB disk plugged in → mounted.
+set -uo pipefail
+cd "$(dirname "$0")/../.."
+. dev/env
+SRC=${OLYMPARCH_BASE:-tests/vm/out/install-disk}
+[ -f "$SRC/disk.qcow2" ] || { echo "kjør tests/vm/install-disk først" >&2; exit 2; }
+O=tests/vm/out/events
+rm -rf -- tests/vm/out/events
+mkdir -p "$O"
+cp "$SRC/vars.fd" "$O/vars.fd"
+qemu-img create -q -f qcow2 -b "$(realpath "$SRC/disk.qcow2")" -F qcow2 "$O/disk.qcow2"
+# a small USB stick with a file on it, plugged in later through QMP
+truncate -s 64M "$O/usb.img"
+mkfs.fat -n OLYUSB "$O/usb.img" >/dev/null
+echo "Hei fra USB-pinnen" >"$O/hei.txt"
+mcopy -i "$O/usb.img" "$O/hei.txt" ::/hei.txt
+QMP=$O/qmp.sock
+. tests/vm/lib.sh
+PW='olymp-test-123'
+trap 'kill "$QPID" 2>/dev/null' EXIT
+t0=$SECONDS
+vm boot.log -virtfs local,path="$PWD",mount_tag=olysrc,security_model=none,readonly=on,id=src \
+    -device qemu-xhci,id=xhci -drive if=none,id=usbstick,format=raw,file="$O/usb.img"
+unlock_and_desktop "$PW"
+
+press meta_l+ret; sleep 2
+# put the event pieces in place (packages from the base disk's cache/mirrors), a clamscan stub for the test
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo install -m755 /mnt/system/bin/olymparch-* /usr/bin/ && sudo install -Dm644 -t /usr/lib/systemd/user /mnt/default/systemd/user/* && sudo install -Dm644 /mnt/default/apps/olymparch-extract.desktop /usr/share/applications/olymparch-extract.desktop && sudo install -Dm644 /mnt/default/apps/mimeapps.list /etc/xdg/mimeapps.list && sudo pacman -S --noconfirm --needed udiskie udisks2 xdg-utils xdg-user-dirs >/dev/null && printf '#!/bin/sh\\nr=0; for f; do grep -q EICAR \"\$f\" && { echo \"\$f: Eicar-Signature FOUND\"; r=1; }; done; exit \$r\\n' | sudo tee /usr/local/bin/clamscan >/dev/null && sudo chmod +x /usr/local/bin/clamscan && echo '<2>EVENTS-READY' | sudo tee /dev/kmsg\n" 1
+keys "$PW\n" 1
+wait_for 'EVENTS-READY' 240 || finish "FAIL · fikk ikke lagt inn hendelsesdelene"
+keys "mkdir -p ~/Downloads && systemctl --user daemon-reload && systemctl --user start olymparch-downloads.path && (udiskie --automount --notify --no-tray &) && clear\n" 2
+shot klar "Hendelsesdelene er lagt inn"
+
+# 1. A dangerous download (the EICAR test string, harmless) → critical notification
+keys "printf 'X5O!P%%@AP[4\\\\\\\\PZX54(P^)7CC)7}\$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!\$H+H*' > ~/Downloads/setup.exe\n" 7
+shot virus "Nedlastet setup.exe med EICAR-testteksten: kritisk varsel"
+
+# 2. Disk nearly full (threshold lowered to 1 % for the test) → notification with «Rydd opp»
+keys "OLYMPARCH_DISK_LIMIT=1 olymparch-disk-check &\n" 3
+shot disk "Disken er «full»: varsel med Rydd opp"
+
+# 3. An archive opens with the extract tool
+keys "cd ~/Downloads && echo hei > notat.txt && bsdtar -a -cf pakke.zip notat.txt && rm notat.txt && xdg-open pakke.zip; sleep 2; ls ~/Downloads\n" 4
+shot arkiv "pakke.zip åpnet: pakket ut til mappen «pakke»"
+
+# 4. USB stick plugged in → mounted, notification
+python3 -I tests/vm/qmp.py "$QMP" cmd device_add '{"driver": "usb-storage", "bus": "xhci.0", "drive": "usbstick", "id": "stick"}' >/dev/null
+sleep 5
+shot usb "USB-pinnen satt inn: montert, varsel fra udiskie"
+keys "clear; findmnt -no TARGET -S LABEL=OLYUSB && cat \"\$(findmnt -no TARGET -S LABEL=OLYUSB)/hei.txt\" && echo '<2>USB-MOUNTED' | sudo tee /dev/kmsg\n" 2
+wait_for 'USB-MOUNTED' 15
+shot usb-innhold "Filen på USB-pinnen kan leses"
+
+ok=1
+seen 'USB-MOUNTED' || ok=0
+finish "$([ $ok = 1 ] && echo PASS || echo FAIL) · hendelser: virus, disk, arkiv og USB på $((SECONDS - t0)) s"

@@ -57,5 +57,7 @@ if __name__ == "__main__":
         for chord in sys.argv[3:]:
             q.cmd("send-key", keys=[{"type": "qcode", "data": k} for k in chord.split("+")])
             time.sleep(0.12)
+    elif op == "cmd":   # qmp.py SOCKET cmd NAME '{"json": "arguments"}'
+        print(json.dumps(q.cmd(sys.argv[3], **(json.loads(sys.argv[4]) if len(sys.argv) > 4 else {}))))
     elif op == "quit":
         q.cmd("quit")
