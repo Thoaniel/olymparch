@@ -359,7 +359,7 @@ Scope {
             const head = inst ? menu.t(`This is installed (${n} package${n > 1 ? "s" : ""}` + (total ? `, ${menu.size(total)}):` : "):"),
                                        `Dette installeres (${n} pakke${n > 1 ? "r" : ""}` + (total ? `, ${menu.size(total)}):` : "):"))
                               : menu.t(`This is removed (${n} package${n > 1 ? "s" : ""}):`, `Dette fjernes (${n} pakke${n > 1 ? "r" : ""}):`);
-            const what = (inst ? menu.t("install ", "installere ") : menu.t("remove ", "fjerne ")) + label + menu.t(` (${n} package${n > 1 ? "s" : ""})`, ` (${n} pakke${n > 1 ? "r" : ""})`);
+            const what = (inst ? menu.t("install ", "installere ") : menu.t("remove ", "fjerne ")) + label + menu.t(` (${n}\u00a0package${n > 1 ? "s" : ""})`, ` (${n}\u00a0pakke${n > 1 ? "r" : ""})`);
             menu.confirm(inst ? menu.t("Install ", "Installere ") + label + "?" : menu.t("Remove ", "Fjerne ") + label + "?", [head].concat(list),
                          inst ? menu.t("Install", "Installer") : menu.t("Remove", "Fjern"), !inst,
                          () => menu.runJob((inst ? menu.t("Installing ", "Installerer ") : menu.t("Removing ", "Fjerner ")) + label,
@@ -402,7 +402,7 @@ Scope {
             if (!menu.open && !menu.waitingAuth) Quickshell.execDetached(["notify-send", "-a", "Olymparch", msg]);
             const title = ok ? (v.inst ? menu.t("Installed", "Installert") : menu.t("Removed", "Fjernet"))
                         : denied ? menu.t("Cancelled", "Avbrutt") : (v.inst ? menu.t("Not installed", "Ikke installert") : menu.t("Not removed", "Ikke fjernet"));
-            const rows = [{ text: (ok ? "✓  " : "✗  ") + msg, big: true, ok: ok, error: !ok }].concat((denied ? [] : v.lines).map(x => ({ text: x, dim: true })));
+            const rows = [{ text: (ok ? "✓  " : denied ? "" : "✗  ") + msg, big: true, ok: ok, error: !ok && !denied }].concat((denied ? [] : v.lines).map(x => ({ text: x, dim: true })));
             rows.push({ id: "back", icon: "", label: menu.t("Back", "Tilbake"), act: () => menu.back() });
             menu.authWhat = "";
             menu.view = Object.assign({}, v, { kind: "result", title: title, done: true, rows: rows, focus: rows.length - 1 });

@@ -125,7 +125,7 @@ Scope {
                 continue;
             }
             const mine = own.find(kv => Array.isArray(kv) && norm(kv[0]) === n);
-            if (mine) { rows.push({ group: "own", label: mine[1], keys: m.concat([b.key]).map(keyName), order: 0 }); continue; }
+            if (mine) { rows.push({ group: "own", label: t("Run: ", "Kjør: ") + mine[1], keys: m.concat([b.key]).map(keyName), order: 0 }); continue; }
             if (done["?" + n]) continue;
             done["?" + n] = true;
             rows.push({ group: "other", label: b.description || (b.dispatcher !== "__lua" ? (b.dispatcher + " " + b.arg).trim() : t("Set in your own Hyprland config", "Satt i din egen Hyprland-konfigurasjon")),

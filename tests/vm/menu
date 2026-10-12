@@ -166,6 +166,9 @@ keys "firefox" 1
 shot hurtigtaster-egne "Søk «firefox»: din egen hurtigtast (Super+B = firefox) under Dine egne"
 press esc
 press esc; sleep 1
+press meta_l+alt+spc; sleep 1; keys "hurtig" 1
+shot hjelp-etter "Etter flyttingen: Hjelp › Hurtigtaster viser Super+J"
+menu_close
 check moved 'olymparch-settings get keys.cheatsheet | grep -qx "SUPER + J" && hyprctl binds -j | grep -qi "key.: .j."'
 keys "olymparch-settings reset keys.cheatsheet; clear\n" 2
 
