@@ -35,7 +35,7 @@ Scope {
     // A shell restarted in the middle of a game picks the state up from gamemoded itself
     Process {
         running: true
-        command: ["gamemoded", "-s"]
+        command: ["sh", "-c", "command -v gamemoded >/dev/null && exec gamemoded -s"]   // no games option: nothing to ask
         stdout: StdioCollector {
             onStreamFinished: if (text.indexOf("is active") >= 0) gm.active = true
         }

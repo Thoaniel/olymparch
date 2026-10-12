@@ -21,7 +21,7 @@ ShellRoot {
     readonly property string mono: "JetBrains Mono"
     readonly property string art: "/usr/share/olymparch/wallpaper"
     readonly property int frames: 48
-    property bool manualDnd: false   // the bell in the bar
+    property alias manualDnd: gameMode.manualDnd   // the bell in the bar (same switch as «olymparch dnd»)
 
     // One frame counter for every monitor. 8 fps, and it stops while every workspace in view has windows.
     property int frame: 0
@@ -98,14 +98,29 @@ ShellRoot {
                 }
             }
 
-            Text {
+            // The wordmark gives way (only the bolt stays) when the right side grows into it on a narrow screen
+            Row {
+                id: wordmark
                 anchors.centerIn: parent
-                text: "\uf0e7  OLYMPARCH"
-                font { family: root.mono; pixelSize: 13; bold: true; letterSpacing: 2 }
-                color: root.gold
+                spacing: 10
+                Text {
+                    text: "\uf0e7"
+                    font { family: "Symbols Nerd Font Mono"; pixelSize: 15 }
+                    color: root.gold
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+                Text {
+                    visible: barStatus.x > (parent.parent.width + wordmarkFull.advanceWidth) / 2 + 24
+                    text: "OLYMPARCH"
+                    font { family: root.mono; pixelSize: 13; bold: true; letterSpacing: 2 }
+                    color: root.gold
+                    anchors.verticalCenter: parent.verticalCenter
+                }
             }
+            TextMetrics { id: wordmarkFull; font { family: root.mono; pixelSize: 13; bold: true; letterSpacing: 2 } text: "OLYMPARCH  " }
 
             BarStatus {
+                id: barStatus
                 theme: root
                 anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
             }
@@ -114,7 +129,7 @@ ShellRoot {
 
     GameMode { id: gameMode }
     Launcher { theme: root }
-    Notifications { theme: root; dnd: gameMode.dnd || root.manualDnd }
+    Notifications { theme: root; dnd: gameMode.dnd }
     Power {}
     Osd { theme: root }
 }

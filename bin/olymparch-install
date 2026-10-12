@@ -163,7 +163,7 @@ pacstrap_opts=(-K)
 [ "${OLYMPARCH_HOST_CACHE:-0}" = 1 ] && pacstrap_opts+=(-c)   # tests: reuse the package cache mounted from the host
 pacstrap "${pacstrap_opts[@]}" /mnt base "$KERNEL" mkinitcpio btrfs-progs cryptsetup limine sudo networkmanager snapper \
     hyprland hypridle quickshell foot adwaita-cursors ttf-jetbrains-mono ttf-nerd-fonts-symbols-mono libnotify polkit \
-    pipewire pipewire-pulse wireplumber xdg-desktop-portal-hyprland plymouth \
+    pipewire pipewire-pulse wireplumber xdg-desktop-portal-hyprland plymouth upower \
     firefox thunar tumbler gvfs thunar-volman imv mpv xdg-utils xdg-user-dirs udiskie udisks2 clamav pacman-contrib
 
 step "$(L "Configuration" "Oppsett")"

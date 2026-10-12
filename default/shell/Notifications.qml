@@ -36,7 +36,7 @@ Scope {
         WlrLayershell.namespace: "olymparch-notifications"
         exclusionMode: ExclusionMode.Ignore
         anchors { top: true; right: true }
-        margins { top: 42; right: 10 }
+        margins { top: 42; right: 12 }
         implicitWidth: 360
         implicitHeight: column.implicitHeight
         color: "transparent"
@@ -60,8 +60,10 @@ Scope {
                         z: 1   // above the dismiss area, so the buttons get their clicks
                         anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12; leftMargin: 16 }
                         spacing: 3
-                        Text {
-                            text: (parent.parent.modelData.appName || "System").toUpperCase()
+                        Text {   // the sender; left out for plain notify-send, which has no real name
+                            readonly property string app: parent.parent.modelData.appName || ""
+                            visible: app.length > 0 && app !== "notify-send"
+                            text: app.toUpperCase()
                             font { family: notes.theme.mono; pixelSize: 11; letterSpacing: 1.5; bold: true }
                             color: parent.parent.critical ? notes.theme.red : notes.theme.gold
                         }
