@@ -338,7 +338,7 @@ Scope {
     }
 
     // progress: the helper's output as it comes; Esc hides the menu and a notification says when it is done.
-    // The package helper asks for your password (hyprpolkitagent): the menu steps aside until it is typed.
+    // The package helper asks for your password (PasswordPrompt.qml): the menu steps aside until it is typed.
     property bool waitingAuth: false
     function runJob(title, cmd, label, inst, asks) {
         busy = true;
@@ -347,16 +347,16 @@ Scope {
         job.running = true;
         if (asks) { waitingAuth = true; open = false; }
     }
-    function jobLine(l) {
-        if (waitingAuth) { waitingAuth = false; open = true; }   // the password was right: show the progress again
+    function jobLine(l, fromHelper) {
+        if (waitingAuth && fromHelper) { waitingAuth = false; open = true; }   // the helper runs: the password was right
         if (!view || view.kind !== "run" || !l.trim()) return;
         const lines = view.lines.concat([l]).slice(-10);
         view = Object.assign({}, view, { lines: lines, rows: lines.map(x => ({ text: x, dim: true })) });
     }
     Process {
         id: job
-        stdout: SplitParser { onRead: l => menu.jobLine(l) }
-        stderr: SplitParser { onRead: l => menu.jobLine(l) }
+        stdout: SplitParser { onRead: l => menu.jobLine(l, true) }
+        stderr: SplitParser { onRead: l => menu.jobLine(l, false) }
         onExited: code => {
             const v = menu.view && menu.view.kind === "run" ? menu.view : { lines: [], label: "", inst: true };
             const ok = code === 0;

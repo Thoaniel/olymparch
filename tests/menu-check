@@ -91,7 +91,7 @@ pol = (root / "system/polkit/org.olymparch.packages.policy").read_text()
 if '<annotate key="org.freedesktop.policykit.exec.path">/usr/lib/olymparch/packages</annotate>' not in pol or "<allow_any>no</allow_any>" not in pol:
     bad("org.olymparch.packages.policy must name exactly /usr/lib/olymparch/packages and allow no one else")
 inst = (root / "bin/olymparch-install").read_text()
-for need in ("system/lib/packages /mnt/usr/lib/olymparch/packages", "hyprpolkitagent", "org.olymparch.packages.policy", "50-olymparch-packages.rules",
+for need in ("system/lib/packages /mnt/usr/lib/olymparch/packages", "org.olymparch.packages.policy", "50-olymparch-packages.rules",
              "/var/lib/olymparch/base-packages"):
     if need not in inst:
         bad(f"bin/olymparch-install must install {need}")
@@ -130,8 +130,11 @@ if menu.count('"pkexec"') != 2:
 if "confirm" not in menu:
     bad("Menu.qml: installs and removals need a confirm step")
 cheat = (root / "default/shell/Cheatsheet.qml").read_text()
-if "hyprpolkitagent" not in (root / "default/hypr/olymparch.lua").read_text():
-    bad("olymparch.lua must start hyprpolkitagent (the password prompt) with the session")
+prompt = (root / "default/shell/PasswordPrompt.qml").read_text()
+if "PolkitAgent {" not in prompt or "PasswordPrompt {" not in (root / "default/shell/shell.qml").read_text():
+    bad("the shell must be the session's polkit agent (PasswordPrompt.qml in shell.qml): the package helper asks for the password")
+if "TextInput.Password" not in prompt or "cancelAuthenticationRequest" not in prompt:
+    bad("PasswordPrompt.qml must hide what is typed and let Esc cancel")
 if '"hyprctl", "binds", "-j"' not in cheat:
     bad("Cheatsheet.qml must read the live shortcuts from hyprctl binds -j")
 

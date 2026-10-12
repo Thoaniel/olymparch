@@ -28,23 +28,26 @@ check() {  # check NAME 'condition': runs in the VM terminal (it needs the keybo
     seen "CHK-$1-OK" || fails+=("$1")
 }
 menu_open() { press meta_l+alt+spc; sleep 1.2; }
+menu_close() { press esc; press esc; press esc; press esc; press esc; press esc; sleep 1; }   # extra Esc goes to the terminal
 
 vm boot.log -virtfs local,path="$PWD",mount_tag=olysrc,security_model=none,readonly=on,id=src -device qemu-xhci,id=xhci
 unlock_and_desktop "$PW"
 
 # This repo's files in place, the shell restarted in Norwegian, fresh package lists (for the install test)
 press meta_l+ret; sleep 2
-keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /mnt/default/settings /mnt/default/menu /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -m755 /mnt/system/bin/olymparch-settings /mnt/system/bin/olymparch-changes /usr/bin/ && sudo install -Dm755 /mnt/system/lib/packages /usr/lib/olymparch/packages && sudo install -Dm755 /mnt/system/lib/install-app /usr/lib/olymparch/install-app && sudo install -Dm644 /mnt/system/polkit/org.olymparch.packages.policy /usr/share/polkit-1/actions/org.olymparch.packages.policy && sudo install -Dm644 /mnt/system/polkit/50-olymparch-packages.rules /usr/share/polkit-1/rules.d/50-olymparch-packages.rules && sudo systemctl restart polkit && sudo pacman -Sy >/dev/null && sudo pacman -S --noconfirm --needed hyprpolkitagent >/dev/null && sudo chmod 666 /dev/kmsg && hyprctl reload >/dev/null; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=nb_NO.UTF-8 setsid -f /usr/lib/olymparch/launch-shell; echo '<2>MENU-UPDATED' > /dev/kmsg\n" 1
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /mnt/default/settings /mnt/default/menu /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -m755 /mnt/system/bin/olymparch-settings /mnt/system/bin/olymparch-changes /usr/bin/ && sudo install -Dm755 /mnt/system/lib/packages /usr/lib/olymparch/packages && sudo install -Dm755 /mnt/system/lib/install-app /usr/lib/olymparch/install-app && sudo install -Dm644 /mnt/system/polkit/org.olymparch.packages.policy /usr/share/polkit-1/actions/org.olymparch.packages.policy && sudo install -Dm644 /mnt/system/polkit/50-olymparch-packages.rules /usr/share/polkit-1/rules.d/50-olymparch-packages.rules && sudo systemctl restart polkit && sudo pacman -Sy >/dev/null && sudo chmod 666 /dev/kmsg && hyprctl reload >/dev/null; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=nb_NO.UTF-8 setsid -f /usr/lib/olymparch/launch-shell; echo '<2>MENU-UPDATED' > /dev/kmsg\n" 1
 keys "$PW\n" 1
 wait_for 'MENU-UPDATED' 120 || finish "FAIL · fikk ikke kopiert filene inn"
 keys "c() { if eval \"\$2\" >/dev/null 2>&1; then echo \"<2>CHK-\$1-OK\"; else echo \"<2>CHK-\$1-NO\"; fi > /dev/kmsg; }; clear\n" 0.5
 sleep 4
 check no-cowsay '! pacman -Q cowsay'
-# the password prompt (olymparch.lua starts it with the session; this session started before it was installed)
-keys "clear; setsid -f sh -c 'for b in /usr/lib/hyprpolkitagent/hyprpolkitagent /usr/libexec/hyprpolkitagent; do [ -x \"\$b\" ] && exec \"\$b\"; done' >/dev/null 2>&1; sleep 2; pgrep -f hyprpolkitagent >/dev/null && echo '<2>AGENT-UP' > /dev/kmsg\n" 1
-wait_for 'AGENT-UP' 20 || fails+=("hyprpolkitagent startet ikke")
 keys "clear\n" 0.3
 python3 -I tests/vm/qmp.py "$QMP" cmd device_add '{"driver": "usb-tablet", "bus": "xhci.0", "id": "tablet"}' >/dev/null
+if [ "${OLYMPARCH_TEST_HOLD:-0}" = 1 ]; then   # debugging: keep the prepared VM running (qmp.py $QMP …) until it is quit
+    echo "menu: VM klar, $QMP"
+    while kill -0 "$QPID" 2>/dev/null; do sleep 5; done
+    exit 0
+fi
 
 # ── every level (top: Apper 0, Stil 1, Installer 2, Fjern 3, Verktøy 4, Oppsett 5, Oppdater 6, System 7, Hjelp 8)
 menu_open
@@ -107,9 +110,9 @@ press ret; sleep 3
 shot pakke-forhånd "Installere cowsay? Det som hentes og størrelsen; Installer er valgt"
 # first a wrong password: refused, nothing installed
 press ret; sleep 3
-shot passord "Installer: menyen viker, hyprpolkitagent spør etter passordet"
+shot passord "Installer: menyen viker, skallets passordspørsmål (polkit-agent) spør etter passordet"
 keys "feil-passord\n" 4
-shot passord-feil "Feil passord: agenten sier nei"
+shot passord-feil "Feil passord: rød kant, «Feil passord. Prøv igjen»"
 press esc; sleep 3
 shot passord-avvist "Menyen er tilbake: «Ikke gjort: feil passord …», ingenting installert"
 press ret; sleep 1.5
@@ -129,7 +132,7 @@ press esc; keys "yay" 3
 shot pakke-aur "«yay» (bare i AUR): ingen pakke med det navnet"
 press esc; keys "sl;rm" 1.5
 shot pakke-ugyldig "«sl;rm»: ikke et pakkenavn, ingenting kjøres"
-press esc; press esc; press esc; press esc; sleep 1
+menu_close
 check cowsay-in 'pacman -Qe cowsay && grep -q "install cowsay" /var/log/olymparch-packages.log'
 keys "clear\n" 0.3
 
@@ -144,7 +147,7 @@ press up; press ret; sleep 3
 shot fjern-passord "Fjern: passordet huskes noen minutter (auth_admin_keep), ellers spør agenten igjen"
 keys "$PW\n" 8
 shot fjern-ferdig "Fjernet: cowsay"
-press esc; press esc; press esc; sleep 1
+menu_close
 check cowsay-out '! pacman -Q cowsay'
 
 # ── what the helper refuses, run as root (it checks before anything runs; exit 2, nothing run)

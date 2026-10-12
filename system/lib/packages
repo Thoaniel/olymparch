@@ -26,7 +26,7 @@ PROTECTED=(base base-devel linux linux-lts linux-zen linux-hardened linux-firmwa
     systemd systemd-libs systemd-sysvcompat dbus dbus-broker pacman pacman-mirrorlist archlinux-keyring sudo bash
     coreutils filesystem util-linux shadow pam polkit mkinitcpio limine grub efibootmgr btrfs-progs cryptsetup snapper
     networkmanager hyprland hypridle hyprlock quickshell xdg-desktop-portal-hyprland pipewire pipewire-pulse
-    wireplumber hyprpolkitagent foot ttf-jetbrains-mono ttf-nerd-fonts-symbols-mono adwaita-cursors libnotify plymouth upower mesa
+    wireplumber foot ttf-jetbrains-mono ttf-nerd-fonts-symbols-mono adwaita-cursors libnotify plymouth upower mesa
     nvidia nvidia-open nvidia-dkms nvidia-utils intel-ucode amd-ucode lua olymparch olymparch-base)
 # What olymparch-install puts in (pacstrap), for installs from before it wrote $BASE_LIST
 INSTALLER=(firefox thunar tumbler gvfs gvfs-mtp gvfs-gphoto2 thunar-volman imv mpv xdg-utils xdg-user-dirs udiskie
