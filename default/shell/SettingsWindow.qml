@@ -54,14 +54,23 @@ Scope {
                     continue;
                 }
                 const t = l.split("\t");
-                lines.push({ id: t[0], state: t[1], name: t[2] || t[0], detail: t[3] || "" });
+                lines.push({ id: t[0], state: t[1], name: t[2] || t[0], detail: t[3] || "", action: t[4] || "" });
             }
             win.setItems(key, { lines: lines, message: msgs.join("\n"), busy: "" });
         });
     }
     function pickItem(key, it) {
-        setItems(key, { busy: (it.state === "on" ? I18n.t("settings.items.disconnecting", "Disconnecting %1 …") : I18n.t("settings.items.connecting", "Connecting %1 …")).arg(it.name) });
+        if (key === "network.wifi" || key === "bluetooth.devices")
+            setItems(key, { busy: (it.state === "on" ? I18n.t("settings.items.disconnecting", "Disconnecting %1 …") : I18n.t("settings.items.connecting", "Connecting %1 …")).arg(it.name) });
         Settings.run(["pick", key, it.id], () => win.loadItems(key, false));
+    }
+    // a list with an «add» field (own shortcuts): olymparch-settings add KEY TEXT; a refusal is shown under the row
+    function addItem(s, text, done) {
+        Settings.run(["add", s.key, text], (out, code, err) => {
+            if (code) { win.outputKey = s.key; win.output = err.replace(/^olymparch-settings: /gm, "").trim(); win.outputError = true; }
+            else { if (win.outputKey === s.key) win.outputKey = ""; done(); }
+            win.loadItems(s.key, false);
+        });
     }
     // the rows on screen need their choices and lists
     function loadFor(rows) {
@@ -166,7 +175,10 @@ Scope {
     }
     Timer { id: reopen; interval: 200; onTriggered: win.open = true }
     function act(s) {
-        Settings.run(["run", s.key], (out, code) => { if (s.output) { win.outputKey = s.key; win.output = out.trim(); win.outputError = false; } });
+        Settings.run(["run", s.key], (out, code) => {
+            if (s.output) { win.outputKey = s.key; win.output = out.trim(); win.outputError = false; }
+            if (s.unless_file || s.output) win.loadMissing();   // an install (Orca …) shows the rows it unlocks
+        });
     }
     function resetPage() {
         for (const s of Settings.schema.settings.filter(s => s.page === page && s.type !== "action" && !s.readonly)) {
@@ -793,9 +805,37 @@ Scope {
                                         width: Math.min(parent.width, 520)
                                         spacing: 4
                                         readonly property var d: win.items[row.s.key] || { lines: [], message: "", busy: "" }
+                                        // ── a list of your own (own shortcuts): a field that adds to it, «KEYS = COMMAND», Enter adds
+                                        Rectangle {
+                                            id: addBox
+                                            visible: row.s.add === true
+                                            width: itm.width; height: 26
+                                            color: "#0d0d12"
+                                            border.color: addIn.activeFocus ? win.theme.gold : win.theme.line
+                                            TextInput {
+                                                id: addIn
+                                                anchors { fill: parent; leftMargin: 9; rightMargin: 9 }
+                                                verticalAlignment: TextInput.AlignVCenter
+                                                activeFocusOnTab: addBox.visible && row.ready
+                                                onActiveFocusChanged: if (activeFocus) list.show(row)
+                                                clip: true
+                                                font { family: win.theme.mono; pixelSize: win.theme.px(12) }
+                                                color: win.theme.text
+                                                Keys.onReturnPressed: if (text.trim()) win.addItem(row.s, text, () => addIn.text = "")
+                                                Text {
+                                                    visible: !addIn.text
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    width: parent.width
+                                                    elide: Text.ElideRight
+                                                    text: I18n.t("settings.items.add", "+ SUPER + B = firefox · Enter adds")
+                                                    font: addIn.font
+                                                    color: win.theme.muted
+                                                }
+                                            }
+                                        }
                                         Row {
                                             spacing: 8
-                                            visible: itm.d.message === ""   // no adapter: nothing to search with
+                                            visible: itm.d.message === "" && row.s.type !== "list"   // no adapter: nothing to search with; lists don't search
                                             Rectangle {
                                                 id: scanBtn
                                                 width: scanText.implicitWidth + 24; height: 26
@@ -848,7 +888,8 @@ Scope {
                                                 Text {
                                                     id: itAct
                                                     anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
-                                                    text: it.on ? I18n.t("settings.items.disconnect", "Disconnect ›")
+                                                    text: it.modelData.action ? it.modelData.action   // the list says what a click does
+                                                        : it.on ? I18n.t("settings.items.disconnect", "Disconnect ›")
                                                         : it.modelData.state === "saved" ? I18n.t("settings.items.connect", "Connect ›")
                                                         : row.s.key === "bluetooth.devices" ? I18n.t("settings.items.pair", "Pair ›") : I18n.t("settings.items.connect", "Connect ›")
                                                     font { family: win.theme.mono; pixelSize: win.theme.px(11) }

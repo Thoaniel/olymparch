@@ -1,0 +1,13 @@
+#!/bin/sh
+# olymparch-media play-pause|next|previous|stop: the media keys (olymparch.lua binds them while Settings →
+# Keyboard → Media keys is on). playerctl when it is installed, else the shell's own MPRIS handler (Media.qml),
+# which picks the same player the bar shows.
+case ${1:-} in
+    play-pause) pc=play-pause qs=playPause ;;
+    next) pc=next qs=next ;;
+    previous) pc=previous qs=previous ;;
+    stop) pc=stop qs=stop ;;
+    *) echo "usage: olymparch-media play-pause|next|previous|stop" >&2; exit 2 ;;
+esac
+if command -v playerctl >/dev/null 2>&1; then exec playerctl "$pc"; fi
+exec qs ipc -p /usr/share/olymparch/shell call media "$qs"

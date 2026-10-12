@@ -56,5 +56,6 @@
   "settings.zeus.no_models": "Ingen modeller ennå: «Sett opp» laster ned en, etter å ha spurt",
   "settings.items.nobluez": "Bluetooth (bluez) er ikke installert: ingen adapter er funnet",
   "settings.items.nobt": "Ingen Bluetooth-adapter",
-  "settings.items.btoff": "Bluetooth er av"
+  "settings.items.btoff": "Bluetooth er av",
+  "settings.items.add": "+ SUPER + B = firefox · Enter legger til"
 }

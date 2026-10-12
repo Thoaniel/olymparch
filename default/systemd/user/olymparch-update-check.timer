@@ -1,0 +1,11 @@
+[Unit]
+Description=Olymparch: daily look for updates (Settings → Updates; only a notification)
+
+# OnCalendar= comes from Settings: ~/.config/systemd/user/olymparch-update-check.timer.d/olymparch-settings.conf.
+# Without it the timer is not enabled (the default: never by itself).
+[Timer]
+Persistent=true
+RandomizedDelaySec=2min
+
+[Install]
+WantedBy=timers.target

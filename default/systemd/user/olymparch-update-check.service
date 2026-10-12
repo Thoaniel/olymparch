@@ -1,0 +1,7 @@
+[Unit]
+Description=Olymparch: are there updates? (a notification; nothing is installed)
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/olymparch-update-check

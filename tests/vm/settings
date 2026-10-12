@@ -61,6 +61,9 @@ press meta_l+ret; sleep 2
 keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /mnt/default/settings /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -m755 /mnt/system/bin/olymparch-settings /mnt/system/bin/olymparch-doctor /usr/bin/ && sudo install -Dm644 /mnt/default/settings/olymparch-settings.desktop /usr/share/applications/olymparch-settings.desktop && sudo install -Dm755 /mnt/system/lib/settings-apply /usr/lib/olymparch/settings-apply && sudo install -Dm644 /mnt/system/polkit/org.olymparch.settings.policy /usr/share/polkit-1/actions/org.olymparch.settings.policy && sudo install -Dm644 /mnt/system/polkit/50-olymparch-settings.rules /usr/share/polkit-1/rules.d/50-olymparch-settings.rules && sudo install -Dm644 /mnt/default/audio/olymparch-switch-on-connect.conf /etc/pipewire/pipewire-pulse.conf.d/50-olymparch-switch-on-connect.conf && systemctl --user restart pipewire-pulse && sudo chmod 666 /dev/kmsg && hyprctl reload >/dev/null; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=nb_NO.UTF-8 setsid -f /usr/lib/olymparch/launch-shell; echo '<2>SETTINGS-UPDATED' > /dev/kmsg\n" 1
 keys "$PW\n" 1
 wait_for 'SETTINGS-UPDATED' 40 || finish "FAIL · fikk ikke kopiert filene inn"
+# (recovery key, media keys, update check, colour filter, Orca offer: their scripts, units, shaders and helper)
+keys "sudo install -m755 /mnt/system/bin/olymparch-recovery-key /mnt/system/bin/olymparch-media /mnt/system/bin/olymparch-update-check /usr/bin/ && sudo install -Dm755 /mnt/system/lib/install-app /usr/lib/olymparch/install-app && sudo cp -r /mnt/default/hypr/shaders /usr/share/olymparch/hypr/ && sudo install -m644 /mnt/default/systemd/user/olymparch-update-check.service /mnt/default/systemd/user/olymparch-update-check.timer /usr/lib/systemd/user/ && systemctl --user daemon-reload && { command -v fakeroot >/dev/null || sudo pacman -Sy --noconfirm --needed fakeroot >/dev/null; }; echo '<2>EXTRA-UPDATED' > /dev/kmsg\n" 1
+wait_for 'EXTRA-UPDATED' 120 || finish "FAIL · fikk ikke kopiert de nye skriptene inn"
 keys "c() { if eval \"\$2\" >/dev/null 2>&1; then echo \"<2>CHK-\$1-OK\"; else echo \"<2>CHK-\$1-NO\"; fi > /dev/kmsg; }; clear\n" 0.5
 sleep 4
 shot skrivebord "Skrivebordet med det nye skallet (norsk)"
@@ -374,6 +377,105 @@ keys "clear; rm ~/Documents/notat.txt; printf '\nj\n' | olymparch-gitbackup rest
 shot backup-gjenopprett "Gjenopprett: henter, dekrypterer, viser hva som overskrives, spør (svarte j)"
 check backup-restored 'grep -qx HEMMELIG-NOTAT-42 ~/Documents/notat.txt'
 keys "clear; unset OLYMPARCH_GITBACKUP_REMOTE; rm -f ~/.local/bin/olympus; olymparch-settings set backup.github off; clear\n" 1
+# ════ Account, language, own shortcuts, media keys, muted apps, colour filter, update check, Orca, report, views
+# ── own shortcuts: one from the command line works (Super+B opens a terminal titled «egentast»), one is added in
+#    the window's field, a taken one is refused there in red, a removed one is gone from hypr.lua
+keys " clear; olymparch-settings add keyboard.custom_keys 'SUPER + B = foot -a egentast'; sleep 1; clear\n" 2
+keys "sleep 4; c custom-key-works 'hyprctl clients | grep -q \"class: egentast\"'\n" 0.3
+press meta_l+b; sleep 5
+wait_for 'CHK-custom-key-works-(OK|NO)' 20; seen 'CHK-custom-key-works-OK' || fails+=(custom-key-works)
+shot egentast "Egen tast: Super+B åpner «foot -a egentast»"
+press meta_l+q; sleep 1.5
+press meta_l+comma; sleep 1.5
+search keyboard.custom
+keys "SUPER + N = foot -a fratvindu\n" 1.5
+keys "SUPER + Q = foot\n" 1.5
+shot egentast-vindu "Egne taster: SUPER + B og SUPER + N i lista, SUPER + Q avvist i rødt (er allerede «Lukk vindu»)"
+close_settings
+check custom-key-window 'grep -q fratvindu ~/.config/olymparch/settings.json && grep -F "hl.bind(" ~/.config/olymparch/hypr.lua | grep -q fratvindu && [ -z "$(hyprctl configerrors | tr -d "[:space:]")" ]'
+check custom-key-refused '! olymparch-settings add keyboard.custom_keys "SUPER + Q = foot" && ! olymparch-settings add keyboard.custom_keys "XF86AudioPlay = foot" && ! olymparch-settings set keys.terminal "SUPER + B"'
+check custom-key-remove 'olymparch-settings pick keyboard.custom_keys "SUPER + N" && ! grep -q fratvindu ~/.config/olymparch/hypr.lua && olymparch-settings items keyboard.custom_keys | grep -q egentast'
+
+# ── media keys: bound by default (play/pause too), unbound when off, back when on; without playerctl the
+#    shell's IPC handler answers
+check media-bound 'hyprctl binds | grep -q XF86AudioPlay && hyprctl binds | grep -q XF86AudioRaiseVolume'
+check media-off 'olymparch-settings set keys.media off && sleep 1 && ! hyprctl binds | grep -q XF86AudioPlay && ! hyprctl binds | grep -q XF86AudioMute'
+check media-on 'olymparch-settings set keys.media on && sleep 1 && hyprctl binds | grep -q XF86AudioPlay'
+check media-ipc 'qs ipc -p /usr/share/olymparch/shell show | grep -q media && olymparch-media play-pause && ! olymparch-media nope'
+keys " clear; olymparch-settings open keyboard\n" 2.5
+shot tastatur-medietaster "Tastatur og språk: medietaster, språk, tidssone (klare)"
+close_settings
+
+# ── language, time zone, autologin: through the pkexec helper; a made-up zone is refused by both
+check timezone 'olymparch-settings set keyboard.timezone Europe/Oslo && [ "$(timedatectl show -p Timezone --value)" = Europe/Oslo ] && ! olymparch-settings set keyboard.timezone Europe/Atlantis && [ "$(olymparch-settings get keyboard.timezone)" = Europe/Oslo ]'
+check timezone-helper 'pkexec /usr/lib/olymparch/settings-apply timezone Europe/Atlantis; a=$?; pkexec /usr/lib/olymparch/settings-apply timezone "../../etc/passwd"; b=$?; [ $a = 2 ] && [ $b = 2 ]'
+check language-nb 'olymparch-settings set keyboard.language nb && grep -qx LANG=nb_NO.UTF-8 /etc/locale.conf && locale -a | grep -qix nb_NO.utf8'
+check language-en 'olymparch-settings set keyboard.language en && grep -qx LANG=en_US.UTF-8 /etc/locale.conf'
+check autologin-off 'olymparch-settings set account.autologin off && [ ! -e /etc/systemd/system/getty@tty1.service.d/olymparch-autologin.conf ] && ! systemctl cat getty@tty1 | grep -q autologin-getty'
+check autologin-on 'olymparch-settings set account.autologin on && systemctl cat getty@tty1 | grep -q "ExecStart=-/usr/lib/olymparch/autologin-getty"'
+keys " clear; olymparch-settings open account\n" 2.5
+shot konto "Konto og lås: automatisk innlogging (på) og «Ny gjenopprettingsnøkkel»"
+close_settings
+
+# ── a new recovery key, in the terminal: sudo, the disk password, the key shown once, the old one wiped
+keys " clear; sudo -k; olymparch-recovery-key\n" 2
+keys "j\n" 1
+keys "$PW\n" 3
+keys "$PW\n" 12
+shot gjenopprettingsnokkel "Ny gjenopprettingsnøkkel: vist én gang, den gamle fjernet, nøkkelplassene listet"
+keys "\n" 1
+check recovery-key 'd=/dev/disk/by-uuid/$(grep -oE "rd.luks.name=[0-9a-f-]{36}" /etc/olymparch/boot.conf | cut -d= -f2); [ "$(sudo -n systemd-cryptenroll "$d" | grep -c recovery)" = 1 ] && sudo -n systemd-cryptenroll "$d" | grep -qE "^ *2 +recovery"'
+
+# ── muted apps: an app that notified is listed; muted, its next notification is not shown
+keys " clear; notify-send -a Testapp Hei 'Forste varsel'; sleep 1; clear\n" 2
+check apps-seen 'olymparch-settings items notifications.apps | grep -q "^Testapp.on"'
+keys " clear; olymparch-settings open notifications\n" 2.5
+shot varsler-apper "Varsler: Testapp har varslet og kan dempes"
+close_settings
+keys " clear; sleep 8; olymparch-settings pick notifications.apps Testapp; notify-send -a Testapp Hei 'Dempet'; sleep 1.5; c apps-muted '! hyprctl layers | grep -q olymparch-notifications && grep -q Testapp ~/.config/olymparch/settings.json'\n" 1
+wait_for 'CHK-apps-muted-(OK|NO)' 40; seen 'CHK-apps-muted-OK' || fails+=(apps-muted)
+check apps-allowed 'olymparch-settings pick notifications.apps Testapp && ! grep -q Testapp ~/.config/olymparch/settings.json'
+
+# ── colour filter: greyscale takes the gold out of the screen; none brings it back
+keys " clear; olymparch-settings set accessibility.color_filter grayscale; sleep 2; clear\n" 3
+grey=$(gold_now)
+shot fargefilter-gra "Fargefilter: gråtoner (skjermshader), $grey gullpiksler"
+keys " clear; olymparch-settings set accessibility.color_filter protanopia; sleep 2; clear\n" 3
+shot fargefilter-rodblind "Fargefilter: rødblind (rødt flyttes til grønt og blått)"
+keys " clear; olymparch-settings set accessibility.color_filter none; sleep 2; clear\n" 3
+color=$(gold_now)
+echo "fargefilter: gullpiksler gråtoner=$grey ingen=$color" >>"$O/measure.txt"
+{ ((grey < 20)) && ((color > 200)); } || fails+=("color-filter gra=$grey ingen=$color")
+check color-filter-file '! grep -q screen_shader ~/.config/olymparch/hypr.lua && [ -z "$(hyprctl configerrors | tr -d "[:space:]")" ]'
+
+# ── update check: a daily user timer at the time set, only a notification; empty = off
+check update-timer 'olymparch-settings set updates.time 07:30 && systemctl --user is-enabled -q olymparch-update-check.timer && systemctl --user cat olymparch-update-check.timer | grep -qF "OnCalendar=*-*-* 07:30:00"'
+keys " clear; systemctl --user start --no-block olymparch-update-check.service; sleep 25; clear\n" 27
+shot oppdateringssjekk "Oppdateringssjekk: «Oppdateringer tilgjengelig» som varsel (ingenting installeres)"
+check update-check-ran '! systemctl --user is-failed -q olymparch-update-check.service && ! pgrep -x pacman'
+check update-timer-off 'olymparch-settings set updates.time "" && ! systemctl --user is-enabled -q olymparch-update-check.timer && ! olymparch-settings set updates.time 25:00'
+
+# ── the screen reader: Orca is not installed, so the switch is hidden and the one-click install is offered;
+#    install-app takes only its fixed app IDs
+check orca-offer 'olymparch-settings missing | grep -qx accessibility.screen_reader && ! olymparch-settings missing | grep -qx accessibility.screen_reader_install'
+check install-app-refuses 'pkexec /usr/lib/olymparch/install-app orca; [ $? = 2 ]'
+keys " clear; olymparch-settings set settings.advanced on; olymparch-settings open accessibility\n" 2.5
+shot tilgjengelighet-orca "Tilgjengelighet (avansert): «Installer skjermleseren (Orca)» og fargefilter"
+close_settings
+
+# ── the event views and the bug report
+check view-on-connect 'olymparch-settings run events.on_connect | grep -q disks.usb_automount'
+check view-events 'olymparch-settings run events.rules | grep -q olymparch-heat-check.timer'
+keys " clear; olymparch-settings open events\n" 2.5
+press ctrl+f; keys "events.rules" 0.8; press ret; sleep 0.5
+press ret; sleep 2
+shot hendelser-regler "Hendelser → Alle regler: hver regel, om den er på, og enheten som kjører den"
+close_settings
+keys " clear; olymparch-settings set settings.advanced off; olymparch-settings run about.report > ~/report.txt; sleep 12; c report 'grep -q ^version= ~/report.txt && pgrep -f issues/new'\n" 1
+wait_for 'CHK-report-(OK|NO)' 40; seen 'CHK-report-OK' || fails+=(report)
+shot feilrapport "Meld fra om en feil: GitHub-saken åpnes i nettleseren med systeminfo; brukeren sender selv"
+press meta_l+q; sleep 2
+keys "clear\n" 0.5
 
 # last, because a critical notification stays until it is clicked
 keys "olymparch-settings set notifications.dnd on; notify-send -u critical Disk 'Disken er 95 % full'; sleep 1.5; c dnd-critical 'hyprctl layers | grep -q olymparch-notifications'\n" 1

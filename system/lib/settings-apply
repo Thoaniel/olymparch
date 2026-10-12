@@ -9,13 +9,21 @@
 #   dns auto|cloudflare|quad9        /etc/NetworkManager/conf.d/30-olymparch-dns.conf (global DNS)
 #   mac-random on|off                /etc/NetworkManager/conf.d/30-olymparch-mac.conf (Wi-Fi MAC per network)
 #   snapshots 2…50                   NUMBER_LIMIT in /etc/snapper/configs/root (snapper set-config)
+#   autologin on|off                 /etc/systemd/system/getty@tty1.service.d/olymparch-autologin.conf (from the next start)
+#   language en|nb                   LANG in /etc/locale.conf (from the next login; the locale is generated if needed)
+#   timezone NAME                    timedatectl set-timezone; NAME must be one `timedatectl list-timezones` prints
 set -euo pipefail
 export PATH=/usr/bin LC_ALL=C
 umask 022
 [ "$(id -u)" = 0 ] || { echo "settings-apply: run through pkexec" >&2; exit 1; }
 [ $# = 2 ] || { echo "usage: settings-apply ACTION VALUE" >&2; exit 2; }
 action=$1 value=$2
+# the time zone is checked against the system's own list, every other action against the fixed words below
+if [ "$action" = timezone ]; then
+    timedatectl list-timezones | grep -xF -- "$value" >/dev/null || { echo "settings-apply: not allowed: $action $value" >&2; exit 2; }
+else
 case "$action:$value" in
+    autologin:on | autologin:off | language:en | language:nb | \
     lid:suspend | lid:lock | lid:ignore | connectivity:on | connectivity:off | \
     bt-mode:dual | bt-mode:le | bt-mode:bredr | bt-fast:on | bt-fast:off | \
     dns:auto | dns:cloudflare | dns:quad9 | \
@@ -23,6 +31,7 @@ case "$action:$value" in
     snapshots:[2-9] | snapshots:[1-4][0-9] | snapshots:50) ;;
     *) echo "settings-apply: not allowed: $action $value" >&2; exit 2 ;;
 esac
+fi
 log() { printf '%s settings-apply %s %s (uid %s)\n' "$(date '+%F %T')" "$action" "$value" "${PKEXEC_UID:-?}" >>/var/log/olymparch-settings.log; }
 
 # KEY = VALUE under [General] in bluez' main.conf (the file has no drop-in directory)
@@ -89,5 +98,29 @@ case "$action" in
         [ -f /etc/snapper/configs/root ] || { echo "settings-apply: no snapper config root" >&2; exit 3; }
         snapper --no-dbus -c root set-config "NUMBER_LIMIT=$value"
         ;;
+    # ── account and language
+    autologin)
+        f=/etc/systemd/system/getty@tty1.service.d/olymparch-autologin.conf
+        if [ "$value" = on ]; then
+            [ -x /usr/lib/olymparch/autologin-getty ] || { echo "settings-apply: /usr/lib/olymparch/autologin-getty is missing" >&2; exit 3; }
+            mkdir -p /etc/systemd/system/getty@tty1.service.d
+            printf '# Written by Settings (account.autologin)\n[Service]\nExecStart=\nExecStart=-/usr/lib/olymparch/autologin-getty %%I\nEnvironment=XDG_SESSION_TYPE=wayland\n' >"$f"
+        else
+            rm -f -- "$f"
+        fi
+        systemctl daemon-reload
+        ;;
+    language)
+        case $value in nb) loc=nb_NO.UTF-8 ;; *) loc=en_US.UTF-8 ;; esac
+        if ! locale -a | grep -ix "${loc%.UTF-8}.utf8" >/dev/null; then
+            sed -i "s/^#[[:space:]]*\(${loc%.UTF-8}\.UTF-8 UTF-8\)/\1/" /etc/locale.gen
+            locale-gen >/dev/null
+        fi
+        tmp=$(mktemp /etc/.locale.conf.XXXXXX)
+        { grep -v '^LANG=' /etc/locale.conf 2>/dev/null || true; printf 'LANG=%s\n' "$loc"; } >"$tmp"
+        chmod 644 "$tmp"
+        mv -f "$tmp" /etc/locale.conf
+        ;;
+    timezone) timedatectl set-timezone "$value" ;;
 esac
 log

@@ -3,6 +3,7 @@
 // answered or dismissed); all of it is in Settings → Notifications. Do not disturb hides everything but critical.
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.Notifications
 
@@ -18,6 +19,25 @@ Scope {
         .filter(n => !silent && (!dnd || n.urgency === NotificationUrgency.Critical))
         .slice(-Settings.get("notifications.max_visible")).reverse()
 
+    // ── Settings → Notifications → Muted apps: names in settings.json; every app that notifies is remembered in
+    //    ~/.local/state/olymparch/notification-apps.json so the list there can offer it (olymparch-settings items)
+    readonly property var muted: Settings.get("notifications.apps") || []
+    FileView {
+        id: seenApps
+        path: (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/olymparch/notification-apps.json"
+        blockLoading: true
+        printErrors: false
+        atomicWrites: true
+    }
+    function remember(app) {
+        if (!app || app.length > 80) return;
+        let list = [];
+        try { list = JSON.parse(seenApps.text() || "[]"); } catch (e) { list = []; }
+        if (!Array.isArray(list) || list.includes(app)) return;
+        list.push(app);
+        seenApps.setText(JSON.stringify(list.slice(-100)));
+    }
+
     NotificationServer {
         id: server
         keepOnReload: true
@@ -25,7 +45,9 @@ Scope {
         bodySupported: true
         onNotification: n => {
             const critical = n.urgency === NotificationUrgency.Critical;
+            notes.remember(n.appName || "");
             if (notes.dnd && !critical) return;   // not tracked: dropped quietly
+            if (!critical && notes.muted.includes(n.appName || "")) return;   // a muted app (Settings → Notifications)
             n.tracked = true;
             // offers with buttons («Install driver», «Undo» …) stay until answered, like critical ones
             if (!critical && n.actions.length === 0) {
