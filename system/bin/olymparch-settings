@@ -11,6 +11,8 @@
 --   olymparch-settings apply [KEY]             write every file again (or the files for KEY) and apply live
 --   olymparch-settings run KEY                 run an action (Update now, doctor …)
 --   olymparch-settings open [PAGE]             open the Settings window
+--   olymparch-settings profiles                the saved layout of every monitor combination (* = in use)
+--   olymparch-settings monitors-changed        apply the layout for the monitors connected now (Hyprland runs it)
 --   olymparch-settings about | files | check | pending
 -- Per-monitor keys take the output after @, such as display.scale@DP-1.
 
@@ -489,6 +491,157 @@ local function revert(token)
     return true
 end
 
+---------------------------------------------------------------------------------------------------- monitor combinations
+-- Every set of connected monitors remembers its layout (display.profiles). The key is the monitors' descriptions
+-- (make, model, serial) sorted, never the port names, and the layout is stored per description, so a monitor keeps
+-- its place when it moves to another port. Settings → Displays saves the layout for the combination in use;
+-- Hyprland's monitor.added/removed events run `olymparch-settings monitors-changed`, which applies the saved one.
+FILES.profiles = CONFIG .. "/olymparch/display-profiles.json"
+local PER_MONITOR = {}   -- "resolution", "scale", … : the per-monitor display settings
+for _, s in ipairs(schema.settings) do
+    if s.per == "monitor" and s.key:match("^display%.") then PER_MONITOR[#PER_MONITOR + 1] = s.key:sub(9) end
+end
+
+local function json_pretty(v, indent)   -- nested tables, keys sorted, so the file diffs well
+    indent = indent or ""
+    if type(v) ~= "table" then return json.value(v) end
+    local keys = {}
+    for k in pairs(v) do keys[#keys + 1] = k end
+    table.sort(keys)
+    if #keys == 0 then return "{}" end
+    local inner, out = indent .. "  ", {}
+    for i, k in ipairs(keys) do out[i] = inner .. json.value(tostring(k)) .. ": " .. json_pretty(v[k], inner) end
+    return "{\n" .. table.concat(out, ",\n") .. "\n" .. indent .. "}"
+end
+
+-- connected monitors (also disabled ones): { name = "DP-1", id = "Dell Inc. DELL U2720Q 1234" }, sorted by id
+local function connected()
+    if not os.getenv("HYPRLAND_INSTANCE_SIGNATURE") then return {} end
+    local ok, v = pcall(json.decode, capture("hyprctl monitors all -j"))
+    local list, count = {}, {}
+    for _, m in ipairs(ok and type(v) == "table" and v or {}) do
+        local name = type(m.name) == "string" and m.name or ""
+        if name:match("^[%w_.-]+$") then
+            local id = type(m.description) == "string" and m.description:gsub("[%c\\]", ""):sub(1, 200) or ""
+            if id:match("^%s*$") then id = name end
+            list[#list + 1] = { name = name, id = id }
+        end
+    end
+    table.sort(list, function(a, b) return a.id == b.id and a.name < b.name or a.id < b.id end)
+    for _, m in ipairs(list) do   -- two identical monitors without a serial: the second is «… #2»
+        count[m.id] = (count[m.id] or 0) + 1
+        if count[m.id] > 1 then m.id = m.id .. " #" .. count[m.id] end
+    end
+    return list
+end
+local function combo_key(mons)
+    local ids = {}
+    for i, m in ipairs(mons) do ids[i] = m.id end
+    return table.concat(ids, " + ")
+end
+
+-- display-profiles.json: { "current": KEY, "profiles": { KEY: { MONITOR-ID: { "scale": "1.5", … } } } }. Hand
+-- edits are welcome, so every value is checked against the schema again before it is used.
+local function load_profiles()
+    local ok, v = pcall(json.decode, read(FILES.profiles) or "{}")
+    if not ok or type(v) ~= "table" then v = {} end
+    local clean = { current = type(v.current) == "string" and v.current or nil, profiles = {} }
+    for key, prof in pairs(type(v.profiles) == "table" and v.profiles or {}) do
+        if type(key) == "string" and type(prof) == "table" then
+            local p = {}
+            for id, layout in pairs(prof) do
+                if type(id) == "string" and type(layout) == "table" then
+                    p[id] = {}
+                    for _, k in ipairs(PER_MONITOR) do
+                        local x = layout[k]
+                        if x ~= nil and valid(byKey["display." .. k], x, "check") then p[id][k] = x end
+                    end
+                end
+            end
+            clean.profiles[key] = p
+        end
+    end
+    return clean
+end
+local function save_profiles(data) write(FILES.profiles, json_pretty(data) .. "\n") end
+
+-- the layout in settings.json for these monitors, by monitor ID
+local function snapshot(values, mons)
+    local prof = {}
+    for _, m in ipairs(mons) do
+        prof[m.id] = {}
+        for _, k in ipairs(PER_MONITOR) do prof[m.id][k] = values["display." .. k .. "@" .. m.name] end
+    end
+    return prof
+end
+
+-- Settings → Displays changed something: remember it for the monitors connected now
+local function save_combination(values)
+    if value_of(values, "display.profiles") == false then return end
+    local mons = connected()
+    if #mons == 0 then return end
+    local data, key = load_profiles(), combo_key(mons)
+    data.profiles[key] = snapshot(values, mons)
+    data.current = key
+    save_profiles(data)
+end
+
+local function notify_new_combination()
+    local nb = (os.getenv("LANG") or ""):match("^n[bno]")
+    local title = nb and "Ny skjermkombinasjon" or "New monitor combination"
+    local body = nb and "Ny skjermkombinasjon — åpne Skjermer for å ordne den. Oppsettet huskes til neste gang."
+        or "New monitor combination — open Displays to arrange it. The layout is remembered for next time."
+    local button = nb and "Åpne Skjermer" or "Open Displays"
+    local script = ('a=$(notify-send -a Olymparch -w --action=open=%s %s %s); [ "$a" = open ] && exec %s open display')
+        :format(sh_quote(button), sh_quote(title), sh_quote(body), sh_quote(SELF))
+    os.execute("setsid -f sh -c " .. sh_quote(script) .. " >/dev/null 2>&1 </dev/null")
+end
+
+-- the monitors changed: put the saved layout for this combination in place, or start a new one at the defaults
+local function monitors_changed()
+    -- a dock or a KVM switch sends several events at once: only the last one within a second does the work
+    local stamp = RUNTIME .. "/olymparch-monitors-event"
+    local token = ("%d%06d"):format(os.time(), math.random(0, 999999))
+    write(stamp, token)
+    os.execute("sleep 1")
+    if read(stamp) ~= token then return "superseded" end
+    local values = load_values()
+    if value_of(values, "display.profiles") == false then return "off" end
+    local mons = connected()
+    if #mons == 0 then return "no monitors" end
+    local data, key = load_profiles(), combo_key(mons)
+    if data.current == nil then   -- the first time: the layout in use is this combination's
+        data.profiles[key] = data.profiles[key] or snapshot(values, mons)
+        data.current = key
+        save_profiles(data)
+        return "first " .. key
+    end
+    if data.current == key then return "same " .. key end
+    local prof = data.profiles[key]
+    for k in pairs(values) do
+        if k:match("^display%.[%w_]+@") and byKey[k:match("^[^@]+")].per == "monitor" then values[k] = nil end
+    end
+    -- a new combination starts at preferred modes and automatic positions; a monitor it shares with the one before
+    -- keeps its scale, VRR and colour depth
+    local before = data.profiles[data.current] or {}
+    for _, m in ipairs(mons) do
+        local layout = prof and prof[m.id] or {}
+        if not prof and before[m.id] then
+            for _, k in ipairs({ "scale", "vrr", "bitdepth" }) do layout[k] = before[m.id][k] end
+        end
+        for k, v in pairs(layout) do values["display." .. k .. "@" .. m.name] = v end
+    end
+    save_values(values)
+    ensure_loader(values)
+    write_monitors(values)
+    for _, m in ipairs(mons) do hyprctl_eval(monitor_spec(values, m.name)) end
+    data.current = key
+    if not prof then data.profiles[key] = snapshot(values, mons) end
+    save_profiles(data)
+    if not prof then notify_new_combination(); return "new " .. key end
+    return "restored " .. key
+end
+
 ---------------------------------------------------------------------------------------------------- commands
 local cmd = arg[1]
 local function label(s)
@@ -520,6 +673,7 @@ elseif cmd == "set" then
         values[key] = v
         save_values(values)
         apply(key, values)
+        if key:match("^display%..+@") then save_combination(values) end
     end
 
 elseif cmd == "keep" then
@@ -529,6 +683,7 @@ elseif cmd == "keep" then
     values[p.key] = p.value
     save_values(values)
     apply(p.key, values)
+    if p.key:match("^display%..+@") then save_combination(values) end
     print("kept " .. p.key)
 
 elseif cmd == "revert" then
@@ -546,6 +701,7 @@ elseif cmd == "reset" then
     values[key] = nil
     save_values(values)
     apply(key, values)
+    if key:match("^display%..+@") then save_combination(values) end
 
 elseif cmd == "list" then
     local page = arg[2]
@@ -606,11 +762,34 @@ elseif cmd == "about" then
     print("monitors=" .. table.concat(mons, ", "))
     print("hyprland=" .. (capture("hyprctl version -j"):match('"tag":%s*"([^"]+)"') or "?"))
 
+elseif cmd == "monitors-changed" then
+    print(monitors_changed())
+
+elseif cmd == "profiles" then
+    local data = load_profiles()
+    local keys = {}
+    for k in pairs(data.profiles) do keys[#keys + 1] = k end
+    table.sort(keys)
+    for _, k in ipairs(keys) do
+        print((k == data.current and "* " or "  ") .. k)
+        local ids = {}
+        for id in pairs(data.profiles[k]) do ids[#ids + 1] = id end
+        table.sort(ids)
+        for _, id in ipairs(ids) do
+            local parts = {}
+            for _, s in ipairs(PER_MONITOR) do
+                local v = data.profiles[k][id][s]
+                if v ~= nil then parts[#parts + 1] = s .. "=" .. tostring(v) end
+            end
+            print("    " .. id .. ": " .. (#parts > 0 and table.concat(parts, " ") or "default"))
+        end
+    end
+
 elseif cmd == "open" then
     if arg[2] then shell_call("page", arg[2]) else shell_call("open") end
 
 elseif cmd == "files" then
-    for _, k in ipairs({ "settings", "hypr", "monitors", "idle", "hyprland" }) do
+    for _, k in ipairs({ "settings", "hypr", "monitors", "profiles", "idle", "hyprland" }) do
         local f = io.open(FILES[k])
         print(("%s %s"):format(f and "✓" or "·", FILES[k]))
         if f then f:close() end

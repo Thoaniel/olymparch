@@ -82,9 +82,9 @@
       "options": [ { "value": "0", "label": { "en": "Off", "nb": "Av" } }, { "value": "1", "label": { "en": "On", "nb": "På" } }, { "value": "2", "label": { "en": "Games", "nb": "Spill" } } ],
       "label": { "en": "Direct scanout", "nb": "Direkte scanout" }, "description": { "en": "Fullscreen apps skip the compositor", "nb": "Fullskjermapper går forbi kompositoren" },
       "apply": { "via": "hypr", "file": "~/.config/olymparch/hypr.lua", "key": "render.direct_scanout" } },
-    { "key": "display.profiles", "page": "display", "level": "advanced", "type": "action", "ready": false,
-      "label": { "en": "Profiles per monitor combination", "nb": "Profiler per skjermkombinasjon" }, "description": { "en": "Layouts that switch when monitors change", "nb": "Oppsett som byttes når skjermene endres" },
-      "apply": { "via": "action", "command": "olymparch display profiles" } },
+    { "key": "display.profiles", "page": "display", "level": "simple", "type": "bool", "default": true, "ready": true,
+      "label": { "en": "Remember the layout per monitor combination", "nb": "Husk oppsettet per skjermkombinasjon" }, "description": { "en": "Plug the same monitors in again and they are placed as last time", "nb": "Kobler du til de samme skjermene igjen, står de som sist" },
+      "apply": { "via": "stored", "file": "~/.config/olymparch/display-profiles.json", "key": "display.profiles" } },
 
     { "key": "audio.output", "page": "audio", "level": "simple", "type": "choice", "widget": "select", "default": "", "options_from": "audio.sinks", "ready": true,
       "label": { "en": "Output", "nb": "Utgang" }, "description": { "en": "Where sound plays", "nb": "Hvor lyden spilles" },
