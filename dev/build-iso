@@ -22,7 +22,7 @@ rm -rf -- build/plymouth
 py art/bootart.py build/plymouth >/dev/null
 mkdir -p "$share/plymouth" "$share/limine"
 cp default/plymouth/olymparch.plymouth build/plymouth/olymparch.script build/plymouth/s*.png "$share/plymouth/"
-cp -r default/plymouth/units default/plymouth/olymparch-mkinitcpio-install "$share/plymouth/"
+cp -r default/plymouth/units default/plymouth/olymparch-mkinitcpio-install default/plymouth/olymparch-plymouth-handoff "$share/plymouth/"
 cp build/plymouth/limine-s*.png "$share/limine/"
 # The live environment calls itself Olymparch too
 install -m644 default/branding/os-release profile/airootfs/etc/os-release

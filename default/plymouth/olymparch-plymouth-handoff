@@ -1,0 +1,26 @@
+#!/bin/bash
+# The boot screen hands the display to the desktop with no black gap (as GDM does): the session asks for the
+# screen ($XDG_RUNTIME_DIR/olymparch-want-screen, made by /etc/profile.d/zz-olymparch-session.sh), plymouth lets
+# go of it (deactivate) while its last frame stays, Hyprland takes over and draws, and only then plymouth quits.
+# Runs as plymouth-quit.service. When no desktop asks within 30 s (a text login), plymouth quits as usual.
+set -u
+plymouth --ping 2>/dev/null || exit 0
+for ((i = 0; i < 300; i++)); do
+    for f in /run/user/*/olymparch-want-screen; do
+        [ -f "$f" ] && [ ! -L "$f" ] || continue
+        uid=${f#/run/user/}
+        uid=${uid%%/*}
+        [[ $uid =~ ^[0-9]+$ ]] || continue
+        plymouth deactivate
+        rm -f -- "$f"   # tells the session it may start
+        # until the compositor is up (its socket), at most 10 s, plus a moment for its first frame
+        for ((j = 0; j < 100; j++)); do
+            compgen -G "/run/user/$uid/hypr/*/.socket.sock" >/dev/null && break
+            sleep 0.1
+        done
+        sleep 1
+        exec plymouth quit --retain-splash
+    done
+    sleep 0.1
+done
+exec plymouth quit --retain-splash

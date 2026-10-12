@@ -212,6 +212,8 @@ cp /usr/share/olymparch/plymouth/olymparch.plymouth /usr/share/olymparch/plymout
 install -Dm644 /usr/share/olymparch/plymouth/olymparch-mkinitcpio-install /mnt/usr/lib/initcpio/install/olymparch
 install -Dm644 -t /mnt/usr/lib/systemd/system /usr/share/olymparch/plymouth/units/olymparch-unlocked.service /usr/share/olymparch/plymouth/units/olymparch-handoff.service
 install -Dm644 /usr/share/olymparch/plymouth/units/plymouth-quit-retain.conf /mnt/etc/systemd/system/plymouth-quit.service.d/olymparch.conf
+install -Dm755 /usr/share/olymparch/plymouth/olymparch-plymouth-handoff /mnt/usr/lib/olymparch/plymouth-handoff
+arch-chroot /mnt systemctl mask plymouth-quit-wait.service >/dev/null 2>&1
 arch-chroot /mnt systemctl enable olymparch-handoff.service >/dev/null 2>&1
 printf '[Daemon]\nTheme=olymparch\nShowDelay=0\nDeviceScale=1\n' >/mnt/etc/plymouth/plymouthd.conf
 arch-chroot /mnt mkinitcpio -P
@@ -271,10 +273,8 @@ cat >/mnt/etc/systemd/system/getty@tty1.service.d/olymparch-autologin.conf <<'UN
 ExecStart=
 ExecStart=-/usr/lib/olymparch/autologin-getty %I
 Environment=XDG_SESSION_TYPE=wayland
-# The boot screen's last frame stays until Hyprland draws: the tty is not reset, cleared or hung up
-TTYReset=no
-TTYVTDisallocate=no
-TTYVHangup=no
+# (tty1 keeps systemd's reset and hangup, so nothing from an earlier session can read the next login; the boot
+# screen still covers it: plymouth holds the display until Hyprland takes it, see olymparch-plymouth-handoff)
 UNIT
 # no motd or «Last login» printed over it either
 arch-chroot /mnt sudo -u "$USERNAME" touch "/home/$USERNAME/.hushlogin"
@@ -283,6 +283,15 @@ cat >/mnt/etc/profile.d/zz-olymparch-session.sh <<'SESSION'
 if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ "$(id -u)" != 0 ]; then
     # keys that reach this tty must never signal the session: Ctrl+C here would end the whole desktop
     stty -isig -echo 2>/dev/null
+    # ask the boot screen for the display (it keeps its last frame until Hyprland draws): at most 5 s
+    if [ -n "${XDG_RUNTIME_DIR:-}" ] && [ -e /run/plymouth/pid ]; then
+        : >"$XDG_RUNTIME_DIR/olymparch-want-screen"
+        for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50; do
+            [ -e "$XDG_RUNTIME_DIR/olymparch-want-screen" ] || break
+            sleep 0.1
+        done
+        rm -f -- "$XDG_RUNTIME_DIR/olymparch-want-screen"
+    fi
     if command -v start-hyprland >/dev/null 2>&1; then exec start-hyprland; else exec Hyprland; fi
 fi
 SESSION
