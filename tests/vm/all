@@ -1,0 +1,20 @@
+#!/bin/bash
+# Every VM test, one VM at a time (no parallel VMs: heat). install-disk first; its disk becomes the base the
+# other tests start from. Results in tests/vm/out/all.txt, one line per test.
+#   tests/vm/all [TEST …]      default: all of them
+set -uo pipefail
+cd "$(dirname "$0")/../.."
+tests=("$@")
+[ ${#tests[@]} -gt 0 ] || tests=(install-disk install-wizard snapshots shell events settings hw games games-install)
+summary=tests/vm/out/all.txt
+mkdir -p tests/vm/out
+: >"$summary"
+for t in "${tests[@]}"; do
+    base=()
+    [ "$t" = install-disk ] || [ "$t" = install-wizard ] || [ "$t" = games-install ] ||
+        base=(env OLYMPARCH_BASE="${OLYMPARCH_BASE:-tests/vm/out/install-disk}")
+    echo "==> $t"
+    timeout 3600 "${base[@]}" "tests/vm/$t" >"tests/vm/out/$t-run.log" 2>&1
+    r=$(cat "tests/vm/out/$t/result.txt" 2>/dev/null || echo "FAIL · no result (exit $?)")
+    printf '%s\t%s\n' "$t" "$r" | tee -a "$summary"
+done
