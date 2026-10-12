@@ -73,6 +73,8 @@ shot passord2 "Passordet en gang til"
 keys 'olympTest123\n'
 shot valg "Valg: Spill er krysset av fra start"
 press ret
+shot flere-apper "Flere apper og verktøy: alt er valgfritt og ingenting er krysset av"
+press ret
 shot oppsummering "Oppsummeringen før noe skrives"
 press ret
 sleep 5

@@ -1,0 +1,92 @@
+#!/bin/bash
+# VM test: web apps (olymparch-webapp). On a copy of the installed disk (OLYMPARCH_BASE), with this repo's pieces
+# copied in (tests/vm/webapps-guest.sh):
+#   bad names and URLs are refused (javascript:, http://, file://, quotes and ; in the URL, newlines, ../);
+#   «olymparch-webapp add youtube» → a valid .desktop file with the site's icon, listed, in the launcher (Super+Space);
+#   opening it without Chromium → a notification offers it; one click installs it (pkexec install-app webapps);
+#   the app opens as a frameless window with its own class (webapp-youtube) and its own profile;
+#   «olymparch-webapp remove youtube» → file, icon and profile gone, and gone from the launcher.
+#   tests/vm/webapps
+set -uo pipefail
+cd "$(dirname "$0")/../.."
+. dev/env
+SRC=${OLYMPARCH_BASE:-tests/vm/out/install-disk}
+[ -f "$SRC/disk.qcow2" ] || { echo "kjør tests/vm/install-disk først (eller sett OLYMPARCH_BASE)" >&2; exit 2; }
+O=tests/vm/out/webapps
+rm -rf -- tests/vm/out/webapps
+mkdir -p "$O"
+install -m644 "$SRC/vars.fd" "$O/vars.fd"   # a writable copy (the base is read-only)
+qemu-img create -q -f qcow2 -b "$(realpath "$SRC/disk.qcow2")" -F qcow2 "$O/disk.qcow2"
+QMP=$O/qmp.sock
+. tests/vm/lib.sh
+PW='olymp-test-123'
+trap 'kill "$QPID" 2>/dev/null; python3 -I tests/vm/report.py tests/vm/out/report.html "$O" >/dev/null 2>&1' EXIT
+t0=$SECONDS
+fails=()
+need() {  # need MARK SECONDS: wait for «WA: MARK» on the serial console, else note it as failed
+    wait_for "WA: $1" "$2" || fails+=("$1")
+}
+
+vm boot.log -virtfs local,path="$PWD",mount_tag=olysrc,security_model=none,readonly=on,id=src -device qemu-xhci,id=xhci
+unlock_and_desktop "$PW"
+python3 -I tests/vm/qmp.py "$QMP" cmd device_add '{"driver": "usb-tablet", "bus": "xhci.0", "id": "tablet"}' >/dev/null
+
+press meta_l+ret; sleep 2
+g='bash /mnt/tests/vm/webapps-guest.sh'
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo $g setup; mkdir -p ~/.local/share/applications; hyprctl reload >/dev/null; pkill -x launch-shell; pkill -x quickshell; sleep 1; setsid -f /usr/lib/olymparch/launch-shell; clear\n" 1
+keys "$PW\n" 1
+wait_for 'WA: SETUP-(OK|CHROMIUM-ALREADY)' 60 || finish "FAIL · fikk ikke lagt inn olymparch-webapp"
+seen 'WA: SETUP-CHROMIUM-ALREADY' && fails+=("chromium var installert fra før")
+sleep 3
+
+# ── 1. bad input is refused
+keys "clear; $g refuse; olymparch-webapp add Bad 'javascript:alert(1)'; olymparch-webapp add Bad 'https://x\" ; rm -rf ~'; olymparch-webapp add Bad http://www.youtube.com/; olymparch-webapp add ../evil https://www.youtube.com/\n" 2
+need REFUSE-OK 60
+shot avvist "Ugyldige navn og adresser avvises (javascript:, http://, file://, anførselstegn og ; i adressen, ../ i navnet); ingenting skrives"
+
+# ── 2. add YouTube (one of the defaults): .desktop file, icon, list
+keys "clear; olymparch-webapp add youtube && olymparch-webapp defaults && $g added youtube && grep -E '^(Name|Exec|Icon|StartupWMClass)=' ~/.local/share/applications/webapp-youtube.desktop\n" 3
+need ADDED-OK 90
+shot lagt-til "olymparch-webapp add youtube: .desktop-fila, nettstedets ikon og listen over standardene"
+
+# ── 3. the launcher has it
+press meta_l+spc; sleep 1.5
+keys "YouTube" 1
+shot meny "Super+mellomrom, «YouTube»: webappen står i menyen"
+press ret; sleep 1
+
+# ── 4. no Chromium yet → the offer; one click installs it and the app opens
+if xy=$(for i in $(seq 30); do python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/probe.ppm" 2>/dev/null &&
+        python3 -I tests/vm/button.py "$O/probe.ppm" 0 2>/dev/null && break; sleep 1; done); [ -n "$xy" ]; then
+    shot tilbud "Uten Chromium: varsel «Webapper trenger Chromium» med «Installer Chromium»"
+    # typed first: the web app takes the keyboard focus when it opens
+    keys "clear; $g window youtube\n" 0.5
+    # shellcheck disable=SC2086
+    python3 -I tests/vm/qmp.py "$QMP" click $xy
+    sleep 3
+    shot installerer "Ett klikk: pkexec /usr/lib/olymparch/install-app webapps (Chromium) installeres"
+    need 'WINDOW-OK' 600
+    sleep 2
+    shot vindu "YouTube som webapp: eget vindu uten faner og adresselinje, klasse webapp-youtube"
+    press meta_l+spc; sleep 1.5
+    keys "You" 1
+    shot meny-med-app "Menyen mens webappen kjører"
+    press esc; sleep 0.5
+    need CLOSED 40   # the guest closes the web app again, so the terminal has the keyboard
+else
+    shot tilbud-feil "Ingen tilbud om Chromium"; fails+=("tilbud")
+fi
+
+# ── 5. remove it: the window is closed, then the file, the icon and the profile go
+keys "clear; $g removed youtube; olymparch-webapp list; ls -a ~/.local/share/olymparch/webapps/\n" 1
+need REMOVED-OK 40
+sleep 1
+shot fjernet "olymparch-webapp remove youtube: fil, ikon og profil er borte"
+press meta_l+spc; sleep 1.5
+keys "YouTube" 1
+shot meny-uten "Menyen etter fjerning: ingen YouTube"
+press esc
+
+grep -aoE 'WA: (CLIENT|ICON|ACCEPTED|EXEC|INVALID|NO-|LEFT)[^\r]*' "$O/$LOG" | sed 's/^WA: //' >"$O/details.txt"
+[ ${#fails[@]} = 0 ] && finish "PASS · webapper: avvisning, add youtube (ikon, .desktop, meny), Chromium med ett klikk, eget vindu webapp-youtube, remove på $((SECONDS - t0)) s"
+finish "FAIL · ${fails[*]}"

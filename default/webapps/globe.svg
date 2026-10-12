@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Olymparch: the icon of a web app whose site gave no usable icon -->
+  <rect x="2" y="2" width="60" height="60" rx="6" fill="#121218" stroke="#3a3644" stroke-width="2"/>
+  <g fill="none" stroke="#d4a73a" stroke-width="3">
+    <circle cx="32" cy="32" r="20"/>
+    <ellipse cx="32" cy="32" rx="9" ry="20"/>
+    <path d="M12 32h40M15 22h34M15 42h34"/>
+  </g>
+</svg>

@@ -1,0 +1,333 @@
+#!/bin/bash
+# Web apps: a site in its own frameless window, started from the launcher like any other app (as in Omarchy).
+# Every web app is a .desktop file in ~/.local/share/applications and a Chromium profile of its own, so each one
+# keeps its own login.
+#
+#   olymparch-webapp add NAME [URL] [ICON]   add (URL may be left out for one of the defaults below); ICON is a
+#                                           local image or an https:// address, else the site's own icon
+#   olymparch-webapp remove NAME|ID          remove it, its icon and its profile (its login)
+#   olymparch-webapp list                    ID <tab> NAME <tab> URL of every web app
+#   olymparch-webapp defaults                ID <tab> NAME <tab> URL <tab> installed|- of the offered defaults
+#   olymparch-webapp browser                 install Chromium (one click: pkexec install-app webapps)
+#   olymparch-webapp launch ID URL           what the .desktop files run (offers Chromium when it is missing)
+#
+# NAME: 1–40 of A–Z a–z 0–9 space . _ -   URL: https:// with a host name; no spaces, quotes or backslashes.
+# Icons are fetched over https only, at most 1 MB, and are only used when they check out as an image
+# (ImageMagick re-encodes them when it is installed; otherwise a PNG is checked chunk by chunk); else a globe.
+set -uo pipefail
+export LC_ALL=C.UTF-8
+L() { case ${LANG:-} in nb* | nn* | no*) printf '%s' "$2" ;; *) printf '%s' "$1" ;; esac; }
+die() { echo "olymparch-webapp: $*" >&2; exit 2; }
+
+DATA=${XDG_DATA_HOME:-$HOME/.local/share}
+APPS=$DATA/applications
+STORE=$DATA/olymparch/webapps            # STORE/ID = the app's Chromium profile, STORE/icons/ID.png its icon
+GLOBE=/usr/share/olymparch/webapps/globe.svg
+INSTALL_APP=/usr/lib/olymparch/install-app
+MAX=1048576                               # the most an icon or a page may be, in bytes
+UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36"
+
+# The defaults Olymparch offers (never added on its own). The last two are the cloud-gaming ones.
+DEFAULTS=$'youtube\tYouTube\thttps://www.youtube.com/
+whatsapp\tWhatsApp\thttps://web.whatsapp.com/
+discord-web\tDiscord Web\thttps://discord.com/app
+spotify-web\tSpotify Web\thttps://open.spotify.com/
+chatgpt\tChatGPT\thttps://chatgpt.com/
+xbox-cloud-gaming\tXbox Cloud Gaming\thttps://www.xbox.com/play
+geforce-now\tGeForce NOW\thttps://play.geforcenow.com/'
+
+# ── validation ────────────────────────────────────────────────────────────────────────────────────────────────
+NAME_RE='^[A-Za-z0-9 ._-]{1,40}$'
+valid_name() { [[ $1 =~ $NAME_RE && $1 =~ [A-Za-z0-9] ]]; }
+valid_id() { [[ $1 =~ ^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$ ]]; }
+# https://, a host name (labels of letters, digits and -, or an IPv4 address), an optional port, and then only
+# URI characters minus quotes and backslashes. No user:password@ part.
+URL_RE='^https://([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*(:[0-9]{1,5})?([/?#][][A-Za-z0-9._~:/?#@!$&()*+,;=%-]*)?$'
+valid_url() { (( ${#1} <= 2000 )) && [[ $1 =~ $URL_RE ]]; }
+id_of() {  # the file-safe ID of a name: lower case, runs of space . _ - become one -
+    local s=${1,,}
+    s=$(printf '%s' "$s" | tr -c 'a-z0-9' '-' | tr -s '-')
+    s=${s#-}; s=${s%-}
+    printf '%s' "${s:0:40}" | sed 's/-$//'
+}
+default_of() {  # default_of NAME|ID → "ID<tab>NAME<tab>URL" of a default, if it is one
+    local want; want=$(id_of "$1")
+    awk -F '\t' -v w="$want" '$1 == w' <<<"$DEFAULTS"
+}
+
+# ── the Exec line (Desktop Entry spec: quoting, then field codes, then the string escapes) ───────────────────
+exec_arg() {
+    local s=$1
+    s=${s//\\/\\\\}; s=${s//\"/\\\"}; s=${s//\`/\\\`}; s=${s//\$/\\\$}   # inside "…": \ " ` $ get a backslash
+    s=${s//%/%%}                                                           # % is a field code
+    s="\"$s\""
+    printf '%s' "${s//\\/\\\\}"                                            # the value is a string: \ → \\
+}
+
+# ── icons ─────────────────────────────────────────────────────────────────────────────────────────────────────
+fetch() {  # fetch URL FILE: https only (redirects too), at most MAX bytes; prints the final URL
+    local url=$1 out=$2 eff
+    valid_url "$url" || return 1
+    eff=$(curl -sfL --proto =https --proto-redir =https --max-redirs 5 --connect-timeout 8 --max-time 20 \
+        --max-filesize "$MAX" -A "$UA" -w '%{url_effective}' -o "$out" -- "$url" 2>/dev/null) || return 1
+    local size; size=$(stat -c %s -- "$out" 2>/dev/null || echo 0)
+    (( size > 0 && size <= MAX )) || return 1
+    printf '%s' "$eff"
+}
+png_ok() {  # a well-formed PNG: signature, every chunk's CRC, a sane IHDR, IEND at the end (Lua: no extra package)
+    lua - "$1" <<'LUA' 2>/dev/null
+local f = assert(io.open(arg[1], "rb")); local d = f:read("a"); f:close()
+if d:sub(1, 8) ~= "\137PNG\r\n\26\n" then os.exit(1) end
+local crc = {}
+for i = 0, 255 do local c = i; for _ = 1, 8 do c = (c & 1 == 1) and (0xEDB88320 ~ (c >> 1)) or (c >> 1) end; crc[i] = c end
+local function crc32(s, a, b) local c = 0xFFFFFFFF; for i = a, b do c = crc[(c ~ s:byte(i)) & 0xFF] ~ (c >> 8) end; return c ~ 0xFFFFFFFF end
+local p, first, idat = 9, true, false
+while p + 11 <= #d do
+    local len, typ = string.unpack(">I4c4", d, p)
+    if len > #d - p - 11 then os.exit(1) end
+    if first then
+        if typ ~= "IHDR" or len ~= 13 then os.exit(1) end
+        local w, h = string.unpack(">I4I4", d, p + 8)
+        if w < 1 or h < 1 or w > 2048 or h > 2048 then os.exit(1) end
+        first = false
+    end
+    if string.unpack(">I4", d, p + 8 + len) ~= crc32(d, p + 4, p + 7 + len) then os.exit(1) end
+    if typ == "IDAT" then idat = true end
+    if typ == "IEND" then os.exit((idat and p + 12 == #d + 1) and 0 or 1) end
+    p = p + 12 + len
+end
+os.exit(1)
+LUA
+}
+ico_png() {  # ico_png ICO OUT: the biggest PNG inside a .ico (the BMP kind needs ImageMagick)
+    lua - "$1" "$2" <<'LUA' 2>/dev/null
+local f = assert(io.open(arg[1], "rb")); local d = f:read("a"); f:close()
+if #d < 6 or d:sub(1, 4) ~= "\0\0\1\0" then os.exit(1) end
+local n = string.unpack("<I2", d, 5)
+local best, bw
+for i = 0, math.min(n, 64) - 1 do
+    local e = 7 + i * 16
+    if e + 15 > #d then os.exit(1) end
+    local w = d:byte(e); if w == 0 then w = 256 end
+    local size, off = string.unpack("<I4I4", d, e + 8)
+    if off + size <= #d and d:sub(off + 1, off + 8) == "\137PNG\r\n\26\n" and (not bw or w > bw) then best, bw = d:sub(off + 1, off + size), w end
+end
+if not best then os.exit(1) end
+local o = assert(io.open(arg[2], "wb")); o:write(best); o:close()
+LUA
+}
+icon_from_file() {  # icon_from_file FILE OUT: a checked PNG at OUT, or failure
+    local in=$1 out=$2 kind
+    kind=$(head -c 16 -- "$in" | od -An -tx1 | tr -d ' \n')
+    case $kind in
+        89504e470d0a1a0a*) kind=png ;;
+        00000100*) kind=ico ;;
+        ffd8ff*) kind=jpeg ;;
+        47494638*) kind=gif ;;
+        52494646????????57454250*) kind=webp ;;
+        *) return 1 ;;   # SVG and the rest: only the formats above, by their first bytes
+    esac
+    if [ -z "${OLYMPARCH_WEBAPP_NO_MAGICK:-}" ] && command -v magick >/dev/null 2>&1; then   # (the variable: tests)
+        # the coder is named, so ImageMagick never guesses a format (no MVG/MSL/delegates); decoding is the check
+        magick -limit memory 64MiB -limit map 128MiB -limit disk 0 -limit width 4096 -limit height 4096 \
+            "$kind:$in[0]" -resize '256x256>' "png:$out" 2>/dev/null && png_ok "$out" && return 0
+        rm -f -- "$out"
+        return 1
+    fi
+    case $kind in
+        png) png_ok "$in" && cp -- "$in" "$out" ;;
+        ico) ico_png "$in" "$out" && png_ok "$out" || { rm -f -- "$out"; return 1; } ;;
+        *) return 1 ;;
+    esac
+}
+abs_url() {  # abs_url BASE HREF: HREF made absolute against BASE (https only)
+    local base=$1 href=$2 origin dir
+    href=${href//&amp;/&}
+    origin=$(printf '%s' "$base" | grep -oE '^https://[^/?#]+')
+    case $href in
+        https://*) printf '%s' "$href" ;;
+        //*) printf 'https:%s' "$href" ;;
+        /*) printf '%s%s' "$origin" "$href" ;;
+        http:* | data:* | javascript:* | *:*) return 1 ;;
+        *) dir=${base%%[?#]*}; dir=${dir%/*}; [ "$dir" = "https:/" ] && dir=$origin; printf '%s/%s' "$dir" "$href" ;;
+    esac
+}
+site_icon() {  # site_icon URL OUT: the site's apple-touch-icon or biggest favicon, checked; or failure
+    local url=$1 out=$2 tmp page eff origin cand
+    tmp=$(mktemp -d) || return 1
+    page=$tmp/page.html
+    eff=$(fetch "$url" "$page") || eff=$url
+    origin=$(printf '%s' "$eff" | grep -oE '^https://[^/?#]+')
+    {
+        if [ -s "$page" ]; then
+            # every <link …> with rel=icon, apple-touch-icon …: «score href», best first
+            tr '\n' ' ' <"$page" | grep -oiE '<link[^>]+>' | while IFS= read -r tag; do
+                rel=$(printf '%s' "$tag" | grep -oiE "rel=[\"'][^\"']*[\"']" | head -n 1 | tr 'A-Z' 'a-z')
+                href=$(printf '%s' "$tag" | grep -oiE "href=[\"'][^\"']+[\"']" | head -n 1 | sed -E "s/^href=[\"']//I; s/[\"']$//")
+                sizes=$(printf '%s' "$tag" | grep -oiE "sizes=[\"'][0-9]+x" | grep -oE '[0-9]+' | head -n 1)
+                [ -n "$href" ] || continue
+                case $rel in
+                    *apple-touch-icon*) score=$((1000 + ${sizes:-180})) ;;
+                    *icon*) score=$((${sizes:-16})) ;;
+                    *) continue ;;
+                esac
+                (( score > 9999 )) && score=9999
+                printf '%s %s\n' "$score" "$href"
+            done | sort -rn -k1,1 | head -n 8 | while read -r _ href; do abs_url "$eff" "$href" && echo; done
+        fi
+        printf '%s/apple-touch-icon.png\n%s/favicon.ico\n' "$origin" "$origin"
+    } >"$tmp/candidates"
+    local ok=1 i=0
+    while IFS= read -r cand && (( i < 10 )); do
+        i=$((i + 1))
+        [ -n "$cand" ] || continue
+        rm -f -- "$tmp/icon"
+        fetch "$cand" "$tmp/icon" >/dev/null || continue
+        if icon_from_file "$tmp/icon" "$out"; then ok=0; break; fi
+    done <"$tmp/candidates"
+    rm -rf -- "${tmp:?}"
+    return $ok
+}
+
+# ── commands ──────────────────────────────────────────────────────────────────────────────────────────────────
+wm_class() {  # wm_class ID URL: the Wayland app ID Chromium gives the window: chrome-HOST_PATH-webapp-ID, where
+    # HOST_PATH is the host, «_» and the path (no query), with every character but letters, digits, . and - as «_»
+    local rest=${2#https://} host path
+    rest=${rest%%[?#]*}
+    host=${rest%%/*}; host=${host%%:*}   # (the port is not part of it)
+    path=/; [[ $rest == */* ]] && path=/${rest#*/}
+    printf 'chrome-%s-webapp-%s' "$(printf '%s_%s' "$host" "$path" | tr -c 'A-Za-z0-9.-' '_')" "$1"
+}
+desktop_of() { printf '%s/webapp-%s.desktop' "$APPS" "$1"; }
+ours() { [ -f "$1" ] && grep -qx 'X-Olymparch-WebApp=true' -- "$1"; }
+
+cmd_add() {
+    local name=${1:-} url=${2:-} icon=${3:-} id def file iconfile cat=Network
+    [ -n "$name" ] || die "$(L "usage: olymparch-webapp add NAME [URL] [ICON]" "bruk: olymparch-webapp add NAVN [URL] [IKON]")"
+    if [ -z "$url" ]; then
+        def=$(default_of "$name")
+        [ -n "$def" ] || die "$(L "no URL given, and «$name» is not one of the defaults (olymparch-webapp defaults)" "ingen URL, og «$name» er ikke en av standardene (olymparch-webapp defaults)")"
+        IFS=$'\t' read -r _ name url <<<"$def"
+    fi
+    valid_name "$name" || die "$(L "bad name: use 1–40 letters, digits, spaces, . _ or -" "ugyldig navn: bruk 1–40 bokstaver, tall, mellomrom, . _ eller -")"
+    valid_url "$url" || die "$(L "bad URL: it must be https:// with a host name, without spaces, quotes or backslashes" "ugyldig URL: den må være https:// med et vertsnavn, uten mellomrom, anførselstegn eller omvendt skråstrek")"
+    id=$(id_of "$name")
+    valid_id "$id" || die "$(L "bad name" "ugyldig navn")"
+    file=$(desktop_of "$id")
+    [ -e "$file" ] && ! ours "$file" && die "$(L "$file exists and is not a web app" "$file finnes og er ikke en webapp")"
+    local newdir=0
+    [ -d "$APPS" ] || newdir=1   # the launcher only watches folders that were there when it started
+    mkdir -p -- "$APPS" "$STORE/icons" || exit 1
+    iconfile=$STORE/icons/$id.png
+    rm -f -- "$iconfile"
+    if [ -n "$icon" ]; then
+        if [[ $icon == https://* ]]; then
+            local t; t=$(mktemp) && fetch "$icon" "$t" >/dev/null && icon_from_file "$t" "$iconfile"
+            rm -f -- "$t"
+        elif [[ $icon == *://* ]]; then
+            die "$(L "the icon must be a file or an https:// address" "ikonet må være en fil eller en https://-adresse")"
+        else
+            [ -f "$icon" ] && (( $(stat -c %s -- "$icon") <= MAX )) && icon_from_file "$icon" "$iconfile"
+        fi
+        [ -s "$iconfile" ] || echo "olymparch-webapp: $(L "that icon could not be used; trying the site's own" "det ikonet kunne ikke brukes; prøver nettstedets eget")" >&2
+    fi
+    [ -s "$iconfile" ] || site_icon "$url" "$iconfile" || rm -f -- "$iconfile"
+    [ -s "$iconfile" ] || iconfile=$GLOBE
+    case $id in xbox-cloud-gaming | geforce-now) cat=Game ;; esac
+    {
+        echo '[Desktop Entry]'
+        echo 'Type=Application'
+        echo "Name=$name"
+        echo "Comment=$(L "Web app" "Webapp"): ${url%%[?#]*}"
+        echo "Exec=/usr/bin/olymparch-webapp launch $id $(exec_arg "$url")"
+        echo "Icon=$iconfile"
+        echo "StartupWMClass=$(wm_class "$id" "$url")"
+        echo "Categories=$cat;"
+        echo 'Terminal=false'
+        echo 'X-Olymparch-WebApp=true'
+        echo "X-Olymparch-WebApp-URL=$url"
+    } >"$file.tmp" && mv -f -- "$file.tmp" "$file" || exit 1
+    command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database -q "$APPS" 2>/dev/null
+    echo "$(L "Added" "La til") $name ($url) → $file"
+    [ "$iconfile" = "$GLOBE" ] && echo "  $(L "icon: the site gave none that checked out; using the globe" "ikon: nettstedet ga ingen som holdt mål; bruker globusen")"
+    (( newdir )) && echo "  $(L "the menu shows it after the next login (its folder is new)" "menyen viser den etter neste innlogging (mappen er ny)")"
+    browser_bin >/dev/null || echo "  $(L "Chromium is not installed: the app offers it the first time it opens (or run: olymparch-webapp browser)" "Chromium er ikke installert: appen tilbyr det første gang den åpnes (eller kjør: olymparch-webapp browser)")"
+    return 0
+}
+
+cmd_remove() {
+    local id file
+    [ -n "${1:-}" ] || die "$(L "usage: olymparch-webapp remove NAME|ID" "bruk: olymparch-webapp remove NAVN|ID")"
+    valid_name "$1" || die "$(L "bad name" "ugyldig navn")"
+    id=$(id_of "$1")
+    valid_id "$id" || die "$(L "bad name" "ugyldig navn")"
+    file=$(desktop_of "$id")
+    ours "$file" || die "$(L "no web app called «$1»" "ingen webapp som heter «$1»")"
+    rm -f -- "$file" "$STORE/icons/$id.png"
+    # its own profile (the login) goes too; the ID was checked above, so this is always STORE/<letters-digits->
+    [ -d "$STORE/$id" ] && rm -rf -- "${STORE:?}/${id:?}"
+    command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database -q "$APPS" 2>/dev/null
+    echo "$(L "Removed" "Fjernet") $id"
+}
+
+cmd_list() {
+    local f id name url
+    for f in "$APPS"/webapp-*.desktop; do
+        ours "$f" || continue
+        id=${f##*/webapp-}; id=${id%.desktop}
+        name=$(sed -n 's/^Name=//p' -- "$f" | head -n 1)
+        url=$(sed -n 's/^X-Olymparch-WebApp-URL=//p' -- "$f" | head -n 1)
+        printf '%s\t%s\t%s\n' "$id" "$name" "$url"
+    done
+}
+
+cmd_defaults() {
+    local id name url
+    while IFS=$'\t' read -r id name url; do
+        printf '%s\t%s\t%s\t%s\n' "$id" "$name" "$url" "$(ours "$(desktop_of "$id")" && echo installed || echo -)"
+    done <<<"$DEFAULTS"
+}
+
+browser_bin() {  # the Chromium-family browser web apps run in: Chromium first
+    local b
+    for b in chromium brave google-chrome-stable; do command -v "$b" >/dev/null 2>&1 && { echo "$b"; return 0; }; done
+    return 1
+}
+cmd_browser() {  # one click: pkexec install-app webapps (Chromium), then it is there
+    browser_bin >/dev/null && { echo "$(L "Chromium is installed" "Chromium er installert")"; return 0; }
+    pkexec "$INSTALL_APP" webapps && browser_bin >/dev/null && return 0
+    notify-send -u critical -a Olymparch "$(L "Chromium was not installed" "Chromium ble ikke installert")" \
+        "$(L "See /var/log/olymparch-install-app.log" "Se /var/log/olymparch-install-app.log")" 2>/dev/null
+    return 1
+}
+
+cmd_launch() {
+    local id=${1:-} url=${2:-} b choice
+    valid_id "$id" && valid_url "$url" || die "$(L "refused: bad web app" "avvist: ugyldig webapp")"
+    if ! b=$(browser_bin); then
+        choice=$(notify-send -a Olymparch -w \
+            --action=install="$(L "Install Chromium" "Installer Chromium")" --action=later="$(L "Not now" "Ikke nå")" \
+            "$(L "Web apps need Chromium" "Webapper trenger Chromium")" \
+            "$(L "It opens each web app in its own window, with its own login." \
+                 "Den åpner hver webapp i sitt eget vindu, med sin egen innlogging.")")
+        [ "$choice" = install ] || exit 0
+        cmd_browser || exit 1
+        b=$(browser_bin) || exit 1
+    fi
+    mkdir -p -- "$STORE/$id"
+    # --class names the window on X11; on Wayland Chromium names an --app window itself, as
+    # chrome-<site>-<profile folder>: the profile folder «webapp-ID» makes that end in -webapp-ID (see wm_class)
+    exec "$b" --app="$url" --class="webapp-$id" --user-data-dir="$STORE/$id" --profile-directory="webapp-$id" \
+        --no-first-run --no-default-browser-check --password-store=basic
+}
+
+case ${1:-} in
+    add) shift; cmd_add "$@" ;;
+    remove | rm) shift; cmd_remove "$@" ;;
+    # tab-separated for scripts (the menu); lined up in a terminal
+    list | ls) if [ -t 1 ]; then cmd_list | column -t -s $'\t'; else cmd_list; fi ;;
+    defaults) if [ -t 1 ]; then cmd_defaults | column -t -s $'\t'; else cmd_defaults; fi ;;
+    browser) cmd_browser ;;
+    launch) shift; cmd_launch "$@" ;;
+    *) sed -n '5,13s/^# \{0,1\}//p' "$0" >&2; exit 2 ;;
+esac

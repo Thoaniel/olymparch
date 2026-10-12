@@ -1,6 +1,7 @@
 // The Install button is the consent: the active, local admin (wheel) user may run install-app without a
 // password. install-app takes an app ID from a fixed list (torrent → transmission-gtk, backup → git openssh age,
-// screen-reader → orca, nightlight → hyprsunset, tailscale), never a package name.
+// screen-reader → orca, nightlight → hyprsunset, tailscale, webapps → chromium, and the app catalog in
+// default/menu/catalog.json), never a package name.
 polkit.addRule(function (action, subject) {
     if (action.id == "org.olymparch.install-app" && subject.local && subject.active && subject.isInGroup("wheel")) {
         return polkit.Result.YES;
