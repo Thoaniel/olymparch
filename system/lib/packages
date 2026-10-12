@@ -1,7 +1,7 @@
 #!/bin/bash
 # The Olymparch menu's package helper (Install → Package, Remove). Fixed actions, one package name, official
-# repositories only. Read-only actions run as you; install and remove only through pkexec (polkit:
-# 50-olymparch-packages.rules), and the menu runs them only after you confirmed what `preview` showed.
+# repositories only. Read-only actions run as you; install and remove only through pkexec, which always asks for
+# your password (50-olymparch-packages.rules), and the menu runs them only after you confirmed what `preview` showed.
 #
 #   packages search WORDS…        pacman -Ss in the allowed repositories (read-only): repo/name<TAB>version<TAB>description
 #   packages preview install NAME what installing NAME pulls in: repo/name<TAB>version<TAB>size (read-only)
@@ -26,7 +26,7 @@ PROTECTED=(base base-devel linux linux-lts linux-zen linux-hardened linux-firmwa
     systemd systemd-libs systemd-sysvcompat dbus dbus-broker pacman pacman-mirrorlist archlinux-keyring sudo bash
     coreutils filesystem util-linux shadow pam polkit mkinitcpio limine grub efibootmgr btrfs-progs cryptsetup snapper
     networkmanager hyprland hypridle hyprlock quickshell xdg-desktop-portal-hyprland pipewire pipewire-pulse
-    wireplumber foot ttf-jetbrains-mono ttf-nerd-fonts-symbols-mono adwaita-cursors libnotify plymouth upower mesa
+    wireplumber hyprpolkitagent foot ttf-jetbrains-mono ttf-nerd-fonts-symbols-mono adwaita-cursors libnotify plymouth upower mesa
     nvidia nvidia-open nvidia-dkms nvidia-utils intel-ucode amd-ucode lua olymparch olymparch-base)
 # What olymparch-install puts in (pacstrap), for installs from before it wrote $BASE_LIST
 INSTALLER=(firefox thunar tumbler gvfs gvfs-mtp gvfs-gphoto2 thunar-volman imv mpv xdg-utils xdg-user-dirs udiskie

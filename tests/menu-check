@@ -84,13 +84,14 @@ if have_pacman:
 # ── polkit: scoped to this helper, the active local wheel session
 rules = (root / "system/polkit/50-olymparch-packages.rules").read_text()
 if ('action.id == "org.olymparch.packages"' not in rules or "subject.local && subject.active" not in rules
-        or 'subject.isInGroup("wheel")' not in rules or rules.count("polkit.Result.YES") != 1):
-    bad("50-olymparch-packages.rules must say YES only for org.olymparch.packages, active local wheel")
+        or 'subject.isInGroup("wheel")' not in rules or "Result.YES" in rules or "return polkit.Result.AUTH_ADMIN_KEEP" not in rules
+        or "return polkit.Result.NO" not in rules):
+    bad("50-olymparch-packages.rules: org.olymparch.packages must always ask for the password (AUTH_ADMIN_KEEP for the active local wheel user, NO for others), never YES")
 pol = (root / "system/polkit/org.olymparch.packages.policy").read_text()
 if '<annotate key="org.freedesktop.policykit.exec.path">/usr/lib/olymparch/packages</annotate>' not in pol or "<allow_any>no</allow_any>" not in pol:
     bad("org.olymparch.packages.policy must name exactly /usr/lib/olymparch/packages and allow no one else")
 inst = (root / "bin/olymparch-install").read_text()
-for need in ("system/lib/packages /mnt/usr/lib/olymparch/packages", "org.olymparch.packages.policy", "50-olymparch-packages.rules",
+for need in ("system/lib/packages /mnt/usr/lib/olymparch/packages", "hyprpolkitagent", "org.olymparch.packages.policy", "50-olymparch-packages.rules",
              "/var/lib/olymparch/base-packages"):
     if need not in inst:
         bad(f"bin/olymparch-install must install {need}")
@@ -129,6 +130,8 @@ if menu.count('"pkexec"') != 2:
 if "confirm" not in menu:
     bad("Menu.qml: installs and removals need a confirm step")
 cheat = (root / "default/shell/Cheatsheet.qml").read_text()
+if "hyprpolkitagent" not in (root / "default/hypr/olymparch.lua").read_text():
+    bad("olymparch.lua must start hyprpolkitagent (the password prompt) with the session")
 if '"hyprctl", "binds", "-j"' not in cheat:
     bad("Cheatsheet.qml must read the live shortcuts from hyprctl binds -j")
 

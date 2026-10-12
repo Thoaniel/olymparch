@@ -145,6 +145,11 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("sh -c '[ \"$(olymparch-settings get display.night_light 2>/dev/null)\" = true ] && command -v hyprsunset >/dev/null && exec hyprsunset'")
 end)
 
+-- The polkit agent: the password prompt when something asks for it (the menu's Install → Package and Remove)
+hl.on("hyprland.start", function()
+    hl.exec_cmd("sh -c 'for b in /usr/lib/hyprpolkitagent/hyprpolkitagent /usr/libexec/hyprpolkitagent; do [ -x \"$b\" ] && exec \"$b\"; done'")
+end)
+
 -- Settings → Accessibility → Screen reader: Orca starts with the session while it is on (and installed)
 hl.on("hyprland.start", function()
     hl.exec_cmd("sh -c '[ \"$(olymparch-settings get accessibility.screen_reader 2>/dev/null)\" = true ] && command -v orca >/dev/null && exec orca'")

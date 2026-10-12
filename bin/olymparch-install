@@ -319,6 +319,9 @@ fi
 install -Dm755 /usr/share/olymparch/system/lib/packages /mnt/usr/lib/olymparch/packages
 install -Dm644 /usr/share/olymparch/system/polkit/org.olymparch.packages.policy /mnt/usr/share/polkit-1/actions/org.olymparch.packages.policy
 install -Dm644 /usr/share/olymparch/system/polkit/50-olymparch-packages.rules /mnt/usr/share/polkit-1/rules.d/50-olymparch-packages.rules
+# the password prompt for it (and any pkexec that asks): a polkit agent, started with the session in olymparch.lua
+arch-chroot /mnt pacman -S --noconfirm --needed hyprpolkitagent >/dev/null ||
+    step "$(L "Warning: hyprpolkitagent was not installed; password prompts will not show" "Advarsel: hyprpolkitagent ble ikke installert; passordspørsmål vises ikke")"
 mkdir -p /mnt/var/lib/olymparch
 arch-chroot /mnt pacman -Qqe >/mnt/var/lib/olymparch/base-packages
 # ── (end of the menu block)

@@ -1,0 +1,177 @@
+#!/bin/bash
+# VM test: the Olymparch menu (Super+Alt+Space) and the list of shortcuts (Super+K). Copies the shell, the Hyprland
+# defaults, the schema, the catalog, olymparch-settings and the package helper (with its polkit rule) from this repo
+# into a copy of the installed disk (no rebuild), then takes a picture of every level, searches, opens the menu from
+# the bolt in the bar, installs a small official package (cowsay) through Install → Package and removes it again
+# through Remove, checks what the helper refuses (AUR, -Syu, paths, URLs, ; and spaces, system packages), and shows
+# the shortcut list before and after a shortcut is moved. The shell runs with LANG=nb_NO (Norwegian text).
+#   OLYMPARCH_BASE=$HOME/dev/olymparch-base tests/vm/menu
+set -uo pipefail
+cd "$(dirname "$0")/../.."
+. dev/env
+SRC=${OLYMPARCH_BASE:-tests/vm/out/install-disk}   # a read-only installed disk to test on (overlay)
+[ -f "$SRC/disk.qcow2" ] || { echo "kjør tests/vm/install-disk først (eller sett OLYMPARCH_BASE)" >&2; exit 2; }
+O=tests/vm/out/menu
+rm -rf -- tests/vm/out/menu
+mkdir -p "$O"
+install -m644 "$SRC/vars.fd" "$O/vars.fd"   # a writable copy (the base is read-only)
+qemu-img create -q -f qcow2 -b "$(realpath "$SRC/disk.qcow2")" -F qcow2 "$O/disk.qcow2"
+QMP=$O/qmp.sock
+. tests/vm/lib.sh
+PW='olymp-test-123'
+trap 'kill "$QPID" 2>/dev/null; python3 -I tests/vm/report.py tests/vm/out/report.html "$O" >/dev/null 2>&1' EXIT
+t0=$SECONDS
+fails=()
+check() {  # check NAME 'condition': runs in the VM terminal (it needs the keyboard), answers on the serial console
+    keys " c $1 '$2'\n" 0.3
+    wait_for "CHK-$1-(OK|NO)" 30
+    seen "CHK-$1-OK" || fails+=("$1")
+}
+menu_open() { press meta_l+alt_l+spc; sleep 1.2; }
+
+vm boot.log -virtfs local,path="$PWD",mount_tag=olysrc,security_model=none,readonly=on,id=src -device qemu-xhci,id=xhci
+unlock_and_desktop "$PW"
+
+# This repo's files in place, the shell restarted in Norwegian, fresh package lists (for the install test)
+press meta_l+ret; sleep 2
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /mnt/default/settings /mnt/default/menu /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -m755 /mnt/system/bin/olymparch-settings /mnt/system/bin/olymparch-changes /usr/bin/ && sudo install -Dm755 /mnt/system/lib/packages /usr/lib/olymparch/packages && sudo install -Dm755 /mnt/system/lib/install-app /usr/lib/olymparch/install-app && sudo install -Dm644 /mnt/system/polkit/org.olymparch.packages.policy /usr/share/polkit-1/actions/org.olymparch.packages.policy && sudo install -Dm644 /mnt/system/polkit/50-olymparch-packages.rules /usr/share/polkit-1/rules.d/50-olymparch-packages.rules && sudo systemctl restart polkit && sudo pacman -Sy >/dev/null && sudo pacman -S --noconfirm --needed hyprpolkitagent >/dev/null && sudo chmod 666 /dev/kmsg && hyprctl reload >/dev/null; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=nb_NO.UTF-8 setsid -f /usr/lib/olymparch/launch-shell; echo '<2>MENU-UPDATED' > /dev/kmsg\n" 1
+keys "$PW\n" 1
+wait_for 'MENU-UPDATED' 120 || finish "FAIL · fikk ikke kopiert filene inn"
+keys "c() { if eval \"\$2\" >/dev/null 2>&1; then echo \"<2>CHK-\$1-OK\"; else echo \"<2>CHK-\$1-NO\"; fi > /dev/kmsg; }; clear\n" 0.5
+sleep 4
+check no-cowsay '! pacman -Q cowsay'
+# the password prompt (olymparch.lua starts it with the session; this session started before it was installed)
+keys "clear; setsid -f sh -c 'for b in /usr/lib/hyprpolkitagent/hyprpolkitagent /usr/libexec/hyprpolkitagent; do [ -x \"\$b\" ] && exec \"\$b\"; done' >/dev/null 2>&1; sleep 2; pgrep -f hyprpolkitagent >/dev/null && echo '<2>AGENT-UP' > /dev/kmsg\n" 1
+wait_for 'AGENT-UP' 20 || fails+=("hyprpolkitagent startet ikke")
+keys "clear\n" 0.3
+python3 -I tests/vm/qmp.py "$QMP" cmd device_add '{"driver": "usb-tablet", "bus": "xhci.0", "id": "tablet"}' >/dev/null
+
+# ── every level (top: Apper 0, Stil 1, Installer 2, Fjern 3, Verktøy 4, Oppsett 5, Oppdater 6, System 7, Hjelp 8)
+menu_open
+shot meny "Super+Alt+Space: Olymparch-menyen, øverste nivå"
+press down; press ret; sleep 0.5
+shot stil "Stil: Tema og Bakgrunn"
+press down; press ret; sleep 0.5
+shot bakgrunn "Stil › Bakgrunn: Fakkel (i bruk), Rolig, Stille"
+press esc; press esc
+press down; press ret; sleep 0.5
+shot installer "Installer: Apper, Nettapp (kommer), Pakke"
+press ret; sleep 0.8
+shot katalog "Installer › Apper: katalogen (ett klikk via install-app)"
+press esc; press esc
+press down; press ret; sleep 3
+shot fjern "Fjern: det du har installert selv (ingen systempakker)"
+press esc
+press down; press ret; sleep 0.5
+shot verktoy "Verktøy (olymparch-tool mangler ennå: «kommer»)"
+press esc
+press down; press ret; sleep 0.5
+shot oppsett "Oppsett: Wi-Fi, Bluetooth, Skjermer, Lyd, Tastatur"
+press esc
+press down; press ret; sleep 0.5
+shot oppdater "Oppdater: Oppdater nå, Hva som er endret"
+press down; press ret; sleep 2
+shot endret "Oppdater › Hva som er endret (olymparch-changes)"
+press esc; press esc
+press down; press ret; sleep 0.5
+shot system "System: Lås, Logg ut, Start på nytt, Slå av, Rull tilbake"
+press down; press down; press ret; sleep 0.5
+shot system-bekreft "Start på nytt: bekreftelse, Avbryt er valgt"
+press esc; press esc
+press down; press ret; sleep 0.5
+shot hjelp "Hjelp: hurtigtaster, brukerveiledning, meld fra om en feil"
+press esc
+
+# ── search across every level
+keys "blue" 1
+shot sok-blue "Søk «blue»: Oppsett › Bluetooth"
+press esc
+keys "slaa" 0.6
+keys "\b\bå av" 1
+shot sok-sla-av "Søk «slå av»: System › Slå av"
+press esc; press esc
+sleep 1
+shot lukket "Esc på øverste nivå lukker menyen"
+
+# ── the bolt in the bar opens it too
+python3 -I tests/vm/qmp.py "$QMP" click 582 17 1280 800
+sleep 1.2
+shot lyn "Klikk på lynet i linjen åpner menyen"
+
+# ── Install → Package: search, preview, install cowsay
+keys "cowsay" 1
+shot sok-cowsay "Søk «cowsay»: siste rad søker i pakkene"
+press up; press ret; sleep 3
+shot pakke-sok "Installer › Pakke: treff fra de offisielle pakkebrønnene"
+press ret; sleep 3
+shot pakke-forhånd "Installere cowsay? Det som hentes og størrelsen; Installer er valgt"
+# first a wrong password: refused, nothing installed
+press ret; sleep 3
+shot passord "Installer: menyen viker, hyprpolkitagent spør etter passordet"
+keys "feil-passord\n" 4
+shot passord-feil "Feil passord: agenten sier nei"
+press esc; sleep 3
+shot passord-avvist "Menyen er tilbake: «Ikke gjort: feil passord …», ingenting installert"
+press ret; sleep 1.5
+press ret; sleep 3
+press ret; sleep 3
+shot passord-igjen "Ny runde: passordspørsmålet igjen"
+keys "$PW\n" 5
+shot pakke-installerer "Riktig passord: installerer, utdata fra hjelperen mens det går"
+for _ in $(seq 60); do sleep 2; python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/probe.ppm"; done &
+wait $!
+shot pakke-installert "Installert: cowsay"
+press ret; sleep 1.5
+shot pakke-etter "Tilbake i søket: cowsay er merket installert"
+
+# refused in the menu: an AUR-only name and something that is not a name
+press esc; keys "yay" 3
+shot pakke-aur "«yay» (bare i AUR): ingen pakke med det navnet"
+press esc; keys "sl;rm" 1.5
+shot pakke-ugyldig "«sl;rm»: ikke et pakkenavn, ingenting kjøres"
+press esc; press esc; press esc; press esc; sleep 1
+check cowsay-in 'pacman -Qe cowsay && grep -q "install cowsay" /var/log/olymparch-packages.log'
+keys "clear\n" 0.3
+
+# ── Remove: cowsay, typed to find it
+menu_open
+press down; press down; press down; press ret; sleep 3
+keys "cowsay" 1
+shot fjern-sok "Fjern: «cowsay» filtrerer listen"
+press ret; sleep 3
+shot fjern-bekreft "Fjerne cowsay? Avbryt er valgt (rød Fjern over)"
+press up; press ret; sleep 3
+shot fjern-passord "Fjern: passordet huskes noen minutter (auth_admin_keep), ellers spør agenten igjen"
+keys "$PW\n" 8
+shot fjern-ferdig "Fjernet: cowsay"
+press esc; press esc; press esc; sleep 1
+check cowsay-out '! pacman -Q cowsay'
+
+# ── what the helper refuses, run as root (it checks before anything runs; exit 2, nothing run)
+keys "clear; for a in 'install yay' 'install -Syu' 'install --overwrite=*' 'install /tmp/x.pkg.tar.zst' 'install https://evil.example/x.pkg.tar.zst' 'install sl;id' 'install a b' 'install xorg' 'remove linux' 'remove systemd' 'remove hyprland' 'remove glibc'; do sudo /usr/lib/olymparch/packages \$a >/dev/null 2>\$HOME/err; echo \"\$? \$a: \$(cat \$HOME/err)\"; done | tee \$HOME/refused\n" 2
+keys "$PW\n" 6
+shot nekter "Hjelperen (som root) nekter: AUR, -Syu, --overwrite, filer, URL-er, ; og mellomrom, grupper, linux/systemd/hyprland/glibc (kode 2)"
+check refused '[ \$(grep -c "^2 " ~/refused) = 12 ] && ! pacman -Q yay'
+keys "clear\n" 0.3
+
+# ── the shortcut list: as it is, searched, and after a shortcut is moved
+press meta_l+k; sleep 2
+shot hurtigtaster "Super+K: alle hurtigtastene som virker nå, gruppert"
+keys "arbeid" 1
+shot hurtigtaster-sok "Søk «arbeid»: arbeidsflatene"
+press esc; press esc; sleep 1
+keys "olymparch-settings set keys.cheatsheet 'SUPER + J'; olymparch-settings add keyboard.custom_keys 'SUPER + B = firefox'; clear\n" 3
+press meta_l+j; sleep 2
+shot hurtigtaster-flyttet "Hurtigtastlisten flyttet til Super+J, og en egen (Super+B = firefox) er med"
+press esc; sleep 1
+check moved 'hyprctl binds -j | grep -q "\"key\": \"J\""'
+keys "olymparch-settings reset keys.cheatsheet; clear\n" 2
+
+# The shell's own log on the serial console, for debugging
+keys "tail -n 60 ~/.local/state/olymparch/shell.log | while IFS= read -r l; do echo \"<2>QS: \$l\" > /dev/kmsg; done; echo '<2>LOG-DONE' > /dev/kmsg\n" 1
+wait_for 'LOG-DONE' 20
+grep -aoE 'QS: .*' "$O/$LOG" | sed 's/\x1b\[[0-9;]*m//g' >"$O/shell-log.txt"
+errors=$(awk '/Launching config/ {n = 0} /ERROR|TypeError|ReferenceError/ {n++} END {print n + 0}' "$O/shell-log.txt")
+((errors == 0)) || fails+=("$errors feil i skall-loggen")
+rm -f -- "$O/probe.ppm"
+finish "$([ ${#fails[@]} = 0 ] && echo PASS || echo "FAIL (${fails[*]})") · menyen: alle nivåer, søk, lynet, cowsay installert og fjernet, 12 nektet, hurtigtaster på $((SECONDS - t0)) s"

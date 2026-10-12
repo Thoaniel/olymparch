@@ -167,6 +167,11 @@ Scope {
     readonly property var rows: {
         if (view) return view.rows;
         if (kind === "pkgsearch") return pkgRows();
+        if (query.trim() && kind === "remove") {   // what you can remove that matches first, then everything else
+            const words = query.toLowerCase().split(/\s+/).filter(w => w);
+            const mine = removeRows().filter(r => !r.text && words.every(w => (r.label + " " + (r.sub || "") + " " + r.hint).toLowerCase().includes(w)));
+            return mine.concat(searchRows().filter(r => !(mine.length && r.text)));
+        }
         if (query.trim()) return searchRows();
         if (kind === "remove") return removeRows();
         return here ? here.children : tree;
@@ -326,18 +331,22 @@ Scope {
             menu.confirm(inst ? menu.t("Install ", "Installere ") + label + "?" : menu.t("Remove ", "Fjerne ") + label + "?", [head].concat(list),
                          inst ? menu.t("Install", "Installer") : menu.t("Remove", "Fjern"), !inst,
                          () => menu.runJob((inst ? menu.t("Installing ", "Installerer ") : menu.t("Removing ", "Fjerner ")) + label,
-                                           ["pkexec", menu.helper, action, name], label, inst));
+                                           ["pkexec", menu.helper, action, name], label, inst, true));
         }
     }
 
-    // progress: the helper's output as it comes; Esc hides the menu and a notification says when it is done
-    function runJob(title, cmd, label, inst) {
+    // progress: the helper's output as it comes; Esc hides the menu and a notification says when it is done.
+    // The package helper asks for your password (hyprpolkitagent): the menu steps aside until it is typed.
+    property bool waitingAuth: false
+    function runJob(title, cmd, label, inst, asks) {
         busy = true;
         view = { kind: "run", title: title, label: label, inst: inst, lines: [], done: false, rows: [{ text: t("Starting …", "Starter …") }] };
         job.command = cmd;
         job.running = true;
+        if (asks) { waitingAuth = true; open = false; }
     }
     function jobLine(l) {
+        if (waitingAuth) { waitingAuth = false; open = true; }   // the password was right: show the progress again
         if (!view || view.kind !== "run" || !l.trim()) return;
         const lines = view.lines.concat([l]).slice(-10);
         view = Object.assign({}, view, { lines: lines, rows: lines.map(x => ({ text: x, dim: true })) });
@@ -347,17 +356,20 @@ Scope {
         stdout: SplitParser { onRead: l => menu.jobLine(l) }
         stderr: SplitParser { onRead: l => menu.jobLine(l) }
         onExited: code => {
-            menu.busy = false;
             const v = menu.view && menu.view.kind === "run" ? menu.view : { lines: [], label: "", inst: true };
             const ok = code === 0;
+            const denied = menu.waitingAuth && (code === 126 || code === 127);   // pkexec: cancelled, or a wrong password
             const msg = ok ? (v.inst ? menu.t("Installed: ", "Installert: ") : menu.t("Removed: ", "Fjernet: ")) + v.label
-                           : menu.t("Did not work. Details: /var/log/olymparch-packages.log", "Det gikk ikke. Detaljer: /var/log/olymparch-packages.log");
-            if (!menu.open) Quickshell.execDetached(["notify-send", "-a", "Olymparch", msg]);
+                      : denied ? menu.t("Not done: the password was wrong or the prompt was closed", "Ikke gjort: feil passord, eller spørsmålet ble lukket")
+                      : menu.t("Did not work. Details: /var/log/olymparch-packages.log", "Det gikk ikke. Detaljer: /var/log/olymparch-packages.log");
+            if (!menu.open && !menu.waitingAuth) Quickshell.execDetached(["notify-send", "-a", "Olymparch", msg]);
             const rows = v.lines.map(x => ({ text: x, dim: true }));
             rows.push({ text: msg, ok: ok, error: !ok });
             rows.push({ id: "back", icon: "", label: menu.t("Back", "Tilbake"), act: () => menu.back() });
             menu.view = Object.assign({}, v, { kind: "result", done: true, rows: rows, focus: rows.length - 1 });
             menu.current = rows.length - 1;
+            if (menu.waitingAuth) { menu.waitingAuth = false; menu.open = true; }
+            menu.busy = false;
             probe.running = true;
             if (menu.removableLoaded) menu.loadRemovable();
             if (menu.query.trim()) search.restart();

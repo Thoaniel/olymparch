@@ -3,7 +3,7 @@
  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <!-- pkexec /usr/lib/olymparch/packages install|remove NAME: the Olymparch menu's Install → Package and Remove.
      One package from core, extra, multilib or olymparch; never a system package removed.
-     50-olymparch-packages.rules lets the desktop's own (wheel) user do it after confirming in the menu. -->
+     Always asks for the password (50-olymparch-packages.rules: wheel users only); hyprpolkitagent shows the prompt. -->
 <policyconfig>
   <vendor>Olymparch</vendor>
   <action id="org.olymparch.packages">
