@@ -41,6 +41,21 @@ declare -A EN=(
     [o_obs]="OBS Studio"
     [o_code]="Code (VS Code)"
     [o_hib]="Hibernate (laptops; uses disk space equal to RAM)"
+    [more]="More apps and tools? All optional; the menu offers them later too. (Space to tick)"
+    [m_lutris]="Games: Lutris (GOG, Epic, emulators)"
+    [m_moonlight]="Games: Moonlight (stream from your own PC)"
+    [m_minecraft]="Games: Minecraft (Prism Launcher)"
+    [m_cloud]="Cloud gaming: Xbox Cloud Gaming, GeForce NOW"
+    [m_obsidian]="Apps: Obsidian (notes)"
+    [m_localsend]="Apps: LocalSend (send files nearby)"
+    [m_neovim]="Coding: Neovim"
+    [m_helix]="Coding: Helix"
+    [m_zed]="Coding: Zed"
+    [m_shelltools]="Terminal: fzf, zoxide, ripgrep, starship"
+    [m_tuis]="Terminal: btop, lazygit, lazydocker"
+    [m_alacritty]="Terminal: Alacritty (foot stays default)"
+    [m_kitty]="Terminal: kitty (foot stays default)"
+    [m_ghostty]="Terminal: Ghostty (foot stays default)"
     [summary]="Ready to install:\n\n  Disk:      %s (%s)\n  User:      %s\n  Keyboard:  %s\n  Time zone: %s\n  Options:   %s\n\nThe disk is erased when you press Install."
     [install]="Install"
     [cancel]="Cancel"
@@ -77,6 +92,21 @@ declare -A NB=(
     [o_obs]="OBS Studio"
     [o_code]="Kode (VS Code)"
     [o_hib]="Dvale (bærbare; bruker diskplass lik RAM)"
+    [more]="Flere apper og verktøy? Alt er valgfritt; menyen tilbyr dem senere også. (Mellomrom krysser av)"
+    [m_lutris]="Spill: Lutris (GOG, Epic, emulatorer)"
+    [m_moonlight]="Spill: Moonlight (strøm fra din egen PC)"
+    [m_minecraft]="Spill: Minecraft (Prism Launcher)"
+    [m_cloud]="Skyspill: Xbox Cloud Gaming, GeForce NOW"
+    [m_obsidian]="Apper: Obsidian (notater)"
+    [m_localsend]="Apper: LocalSend (send filer i nærheten)"
+    [m_neovim]="Koding: Neovim"
+    [m_helix]="Koding: Helix"
+    [m_zed]="Koding: Zed"
+    [m_shelltools]="Terminal: fzf, zoxide, ripgrep, starship"
+    [m_tuis]="Terminal: btop, lazygit, lazydocker"
+    [m_alacritty]="Terminal: Alacritty (foot er fortsatt standard)"
+    [m_kitty]="Terminal: kitty (foot er fortsatt standard)"
+    [m_ghostty]="Terminal: Ghostty (foot er fortsatt standard)"
     [summary]="Klar til å installere:\n\n  Disk:       %s (%s)\n  Bruker:     %s\n  Tastatur:   %s\n  Tidssone:   %s\n  Valg:       %s\n\nDisken slettes når du trykker Installer."
     [install]="Installer"
     [cancel]="Avbryt"
@@ -171,9 +201,22 @@ args=(games "$(t o_games)" ON emu "$(t o_emu)" OFF zeus "$(t o_zeus)" OFF discor
 OPTIONS=$(wt --title Olymparch --checklist "$(t opts)" 18 $W 8 "${args[@]}") || bail
 OPTIONS=$(echo "$OPTIONS" | tr -d '"' | tr ' ' ',')
 
+# 7b. More apps and tools (default/menu/catalog.json has the same ones). LocalSend comes from Olymparch's own repo
+# [olymparch]: offered only when it can be reached, as olymparch-install adds it only then.
+args=()
+for m in lutris moonlight minecraft cloud obsidian localsend neovim helix zed shelltools tuis alacritty kitty ghostty; do
+    if [ $m = localsend ]; then
+        curl -fsIL --max-time 8 https://github.com/Thoaniel/olymparch/releases/download/repo-x86_64/olymparch.db >/dev/null 2>&1 || continue
+    fi
+    args+=("$m" "$(t "m_$m")" OFF)
+done
+MORE=$(wt --title Olymparch --checklist "$(t more)" 22 $W 14 "${args[@]}") || bail
+MORE=$(echo "$MORE" | tr -d '"' | tr ' ' ',')
+[ -n "$MORE" ] && OPTIONS=${OPTIONS:+$OPTIONS,}$MORE
+
 # 8. Summary
 whiptail --backtitle "$BT" --title Olymparch --yes-button "$(t install)" --no-button "$(t cancel)" \
-    --yesno "$(printf "$(t summary)" "$DISK" "$size" "$USERNAME" "$KEYMAP" "$TIMEZONE" "${OPTIONS:--}")" 16 $W || bail
+    --yesno "$(printf "$(t summary)" "$DISK" "$size" "$USERNAME" "$KEYMAP" "$TIMEZONE" "${OPTIONS:--}")" 18 $W || bail
 
 umask 077
 {

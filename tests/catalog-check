@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+"""App catalog (no VM): default/menu/catalog.json agrees with what installs it.
+
+  tests/catalog-check        exit 0 and a summary, or 1 and one line per problem
+
+Fails if an entry lacks en/nb names or descriptions, has an unknown category or a duplicate id; if its «install»
+is not in system/lib/install-app's fixed list; if a «repo: olymparch» package is not pinned in repo/packages.tsv
+(or an install-app ID for one doesn't check for [olymparch]); if a «webapp» is not one of olymparch-webapp's
+defaults; or if an «installer» option is missing from olymparch-setup's checklist or olymparch-install.
+"""
+import json
+import re
+import sys
+from pathlib import Path
+
+root = Path(__file__).resolve().parent.parent
+problems = []
+cat = json.loads((root / "default/menu/catalog.json").read_text())
+install_app = (root / "system/lib/install-app").read_text()
+cases = dict(re.findall(r"^\s+([a-z0-9-]+)\) pkgs=\(([^)]*)\)", install_app, re.M))
+aur_guard = re.search(r"^\s+([a-z0-9|\s-]+)\) grep -qx '\\\[olymparch\\\]'", install_app, re.M)
+guarded = {x.strip() for x in aur_guard.group(1).split("|")} if aur_guard else set()
+pinned = {l.split()[0] for l in (root / "repo/packages.tsv").read_text().splitlines() if l.strip() and not l.startswith("#")}
+webapp = (root / "system/bin/olymparch-webapp").read_text()
+block = webapp.split("DEFAULTS=$'", 1)[1].split("'\n", 1)[0]   # the lines «ID\tNAME\tURL» of the defaults
+defaults = set(re.findall(r"^([a-z0-9-]+)\\t", block, re.M))
+setup = (root / "bin/olymparch-setup").read_text()
+install = (root / "bin/olymparch-install").read_text()
+
+cats = {c["id"] for c in cat["categories"]}
+seen = set()
+for a in cat["apps"]:
+    i = a.get("id", "?")
+    if i in seen:
+        problems.append(f"{i}: duplicate id")
+    seen.add(i)
+    for f in ("name", "description"):
+        if not (isinstance(a.get(f), dict) and a[f].get("en") and a[f].get("nb")):
+            problems.append(f"{i}: {f} needs en and nb")
+    if a.get("category") not in cats:
+        problems.append(f"{i}: unknown category {a.get('category')}")
+    inst = a.get("install")
+    if inst not in cases:
+        problems.append(f"{i}: install «{inst}» is not in install-app's list")
+    if a.get("repo") == "olymparch":
+        for p in cases.get(inst, "").split():
+            if p not in pinned:
+                problems.append(f"{i}: {p} is not pinned in repo/packages.tsv")
+        if inst not in guarded:
+            problems.append(f"{i}: install-app {inst} does not check for [olymparch]")
+    if not (a.get("needs") or a.get("needs_file")):
+        problems.append(f"{i}: needs or needs_file")
+    if "webapp" in a and a["webapp"] not in defaults:
+        problems.append(f"{i}: webapp {a['webapp']} is not an olymparch-webapp default")
+    opt = a.get("installer")
+    if opt and (not re.search(rf"\b{re.escape(opt)}\b", setup) or f"has_opt {opt}" not in install):
+        problems.append(f"{i}: installer option {opt} is missing from olymparch-setup or olymparch-install")
+
+for p in problems:
+    print("catalog-check:", p)
+if problems:
+    sys.exit(1)
+print(f"catalog-check: {len(cat['apps'])} apps OK ({len(defaults)} web app defaults, {len(cases)} install-app IDs)")

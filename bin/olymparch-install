@@ -8,7 +8,8 @@
 # for the wizard to show), or printed at the end when there is none. It is never stored on the installed system.
 #
 # Answers (bash syntax): DISK, DISK_SERIAL, HOSTNAME, USERNAME, PASSWORD, KEYMAP, LOCALE, TIMEZONE, KERNEL,
-# OPTIONS (comma list: games,emu,zeus,discord,spotify,obs,code,hibernate)
+# OPTIONS (comma list: games,emu,zeus,discord,spotify,obs,code,hibernate, and from the second checklist
+# lutris,moonlight,minecraft,cloud,obsidian,localsend,neovim,helix,zed,shelltools,tuis,alacritty,kitty,ghostty)
 # Safety: DISK_SERIAL must match the disk's serial number, or nothing is touched.
 set -euo pipefail
 
@@ -34,6 +35,7 @@ gpu_vendors() {  # vendor IDs of every display controller (PCI class 0x03xxxx): 
     done | sort -u
 }
 install_options() {
+    install_shell_tools_hook
     [ -n "${OPTIONS:-}" ] || return 0
     local pkgs=() conf=/tmp/olymparch-pacman.conf home=/mnt/home/$USERNAME v gpus=''
     step "$(L Options Valg): ${OPTIONS//,/, }"
@@ -62,6 +64,7 @@ install_options() {
     has_opt code && pkgs+=(code)
     # zeus: llama.cpp (Vulkan works on AMD, Intel and NVIDIA) and uv; Olympus itself is installed for the user below
     has_opt zeus && pkgs+=(uv llama-cpp ggml-vulkan)
+    extra_option_packages   # the second checklist (more apps and tools): adds to pkgs
     if [ ${#pkgs[@]} -gt 0 ]; then
         sed '/^#\[multilib\]$/,/^#Include/ s/^#//' /etc/pacman.conf >"$conf"
         local opts=(-C "$conf" -G)
@@ -101,6 +104,58 @@ install_options() {
         printf '/dev/mapper/root  /swap  btrfs  noatime,subvol=@swap  0 0\n/swap/swapfile  none  swap  defaults  0 0\n' \
             >>/mnt/etc/fstab
     fi
+    extra_option_setup
+    return 0
+}
+# ---- More apps and tools (the wizard's second checklist; the same apps as default/menu/catalog.json) --------
+# lutris moonlight minecraft cloud obsidian localsend neovim helix zed shelltools tuis alacritty kitty ghostty.
+# Official Arch packages go in with the rest of pacstrap; LocalSend (AUR) only from Olymparch's repo [olymparch].
+extra_option_packages() {
+    has_opt lutris && pkgs+=(lutris)
+    has_opt moonlight && pkgs+=(moonlight-qt)
+    has_opt minecraft && pkgs+=(prismlauncher)          # Minecraft: the open launcher; sign in with Microsoft there
+    has_opt cloud && pkgs+=(chromium)                   # cloud gaming: Xbox Cloud Gaming and GeForce NOW web apps
+    has_opt obsidian && pkgs+=(obsidian)
+    has_opt neovim && pkgs+=(neovim)
+    has_opt helix && pkgs+=(helix)
+    has_opt zed && pkgs+=(zed)
+    has_opt shelltools && pkgs+=(fzf zoxide ripgrep starship)
+    has_opt tuis && pkgs+=(btop lazygit lazydocker)
+    # terminals: foot stays the default (Settings → Default apps → Terminal switches)
+    has_opt alacritty && pkgs+=(alacritty)
+    has_opt kitty && pkgs+=(kitty)
+    has_opt ghostty && pkgs+=(ghostty)
+    return 0
+}
+extra_option_setup() {
+    if has_opt neovim; then   # a small default config; ~/.config/nvim wins
+        install -Dm644 /usr/share/olymparch/nvim/init.lua /mnt/etc/xdg/nvim/init.lua
+    fi
+    if has_opt localsend; then
+        if grep -qx '\[olymparch\]' /mnt/etc/pacman.conf; then
+            arch-chroot /mnt pacman -S --noconfirm --needed localsend-bin ||
+                step "$(L "LocalSend could not be installed now; the menu offers it later" "LocalSend kunne ikke installeres nå; menyen tilbyr den senere")"
+        else
+            step "$(L "LocalSend comes from Olymparch's own repo, which could not be reached: skipped" "LocalSend kommer fra Olymparchs egen pakkebrønn, som ikke kunne nås: hoppet over")"
+        fi
+    fi
+    if has_opt cloud; then   # the two cloud-gaming web apps, for the user (their icons are fetched now if they can be)
+        local w
+        for w in xbox-cloud-gaming geforce-now; do
+            arch-chroot /mnt sudo -u "$USERNAME" -H /usr/share/olymparch/system/bin/olymparch-webapp add "$w" >/dev/null ||
+                step "$(L "The web app $w was not added; the menu offers it later" "Webappen $w ble ikke lagt til; menyen tilbyr den senere")"
+        done
+    fi
+    return 0
+}
+install_shell_tools_hook() {  # always (tiny): fzf, zoxide and starship come on in bash once they are installed
+    [ -f /usr/share/olymparch/shell-tools/olymparch-shell-tools.sh ] || return 0
+    install -Dm644 /usr/share/olymparch/shell-tools/olymparch-shell-tools.sh /mnt/etc/profile.d/olymparch-shell-tools.sh
+    local line='[ -r /etc/profile.d/olymparch-shell-tools.sh ] && . /etc/profile.d/olymparch-shell-tools.sh   # Olymparch: shell tools'
+    local f
+    for f in /mnt/etc/skel/.bashrc "/mnt/home/$USERNAME/.bashrc"; do
+        [ -f "$f" ] && ! grep -qF 'olymparch-shell-tools.sh' "$f" && printf '%s\n' "$line" >>"$f"
+    done
     return 0
 }
 # ---- end of options ------------------------------------------------------------------------------------------

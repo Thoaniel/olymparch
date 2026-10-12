@@ -13,7 +13,33 @@ case $1 in
     # Settings rows that need a program Olymparch doesn't install (official Arch repositories only)
     nightlight) pkgs=(hyprsunset) ;;   # display.night_light
     tailscale) pkgs=(tailscale) ;;     # network.tailscale
+    # ── the app catalog (default/menu/catalog.json: every «install» there is one of these) and web apps ──
+    webapps) pkgs=(chromium) ;;        # olymparch-webapp: web apps and cloud gaming run in Chromium
+    lutris) pkgs=(lutris) ;;
+    moonlight) pkgs=(moonlight-qt) ;;
+    minecraft) pkgs=(prismlauncher) ;;
+    neovim) pkgs=(neovim) ;;
+    helix) pkgs=(helix) ;;
+    zed) pkgs=(zed) ;;
+    shell-tools) pkgs=(fzf zoxide ripgrep starship) ;;
+    btop) pkgs=(btop) ;;
+    lazygit) pkgs=(lazygit) ;;
+    lazydocker) pkgs=(lazydocker) ;;
+    obsidian) pkgs=(obsidian) ;;
+    alacritty) pkgs=(alacritty) ;;
+    kitty) pkgs=(kitty) ;;
+    ghostty) pkgs=(ghostty) ;;
+    discord) pkgs=(discord) ;;
+    spotify) pkgs=(spotify-launcher) ;;
+    obs) pkgs=(obs-studio) ;;
+    code) pkgs=(code) ;;
+    # AUR packages only from Olymparch's own signed repo [olymparch] (repo/packages.tsv), never from the AUR here
+    localsend) pkgs=(localsend-bin) ;;
+    # ── end of the catalog ──
     *) echo "install-app: ukjent app" >&2; exit 2 ;;
+esac
+case $1 in
+    localsend) grep -qx '\[olymparch\]' /etc/pacman.conf || { echo "install-app: $1 trenger pakkebrønnen [olymparch]" >&2; exit 3; } ;;
 esac
 exec </dev/null 9>/run/olymparch-install-app.lock
 flock 9
@@ -21,4 +47,8 @@ flock 9
     printf '\n== %s install-app %s (uid %s)\n' "$(date '+%F %T')" "$1" "${PKEXEC_UID:-?}"
     for _ in $(seq 60); do [ -e /var/lib/pacman/db.lck ] || break; sleep 2; done   # another install is running
     pacman -S --noconfirm --needed -- "${pkgs[@]}"
+    # Neovim gets Olymparch's small default config (your own ~/.config/nvim wins)
+    if [ "$1" = neovim ] && [ ! -e /etc/xdg/nvim/init.lua ] && [ -f /usr/share/olymparch/nvim/init.lua ]; then
+        install -Dm644 /usr/share/olymparch/nvim/init.lua /etc/xdg/nvim/init.lua
+    fi
 } >>/var/log/olymparch-install-app.log 2>&1
