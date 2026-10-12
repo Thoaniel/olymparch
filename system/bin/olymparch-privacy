@@ -1,0 +1,9 @@
+#!/bin/bash
+# What leaves this PC (read-only; Settings → Privacy): the open connections of your own programs right now,
+# and what Olymparch itself contacts. Olymparch has no telemetry.
+set -uo pipefail
+echo "Olymparch selv: pakkespeil (pacman), GitHub (oppdateringer/backup hvis slått på), nettsjekken til NetworkManager."
+echo "Ingen telemetri."
+echo
+echo "Åpne tilkoblinger nå (dine programmer):"
+ss -Htnp state established 2>/dev/null | awk '{ p = $NF; sub(/^users:\(\("/, "", p); sub(/".*/, "", p); printf "  %-18s %s\n", p, $4 }' | sort -u
