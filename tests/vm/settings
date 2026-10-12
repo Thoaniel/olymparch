@@ -155,11 +155,11 @@ shot doctor "Om Olymparch: «Sjekk systemet» kjører olymparch doctor"
 close_settings
 check doctor-runs 'olymparch-settings run about.doctor | grep -q "Hyprland is running"'
 
-# Update now: a terminal with olymparch update (it stops at the sudo password; Ctrl+C closes it)
+# Update now: a terminal with olymparch update (it stops at the sudo password; Super+Q closes it)
 keys "olymparch-settings run updates.now; sleep 2; c update-terminal 'pgrep -f olymparch-update'\n" 3
 wait_for 'CHK-update-terminal-(OK|NO)' 30; seen 'CHK-update-terminal-OK' || fails+=(update-terminal)
 shot oppdater-na "«Oppdater nå» åpner en terminal med olymparch update"
-press ctrl+c; sleep 1
+press meta_l+q; sleep 1.5
 
 # The menu finds Settings too
 press meta_l+spc; sleep 1; keys "innst" 1

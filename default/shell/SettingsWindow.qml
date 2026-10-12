@@ -96,8 +96,15 @@ Scope {
             Settings.set(key, value, () => { if (s.page === "display") win.refreshMonitors(); });
         }
     }
-    function keep() { if (pending) Settings.run(["keep"], () => { win.pending = null; win.refreshMonitors(); }); }
-    function revert() { if (pending) Settings.run(["revert"], () => { win.pending = null; win.refreshMonitors(); }); }
+    function keep() { if (pending) Settings.run(["keep"], () => answered()); }
+    function revert() { if (pending) Settings.run(["revert"], () => answered()); }
+    // A new mode or scale changes the monitor's logical size; the window is shown again so Hyprland sizes it anew
+    function answered() {
+        pending = null;
+        refreshMonitors();
+        if (open) { open = false; reopen.start(); }
+    }
+    Timer { id: reopen; interval: 200; onTriggered: win.open = true }
     function act(s) {
         Settings.run(["run", s.key], (out, code) => { if (s.output) { win.outputKey = s.key; win.output = out.trim(); } });
     }
@@ -160,7 +167,7 @@ Scope {
         running: win.pending !== null
         interval: 1000
         repeat: true
-        onTriggered: if (--win.countdown <= 0) win.revert()
+        onTriggered: if (win.countdown > 0 && --win.countdown === 0) win.revert()
     }
 
     FloatingWindow {
