@@ -48,20 +48,22 @@ added)
     [ -s "$icon" ] || { ok=0; mark "NO-ICON $icon"; }
     case $icon in *.png) file -b "$icon" | grep -q '^PNG image data' || { ok=0; mark "BAD-ICON"; } ;; esac
     desktop-file-validate "$f" >/dev/null 2>&1 || { ok=0; mark "INVALID $(desktop-file-validate "$f" 2>&1 | head -n 2)"; }
-    olymparch-webapp list | grep -q "^$2	" || { ok=0; mark "NOT-LISTED"; }
+    olymparch-webapp list | grep "^$2	" >/dev/null || { ok=0; mark "NOT-LISTED"; }
     mark "ICON $icon $(file -b "$icon" | cut -c1-60)"
     [ $ok = 1 ] && mark "ADDED-OK"
     ;;
 window)
     # the window's class: webapp-ID on X11, chrome-SITE-webapp-ID on Wayland (= StartupWMClass in the .desktop file)
     want=$(sed -n 's/^StartupWMClass=//p' "$apps/webapp-$2.desktop")
-    has() { hyprctl clients | grep -qE "class: (webapp-$2|$want)\$"; }
-    for _ in $(seq 150); do has && break; sleep 2; done
+    id=$2
+    # (grep reads it all: with pipefail, grep -q would make hyprctl's SIGPIPE the answer)
+    has() { hyprctl clients | grep -E "class: (webapp-$id|$want)\$" >/dev/null; }
+    for _ in $(seq 300); do has && break; sleep 2; done
     sleep 8   # the page loads
     hyprctl clients | awk '/^Window/ {w = $0} /class:|title:|floating:|fullscreen:|workspace:/ {print w " " $0}' | grep -i -e webapp -e chrom |
         while IFS= read -r l; do mark "CLIENT $l"; done
     if has; then
-        pgrep -af chromium | grep -q -- "--app=https://www.youtube.com/" && pgrep -af chromium | grep -q -- "--user-data-dir=$store/$2" &&
+        pgrep -af chromium | grep -- "--app=https://www.youtube.com/" >/dev/null && pgrep -af chromium | grep -- "--user-data-dir=$store/$2" >/dev/null &&
             [ -d "$store/$2/webapp-$2" ] && mark "WINDOW-OK"
     else
         mark "NO-WINDOW"
@@ -74,6 +76,6 @@ window)
 removed)
     olymparch-webapp remove "$2" >/dev/null
     [ ! -e "$apps/webapp-$2.desktop" ] && [ ! -e "$store/icons/$2.png" ] && [ ! -e "$store/$2" ] &&
-        ! olymparch-webapp list | grep -q "^$2	" && mark "REMOVED-OK"
+        ! olymparch-webapp list | grep "^$2	" >/dev/null && mark "REMOVED-OK"
     ;;
 esac
