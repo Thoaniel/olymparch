@@ -8,6 +8,16 @@ hl.env("XCURSOR_SIZE", "24")
 hl.env("HYPRCURSOR_SIZE", "24")
 hl.env("QT_QPA_PLATFORM", "wayland;xcb")
 
+-- Session variables the hardware rules ask for (olymparch-hw writes KEY=VALUE lines, e.g. for NVIDIA)
+local hwenv = io.open("/etc/olymparch/hw/hypr-env")
+if hwenv then
+    for line in hwenv:lines() do
+        local k, v = line:match("^([%w_]+)=(.*)$")
+        if k then hl.env(k, v) end
+    end
+    hwenv:close()
+end
+
 -- Every monitor at its preferred mode; the monitor menu in Settings writes real layouts later.
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
 

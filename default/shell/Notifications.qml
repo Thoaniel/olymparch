@@ -16,7 +16,8 @@ Scope {
         bodySupported: true
         onNotification: n => {
             n.tracked = true;
-            if (n.urgency !== NotificationUrgency.Critical) {
+            // offers with buttons (e.g. «Install driver») stay until answered, like critical ones
+            if (n.urgency !== NotificationUrgency.Critical && n.actions.length === 0) {
                 const t = Qt.createQmlObject("import QtQuick; Timer { interval: 6000; running: true }", notes);
                 t.triggered.connect(() => { if (n) n.expire(); t.destroy(); });
             }
@@ -42,6 +43,7 @@ Scope {
             Repeater {
                 model: server.trackedNotifications.values.slice(-3).reverse()
                 delegate: Rectangle {
+                    id: card
                     required property var modelData
                     readonly property bool critical: modelData.urgency === NotificationUrgency.Critical
                     width: column.width
@@ -76,8 +78,34 @@ Scope {
                             elide: Text.ElideRight
                             textFormat: Text.PlainText
                         }
+                        // Action buttons (notify-send -A): the first is the primary one, in gold
+                        Row {
+                            visible: card.modelData.actions.length > 0
+                            topPadding: 6
+                            spacing: 8
+                            Repeater {
+                                model: card.modelData.actions
+                                delegate: Rectangle {
+                                    required property var modelData
+                                    required property int index
+                                    width: label.implicitWidth + 24
+                                    height: 28
+                                    z: 2
+                                    color: index === 0 ? notes.theme.gold : notes.theme.surface
+                                    border.color: index === 0 ? notes.theme.gold : notes.theme.line
+                                    Text {
+                                        id: label
+                                        anchors.centerIn: parent
+                                        text: parent.modelData.text
+                                        font { family: notes.theme.mono; pixelSize: 12; bold: true }
+                                        color: parent.index === 0 ? "#0a0a0e" : notes.theme.text
+                                    }
+                                    MouseArea { anchors.fill: parent; onClicked: parent.modelData.invoke() }
+                                }
+                            }
+                        }
                     }
-                    MouseArea { anchors.fill: parent; onClicked: parent.modelData.dismiss() }
+                    MouseArea { anchors.fill: parent; z: -1; onClicked: parent.modelData.dismiss() }
                 }
             }
         }

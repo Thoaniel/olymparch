@@ -21,6 +21,7 @@ declare -A EN=(
     [tz_city]="Time zone: city"
     [net_ok]="Network: connected."
     [net_none]="No internet connection. The online installer needs it.\n\nSet up Wi-Fi or cable now?"
+    [hw]="Hardware"
     [disk]="Install Olymparch on which disk? EVERYTHING on it will be erased.\nOther disks are not touched."
     [erase]="Type ERASE to erase %s (%s, serial %s):"
     [erase_no]="Not confirmed. Nothing was written."
@@ -54,6 +55,7 @@ declare -A NB=(
     [tz_city]="Tidssone: by"
     [net_ok]="Nett: tilkoblet."
     [net_none]="Ingen internettforbindelse. Online-installasjonen trenger det.\n\nSette opp Wi-Fi eller kabel nå?"
+    [hw]="Maskinvare"
     [disk]="Hvilken disk skal Olymparch installeres på? ALT på den slettes.\nAndre disker røres ikke."
     [erase]="Skriv ERASE for å slette %s (%s, serienummer %s):"
     [erase_no]="Ikke bekreftet. Ingenting er skrevet."
@@ -113,6 +115,14 @@ until curl -sfI --max-time 6 https://archlinux.org >/dev/null 2>&1; do
     wt --title Network --yesno "$(printf "$(t net_none)")" 10 $W || bail
     nmtui-connect 2>/dev/null || iwctl
 done
+
+# 4b. Hardware: what olymparch-hw found and what it will install, with a warning for untested hardware.
+# Shown before the disk is chosen; nothing is installed here (olymparch-install does that after pacstrap).
+hw=/usr/share/olymparch/system/bin/olymparch-hw
+if [ -x "$hw" ]; then
+    OLYMPARCH_LANG=$lang "$hw" plan --summary >/tmp/olymparch-hw.txt 2>&1
+    whiptail --backtitle "$BT" --title "$(t hw)" --scrolltext --textbox /tmp/olymparch-hw.txt 22 $W || bail
+fi
 
 # 5. Disk: every whole disk except the one we booted from
 boot_dev=$(lsblk -no PKNAME "$(findmnt -no SOURCE /run/archiso/bootmnt 2>/dev/null)" 2>/dev/null || true)

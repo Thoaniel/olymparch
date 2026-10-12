@@ -66,6 +66,20 @@ pacstrap "${pacstrap_opts[@]}" /mnt base "$KERNEL" mkinitcpio btrfs-progs crypts
     hyprland hypridle quickshell foot adwaita-cursors ttf-jetbrains-mono ttf-nerd-fonts-symbols-mono libnotify polkit \
     pipewire pipewire-pulse wireplumber xdg-desktop-portal-hyprland plymouth
 
+# --- Hardware (olymparch-hw): the live system is the same machine, so its plan is the new system's plan.
+# Drivers, microcode and only the firmware this machine needs, the initramfs MODULES for a built-in keyboard,
+# and the boot check, hotplug offers and pkexec helper. Not fatal: mesa drives any screen, and what is
+# missing is offered with one click after boot. Runs before mkinitcpio -P below, so the drop-in is used.
+step "Maskinvare (olymparch-hw)"
+hw=/usr/share/olymparch/system/bin/olymparch-hw
+if [ -x "$hw" ]; then
+    mkdir -p /mnt/var/log
+    "$hw" plan --root /mnt | tee /mnt/var/log/olymparch-hw-install.txt
+    "$hw" apply --root /mnt --when install 2>&1 | tee -a /mnt/var/log/olymparch-hw-install.txt ||
+        step "Advarsel: noen drivere ble ikke installert. De tilbys etter oppstart (se /var/log/olymparch-hw-install.txt)."
+    "$hw" setup-system --root /mnt || step "Advarsel: maskinvaresjekken ved oppstart ble ikke satt opp"
+fi
+
 step "Oppsett"
 genfstab -U /mnt | sed -E 's/,subvolid=[0-9]+//' >/mnt/etc/fstab
 echo "$HOSTNAME" >/mnt/etc/hostname

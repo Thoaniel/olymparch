@@ -1,0 +1,13 @@
+[Unit]
+Description=Olymparch: check the hardware (graphics card swap, missing firmware)
+After=systemd-udev-trigger.service systemd-modules-load.service local-fs.target
+ConditionPathExists=/usr/bin/olymparch-hw
+
+[Service]
+Type=oneshot
+ExecStartPre=-/usr/bin/udevadm settle --timeout=30
+ExecStart=/usr/bin/olymparch-hw boot-check
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

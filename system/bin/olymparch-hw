@@ -1,7 +1,7 @@
 #!/bin/bash
 # olymparch-hw: find out what hardware this is (sysfs only) and what it needs, from data rules.
 #   olymparch-hw scan                      what was found
-#   olymparch-hw plan [--root DIR] [--list packages|optional|rules|initramfs|offers] [--summary]
+#   olymparch-hw plan [--root DIR] [--list packages|optional|rules|initramfs] [--summary]
 #   olymparch-hw explain [RULE]            why each rule matched or not
 #   olymparch-hw dump                      anonymised fixture of this machine, for bug reports and tests
 #   olymparch-hw apply [--root DIR] [--user NAME] [--when W] [RULE...]    as root (pkexec: hw-apply)
@@ -9,6 +9,7 @@
 #   olymparch-hw notify --boot | RULE      as the user: one notification with an Install button
 #   olymparch-hw udev-rules                the hotplug udev rules, compiled from the rules
 #   olymparch-hw lint                      check the rules (needs pacman -Si)
+#   olymparch-hw setup-system [--root DIR] [--from DIR]   install the helper, units, polkit and udev files
 # Rules are key=value data files in rules.d/*.rule; they are parsed, never sourced, and cannot run commands.
 # Every read goes through $OLYMPARCH_SYSROOT (a fixture). As root it is ignored: root sees the real machine.
 set -euo pipefail
@@ -20,9 +21,9 @@ LOCAL_RULES=/etc/olymparch/hw/rules.d
 ROOT=/                       # the system packages and files are checked against (apply/plan --root)
 LIB=/usr/lib/olymparch
 
-# --- messages: English by default, Norwegian (bokmål) when LANG=nb*
+# --- messages: English by default, Norwegian (bokmål) when LANG=nb* (or OLYMPARCH_LANG=nb)
 NB=0
-case ${LC_ALL:-${LC_MESSAGES:-${LANG:-}}} in nb* | nn* | no*) NB=1 ;; esac
+case ${OLYMPARCH_LANG:-${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}} in nb* | nn* | no*) NB=1 ;; esac
 declare -A EN=(
     [plan]="Olymparch hardware plan" [machine]="Machine" [cpu]="CPU" [gpu]="Graphics" [none]="none"
     [primary]="primary" [desktop]="desktop" [laptop]="laptop" [vm]="virtual machine"
@@ -39,7 +40,7 @@ declare -A EN=(
     [n_fail]="Installation failed. See /var/log/olymparch-hw.log" [n_fw]="Missing firmware"
     [n_fw_body]="The kernel asked for firmware that is not installed (%s)."
     [n_repo]="The driver comes from the Olymparch repo, which is not available yet."
-    [n_gpu]="New graphics card found" [warn]="Warning" [kmsg]="kernel log"
+    [n_gpu]="New graphics card found" [warn]="Warning" [kmsg]="kernel log" [untested_hw]="Some of this hardware is not tested on Olymparch yet. See the notes at the bottom."
 )
 declare -A NO=(
     [plan]="Olymparch maskinvareplan" [machine]="Maskin" [cpu]="Prosessor" [gpu]="Grafikk" [none]="ingen"
@@ -57,7 +58,7 @@ declare -A NO=(
     [n_fail]="Installasjonen feilet. Se /var/log/olymparch-hw.log" [n_fw]="Fastvare mangler"
     [n_fw_body]="Kjernen ba om fastvare som ikke er installert (%s)."
     [n_repo]="Driveren kommer fra Olymparch-repoet, som ikke er tilgjengelig ennå."
-    [n_gpu]="Nytt skjermkort funnet" [warn]="Advarsel" [kmsg]="kjerneloggen"
+    [n_gpu]="Nytt skjermkort funnet" [warn]="Advarsel" [kmsg]="kjerneloggen" [untested_hw]="Noe av denne maskinvaren er ikke testet på Olymparch ennå. Se merknadene nederst."
 )
 t() { if ((NB)); then printf '%s' "${NO[$1]}"; else printf '%s' "${EN[$1]}"; fi; }
 die() { echo "olymparch-hw: $*" >&2; exit 1; }
@@ -442,7 +443,13 @@ cmd_plan() {
         *) die "plan --list: packages, optional, rules or initramfs" ;;
     esac
     local ind='  '
-    ((summary)) || { t plan; echo; echo; }
+    if ((summary)); then  # the installer screen: a clear warning first when something is not tested
+        for id in $(active); do
+            case $(rget "$id" support) in beta | untested) printf '! %s\n\n' "$(t untested_hw)"; break ;; esac
+        done
+    else
+        t plan; echo; echo
+    fi
     printf '%s%-10s %s\n' "$ind" "$(t machine)" "$(machine_line)"
     printf '%s%-10s %s\n' "$ind" "$(t cpu)" "${CPU_NAME:-?} ($CPU_VENDOR)"
     local first=1 l
@@ -731,6 +738,8 @@ cmd_notify() {
     [ -n "$what" ] || die "notify --boot | RULE"
     wait_notifications || exit 0
     if [ "$what" = --boot ]; then
+        local i
+        for ((i = 0; i < 60; i++)); do [ -r /run/olymparch/hw/offers ] && break; sleep 1; done   # boot-check may still run
         [ -r /run/olymparch/hw/offers ] || exit 0
         local id
         while IFS= read -r id; do
@@ -796,14 +805,47 @@ cmd_lint() {
     echo "lint ok: ${#RULE_IDS[@]} rules"
 }
 
+# setup-system: put the pieces that make detection automatic into a system (the installer runs this on /mnt).
+# --from is the Olymparch share dir that has system/ (default /usr/share/olymparch); the rules come from $DATA.
+cmd_setup_system() {
+    local from=/usr/share/olymparch
+    while [ $# -gt 0 ]; do
+        case $1 in
+            --root) ROOT=$2; shift ;;
+            --from) from=$2; shift ;;
+            *) die "setup-system: unknown option $1" ;;
+        esac
+        shift
+    done
+    [ "$(id -u)" = 0 ] || die "$(t needs_root)"
+    local r=${ROOT%/} s=$from/system
+    install -Dm755 "$s/bin/olymparch-hw" "$r/usr/bin/olymparch-hw"
+    install -Dm755 "$s/lib/hw-apply" "$r$LIB/hw-apply"
+    install -Dm644 "$s/systemd/olymparch-hw-boot.service" "$r/usr/lib/systemd/system/olymparch-hw-boot.service"
+    install -Dm644 -t "$r/usr/lib/systemd/user" "$s"/systemd/user/olymparch-hw-*.service
+    install -Dm644 "$s/polkit/org.olymparch.hw.policy" "$r/usr/share/polkit-1/actions/org.olymparch.hw.policy"
+    install -Dm644 "$s/polkit/50-olymparch-hw.rules" "$r/usr/share/polkit-1/rules.d/50-olymparch-hw.rules"
+    if [ "$(realpath -m "$DATA")" != "$(realpath -m "$r/usr/share/olymparch/hw")" ]; then
+        mkdir -p "$r/usr/share/olymparch/hw"
+        cp -r "$DATA"/. "$r/usr/share/olymparch/hw/"
+    fi
+    mkdir -p "$r/usr/lib/udev/rules.d"
+    cmd_udev_rules >"$r/usr/lib/udev/rules.d/90-olymparch-hw.rules"
+    systemctl --root="$ROOT" enable olymparch-hw-boot.service >/dev/null 2>&1
+    systemctl --root="$ROOT" --global enable olymparch-hw-offers.service >/dev/null 2>&1
+    if [ "$ROOT" = / ]; then
+        systemctl daemon-reload; udevadm control --reload 2>/dev/null || true
+    fi
+}
+
 cmd=${1:-help}
 shift || true
 case $cmd in
-    scan | plan | explain | dump | apply | boot-check | notify | udev-rules | lint) ;;
-    *) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; [ "$cmd" = help ] || [ "$cmd" = --help ]; exit ;;
+    scan | plan | explain | dump | apply | boot-check | notify | udev-rules | lint | setup-system) ;;
+    *) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; [ "$cmd" = help ] || [ "$cmd" = --help ]; exit ;;
 esac
 load_rules
-if [ "$cmd" != udev-rules ] && [ "$cmd" != lint ]; then collect; evaluate; fi
+case $cmd in udev-rules | lint | setup-system) ;; *) collect; evaluate ;; esac
 case $cmd in
     scan) cmd_scan ;;
     plan) cmd_plan "$@" ;;
@@ -813,5 +855,6 @@ case $cmd in
     boot-check) cmd_boot_check ;;
     notify) load_installed; cmd_notify "$@" ;;
     udev-rules) cmd_udev_rules ;;
+    setup-system) cmd_setup_system "$@" ;;
     lint) load_installed; cmd_lint ;;
 esac

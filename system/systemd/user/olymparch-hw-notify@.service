@@ -1,0 +1,10 @@
+# Started by udev (SYSTEMD_USER_WANTS in 90-olymparch-hw.rules) when a device a hardware rule knows appears,
+# also for devices already there when the session starts. Shows one notification with an Install button,
+# and only when something is missing. Nothing is installed without the click.
+[Unit]
+Description=Olymparch: driver offer for new hardware (%i)
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/olymparch-hw notify %i
