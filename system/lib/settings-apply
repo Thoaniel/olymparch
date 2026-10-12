@@ -7,6 +7,7 @@
 #   bt-mode dual|le|bredr            ControllerMode in /etc/bluetooth/main.conf
 #   bt-fast on|off                   FastConnectable in /etc/bluetooth/main.conf
 #   dns auto|cloudflare|quad9        /etc/NetworkManager/conf.d/30-olymparch-dns.conf (global DNS)
+#   mac-random on|off                /etc/NetworkManager/conf.d/30-olymparch-mac.conf (Wi-Fi MAC per network)
 #   snapshots 2…50                   NUMBER_LIMIT in /etc/snapper/configs/root (snapper set-config)
 set -euo pipefail
 export PATH=/usr/bin LC_ALL=C
@@ -18,6 +19,7 @@ case "$action:$value" in
     lid:suspend | lid:lock | lid:ignore | connectivity:on | connectivity:off | \
     bt-mode:dual | bt-mode:le | bt-mode:bredr | bt-fast:on | bt-fast:off | \
     dns:auto | dns:cloudflare | dns:quad9 | \
+    mac-random:on | mac-random:off | \
     snapshots:[2-9] | snapshots:[1-4][0-9] | snapshots:50) ;;
     *) echo "settings-apply: not allowed: $action $value" >&2; exit 2 ;;
 esac
@@ -72,6 +74,16 @@ case "$action" in
             rm -f -- "$f"
         fi
         nmcli general reload conf dns-full 2>/dev/null || nmcli general reload 2>/dev/null || true
+        ;;
+    mac-random)
+        f=/etc/NetworkManager/conf.d/30-olymparch-mac.conf
+        if [ "$value" = on ]; then
+            mkdir -p /etc/NetworkManager/conf.d
+            printf '# Written by Settings (network.mac_random)\n[device-olymparch-mac]\nwifi.scan-rand-mac-address=yes\n\n[connection-olymparch-mac]\nwifi.cloned-mac-address=stable\n' >"$f"
+        else
+            rm -f -- "$f"
+        fi
+        nmcli general reload conf 2>/dev/null || true
         ;;
     snapshots)
         [ -f /etc/snapper/configs/root ] || { echo "settings-apply: no snapper config root" >&2; exit 3; }
