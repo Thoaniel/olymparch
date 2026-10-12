@@ -78,5 +78,16 @@
   "emoji.search": "Søk etter emoji (norsk eller engelsk) …",
   "emoji.none": "Ingen emoji passer.",
   "emoji.recent": "nylig brukt",
-  "emoji.keys": "Piltaster velg · Enter skriv inn · Esc lukk"
+  "emoji.keys": "Piltaster velg · Enter skriv inn · Esc lukk",
+  "mcp.asks": "EN AI-AGENT BER OM LOV",
+  "mcp.change": "ENDRING",
+  "mcp.sensitive": "SENSITIV",
+  "mcp.tool": "Verktøy: %1",
+  "mcp.once": "Tillat én gang",
+  "mcp.always": "Alltid for %1",
+  "mcp.deny": "Avvis",
+  "mcp.left": "Avvises om %1 s",
+  "settings.items.noclients": "Ingen agent har koblet til ennå",
+  "settings.items.nogrants": "Ingen ennå: «Alltid» på et godkjenningskort legger dem til her",
+  "settings.items.nomcp": "olymparch-mcp er ikke installert"
 }

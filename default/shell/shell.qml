@@ -170,4 +170,6 @@ ShellRoot {
     // ── everyday tools (olymparch-tool): clipboard history (Super+Ctrl+V) and emoji (Super+period)
     Clipboard { theme: root }
     Emoji { theme: root }
+    // ── AI agents (olymparch-mcp): the approval card for what an agent wants to change; none while a game runs
+    McpApproval { theme: root; gameActive: gameMode.active }
 }

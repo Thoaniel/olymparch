@@ -1,0 +1,9 @@
+# Started by olymparch-mcp.socket on the first connection; stops by itself after 30 idle minutes.
+[Unit]
+Description=Olymparch MCP server for AI agents (local HTTP)
+Requires=olymparch-mcp.socket
+
+[Service]
+ExecStart=/usr/bin/olymparch-mcp http
+PrivateTmp=yes
+ProtectSystem=full

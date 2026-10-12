@@ -53,6 +53,7 @@ VIAS = {"shell", "hypr", "monitor", "idle", "audio", "cursor", "stored", "action
 VIAS |= {"hyprlua", "orca", "timer"}   # own shortcuts / media keys / colour filter, the screen reader, a user timer
 VIAS |= {"nightlight", "wpprio", "gamechat"}   # display.night_light, audio.priority, audio.game_chat
 VIAS |= {"clipboard"}   # privacy.clipboard_*: olymparch-tool clip-apply (watcher restarted, or stopped and wiped)
+VIAS |= {"mcp"}   # ai.*: olymparch-mcp apply (the HTTP socket, registration with the agents)
 seen = set()
 for s in settings:
     k = s.get("key", "?")

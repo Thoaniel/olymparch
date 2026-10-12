@@ -10,6 +10,6 @@ for f in "${scripts[@]}"; do check bash -n "$f"; done
 command -v shellcheck >/dev/null && check shellcheck -S error "${scripts[@]}"
 while IFS= read -r f; do check python3 -c 'import ast, sys; ast.parse(open(sys.argv[1]).read(), sys.argv[1])' "$f"; done < <(grep -rlE '^#!/usr/bin/(env )?python3' bin system tests 2>/dev/null; ls art/*.py tests/vm/*.py)
 command -v luac >/dev/null && for f in default/hypr/*.lua; do check luac -p -- "$f"; done
-for t in tests/settings-coverage tests/hw/run tests/catalog-check; do [ -x "$t" ] && check "$t"; done
+for t in tests/settings-coverage tests/hw/run tests/catalog-check tests/mcp-check; do [ -x "$t" ] && check "$t"; done
 [ $fail = 0 ] && echo "ci-checks: all OK"
 exit $fail

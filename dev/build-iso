@@ -18,6 +18,7 @@ share=profile/airootfs/usr/share/olymparch
 mkdir -p "$share"
 cp -r default/hypr default/shell default/lock default/idle default/branding default/foot default/i18n default/systemd default/apps default/audio default/games default/hw default/settings system "$share/"
 cp -r default/menu default/webapps default/nvim default/shell-tools "$share/"   # app catalog, web apps, Neovim and shell-tool defaults
+cp -r default/skills "$share/"   # AI agents: the Agent Skills olymparch-mcp register links into ~/.claude/skills and the others
 # Boot screen (Plymouth theme for every pixel size) and the Limine wallpapers, made by art/bootart.py
 rm -rf -- build/plymouth
 py art/bootart.py build/plymouth >/dev/null
