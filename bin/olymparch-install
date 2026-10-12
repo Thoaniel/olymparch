@@ -303,6 +303,17 @@ if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ "$(id -u)" != 0 ];
 fi
 SESSION
 
+# Olymparch's own signed package repo [olymparch] (GE-Proton, Heroic, xone, hid-tmff2): only once it is online,
+# so an install never fails on a repo that has not been published yet. The signing key is trusted for it alone.
+REPO_URL=https://github.com/Thoaniel/olymparch/releases/download/repo-x86_64
+if curl -fsIL --max-time 15 "$REPO_URL/olymparch.db" >/dev/null 2>&1 && [ -f /usr/share/olymparch/repo/olymparch-signing.asc ]; then
+    install -Dm644 /usr/share/olymparch/repo/olymparch-signing.asc /mnt/usr/share/olymparch/olymparch-signing.asc
+    arch-chroot /mnt pacman-key --add /usr/share/olymparch/olymparch-signing.asc >/dev/null 2>&1
+    arch-chroot /mnt pacman-key --lsign-key D76D4C9C9C583433F495FF542E76D8575275DA01 >/dev/null 2>&1
+    printf '\n[olymparch]\nSigLevel = Required DatabaseRequired\nServer = %s\n' "$REPO_URL" >>/mnt/etc/pacman.conf
+    arch-chroot /mnt pacman -Sy --noconfirm >/dev/null 2>&1 || true
+fi
+
 install_options
 
 step "$(L "Boot menu (Limine) and snapshots" "Oppstartsmeny (Limine) og øyeblikksbilder")"

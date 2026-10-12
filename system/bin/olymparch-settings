@@ -1562,7 +1562,7 @@ elseif cmd == "add" then
 -- Settings → About → Report a bug: the issue form on GitHub with `about` filled in, in the browser. Nothing is sent
 -- from here; you read it there and press the button yourself.
 elseif cmd == "report" then
-    local REPORT_URL = "https://github.com/olymparch/olymparch/issues/new"   -- the one place to change when the project moves
+    local REPORT_URL = "https://github.com/Thoaniel/olymparch/issues/new"   -- the one place to change when the project moves
     local function enc(s) return (s:gsub("[^%w%-_.~]", function(ch) return ("%%%02X"):format(ch:byte()) end)) end
     local about = capture(sh_quote(SELF) .. " about"):gsub("%s+$", "")
     local body = "## What happened\n\n\n## What I expected\n\n\n## Steps\n\n1. \n\n## System (olymparch-settings about)\n\n```\n" .. about .. "\n```\n"

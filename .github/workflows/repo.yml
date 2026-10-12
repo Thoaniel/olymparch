@@ -1,5 +1,5 @@
 # Builds the [olymparch] pacman repo from repo/packages.tsv and publishes it as the assets of the release
-# "repo-x86_64". Installed systems use: Server = https://github.com/<owner>/olymparch/releases/download/repo-x86_64
+# "repo-x86_64". Installed systems use: Server = https://github.com/Thoaniel/olymparch/releases/download/repo-x86_64
 #
 # Two jobs on purpose: "build" runs the AUR PKGBUILDs with no secrets and a read-only token; "publish" signs and
 # uploads without running any PKGBUILD code. Secret OLYMPARCH_SIGNING_KEY: the ASCII-armoured private key.
