@@ -114,8 +114,9 @@ Scope {
                 Keys.onEscapePressed: picker.close()
                 Keys.onDownPressed: grid.moveCurrentIndexDown()
                 Keys.onUpPressed: grid.moveCurrentIndexUp()
-                Keys.onLeftPressed: grid.moveCurrentIndexLeft()
-                Keys.onRightPressed: grid.moveCurrentIndexRight()
+                // left/right move in the grid; with Ctrl (or Home/End) they move in the search text, to fix a typo
+                Keys.onLeftPressed: event => { if (event.modifiers & Qt.ControlModifier) event.accepted = false; else grid.moveCurrentIndexLeft(); }
+                Keys.onRightPressed: event => { if (event.modifiers & Qt.ControlModifier) event.accepted = false; else grid.moveCurrentIndexRight(); }
                 Keys.onReturnPressed: picker.choose(grid.currentIndex)
                 Keys.onEnterPressed: picker.choose(grid.currentIndex)
                 Text {
@@ -181,7 +182,7 @@ Scope {
                 Text {
                     id: keysHint
                     anchors { right: parent.right; rightMargin: 14; verticalCenter: parent.verticalCenter }
-                    text: I18n.t("emoji.keys", "Enter type · Esc close")
+                    text: I18n.t("emoji.keys", "Arrows choose · Enter type · Esc close")
                     font { family: picker.theme.mono; pixelSize: picker.theme.px(11) }
                     color: picker.theme.muted
                 }

@@ -120,7 +120,7 @@ Row {
     Cell {
         id: recCell
         visible: Tools.recording
-        icon: "\u{F044A}"
+        icon: "\u{F04DB}"   // a square: stop
         property int secs: 0
         label: `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`
         labelChars: 5

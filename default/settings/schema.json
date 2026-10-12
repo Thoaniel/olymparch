@@ -499,6 +499,12 @@
     { "key": "keys.emoji", "page": "keyboard", "level": "simple", "type": "text", "default": "SUPER + PERIOD", "binds": ["^SUPER \\+ PERIOD$"], "widget": "keys", "ready": true,
       "label": { "en": "Shortcut: emoji", "nb": "Hurtigtast: emoji" }, "description": { "en": "Search in English or Norwegian; Enter types it", "nb": "Søk på engelsk eller norsk; Enter skriver den inn" },
       "apply": { "via": "hypr", "file": "~/.config/olymparch/hypr.lua", "key": "bind" } },
+    { "key": "keys.notification_action", "page": "keyboard", "level": "simple", "type": "text", "default": "SUPER + SHIFT + RETURN", "binds": ["^SUPER \\+ SHIFT \\+ RETURN$"], "widget": "keys", "ready": true,
+      "label": { "en": "Shortcut: answer the notification", "nb": "Hurtigtast: svar på varselet" }, "description": { "en": "The gold button of the newest notification (Edit, Play, OK …)", "nb": "Gullknappen på det nyeste varselet (Rediger, Spill av, OK …)" },
+      "apply": { "via": "hypr", "file": "~/.config/olymparch/hypr.lua", "key": "bind" } },
+    { "key": "keys.notification_dismiss", "page": "keyboard", "level": "simple", "type": "text", "default": "SUPER + SHIFT + ESCAPE", "binds": ["^SUPER \\+ SHIFT \\+ ESCAPE$"], "widget": "keys", "ready": true,
+      "label": { "en": "Shortcut: close the notification", "nb": "Hurtigtast: lukk varselet" }, "description": { "en": "The newest one goes away", "nb": "Det nyeste forsvinner" },
+      "apply": { "via": "hypr", "file": "~/.config/olymparch/hypr.lua", "key": "bind" } },
 
     { "key": "appearance.wallpaper", "page": "appearance", "level": "simple", "type": "choice", "widget": "segmented", "default": "torch", "ready": true,
       "options": [ { "value": "torch", "label": { "en": "Torch", "nb": "Fakkel" } }, { "value": "calm", "label": { "en": "Calm", "nb": "Rolig" } }, { "value": "off", "label": { "en": "Off", "nb": "Av" } } ],

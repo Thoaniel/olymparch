@@ -24,7 +24,9 @@ Scope {
             onStreamFinished: {
                 cb.entries = text.split("\n").filter(l => l.length > 0).map(l => {
                     const p = l.split("\t");
-                    return { id: p[0], kind: p[1], data: p.slice(2).join("\t") };
+                    // image rows: ID, image, thumbnail, "611x151 · 9 KiB"
+                    return p[1] === "image" ? { id: p[0], kind: "image", data: p[2], meta: (p[3] || "").replace("x", "×") }
+                        : { id: p[0], kind: p[1], data: p.slice(2).join("\t") };
                 });
                 cb.loading = false;
             }
@@ -33,7 +35,7 @@ Scope {
     readonly property var shown: {
         const q = search.text.toLowerCase();
         if (!q) return entries;
-        return entries.filter(e => e.kind === "text" ? e.data.toLowerCase().includes(q) : "image bilde".includes(q));
+        return entries.filter(e => e.kind === "text" ? e.data.toLowerCase().includes(q) : ("image bilde " + e.meta).toLowerCase().includes(q));
     }
     function paste(i) {
         const e = shown[i];
@@ -46,6 +48,9 @@ Scope {
         if (!e) return;
         entries = entries.filter(x => x.id !== e.id);
         Quickshell.execDetached(["olymparch-tool", "clip-delete", e.id]);
+    }
+    function turnOn() {
+        Quickshell.execDetached(["olymparch-settings", "set", "privacy.clipboard_history", "on"]);
     }
     function clearAll() {
         if (!confirmClear) { confirmClear = true; return; }
@@ -102,14 +107,16 @@ Scope {
                 Keys.onEscapePressed: cb.close()
                 Keys.onDownPressed: list.incrementCurrentIndex()
                 Keys.onUpPressed: list.decrementCurrentIndex()
-                Keys.onReturnPressed: cb.paste(list.currentIndex)
-                Keys.onEnterPressed: cb.paste(list.currentIndex)
+                // history off: Enter turns it on, right here
+                Keys.onReturnPressed: cb.enabled ? cb.paste(list.currentIndex) : cb.turnOn()
+                Keys.onEnterPressed: cb.enabled ? cb.paste(list.currentIndex) : cb.turnOn()
                 Keys.onDeletePressed: event => {
                     if (event.modifiers & Qt.ControlModifier) cb.clearAll();
                     else cb.remove(list.currentIndex);
                 }
+                readOnly: !cb.enabled
                 Text {
-                    visible: !search.text
+                    visible: !search.text && cb.enabled
                     text: I18n.t("clipboard.search", "Search copied text …")
                     font: search.font
                     color: cb.theme.muted
@@ -163,7 +170,7 @@ Scope {
                         }
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: I18n.t("clipboard.image", "Image")
+                            text: I18n.t("clipboard.image", "Image") + (parent.parent.modelData.meta ? "  ·  " + parent.parent.modelData.meta : "")
                             font { family: cb.theme.mono; pixelSize: cb.theme.px(13) }
                             color: parent.parent.current ? cb.theme.goldHi : cb.theme.muted
                         }
@@ -179,7 +186,7 @@ Scope {
                     visible: list.count === 0 && !cb.loading
                     anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12; topMargin: 18 }
                     wrapMode: Text.Wrap
-                    text: !cb.enabled ? I18n.t("clipboard.off", "Clipboard history is off. Turn it on in Settings → Privacy.")
+                    text: !cb.enabled ? I18n.t("clipboard.off", "Clipboard history is off (Settings → Privacy). Press Enter to turn it on.")
                         : search.text ? I18n.t("clipboard.no_match", "Nothing matches.")
                         : I18n.t("clipboard.empty", "Nothing copied yet. What you copy shows up here.")
                     font { family: cb.theme.mono; pixelSize: cb.theme.px(13) }
@@ -194,7 +201,8 @@ Scope {
                 Rectangle { anchors { left: parent.left; right: parent.right; top: parent.top } height: 1; color: cb.theme.line }
                 Text {
                     anchors { left: parent.left; leftMargin: 14; verticalCenter: parent.verticalCenter }
-                    text: I18n.t("clipboard.keys", "Enter paste · Del remove · Esc close")
+                    text: cb.enabled ? I18n.t("clipboard.keys", "↑↓ choose · Enter paste · Del remove · Esc close")
+                        : I18n.t("clipboard.keys_off", "Enter turn on · Esc close")
                     font { family: cb.theme.mono; pixelSize: cb.theme.px(11) }
                     color: cb.theme.muted
                 }

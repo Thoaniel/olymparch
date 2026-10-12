@@ -6,6 +6,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.Notifications
+import Quickshell.Hyprland
 
 Scope {
     id: notes
@@ -59,6 +60,20 @@ Scope {
                 t.triggered.connect(() => { try { if (n) n.expire(); } catch (e) {} t.destroy(); });
             }
         }
+    }
+
+    // ── the keyboard (keys.notification_action / keys.notification_dismiss): the newest toast's main button, or away
+    GlobalShortcut {
+        appid: "olymparch"
+        name: "notification-action"
+        description: "Press the main button of the newest notification"
+        onPressed: { const n = notes.shown[0]; if (n && n.actions.length > 0) n.actions[0].invoke(); }
+    }
+    GlobalShortcut {
+        appid: "olymparch"
+        name: "notification-dismiss"
+        description: "Dismiss the newest notification"
+        onPressed: { const n = notes.shown[0]; if (n) n.dismiss(); }
     }
 
     PanelWindow {
@@ -118,17 +133,25 @@ Scope {
                             elide: Text.ElideRight
                             textFormat: Text.PlainText
                         }
-                        Image {   // an image the sender attached (a screenshot, a colour swatch)
-                            // a file path comes as image://icon/PATH, which the icon provider loads at 2×2: load the file itself
-                            readonly property string src: (parent.parent.modelData.image || "").replace(/^image:\/\/icon\/(?=\/)/, "")
-                            visible: src.length > 0 && status === Image.Ready
-                            source: src.length === 0 ? "" : src.startsWith("/") ? "file://" + src : src
-                            width: Math.min(parent.width, implicitWidth * Math.min(1, 140 / Math.max(1, implicitHeight)))
-                            height: visible ? width * implicitHeight / Math.max(1, implicitWidth) : 0
-                            fillMode: Image.PreserveAspectFit
-                            sourceSize.height: 280
-                            asynchronous: true
-                            cache: false
+                        Rectangle {   // an image the sender attached (a screenshot, a colour swatch), framed in line
+                            visible: attached.src.length > 0 && attached.status === Image.Ready
+                            width: attached.width + 2
+                            height: visible ? attached.height + 2 : 0
+                            color: "transparent"
+                            border.color: notes.theme.line
+                            Image {
+                                id: attached
+                                x: 1; y: 1
+                                // a file path comes as image://icon/PATH, which the icon provider loads at 2×2: load the file
+                                readonly property string src: (parent.parent.parent.modelData.image || "").replace(/^image:\/\/icon\/(?=\/)/, "")
+                                source: src.length === 0 ? "" : src.startsWith("/") ? "file://" + src : src
+                                // never larger than it is (a swatch stays 96×32), at most the card's width and 140 px high
+                                width: Math.min(parent.parent.width - 2, implicitWidth, implicitWidth * 140 / Math.max(1, implicitHeight))
+                                height: width * implicitHeight / Math.max(1, implicitWidth)
+                                fillMode: Image.PreserveAspectFit
+                                asynchronous: true
+                                cache: false
+                            }
                         }
                         Row {   // the sender's buttons («Rydd opp», «Undo» …): the first is the main one, in gold
                             visible: parent.parent.modelData.actions.length > 0
@@ -152,6 +175,12 @@ Scope {
                                     MouseArea { anchors.fill: parent; onClicked: parent.modelData.invoke() }
                                 }
                             }
+                        }
+                        Text {   // the newest toast with buttons says how to answer it without the mouse
+                            visible: parent.parent.modelData.actions.length > 0 && notes.shown[0] === parent.parent.modelData
+                            text: I18n.t("notify.keys", "Super+Shift+Enter: gold button · Super+Shift+Esc: close")
+                            font { family: notes.theme.mono; pixelSize: notes.theme.px(10) }
+                            color: notes.theme.muted
                         }
                     }
                     MouseArea { anchors.fill: parent; z: -1; onClicked: parent.modelData.dismiss() }

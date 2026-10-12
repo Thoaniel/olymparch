@@ -122,6 +122,9 @@ shortcut("keys.colorpicker", mod .. " + SHIFT + C", nil, tool("colorpicker"))
 shortcut("keys.ocr", mod .. " + SHIFT + T", nil, tool("ocr"))
 shortcut("keys.clipboard", mod .. " + CTRL + V", nil, tool("clipboard"))
 shortcut("keys.emoji", mod .. " + PERIOD", nil, tool("emoji"))
+-- the newest notification without the mouse: its gold button (Edit, Play, OK …), or away
+shortcut("keys.notification_action", mod .. " + SHIFT + RETURN", nil, function(k) hl.bind(k, hl.dsp.global("olymparch:notification-action")) end)
+shortcut("keys.notification_dismiss", mod .. " + SHIFT + ESCAPE", nil, function(k) hl.bind(k, hl.dsp.global("olymparch:notification-dismiss")) end)
 -- the screenshot editor floats in the middle
 hl.window_rule({ name = "olymparch-satty", match = { class = "^com\\.gabm\\.satty$" }, float = true, center = true, size = "monitor_w*0.72 monitor_h*0.78" })
 -- ── end everyday tools

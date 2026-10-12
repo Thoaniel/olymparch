@@ -61,14 +61,8 @@ python3 -I tests/vm/qmp.py "$QMP" move $((RX + 200)) $((RY + 200)) "$W" "$H"; sl
 shot slurp "Print: velg et område (svart slør, gull ramme)"
 drag "$RX" "$RY" $((W - 20)) $((RY + 150)) 2.5
 shot skjermbilde-varsel "Skjermbildet: kopiert og lagret, varsel med bilde, «Rediger» og «Åpne mappe»"
-python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/probe.ppm"
-if xy=$(python3 -I tests/vm/button.py "$O/probe.ppm" 0 2>/dev/null) && [ -n "$xy" ]; then
-    read -r bx by _ <<<"$xy"
-    click "$bx" "$by" 4
-else
-    keys "olymparch-tool screenshot-edit \"\$(ls -t ~/Pictures/Screenshots/*.png | head -1)\" &\n" 4
-fi
-shot satty "«Rediger»: satty åpner skjermbildet (gull først i paletten)"
+press meta_l+shift+ret; sleep 4   # keys.notification_action: the gold button without the mouse
+shot satty "Super+Shift+Enter = «Rediger»: satty åpner skjermbildet (gull først i paletten)"
 press esc; sleep 1   # Esc closes satty
 work
 keys "clear; pkill -x satty; f=\$(ls -t ~/Pictures/Screenshots/*.png | head -1); ls -l \"\$f\"; wl-paste --list-types | grep -q image/png && [ -s \"\$f\" ] && echo '<2>SHOT-OK' > /dev/kmsg\n" 2
@@ -78,9 +72,9 @@ shot skjermbilde-fil "Filen i ~/Pictures/Screenshots, bildet på utklippstavlen"
 
 # ── 2. Colour picker: Super+Shift+C, click the gold wordmark in the bar
 press meta_l+shift+c; sleep 1.5
-python3 -I tests/vm/qmp.py "$QMP" move $((W / 2 + 40)) 17 "$W" "$H"; sleep 0.8
-shot fargevelger "Super+Shift+C: hyprpicker med forstørrelse over gullet i baren"
-click $((W / 2 + 40)) 17 2
+python3 -I tests/vm/qmp.py "$QMP" move 9 $((H / 2)) "$W" "$H"; sleep 0.8
+shot fargevelger "Super+Shift+C: hyprpicker med forstørrelse over den gule vinduskanten"
+click 9 $((H / 2)) 2
 shot farge-varsel "Fargen er kopiert: varsel med fargeprøve og #hex"
 work
 keys "clear; wl-paste; echo; wl-paste | grep -qE '^#[0-9a-f]{6}\$' && echo '<2>COLOR-OK' > /dev/kmsg\n" 2
@@ -112,6 +106,8 @@ press meta_l+ctrl+v; sleep 2
 press down; sleep 0.3
 press delete; sleep 1
 shot utklipp-slett "Delete fjerner den valgte"
+press ctrl+delete; sleep 0.6
+shot utklipp-tom-sporsmal "Ctrl+Del: «Tøm historikk» spør én gang til"
 press esc; sleep 1
 
 # ── 5. Emoji: Super+period, search in Norwegian, Enter types it into the terminal
@@ -151,8 +147,12 @@ check paminnelse 'REMIND-OK' 8
 keys "clear; olymparch-settings set privacy.clipboard_history off; sleep 1; [ -z \"\$(cliphist list)\" ] && ! pgrep -f 'wl-paste --watch' >/dev/null && echo '<2>CLIPOFF-OK' > /dev/kmsg\n" 3
 check utklipp-av 'CLIPOFF-OK' 10
 press meta_l+ctrl+v; sleep 2
-shot utklipp-av "Utklippshistorikk av: velgeren sier hvor den slås på"
+shot utklipp-av "Utklippshistorikk av: velgeren sier det, og Enter slår den på"
+press ret; sleep 3
+shot utklipp-pa "Enter: historikken er på igjen (tom)"
 press esc; sleep 1
+keys "clear; olymparch-settings get privacy.clipboard_history | grep -qx true && pgrep -f 'wl-paste --watch' >/dev/null && echo '<2>CLIPON-OK' > /dev/kmsg\n" 2
+check utklipp-pa-igjen 'CLIPON-OK' 10
 
 # The shell's log, for QML errors
 keys "clear; tail -n 60 ~/.local/state/olymparch/shell.log | while IFS= read -r l; do echo \"<2>QS: \$l\" > /dev/kmsg; done; echo '<2>LOG-DONE' > /dev/kmsg\n" 2
