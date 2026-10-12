@@ -37,6 +37,7 @@ g='python3 /mnt/tests/vm/mcp-guest.py'
 # click button N (0 Tillat én gang, 1 Avvis, 2 Alltid for …) on the card on screen; after the buttons are armed
 card_click() {
     local xy
+    python3 -I tests/vm/qmp.py "$QMP" move 20 $((H - 20)) "$W" "$H"   # off the card: hover changes the colours
     sleep 1.5
     python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/card.ppm"
     xy=$(python3 -I tests/vm/card-button.py "$O/card.ppm" "$1")
@@ -108,7 +109,7 @@ shot innstillinger-logg "Logg: siste kall med klient, verktøy, svar og resultat
 press ctrl+f; keys "per verktøy" 1
 press ret; sleep 1.5
 shot innstillinger-policy "Per verktøy (avansert): Spør / Alltid / Aldri"
-press esc; press esc; sleep 2
+press esc; press meta_l+comma; sleep 2   # the shortcut closes Settings whatever has the keyboard
 keys "clear; olymparch-settings get ai.grants | grep -q vm-test && echo '<2>MCP: GRANT-STILL' > /dev/kmsg || echo '<2>MCP: GRANT-GONE' > /dev/kmsg\n" 2
 need trukket-i-innstillinger 'MCP: GRANT-GONE' 10
 seen 'MCP: GRANT-STILL' && keys "olymparch-settings pick ai.grants 'vm-test@stdio notification_send'\n" 2

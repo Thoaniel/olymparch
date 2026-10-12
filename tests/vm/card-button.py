@@ -22,6 +22,7 @@ pos += 1
 w, h = int(parts[1]), int(parts[2])
 px = data[pos:pos + w * h * 3]
 want = int(sys.argv[2]) if len(sys.argv) > 2 else 0
+GOLD_HI = (0xf4, 0xd3, 0x5e)
 GOLD, RAISED, LINE = (0xd4, 0xa7, 0x3a), (0x1c, 0x1c, 0x25), (0x3a, 0x36, 0x44)
 left, right = max(0, w // 2 - 250), min(w, w // 2 + 250)
 
@@ -47,8 +48,8 @@ def runs(y, c, minlen):
 
 top = None
 for y in range(40, min(h, 800)):
-    for s, e in runs(y, GOLD, 60):
-        if e - s <= 400 and all(any(abs(s2 - s) <= 2 and abs(e2 - e) <= 2 for s2, e2 in runs(y + k, GOLD, 40)) for k in (3, 6, 25)):
+    for s, e in runs(y, GOLD, 60) + runs(y, GOLD_HI, 60):
+        if e - s <= 400 and all(any(abs(s2 - s) <= 2 and abs(e2 - e) <= 2 for s2, e2 in runs(y + k, GOLD, 40)) for k in (3, 6, 25)) or all(any(abs(s2 - s) <= 2 and abs(e2 - e) <= 2 for s2, e2 in runs(y + k, GOLD_HI, 40)) for k in (3, 6, 25)):
             top = (y, s, e)
             break
     if top:
