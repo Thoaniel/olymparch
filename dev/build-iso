@@ -76,7 +76,11 @@ done
 if [ -n "${OLYMPARCH_PERSONAL:-}" ]; then
     [ -d "$OLYMPARCH_PERSONAL" ] || { echo "OLYMPARCH_PERSONAL=$OLYMPARCH_PERSONAL is not a folder" >&2; exit 2; }
     mkdir -p "$share/personal"
-    cp -r --preserve=mode -- "$OLYMPARCH_PERSONAL"/. "$share/personal/"
+    # regular files only (no links, devices or special bits)
+    (cd "$OLYMPARCH_PERSONAL" && find . -type f -print0) | while IFS= read -r -d '' f; do
+        if [ -x "$OLYMPARCH_PERSONAL/$f" ]; then m=755; else m=644; fi
+        install -D -m "$m" -- "$OLYMPARCH_PERSONAL/$f" "$share/personal/${f#./}"
+    done
     (cd "$OLYMPARCH_PERSONAL" && find . -type f -perm -u+x) | while IFS= read -r f; do
         printf 'file_permissions+=(["/usr/share/olymparch/personal/%s"]="0:0:755")\n' "${f#./}" >>profile/profiledef.sh
     done

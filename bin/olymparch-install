@@ -396,8 +396,15 @@ mkdir -p /mnt/boot/EFI/BOOT /mnt/etc/olymparch
 cp /mnt/usr/share/limine/BOOTX64.EFI /mnt/boot/EFI/BOOT/BOOTX64.EFI
 find /usr/share/olymparch/system/bin -maxdepth 1 -type f -exec install -m755 -t /mnt/usr/bin/ {} +
 # a personal ISO (dev/build-iso with OLYMPARCH_PERSONAL) brings the owner's own additions, laid over the new system
+# file by file, owned by root, 755 for programs and 644 for the rest; folders are made 755 and existing ones keep
+# their modes; links, devices and setuid/setgid bits are never carried over
 if [ -d /usr/share/olymparch/personal ]; then
-    cp -r --preserve=mode --no-preserve=ownership -- /usr/share/olymparch/personal/. /mnt/
+    (cd /usr/share/olymparch/personal && find . -type f -print0) | while IFS= read -r -d '' f; do
+        rel=${f#./}
+        case /$rel in */../*|*/./*) continue ;; esac
+        if [ -x "/usr/share/olymparch/personal/$rel" ]; then mode=755; else mode=644; fi
+        install -D -o root -g root -m "$mode" -- "/usr/share/olymparch/personal/$rel" "/mnt/$rel"
+    done
 fi
 # Settings: the narrow pkexec helper for the few rows that change /etc (lid, connectivity check, Bluetooth mode)
 install -Dm755 /usr/share/olymparch/system/lib/settings-apply /mnt/usr/lib/olymparch/settings-apply
