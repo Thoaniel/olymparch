@@ -49,6 +49,7 @@ for g in schema["groups"]:
         bad(f"group {g['id']}: no pages")
 
 VIAS = {"shell", "hypr", "monitor", "idle", "audio", "cursor", "stored", "action", "info", "bluetooth", "power", "mime", "terminal", "unit", "dropin", "headset", "mangohud", "envd", "brightness", "system", "pwclock"}
+VIAS |= {"hyprlua", "orca", "timer"}   # own shortcuts / media keys / colour filter, the screen reader, a user timer
 seen = set()
 for s in settings:
     k = s.get("key", "?")
@@ -64,7 +65,7 @@ for s in settings:
     if s.get("level") not in ("simple", "advanced"):
         bad(f"{k}: level must be simple or advanced")
     t = s.get("type")
-    if t not in ("bool", "choice", "number", "text", "action"):
+    if t not in ("bool", "choice", "number", "text", "action", "list"):
         bad(f"{k}: unknown type {t}")
     if not isinstance(s.get("ready"), bool):
         bad(f"{k}: ready must be true or false")
@@ -81,6 +82,8 @@ for s in settings:
         bad(f"{k}: no default")
         continue
     dv = s["default"]
+    if t == "list" and (dv != [] or s.get("widget") != "items"):
+        bad(f"{k}: a list starts empty ([]) and is shown with widget items")
     if t == "bool" and not isinstance(dv, bool):
         bad(f"{k}: default must be true or false")
     if t == "number":
@@ -199,6 +202,7 @@ with tempfile.TemporaryDirectory() as home:
         "display.position@Virtual-1": evil, "display.scale@Virtual-1": "1 }) os.execute('x') --",
         "display.resolution@Bad\"Out": "1920x1080", "account.lock_minutes": "5\nlistener {", "power.suspend": 99999,
         "appearance.rounding": 4, "keyboard.model": "pc105",
+        "keyboard.custom_keys": [["SUPER + B", 'x")) os.execute("touch PWNED") hl.bind(("'], ["SUPER + X\n", "y"], "z"],
     }))
     env = {k: v for k, v in os.environ.items() if k not in ("HYPRLAND_INSTANCE_SIGNATURE", "WAYLAND_DISPLAY", "XDG_CONFIG_HOME")}
     env.update(HOME=home, XDG_RUNTIME_DIR=home, OLYMPARCH_SETTINGS_SCHEMA=str(root / "default/settings/schema.json"))
@@ -207,8 +211,8 @@ with tempfile.TemporaryDirectory() as home:
     written = "".join(p.read_text() for p in conf.rglob("*") if p.is_file() and p.name != "settings.json")
     if r.returncode or "os.execute" in written or "PWNED" in written or "listener {\n" in written.split("listener")[0]:
         bad(f"olymparch-settings let a malicious settings.json value through (rc {r.returncode}):\n{written}{r.stderr}")
-    if r.stderr.count("ignoring") != 10:
-        bad(f"olymparch-settings should ignore 10 bad values, said:\n{r.stderr}")
+    if r.stderr.count("ignoring") != 11:
+        bad(f"olymparch-settings should ignore 11 bad values, said:\n{r.stderr}")
     if "rounding = 4" not in written or 'kb_model = "pc105"' not in written:
         bad("olymparch-settings dropped good values next to bad ones")
     for p in conf.rglob("*.lua"):
@@ -216,7 +220,11 @@ with tempfile.TemporaryDirectory() as home:
             bad(f"{p.name} written by olymparch-settings is not valid Lua")
     for args in (["set", "keyboard.variant", evil], ["set", "display.position@Virtual-1", evil],
                  ["set", "display.scale@x;rm", "1"], ["set", "accessibility.cursor_size", "24 && rm -rf ~"],
-                 ["set", "updates.snapshots", "51"], ["set", "updates.snapshots", "10; reboot"], ["set", "power.suspend", "-5"]):
+                 ["set", "updates.snapshots", "51"], ["set", "updates.snapshots", "10; reboot"], ["set", "power.suspend", "-5"],
+                 ["set", "updates.time", "7:30; reboot"], ["set", "keyboard.timezone", "../../etc/passwd"],
+                 ["set", "keyboard.custom_keys", "[]"], ["add", "keyboard.custom_keys", "SUPER + Q\n= x"],
+                 ["add", "keyboard.custom_keys", "B = x"], ["add", "keyboard.custom_keys", "SUPER + mouse:272 = x"],
+                 ["pick", "notifications.apps", "a\nb"]):
         if subprocess.run([cli_path, *args], env=env, capture_output=True).returncode != 2:
             bad(f"olymparch-settings {' '.join(args)!r} was not refused")
     if list(Path(home).rglob("PWNED")) or list(Path(home).rglob(".*.??????")):
@@ -268,6 +276,16 @@ for s in settings:
         for v in vals:
             if f"{a.get('action')}:{v}" not in helper_allowed:
                 bad(f"{s['key']}: {a.get('action')} {v} is not allowed by settings-apply")
+# values checked against a system list (the time zone): the same actions in the CLI's SYSTEM_LISTS and the helper's
+# `if [ "$action" = … ]` branch, both against `timedatectl list-timezones`; a text setting via system must use one
+cli_lists = dict(re.findall(r'(\w+) = "([^"]+)"', cli.split("local SYSTEM_LISTS = {")[1].split("}")[0])) if "local SYSTEM_LISTS = {" in cli else {}
+helper_lists = set(re.findall(r'if \[ "\$action" = ([a-z-]+) \]; then\n\s+timedatectl list-timezones \| grep -xF -- "\$value"', helper))
+if set(cli_lists) != helper_lists or any(v != "timedatectl list-timezones" for v in cli_lists.values()):
+    bad(f"settings-apply and olymparch-settings must check the same list actions: {sorted(cli_lists)} vs {sorted(helper_lists)}")
+for s in settings:
+    a = s["apply"]
+    if a.get("via") == "system" and s["type"] == "text" and a.get("action") not in cli_lists:
+        bad(f"{s['key']}: a text value through the helper needs a list action (SYSTEM_LISTS)")
 if "PATH=/usr/bin" not in helper or '"$(id -u)" = 0' not in helper:
     bad("settings-apply must reset PATH and refuse to run without root")
 pol = (root / "system/polkit/50-olymparch-settings.rules").read_text()

@@ -55,5 +55,6 @@
   "settings.items.nowifi": "Ingen Wi-Fi-adapter",
   "settings.items.nobluez": "Bluetooth (bluez) er ikke installert: ingen adapter er funnet",
   "settings.items.nobt": "Ingen Bluetooth-adapter",
-  "settings.items.btoff": "Bluetooth er av"
+  "settings.items.btoff": "Bluetooth er av",
+  "settings.items.add": "+ SUPER + B = firefox · Enter legger til"
 }

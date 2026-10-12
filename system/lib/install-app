@@ -8,6 +8,7 @@ export PATH=/usr/bin LC_ALL=C
 [ $# = 1 ] || { echo "bruk: install-app APP" >&2; exit 2; }
 case $1 in
     torrent) pkgs=(transmission-gtk) ;;
+    screen-reader) pkgs=(orca) ;;   # Settings → Accessibility → Install the screen reader
     *) echo "install-app: ukjent app" >&2; exit 2 ;;
 esac
 exec </dev/null 9>/run/olymparch-install-app.lock

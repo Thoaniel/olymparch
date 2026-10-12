@@ -1,0 +1,38 @@
+#!/bin/bash
+# olymparch-recovery-key: a new recovery key for the encrypted disk (Settings → Account → New recovery key opens it
+# in a terminal). sudo asks for your password here in the terminal, systemd-cryptenroll asks for the current disk
+# password (or an old recovery key) and prints the new key once; it is not saved anywhere. With «remove the old
+# one», every older recovery key is wiped in the same step, and only after the new one is in place.
+set -uo pipefail
+nb=0
+case ${LANG:-} in nb* | no* | nn*) nb=1 ;; esac
+L() { if ((nb)); then printf '%s' "$2"; else printf '%s' "$1"; fi; }
+pause() { printf '\n%s' "$(L "Enter closes this window …" "Enter lukker vinduet …")"; read -r _; }
+fail() { printf '\n%s\n' "$1" >&2; pause; exit 1; }
+
+# the root LUKS volume, from the boot entry the installer wrote (rd.luks.name=UUID=root)
+uuid=$(grep -oE 'rd\.luks\.name=[0-9a-fA-F-]{36}=' /etc/olymparch/boot.conf 2>/dev/null | head -n 1 | cut -d= -f2)
+dev=/dev/disk/by-uuid/$uuid
+[ -n "$uuid" ] && [ -b "$dev" ] || fail "$(L "No encrypted disk found (/etc/olymparch/boot.conf)." "Fant ingen kryptert disk (/etc/olymparch/boot.conf).")"
+
+printf '%s\n\n' "$(L "NEW RECOVERY KEY for $dev" "NY GJENOPPRETTINGSNØKKEL for $dev")"
+printf '%s\n' "$(L "The key unlocks the disk at the same prompt as the password if you forget it." \
+    "Nøkkelen låser opp disken i samme felt som passordet hvis du glemmer det.")"
+printf '%s\n\n' "$(L "It is shown once and not saved: write it down or keep it somewhere safe off this PC." \
+    "Den vises én gang og lagres ikke: skriv den ned eller ta vare på den et trygt sted utenfor PC-en.")"
+read -r -p "$(L "Remove the old recovery key once the new one works? [y/N] " "Fjerne den gamle nøkkelen når den nye er på plass? [j/N] ")" answer
+wipe=()
+case ${answer,,} in y | yes | j | ja) wipe=(--wipe-slot=recovery) ;; esac
+
+printf '\n%s\n' "$(L "sudo asks for your password; then the disk password is asked for." "sudo spør etter passordet ditt; deretter spørres det etter diskpassordet.")"
+sudo -v || fail "$(L "Not changed (sudo said no)." "Ikke endret (sudo sa nei).")"
+# enrolment first; the wipe (if chosen) runs only when it worked, and never touches the new slot
+if ! sudo systemd-cryptenroll --recovery-key "${wipe[@]}" "$dev"; then
+    fail "$(L "Not changed: the disk password was not accepted, or systemd-cryptenroll failed." \
+        "Ikke endret: diskpassordet ble ikke godtatt, eller systemd-cryptenroll feilet.")"
+fi
+printf '\n%s\n' "$(L "Done. The key above now unlocks the disk." "Ferdig. Nøkkelen over låser nå opp disken.")"
+((${#wipe[@]})) && printf '%s\n' "$(L "Older recovery keys were removed." "Eldre gjenopprettingsnøkler ble fjernet.")"
+printf '\n%s\n' "$(L "Key slots now:" "Nøkkelplasser nå:")"
+sudo systemd-cryptenroll "$dev"
+pause

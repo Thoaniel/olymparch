@@ -1,0 +1,19 @@
+#!/bin/bash
+# olymparch-update-check: are there updates? Run by olymparch-update-check.timer at the time set in Settings →
+# Updates → «Check for updates daily at». Only looks (checkupdates from pacman-contrib uses its own copy of the
+# package database, so nothing on the system changes) and sends a notification; it never installs anything.
+set -uo pipefail
+nb=0
+case ${LANG:-} in nb* | no* | nn*) nb=1 ;; esac
+L() { if ((nb)); then printf '%s' "$2"; else printf '%s' "$1"; fi; }
+command -v checkupdates >/dev/null || { echo "checkupdates (pacman-contrib) is missing" >&2; exit 1; }
+list=$(checkupdates 2>/dev/null)
+rc=$?
+((rc == 2)) && exit 0   # nothing new
+((rc == 0)) || { echo "checkupdates failed ($rc)" >&2; exit 1; }
+n=$(printf '%s\n' "$list" | grep -c .)
+a=$(notify-send -a Olymparch -w --action=open="$(L "Update now" "Oppdater nå")" \
+    "$(L "Updates available" "Oppdateringer tilgjengelig")" \
+    "$(L "$n packages can be updated. Nothing is installed until you say so." "$n pakker kan oppdateres. Ingenting installeres før du sier ja.")")
+[ "$a" = open ] && exec olymparch-settings run updates.now
+exit 0

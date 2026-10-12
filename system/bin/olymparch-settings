@@ -19,6 +19,8 @@
 --                                             firmware, games, proton, proton-games, zeus (read-only)
 --   olymparch-settings zeus-install | zeus-setup   in a terminal (Settings → Zeus); never downloads a model
 --   olymparch-settings about | files | check | pending | wired
+--   olymparch-settings add keyboard.custom_keys 'KEYS = COMMAND'   a shortcut of your own (pick … KEYS removes it)
+--   olymparch-settings report                  a prefilled GitHub issue in the browser; you send it yourself
 -- Per-monitor keys take the output after @, such as display.scale@DP-1.
 
 local HOME = os.getenv("HOME") or "."
@@ -56,6 +58,10 @@ do
         elseif t == "number" then
             if math.type(v) == "integer" or (v == math.floor(v) and math.abs(v) < 1e15) then return string.format("%d", v) end
             return string.format("%.14g", v)
+        elseif t == "table" then   -- a list (type "list" settings): its items, which are strings or lists of strings
+            local parts = {}
+            for i, x in ipairs(v) do parts[i] = json.value(x) end
+            return "[" .. table.concat(parts, ", ") .. "]"
         elseif v == nil then return "null" end
         die("cannot write " .. t .. " as JSON")
     end
@@ -222,8 +228,38 @@ local function combo_text(v)  -- canonical: mods in a fixed order, letters upper
     return table.concat(mods, " + ")
 end
 
+-- ── lists (type "list") and text with rules of its own. Own shortcuts: { "SUPER + B", "firefox" }, a canonical
+--   combo (no mouse buttons) and one line of command; it reaches hypr.lua only through %q. Muted apps: names.
+local MEDIA_KEYS = { "XF86AudioRaiseVolume", "XF86AudioLowerVolume", "XF86AudioMute", "XF86AudioPlay", "XF86AudioPause",
+    "XF86AudioNext", "XF86AudioPrev", "XF86AudioStop" }   -- olymparch.lua binds these while keys.media is on
+local LIST_ITEM = {
+    ["keyboard.custom_keys"] = function(x)
+        return type(x) == "table" and #x == 2 and type(x[1]) == "string" and x[1] ~= "" and combo_text(x[1]) == x[1]
+            and not x[1]:find("mouse:") and type(x[2]) == "string" and #x[2] <= 300 and x[2]:match("%S") ~= nil and not x[2]:find("%c")
+    end,
+    ["notifications.apps"] = function(x) return type(x) == "string" and x ~= "" and #x <= 80 and not x:find("%c") end,
+}
+local function valid_list(s, v)
+    local item = LIST_ITEM[s.key]
+    if type(v) ~= "table" or not item or #v > 100 then return false, "expected a list" end
+    for k in pairs(v) do if math.type(k) ~= "integer" or k < 1 or k > #v then return false, "expected a list" end end
+    for _, x in ipairs(v) do if not item(x) then return false, "a list entry is not valid" end end
+    return true
+end
+local VALIDATORS = {   -- "" = not set
+    ["updates.time"] = function(v)
+        local h, m = v:match("^(%d%d):(%d%d)$")
+        return v == "" or (h ~= nil and tonumber(h) < 24 and tonumber(m) < 60)
+    end,
+    ["keyboard.timezone"] = function(v) return v == "" or (#v <= 64 and v:match("^[%w_+%-]+[%w_+%-/]*$") ~= nil) end,
+}
+local SHADER_DIR = "/usr/share/olymparch/hypr/shaders/"
+local SHADERS = { grayscale = SHADER_DIR .. "grayscale.frag", protanopia = SHADER_DIR .. "protanopia.frag", deuteranopia = SHADER_DIR .. "deuteranopia.frag" }
+
 local function valid(s, v, out)
     if out and not out:match("^[%w_.-]+$") then return false, "bad output name" end
+    if s.type == "list" then return valid_list(s, v) end
+    if VALIDATORS[s.key] then return type(v) == "string" and VALIDATORS[s.key](v) == true, "not a valid value" end
     if s.widget == "keys" then
         return type(v) == "string" and combo_text(v) == v, "expected a shortcut like SUPER + SHIFT + G"
     end
@@ -304,6 +340,7 @@ end
 -- text from the command line → typed value, checked against the schema
 local function parse(s, text)
     if s.readonly or s.type == "action" then die(s.key .. " cannot be set", 2) end
+    if s.type == "list" then die(s.key .. " is a list: olymparch-settings items/pick/add " .. s.key, 2) end
     if s.type == "bool" then
         local t = ({ ["true"] = true, on = true, ["1"] = true, yes = true, ["false"] = false, off = false, ["0"] = false, no = false })[text:lower()]
         if t == nil then die(s.key .. ": expected on or off", 2) end
@@ -392,6 +429,13 @@ local function hypr_lines(values)  -- the user's hypr and cursor settings, as Lu
     end
     local term = values["apps.terminal"]
     if term ~= nil and term ~= "" then lines[#lines + 1] = ("hl.env(\"OLYMPARCH_TERMINAL\", %q)   -- apps.terminal"):format(term) end
+    -- ── apply.via hyprlua: own shortcuts, media keys off, colour filter (every value was checked by valid())
+    for _, kv in ipairs(values["keyboard.custom_keys"] or {}) do
+        lines[#lines + 1] = ("hl.bind(%q, hl.dsp.exec_cmd(%q))   -- keyboard.custom_keys"):format(kv[1], kv[2])
+    end
+    if values["keys.media"] == false then lines[#lines + 1] = ';(rawget(_G, "olymparch_media_keys") or function() end)(false)   -- keys.media' end
+    local shader = SHADERS[values["accessibility.color_filter"] or "none"]
+    if shader then lines[#lines + 1] = ("hl.config({ decoration = { screen_shader = %q } })   -- accessibility.color_filter"):format(shader) end
     return lines
 end
 
@@ -675,7 +719,17 @@ local SYSTEM_ACTIONS = {
 local SYSTEM_RANGES = {   -- whole numbers from MIN to MAX (settings-apply has the same globs)
     snapshots = { 2, 50 },
 }
+-- ── account and language: autologin on tty1, LANG in /etc/locale.conf; the time zone is a name from
+--   `timedatectl list-timezones` (settings-apply checks it against the same list)
+SYSTEM_ACTIONS.autologin = { on = true, off = true }
+SYSTEM_ACTIONS.language = { en = true, nb = true }
+local SYSTEM_LISTS = { timezone = "timedatectl list-timezones" }
+local function in_list(cmd, v)
+    for l in capture(cmd):gmatch("[^\n]+") do if l == v then return true end end
+    return false
+end
 local function system_allowed(act, v)
+    if SYSTEM_LISTS[act] then return in_list(SYSTEM_LISTS[act], v) end
     if SYSTEM_ACTIONS[act] then return SYSTEM_ACTIONS[act][v] == true end
     local r, n = SYSTEM_RANGES[act], math.tointeger(tonumber(v))
     return r ~= nil and n ~= nil and tostring(n) == v and n >= r[1] and n <= r[2]
@@ -685,6 +739,7 @@ appliers["system"] = function(s, values, key)
     if type(v) == "boolean" then v = v and "on" or "off" end
     if type(v) == "number" then v = tostring(math.tointeger(v) or v) end
     local act = s.apply.action
+    if v == "" and SYSTEM_LISTS[act] then return end   -- the time zone left as it is
     if type(v) ~= "string" or not system_allowed(act, v) then die(("%s: %s is not allowed"):format(key, tostring(v)), 5) end
     if not io.open(HELPER) then die(HELPER .. " is missing (olymparch update)", 3) end
     if not os.execute("pkexec " .. HELPER .. " " .. sh_quote(act) .. " " .. sh_quote(v) .. " >/dev/null 2>&1") then
@@ -702,6 +757,36 @@ appliers["headset"] = function(s, values, key)
         local loaded = capture("pactl list modules short"):find("module%-switch%-on%-connect") ~= nil
         if on and not loaded then os.execute("pactl load-module module-switch-on-connect >/dev/null 2>&1")
         elseif not on and loaded then os.execute("pactl unload-module module-switch-on-connect >/dev/null 2>&1") end
+    end
+end
+
+-- ── own shortcuts, media keys and the colour filter: Lua lines in hypr.lua (hypr_lines), then the whole config again
+appliers["hyprlua"] = function(s, values)
+    ensure_loader(values)
+    write_hypr(values)
+    if os.getenv("HYPRLAND_INSTANCE_SIGNATURE") then os.execute("hyprctl reload >/dev/null 2>&1") end
+end
+-- the screen reader now (olymparch.lua starts it with the next session when the setting is on)
+appliers["orca"] = function(s, values, key)
+    if not os.getenv("WAYLAND_DISPLAY") then return end
+    if value_of(values, key) == true then
+        if have("orca") then os.execute("pgrep -x orca >/dev/null || setsid -f orca >/dev/null 2>&1 </dev/null") end
+    else
+        os.execute("pkill -x orca >/dev/null 2>&1")
+    end
+end
+-- a daily user timer at HH:MM ("" = off): OnCalendar= in a drop-in next to the unit, which must be on USER_UNITS
+USER_UNITS["olymparch-update-check.timer"] = true
+appliers["timer"] = function(s, values, key)
+    local unit = allowed_unit(s.apply.unit)
+    local h, m = tostring(value_of(values, key)):match("^(%d%d):(%d%d)$")
+    local conf = CONFIG .. "/systemd/user/" .. unit .. ".d/olymparch-settings.conf"
+    if h then
+        write(conf, ("# Written by olymparch-settings (%s)\n[Timer]\nOnCalendar=\nOnCalendar=*-*-* %s:%s:00\n"):format(s.key, h, m))
+        os.execute("systemctl --user daemon-reload >/dev/null 2>&1; systemctl --user enable --now " .. sh_quote(unit) .. " >/dev/null 2>&1")
+    else
+        os.remove(conf)
+        os.execute("systemctl --user disable --now " .. sh_quote(unit) .. " >/dev/null 2>&1; systemctl --user daemon-reload >/dev/null 2>&1")
     end
 end
 
@@ -910,6 +995,11 @@ elseif cmd == "set" then
             local nb = (os.getenv("LANG") or ""):match("^n[bno]")
             die((nb and "%s er allerede «%s» (%s)" or "%s is already «%s» (%s)"):format(c:upper(), label(o), o.key), 4)
         end
+        local mine = {}   -- … nor the keys of a shortcut of your own
+        for _, c in ipairs(combos(s, v)) do mine[c] = true end
+        for _, kv in ipairs(values["keyboard.custom_keys"] or {}) do
+            for _, c in ipairs(combos({}, kv[1])) do if mine[c] then die(("%s: %s = %s (keyboard.custom_keys)"):format(s.key, kv[1], kv[2]), 4) end end
+        end
     end
     if try then
         revert()   -- one question at a time
@@ -971,6 +1061,7 @@ elseif cmd == "list" then
             end
             for _, k in ipairs(shown) do
                 local v; if s.type ~= "action" then v = value_of(values, k) end
+                if type(v) == "table" then v = json.value(v) end
                 print(("%-40s %-24s %-14s %s%s"):format(k, v == nil and "" or (v == false and "false" or tostring(v or "")),
                     s.page, label(s), s.ready and "" or "  (coming)"))
             end
@@ -1048,6 +1139,8 @@ elseif cmd == "items" or cmd == "pick" then
         local id = arg[3] or die("usage: pick KEY ID", 2)
         if key == "network.wifi" and (#id > 32 or id == "" or id:find("%c")) then die("not a network name", 2) end
         if key == "bluetooth.devices" and not id:match("^%x%x:%x%x:%x%x:%x%x:%x%x:%x%x$") then die("not a device address", 2) end
+        if key == "keyboard.custom_keys" and combo_text(id) ~= id then die("not a shortcut", 2) end
+        if key == "notifications.apps" and not LIST_ITEM[key](id) then die("not an app name", 2) end
     end
     if key == "network.wifi" then
         if not have("nmcli") then print("! nonm NetworkManager (nmcli) is not installed"); os.exit(0) end
@@ -1149,9 +1242,108 @@ elseif cmd == "items" or cmd == "pick" then
             end
             os.exit(os.execute("timeout 15 bluetoothctl connect " .. q .. " >/dev/null 2>&1") and 0 or 1)
         end
+    -- ── own shortcuts (pick removes one) and the apps that have notified (pick mutes or allows one). A fifth
+    --   column is the text on the row's button.
+    elseif key == "keyboard.custom_keys" or key == "notifications.apps" then
+        local nb = (os.getenv("LANG") or ""):match("^n[bno]")
+        local values = load_values()
+        local list = values[key] or {}
+        local function save(new)
+            values[key] = #new > 0 and new or nil
+            save_values(values)
+            apply(key, values)
+        end
+        if key == "keyboard.custom_keys" then
+            if cmd == "items" then
+                if #list == 0 then print("! nocustom " .. (nb and "Ingen egne taster ennå" or "No shortcuts of your own yet")) end
+                for _, kv in ipairs(list) do print(table.concat({ kv[1], "on", kv[1], clean(kv[2]), nb and "Fjern ›" or "Remove ›" }, "\t")) end
+            else
+                local new, found = {}, false
+                for _, kv in ipairs(list) do if kv[1] == arg[3] then found = true else new[#new + 1] = kv end end
+                if not found then die("no shortcut " .. arg[3], 2) end
+                save(new)
+            end
+        else
+            local muted, apps, seen = {}, {}, {}
+            for _, a in ipairs(list) do muted[a] = true end
+            local state = (os.getenv("XDG_STATE_HOME") or (HOME .. "/.local/state")) .. "/olymparch/notification-apps.json"
+            local ok, known = pcall(json.decode, read(state) or "[]")
+            for _, a in ipairs(ok and type(known) == "table" and known or {}) do
+                if LIST_ITEM[key](a) and not seen[a] then seen[a] = true; apps[#apps + 1] = a end
+            end
+            for _, a in ipairs(list) do if not seen[a] then seen[a] = true; apps[#apps + 1] = a end end
+            if cmd == "items" then
+                if #apps == 0 then print("! noapps " .. (nb and "Ingen apper har varslet ennå" or "No app has notified yet")) end
+                table.sort(apps, function(a, b) return a:lower() < b:lower() end)
+                for _, a in ipairs(apps) do
+                    print(table.concat({ a, muted[a] and "off" or "on", clean(a),
+                        muted[a] and (nb and "dempet" or "muted") or (nb and "får varsle" or "may notify"),
+                        muted[a] and (nb and "Tillat ›" or "Allow ›") or (nb and "Demp ›" or "Mute ›") }, "\t"))
+                end
+            else
+                local app = arg[3]
+                if not LIST_ITEM[key](app) then die("not an app name", 2) end
+                local new = {}
+                for _, a in ipairs(list) do if a ~= app then new[#new + 1] = a end end
+                if not muted[app] then
+                    if #new >= 100 then die("too many muted apps", 2) end
+                    new[#new + 1] = app
+                end
+                save(new)
+            end
+        end
     else
         die(key .. " has no list", 2)
     end
+
+-- a shortcut of your own: add keyboard.custom_keys 'SUPER + B = firefox'. The keys may not be taken (Settings'
+-- shortcuts, the media keys while they are on, your other shortcuts); the command is yours and is only ever
+-- written into hypr.lua as a quoted Lua string.
+elseif cmd == "add" then
+    local key, text = arg[2], arg[3]
+    if key ~= "keyboard.custom_keys" or not text then die("usage: add keyboard.custom_keys 'KEYS = COMMAND'", 2) end
+    local nb = (os.getenv("LANG") or ""):match("^n[bno]")
+    local keys_, command = text:match("^([^=]+)=(.*)$")
+    local combo = keys_ and combo_text((keys_:gsub("^%s+", ""):gsub("%s+$", "")))
+    command = command and command:gsub("^%s+", ""):gsub("%s+$", "")
+    local item = { combo, command }
+    if not combo or text:find("%c") or not LIST_ITEM[key](item) then
+        die(nb and "skriv TASTER = KOMMANDO, som SUPER + B = firefox (én linje)" or "write KEYS = COMMAND, such as SUPER + B = firefox (one line)", 2)
+    end
+    local values = load_values()
+    local o, c = shortcut_conflict({ key = key }, combo, values)
+    if o then die((nb and "%s er allerede «%s» (%s)" or "%s is already «%s» (%s)"):format(c:upper(), label(o), o.key), 4) end
+    local mine = combos({}, combo)[1]
+    for _, kv in ipairs(values[key] or {}) do
+        if combos({}, kv[1])[1] == mine then die((nb and "%s er allerede %s" or "%s is already %s"):format(combo, kv[2]), 4) end
+    end
+    if value_of(values, "keys.media") == true then
+        for _, m in ipairs(MEDIA_KEYS) do
+            if combos({}, m)[1] == mine then die((nb and "%s er en medietast (keys.media)" or "%s is a media key (keys.media)"):format(combo), 4) end
+        end
+    end
+    local list = values[key] or {}
+    list[#list + 1] = item
+    local ok, why = valid(byKey[key], list)
+    if not ok then die(key .. ": " .. why, 2) end
+    values[key] = list
+    save_values(values)
+    apply(key, values)
+    print("added " .. combo)
+
+-- Settings → About → Report a bug: the issue form on GitHub with `about` filled in, in the browser. Nothing is sent
+-- from here; you read it there and press the button yourself.
+elseif cmd == "report" then
+    local REPORT_URL = "https://github.com/olymparch/olymparch/issues/new"   -- the one place to change when the project moves
+    local function enc(s) return (s:gsub("[^%w%-_.~]", function(ch) return ("%%%02X"):format(ch:byte()) end)) end
+    local about = capture(sh_quote(SELF) .. " about"):gsub("%s+$", "")
+    local body = "## What happened\n\n\n## What I expected\n\n\n## Steps\n\n1. \n\n## System (olymparch-settings about)\n\n```\n" .. about .. "\n```\n"
+    local url = REPORT_URL .. "?title=" .. enc("Bug: ") .. "&body=" .. enc(body)
+    os.execute("setsid -f xdg-open " .. sh_quote(url) .. " >/dev/null 2>&1 </dev/null")
+    local nb = (os.getenv("LANG") or ""):match("^n[bno]")
+    print(nb and "Åpnet i nettleseren: les saken, og send den selv hvis du vil." or "Opened in the browser: read the issue, and send it yourself if you want to.")
+    print("")
+    print(about)
 
 -- wired network: what NetworkManager says (Settings → Network → Wired)
 elseif cmd == "wired" then
@@ -1345,6 +1537,34 @@ elseif cmd == "view" then
             print("")
             out(capture("timeout 15 " .. sh_quote(oly) .. " modell"))   -- lists the models; changes nothing
         end
+    -- ── Events: what plugging something in does, and every event rule with the unit that runs it
+    elseif name == "on-connect" then
+        local values = load_values()
+        local function st(k) local v = byKey[k] and value_of(values, k); return v == true and L("on", "på") or v == false and L("off", "av") or tostring(v) end
+        print(L("USB disk      mounted, with Open / Eject in a notification", "USB-disk     monteres, med Åpne / Løs ut i et varsel") ..
+            "  (" .. L("Disks", "Disker") .. " → disks.usb_automount: " .. st("disks.usb_automount") .. ")")
+        print(L("Monitor       the layout saved for exactly these monitors, or an offer to arrange a new one", "Skjerm       oppsettet lagret for akkurat disse skjermene, eller et tilbud om å ordne et nytt") ..
+            "  (" .. L("Displays", "Skjermer") .. " → display.profiles: " .. st("display.profiles") .. ")")
+        print(L("Headset       sound moves to it, and back when it goes", "Headset      lyden flyttes dit, og tilbake når det kobles fra") ..
+            "  (" .. L("Sound", "Lyd") .. " → audio.headset_switch: " .. st("audio.headset_switch") .. ")")
+        print(L("Controller    olymparch-hw offers a missing driver in a notification", "Kontroller   olymparch-hw tilbyr en manglende driver i et varsel") ..
+            "  (" .. L("Hardware and drivers", "Maskinvare og drivere") .. ")")
+    elseif name == "events" then
+        local values = load_values()
+        for _, s in ipairs(schema.settings) do
+            if s.page == "events" and s.ready and s.type ~= "action" then
+                local v = value_of(values, s.key)
+                local unit = (s.apply.units and s.apply.units[1]) or s.apply.unit
+                local state = ""
+                if unit and USER_UNITS[unit] then
+                    state = "  [" .. unit .. ": " .. capture("systemctl --user is-enabled " .. sh_quote(unit)):gsub("%s+$", "") .. ", " ..
+                        capture("systemctl --user is-active " .. sh_quote(unit)):gsub("%s+$", "") .. "]"
+                end
+                print(("%-44s %s%s"):format(label(s), v == true and L("on", "på") or v == false and L("off", "av") or tostring(v) .. (s.unit or ""), state))
+            end
+        end
+        local t = capture("systemctl --user list-timers --all --no-legend 'olymparch-*'"):gsub("%s+$", "")
+        if t ~= "" then print(""); print(L("Timers:", "Tidsur:")); out(t) end
     else
         die("no view " .. name, 2)
     end

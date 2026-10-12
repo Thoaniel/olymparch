@@ -164,6 +164,7 @@ ShellRoot {
         silent: gameMode.active && root.inGames === "none"
     }
     Power {}
+    Media {}   // the media keys without playerctl (olymparch-media → qs ipc call media …)
     Osd { theme: root }
     SettingsWindow { theme: root }
 }

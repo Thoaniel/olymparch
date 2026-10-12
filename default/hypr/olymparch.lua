@@ -110,9 +110,22 @@ shortcut("keys.mouse", mod, { "mouse:272", "mouse:273" }, function(m)
     hl.bind(m .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
     hl.bind(m .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 end)
-hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"), { locked = true, repeating = true })
-hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"), { locked = true, repeating = true })
-hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { locked = true })
+-- Media keys (keys.media): volume through wpctl, play/pause/next/previous through olymparch-media (playerctl, or the
+-- shell's player). hypr.lua calls olymparch_media_keys(false) when Settings turns them off, so apps get the keys.
+local media_keys = {
+    { "XF86AudioRaiseVolume", "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+", { locked = true, repeating = true } },
+    { "XF86AudioLowerVolume", "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-", { locked = true, repeating = true } },
+    { "XF86AudioMute", "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle", { locked = true } },
+    { "XF86AudioPlay", "olymparch-media play-pause", { locked = true } },
+    { "XF86AudioPause", "olymparch-media play-pause", { locked = true } },
+    { "XF86AudioNext", "olymparch-media next", { locked = true } },
+    { "XF86AudioPrev", "olymparch-media previous", { locked = true } },
+    { "XF86AudioStop", "olymparch-media stop", { locked = true } },
+}
+for _, k in ipairs(media_keys) do hl.bind(k[1], hl.dsp.exec_cmd(k[2]), k[3]) end
+function olymparch_media_keys(on)
+    if on == false then for _, k in ipairs(media_keys) do hl.unbind(k[1]) end end
+end
 
 -- Settings is a window of the shell; it floats in the middle instead of taking a tile
 hl.window_rule({ name = "olymparch-settings", match = { title = "^Olymparch Settings$" }, float = true, center = true, size = "monitor_w*0.82 monitor_h*0.86" })
@@ -124,6 +137,11 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("sh -c '[ \"$(olymparch-settings get disks.usb_automount 2>/dev/null)\" = false ] && exec udiskie --no-automount --notify --no-tray; exec udiskie --automount --notify --no-tray'")
     hl.exec_cmd("olymparch-welcome")   -- first-login hints (e.g. set up Zeus)
     hl.exec_cmd("sh -c 'f=$HOME/.config/hypr/hypridle.conf; [ -f \"$f\" ] || f=/usr/share/olymparch/idle/hypridle.conf; exec hypridle -c \"$f\"'")
+end)
+
+-- Settings → Accessibility → Screen reader: Orca starts with the session while it is on (and installed)
+hl.on("hyprland.start", function()
+    hl.exec_cmd("sh -c '[ \"$(olymparch-settings get accessibility.screen_reader 2>/dev/null)\" = true ] && command -v orca >/dev/null && exec orca'")
 end)
 
 -- Games need no launch options: every new window is traced back to its process, and a game gets gamemode

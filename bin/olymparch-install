@@ -253,6 +253,13 @@ require("olymparch")
 
 hl.config({ input = { kb_layout = "$xkb" } })
 LUA
+# Settings → Keyboard and language shows what was chosen here (language and time zone are changed there later)
+mkdir -p "$home/.config/olymparch"
+case $LOCALE in nb* | nn* | no*) lang=nb ;; *) lang=en ;; esac
+tz=$TIMEZONE
+[[ $tz =~ ^[A-Za-z0-9_+-]+(/[A-Za-z0-9_+-]+)*$ ]] || tz=''
+[ -f "$home/.config/olymparch/settings.json" ] ||
+    printf '{\n  "keyboard.language": "%s",\n  "keyboard.timezone": "%s"\n}\n' "$lang" "$tz" >"$home/.config/olymparch/settings.json"
 arch-chroot /mnt chown -R "$USERNAME:$USERNAME" "/home/$USERNAME"
 
 # Log in automatically once per boot. After a logout you get a normal login prompt.
