@@ -12,7 +12,16 @@ install -Dm755 -t profile/airootfs/usr/local/bin bin/olymparch-*
 # Olymparch defaults (Hyprland config, shell, wallpaper) for the installer to copy onto the new system
 share=profile/airootfs/usr/share/olymparch
 mkdir -p "$share"
-cp -r default/hypr default/shell "$share/"
+cp -r default/hypr default/shell default/branding "$share/"
+# Plymouth theme: script + images (made from art/plymouth.py)
+mkdir -p "$share/plymouth"
+cp default/plymouth/olymparch.plymouth default/plymouth/olymparch.script "$share/plymouth/"
+[ -s build/plymouth/temple.png ] || uv run -q --no-project --with pillow python art/plymouth.py build/plymouth 6 >/dev/null
+cp build/plymouth/*.png "$share/plymouth/"
+# The live environment calls itself Olymparch too
+install -m644 default/branding/os-release profile/airootfs/etc/os-release
+install -m644 default/branding/motd profile/airootfs/etc/motd
+install -m644 default/branding/issue profile/airootfs/etc/issue
 install -Dm755 default/launch-shell profile/airootfs/usr/lib/olymparch/launch-shell
 printf 'file_permissions+=(["/usr/lib/olymparch/launch-shell"]="0:0:755")\n' >>profile/profiledef.sh
 for size in 1920x1080 2560x1440; do

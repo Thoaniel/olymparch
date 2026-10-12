@@ -1,0 +1,82 @@
+#!/bin/bash
+# VM test 3: the installation wizard (olymparch-setup), screen by screen with real key presses, in Norwegian
+# with the Norwegian keyboard, all the way through a finished install. Screenshot of every screen.
+#   tests/vm/install-wizard [ISO]
+set -uo pipefail
+cd "$(dirname "$0")/../.."
+. dev/env
+ISO=${1:-$(ls -t out/*.iso 2>/dev/null | head -n 1)}
+[ -f "$ISO" ] || { echo "fant ingen ISO" >&2; exit 2; }
+O=tests/vm/out/install-wizard
+rm -rf -- tests/vm/out/install-wizard
+mkdir -p "$O" cache
+cp "$OLYMPARCH_OVMF_VARS" "$O/vars.fd"
+qemu-img create -q -f qcow2 "$O/disk.qcow2" 24G
+QMP=$O/qmp.sock LOG=live.log
+n=0
+shot() {
+    n=$((n + 1))
+    local f; f=$(printf '%02d-%s.png' "$n" "$1")
+    python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/$f" 2>/dev/null && printf '%s\t%s\n' "$f" "$2" >>"$O/steps.txt"
+}
+keys() { python3 -I tests/vm/qmp.py "$QMP" keys "$1"; sleep 0.6; }
+press() { python3 -I tests/vm/qmp.py "$QMP" press "$@"; sleep 0.8; }
+seen() { grep -qaE "$1" "$O/$LOG"; }
+finish() {
+    echo "$1" >"$O/result.txt"
+    python3 -I tests/vm/qmp.py "$QMP" quit 2>/dev/null
+    echo "install-wizard: $1"
+    [[ $1 == PASS* ]]
+    exit
+}
+qemu-system-x86_64 -L "$OLYMPARCH_QEMU_DATA" -machine q35,accel=kvm -cpu host -smp 4 -m 4096 \
+    -drive if=pflash,format=raw,readonly=on,file="$OLYMPARCH_OVMF_CODE" \
+    -drive if=pflash,format=raw,file="$O/vars.fd" \
+    -drive id=d0,if=none,format=qcow2,file="$O/disk.qcow2" -device nvme,serial=OLYWIZ01,drive=d0 \
+    -cdrom "$ISO" -boot d -nic user,model=virtio-net-pci -device virtio-vga -display none \
+    -virtfs local,path="$PWD/cache",mount_tag=pkgcache,security_model=none,id=c0 \
+    -serial file:"$O/$LOG" -qmp unix:"$QMP",server=on,wait=off -no-reboot &
+QPID=$!
+trap 'kill "$QPID" 2>/dev/null' EXIT
+t0=$SECONDS
+for ((i = 0; i < 120; i++)); do seen 'login:' && break; sleep 1; done
+sleep 4
+shot live "Live-miljøet med Olymparch-velkomsten"
+keys 'mount -t 9p -o trans=virtio pkgcache /var/cache/pacman/pkg; OLYMPARCH_TEST=1 OLYMPARCH_HOST_CACHE=1 olymparch-setup; echo "<2>INSTALL-EXIT=$?" > /dev/kmsg\n'
+sleep 2
+shot sprak "Veiviseren: språk"
+press down ret
+shot tastatur "Tastaturoppsett, Norsk er forhåndsvalgt"
+press ret
+shot tastaturtest "Tastaturtesten"
+# æ ø å @ $ { } | on the Norwegian layout
+press apostrophe semicolon bracket_left alt_r+2 alt_r+4 alt_r+7 alt_r+0 grave_accent
+shot tastaturtest-skrevet "Tastaturtesten med æøå@\$\{\}| skrevet på norsk oppsett"
+press ret
+shot region "Tidssone: region (Europe forhåndsvalgt)"
+press ret
+shot by "Tidssone: by (Oslo forhåndsvalgt)"
+press ret
+sleep 3
+shot disk "Disk: bare NVMe-disken vises, ikke installasjonsmediet"
+press ret
+shot slett "Bekreft sletting med ERASE"
+keys 'ERASE\n'
+shot bruker "Brukernavn"
+keys 'zeus\n'
+shot passord "Passord (skjult)"
+keys 'olympTest123\n'
+shot passord2 "Passordet en gang til"
+keys 'olympTest123\n'
+shot valg "Valg: Spill er krysset av fra start"
+press ret
+shot oppsummering "Oppsummeringen før noe skrives"
+press ret
+sleep 5
+shot installerer "Installasjonen har startet"
+for ((i = 0; i < 1500; i++)); do seen 'INSTALL-EXIT=' && break; kill -0 "$QPID" 2>/dev/null || break; sleep 1; done
+sleep 2
+shot ferdig "Installasjonen er ferdig"
+code=$(grep -aoE 'INSTALL-EXIT=[0-9]+' "$O/$LOG" | tail -n 1 | cut -d= -f2)
+[ "$code" = 0 ] || finish "FAIL · veiviseren/installasjonen stoppet (kode ${code:-ingen})"
+finish "PASS · veiviseren gikk gjennom alle skjermene og installerte på $((SECONDS - t0)) s"

@@ -22,6 +22,7 @@ PASSWORD='$PW'
 KEYMAP=us
 LOCALE=en_US.UTF-8
 TIMEZONE=Europe/Oslo
+CMDLINE_EXTRA='console=ttyS0,115200 console=tty0 plymouth.ignore-serial-consoles'
 EOF
 QMP=$O/qmp.sock
 n=0
@@ -91,14 +92,23 @@ kill "$QPID" 2>/dev/null; wait "$QPID" 2>/dev/null
 
 # --- 3. the installed system, from the disk only
 qemu boot.log
-sleep 3
+for ((i = 0; i < 40; i++)); do seen 'BdsDxe: starting' && break; sleep 0.25; done
+sleep 1.2
 shot limine "Limine-menyen på den installerte disken"
-wait_for 'enter passphrase' 90 || { shot oppstart-feil "Fikk aldri spørsmål om diskpassordet"; finish "FAIL · ingen passordspørsmål fra disken"; }
+gold=0
+for ((i = 0; i < 90; i += 2)); do
+    sleep 2
+    python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/probe.ppm" 2>/dev/null || continue
+    gold=$(python3 -I tests/vm/pixels.py "$O/probe.ppm" | sed -E 's/gold=([0-9]+).*/\1/')
+    (( gold > 150 )) && break
+done
 sleep 2
-shot luks "Systemet ber om diskpassordet"
-keys "$PW\n"
-sleep 2
-shot luks-skrevet "Passordet er skrevet"
+shot luks "Pikselskjermen ber om diskpassordet (Plymouth, gullpiksler: $gold)"
+(( gold > 150 )) || finish "FAIL · pikselskjermen for diskpassordet kom ikke"
+keys "${PW:0:6}"
+sleep 1
+shot luks-prikker "Seks tegn skrevet: seks gullprikker i boksen"
+keys "${PW:6}\n"
 wait_for 'olymparch login:' 120 || { shot innlogging-feil "Systemet kom ikke opp"; finish "FAIL · systemet kom ikke opp etter passordet"; }
 # Autologin starts Hyprland and the shell. Wait until the screen shows the gold bar and temple.
 for ((i = 0; i < 90; i += 3)); do

@@ -94,7 +94,7 @@ step "Skrivebordet (Hyprland og skallet)"
 cp -r /usr/share/olymparch /mnt/usr/share/
 install -Dm755 /usr/lib/olymparch/launch-shell /mnt/usr/lib/olymparch/launch-shell
 xkb=$KEYMAP
-case $KEYMAP in no-latin1) xkb=no ;; esac
+case $KEYMAP in no-latin1) xkb=no ;; sv-latin1) xkb=se ;; dk-latin1) xkb=dk ;; de-latin1) xkb=de ;; fr-latin1) xkb=fr ;; uk) xkb=gb ;; esac
 home=/mnt/home/$USERNAME
 mkdir -p "$home/.config/hypr"
 cat >"$home/.config/hypr/hyprland.lua" <<LUA
@@ -149,6 +149,7 @@ term_foreground: e8e6df
     module_path: boot():/initramfs-$KERNEL.img
 EOF
 
+rm -f -- "$2"   # the answers file holds the password in plain text
 step "Ferdig. Ta ut installasjonsmediet og start på nytt."
 umount -R /mnt
 cryptsetup close root

@@ -2,6 +2,7 @@
 
   qmp.py SOCKET screendump OUT.png
   qmp.py SOCKET keys "text to type\n"      types with US qcodes
+  qmp.py SOCKET press down down ret alt_r+2   named qcodes; + makes a chord
   qmp.py SOCKET quit
 """
 import json
@@ -52,5 +53,9 @@ if __name__ == "__main__":
     elif op == "keys":
         for ch in sys.argv[3].encode().decode("unicode_escape"):
             q.key(ch)
+    elif op == "press":
+        for chord in sys.argv[3:]:
+            q.cmd("send-key", keys=[{"type": "qcode", "data": k} for k in chord.split("+")])
+            time.sleep(0.12)
     elif op == "quit":
         q.cmd("quit")

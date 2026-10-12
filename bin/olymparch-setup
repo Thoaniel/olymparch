@@ -1,0 +1,157 @@
+#!/bin/bash
+# Olymparch installation wizard. Asks the questions, writes an answers file and runs olymparch-install with it.
+# English by default, Norwegian (bokmål) on request. Nothing is written to any disk before the last screen.
+set -uo pipefail
+ANSWERS=/tmp/olymparch-answers.env
+BT=Olymparch
+W=72
+
+declare -A EN=(
+    [lang]="Language"
+    [kbd]="Keyboard layout"
+    [kbd_test]="Type these characters to check the layout, then press Enter:\n\n  æ ø å @ \$ { } |\n\n(Only checks; nothing is saved.)"
+    [kbd_bad]="Those characters did not come out as expected. Pick the layout again?"
+    [tz_region]="Time zone: region"
+    [tz_city]="Time zone: city"
+    [net_ok]="Network: connected."
+    [net_none]="No internet connection. The online installer needs it.\n\nSet up Wi-Fi or cable now?"
+    [disk]="Install Olymparch on which disk? EVERYTHING on it will be erased.\nOther disks are not touched."
+    [erase]="Type ERASE to erase %s (%s, serial %s):"
+    [erase_no]="Not confirmed. Nothing was written."
+    [user]="User name (lowercase letters, digits, - or _):"
+    [user_bad]="Not a valid user name."
+    [pw]="Password for the disk and your account:"
+    [pw2]="The same password again:"
+    [pw_mismatch]="The passwords are not the same."
+    [pw_short]="Use at least 8 characters."
+    [pw_chars]="The password contains a character that is different on the boot screen than in the desktop (£ § ¤ € ´ \` ¨ ^ ~). Please avoid it."
+    [opts]="What should be installed? (Space to tick)"
+    [o_games]="Games: Steam, Proton, gamemode, MangoHud"
+    [o_emu]="Emulators"
+    [o_zeus]="Zeus (the AI assistant Olympus)"
+    [o_discord]="Discord"
+    [o_spotify]="Spotify"
+    [o_obs]="OBS Studio"
+    [o_code]="Code (VS Code)"
+    [o_hib]="Hibernate (laptops; uses disk space equal to RAM)"
+    [summary]="Ready to install:\n\n  Disk:      %s (%s)\n  User:      %s\n  Keyboard:  %s\n  Time zone: %s\n  Options:   %s\n\nThe disk is erased when you press Install."
+    [install]="Install"
+    [cancel]="Cancel"
+    [cancelled]="Installation cancelled. Nothing was written."
+)
+declare -A NB=(
+    [lang]="Språk"
+    [kbd]="Tastaturoppsett"
+    [kbd_test]="Skriv disse tegnene for å sjekke oppsettet, og trykk Enter:\n\n  æ ø å @ \$ { } |\n\n(Bare en sjekk, ingenting lagres.)"
+    [kbd_bad]="Tegnene kom ikke ut som forventet. Velge oppsett på nytt?"
+    [tz_region]="Tidssone: region"
+    [tz_city]="Tidssone: by"
+    [net_ok]="Nett: tilkoblet."
+    [net_none]="Ingen internettforbindelse. Online-installasjonen trenger det.\n\nSette opp Wi-Fi eller kabel nå?"
+    [disk]="Hvilken disk skal Olymparch installeres på? ALT på den slettes.\nAndre disker røres ikke."
+    [erase]="Skriv ERASE for å slette %s (%s, serienummer %s):"
+    [erase_no]="Ikke bekreftet. Ingenting er skrevet."
+    [user]="Brukernavn (små bokstaver, tall, - eller _):"
+    [user_bad]="Ugyldig brukernavn."
+    [pw]="Passord for disken og kontoen din:"
+    [pw2]="Samme passord en gang til:"
+    [pw_mismatch]="Passordene er ikke like."
+    [pw_short]="Bruk minst 8 tegn."
+    [pw_chars]="Passordet har et tegn som blir et annet på oppstartsskjermen enn på skrivebordet (£ § ¤ € ´ \` ¨ ^ ~). Unngå det."
+    [opts]="Hva skal installeres? (Mellomrom krysser av)"
+    [o_games]="Spill: Steam, Proton, gamemode, MangoHud"
+    [o_emu]="Emulatorer"
+    [o_zeus]="Zeus (AI-assistenten Olympus)"
+    [o_discord]="Discord"
+    [o_spotify]="Spotify"
+    [o_obs]="OBS Studio"
+    [o_code]="Kode (VS Code)"
+    [o_hib]="Dvale (bærbare; bruker diskplass lik RAM)"
+    [summary]="Klar til å installere:\n\n  Disk:       %s (%s)\n  Bruker:     %s\n  Tastatur:   %s\n  Tidssone:   %s\n  Valg:       %s\n\nDisken slettes når du trykker Installer."
+    [install]="Installer"
+    [cancel]="Avbryt"
+    [cancelled]="Installasjonen er avbrutt. Ingenting er skrevet."
+)
+L=EN
+t() { local -n d=$L; printf '%s' "${d[$1]}"; }
+wt() { whiptail --backtitle "$BT" "$@" 3>&1 1>&2 2>&3; }
+bail() { whiptail --backtitle "$BT" --msgbox "$(t cancelled)" 8 $W; exit 1; }
+
+# 1. Language
+lang=$(wt --title "$(t lang)" --menu "" 12 $W 2 en "English" nb "Norsk (bokmål)") || bail
+[ "$lang" = nb ] && L=NB
+LOCALE=en_US.UTF-8; [ "$lang" = nb ] && LOCALE=nb_NO.UTF-8
+
+# 2. Keyboard, with a test of the characters that differ between layouts
+while true; do
+    # Tags are console keymap names; olymparch-install maps them to the desktop (xkb) layout
+    KEYMAP=$(wt --title "$(t kbd)" --default-item "$([ "$lang" = nb ] && echo no-latin1 || echo us)" --menu "" 18 $W 10 \
+        us "English (US)" no-latin1 "Norsk" sv-latin1 "Svenska" dk-latin1 "Dansk" fi "Suomi" de-latin1 "Deutsch" \
+        fr-latin1 "Français" uk "English (UK)" es "Español" it "Italiano") || bail
+    loadkeys "$KEYMAP" 2>/dev/null
+    typed=$(wt --title "$(t kbd)" --inputbox "$(printf "$(t kbd_test)")" 14 $W) || bail
+    [ "$typed" = "æøå@\${}|" ] || [ "$typed" = "æ ø å @ \$ { } |" ] && break
+    wt --title "$(t kbd)" --yesno "$(t kbd_bad)" 8 $W || break
+done
+
+# 3. Time zone: region, then city
+regions=$(cd /usr/share/zoneinfo && find . -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | grep -E '^(Africa|America|Antarctica|Asia|Atlantic|Australia|Europe|Indian|Pacific)$' | sort)
+args=(); for r in $regions; do args+=("$r" ""); done
+region=$(wt --title "$(t tz_region)" --default-item Europe --menu "" 18 $W 10 "${args[@]}") || bail
+args=(); while IFS= read -r c; do args+=("$c" ""); done < <(cd "/usr/share/zoneinfo/$region" && find . -type f -printf '%P\n' | sort)
+city=$(wt --title "$(t tz_city)" --default-item "$([ "$lang" = nb ] && echo Oslo || echo London)" --menu "" 20 $W 12 "${args[@]}") || bail
+TIMEZONE=$region/$city
+
+# 4. Network
+until curl -sfI --max-time 6 https://archlinux.org >/dev/null 2>&1; do
+    wt --title Network --yesno "$(printf "$(t net_none)")" 10 $W || bail
+    nmtui-connect 2>/dev/null || iwctl
+done
+
+# 5. Disk: every whole disk except the one we booted from
+boot_dev=$(lsblk -no PKNAME "$(findmnt -no SOURCE /run/archiso/bootmnt 2>/dev/null)" 2>/dev/null || true)
+args=()
+while read -r name size model serial; do
+    [ "$name" = "$boot_dev" ] && continue
+    args+=("/dev/$name" "$size  ${model:-?}")
+done < <(lsblk -dno NAME,SIZE,MODEL,SERIAL -e 7,11 | awk '{print $1, $2, $3, $NF}')
+[ ${#args[@]} -gt 0 ] || { wt --msgbox "No disk found." 8 $W; exit 1; }
+DISK=$(wt --title Disk --menu "$(t disk)" 16 $W 6 "${args[@]}") || bail
+DISK_SERIAL=$(lsblk -dno SERIAL "$DISK" | tr -d ' ')
+size=$(lsblk -dno SIZE "$DISK" | xargs)
+confirm=$(wt --title Disk --inputbox "$(printf "$(t erase)" "$DISK" "$size" "$DISK_SERIAL")" 10 $W) || bail
+[ "$confirm" = ERASE ] || { wt --msgbox "$(t erase_no)" 8 $W; exit 1; }
+
+# 6. User and password
+while true; do
+    USERNAME=$(wt --title User --inputbox "$(t user)" 9 $W) || bail
+    [[ $USERNAME =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] && [ "$USERNAME" != root ] && break
+    wt --msgbox "$(t user_bad)" 8 $W
+done
+while true; do
+    PASSWORD=$(wt --title User --passwordbox "$(t pw)" 9 $W) || bail
+    pw2=$(wt --title User --passwordbox "$(t pw2)" 9 $W) || bail
+    if [ "$PASSWORD" != "$pw2" ]; then wt --msgbox "$(t pw_mismatch)" 8 $W; continue; fi
+    if [ ${#PASSWORD} -lt 8 ]; then wt --msgbox "$(t pw_short)" 8 $W; continue; fi
+    if [[ $PASSWORD == *[£§¤€´\`¨^~]* ]]; then wt --msgbox "$(t pw_chars)" 10 $W; continue; fi
+    break
+done
+
+# 7. Options
+laptop=0; ls /sys/class/power_supply/BAT* >/dev/null 2>&1 && laptop=1
+args=(games "$(t o_games)" ON emu "$(t o_emu)" OFF zeus "$(t o_zeus)" OFF discord "$(t o_discord)" OFF
+      spotify "$(t o_spotify)" OFF obs "$(t o_obs)" OFF code "$(t o_code)" OFF)
+(( laptop )) && args+=(hibernate "$(t o_hib)" OFF)
+OPTIONS=$(wt --title Olymparch --checklist "$(t opts)" 18 $W 8 "${args[@]}") || bail
+OPTIONS=$(echo "$OPTIONS" | tr -d '"' | tr ' ' ',')
+
+# 8. Summary
+whiptail --backtitle "$BT" --title Olymparch --yes-button "$(t install)" --no-button "$(t cancel)" \
+    --yesno "$(printf "$(t summary)" "$DISK" "$size" "$USERNAME" "$KEYMAP" "$TIMEZONE" "${OPTIONS:--}")" 16 $W || bail
+
+umask 077
+{
+    printf 'DISK=%q\nDISK_SERIAL=%q\nUSERNAME=%q\nPASSWORD=%q\n' "$DISK" "$DISK_SERIAL" "$USERNAME" "$PASSWORD"
+    printf 'KEYMAP=%q\nLOCALE=%q\nTIMEZONE=%q\nOPTIONS=%q\nLANGUAGE=%q\n' "$KEYMAP" "$LOCALE" "$TIMEZONE" "$OPTIONS" "$lang"
+} >"$ANSWERS"
+exec olymparch-install --answers "$ANSWERS"
