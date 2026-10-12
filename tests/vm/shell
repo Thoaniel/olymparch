@@ -22,7 +22,7 @@ unlock_and_desktop "$PW"
 
 # Put the shell from the repo in place and restart it
 press meta_l+ret; sleep 2
-keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/lock /mnt/default/idle /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -Dm644 /mnt/default/foot/foot.ini /etc/xdg/foot/foot.ini && sudo install -Dm644 /mnt/default/idle/olymparch-lock.pam /etc/pam.d/olymparch-lock && sudo install -m755 /mnt/system/bin/olymparch-lock /usr/bin/ && hyprctl reload >/dev/null; pkill -x quickshell; echo '<2>SHELL-UPDATED' | sudo tee /dev/kmsg; exit\n" 1
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /usr/share/olymparch/ && sudo cp -r /mnt/default/lock /mnt/default/idle /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -Dm644 /mnt/default/foot/foot.ini /etc/xdg/foot/foot.ini && sudo install -Dm644 /mnt/default/idle/olymparch-lock.pam /etc/pam.d/olymparch-lock && sudo install -m755 /mnt/system/bin/olymparch-lock /usr/bin/ && hyprctl reload >/dev/null; pkill -x quickshell; echo '<2>SHELL-UPDATED' | sudo tee /dev/kmsg; exit\n" 1
 keys "$PW\n" 1
 wait_for 'SHELL-UPDATED' 30 || finish "FAIL · fikk ikke kopiert skallet inn"
 sleep 5

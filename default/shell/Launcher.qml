@@ -60,7 +60,7 @@ Scope {
                 Keys.onReturnPressed: list.launch(list.currentIndex)
                 Text {
                     visible: !search.text
-                    text: "Søk etter apper …"
+                    text: I18n.t("launcher.search", "Search apps …")
                     font: search.font
                     color: launcher.theme.muted
                     anchors.verticalCenter: parent.verticalCenter

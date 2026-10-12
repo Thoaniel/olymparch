@@ -56,7 +56,7 @@ Scope {
                     }
                 }
                 Text {
-                    text: osd.muted ? "dempet" : Math.round(osd.volume * 100) + "%"
+                    text: osd.muted ? I18n.t("osd.muted", "muted") : Math.round(osd.volume * 100) + "%"
                     font { family: osd.theme.mono; pixelSize: 14 }
                     color: osd.theme.text
                     anchors.verticalCenter: parent.verticalCenter
