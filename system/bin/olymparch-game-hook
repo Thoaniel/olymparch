@@ -18,20 +18,26 @@ listed() {  # listed NAME FILE...: NAME is a line in one of the files (comments 
     [ -n "$name" ] && grep -qxF -- "$name" < <(sed -e 's/#.*//' -e 's/[[:space:]]*$//' "$@" 2>/dev/null)
 }
 
+uid=$(id -u)
+mine() {  # mine PID: a live process of this user. Nothing of another user's is ever read or registered.
+    [[ $1 =~ ^[0-9]+$ ]] && [ "$1" -gt 1 ] && [ "$(stat -c %u "/proc/$1" 2>/dev/null)" = "$uid" ]
+}
+
 # find_game PID: walk up from the window's process. Prints "KIND APPID PID" for the first match.
+# The walk stops at the first process that is not ours (the login, root daemons).
 find_game() {
     local p=$1 comm cmd env id exe
-    while [ "$p" -gt 1 ] 2>/dev/null && [ -r "/proc/$p/comm" ]; do
+    while mine "$p"; do
         comm=$(<"/proc/$p/comm")
         case $comm in
             steam | steamwebhelper | Hyprland | quickshell | qs) return 1 ;;   # the Steam client itself, the desktop
         esac
         cmd=$(tr '\0' ' ' <"/proc/$p/cmdline" 2>/dev/null || true)
-        if [ "$comm" = reaper ] && [[ $cmd == *SteamLaunch* && $cmd =~ AppId=([0-9]+) ]]; then
+        if [ "$comm" = reaper ] && [[ $cmd == *SteamLaunch* && $cmd =~ AppId=([0-9]{1,10})( |$) ]]; then
             echo "steam ${BASH_REMATCH[1]} $p"; return 0
         fi
         env=$(tr '\0' '\n' <"/proc/$p/environ" 2>/dev/null || true)
-        id=$(sed -nE 's/^(SteamAppId|STEAM_COMPAT_APP_ID)=([0-9]+)$/\2/p' <<<"$env" | grep -vx 0 | head -n 1 || true)
+        id=$(sed -nE 's/^(SteamAppId|STEAM_COMPAT_APP_ID)=([0-9]{1,10})$/\2/p' <<<"$env" | grep -vx 0 | head -n 1 || true)
         if [ -n "$id" ]; then echo "steam $id $p"; return 0; fi
         if grep -q '^HEROIC_APP_NAME=.' <<<"$env"; then echo "heroic - $p"; return 0; fi
         if [[ $cmd == *umu-run* ]]; then echo "umu - $p"; return 0; fi
@@ -70,10 +76,12 @@ case ${1:-} in
             pid=$(hyprctl clients | awk -v a="Window ${addr#0x} " 'index($0, a) == 1 {f = 1} f && $1 == "pid:" {print $2; exit}')
         fi
         [[ ${pid:-} =~ ^[0-9]+$ ]] || exit 0
+        if ! mine "$pid"; then say "ignored window=$addr pid=$pid: not this user's process"; exit 0; fi
         read -r kind appid gpid < <(find_game "$pid") || exit 0
+        [[ $appid == - || $appid =~ ^[0-9]{1,10}$ ]] || exit 0
         say "game: $kind appid=$appid window=$addr pid=$pid (found at $gpid)"
         # The window's own process is the game; it is what gamemode should tune
-        register "$pid" || say "gamemode: could not register $pid"
+        { mine "$pid" && register "$pid"; } || say "gamemode: could not register $pid"
         # The Proton watcher needs to know this game reached a window
         [ "$appid" != - ] && date +%s >"$run/$appid.window"
         ;;

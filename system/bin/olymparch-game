@@ -21,6 +21,11 @@ t() {  # t KEY "English text": the line from /usr/share/olymparch/i18n/<lang>.js
     printf '%s' "${v:-$2}"
 }
 names() { sed -e 's/#.*//' -e 's/[[:space:]]*$//' -e '/^$/d' "$@" 2>/dev/null; }
+uid=$(id -u)
+mine() { [[ $1 =~ ^[0-9]+$ ]] && [ "$1" -gt 1 ] && [ "$(stat -c %u "/proc/$1" 2>/dev/null)" = "$uid" ]; }
+valid_name() {  # a program name: no path, no control characters, not a comment or an option
+    [[ $1 =~ ^[^/#[:cntrl:]-][^/[:cntrl:]]{0,63}$ ]] || { echo "olymparch-game: invalid name: $1" >&2; exit 2; }
+}
 
 case ${1:-} in
     list)
@@ -31,28 +36,33 @@ case ${1:-} in
         ;;
     add)
         name=${2:?"usage: olymparch-game add NAME"}
+        valid_name "$name"
         names "$conf" | grep -qxF -- "$name" || echo "$name" >>"$conf"
         echo "$(t game.added "Added as a game:") $name"
         ;;
     remove)
         name=${2:?"usage: olymparch-game remove NAME"}
+        valid_name "$name"
         grep -vxF -- "$name" "$conf" >"$conf.tmp" || true
         mv "$conf.tmp" "$conf"
         echo "$(t game.removed "No longer a game:") $name"
         ;;
     add-focused)
         pid=$(hyprctl activewindow | awk '$1 == "pid:" {print $2; exit}')
-        [[ ${pid:-} =~ ^[0-9]+$ ]] && [ -r "/proc/$pid/comm" ] || exit 0
+        mine "${pid:-}" || exit 0   # never another user's program
         name=$(<"/proc/$pid/comm")
         case $name in quickshell | qs | Hyprland) exit 0 ;; esac
+        valid_name "$name"
         names "$conf" | grep -qxF -- "$name" || echo "$name" >>"$conf"
-        busctl --user call com.feralinteractive.GameMode /com/feralinteractive/GameMode \
-            com.feralinteractive.GameMode RegisterGameByPID ii $$ "$pid" >/dev/null 2>&1 || true
+        # The note first: once the game is registered, do-not-disturb holds it back
         notify-send -a Olymparch "$(t game.added "Added as a game:") $name" \
             "$(t game.added_body "It gets gamemode and spillmodus from now on. Remove it in Settings → Games.")" || true
+        busctl --user call com.feralinteractive.GameMode /com/feralinteractive/GameMode \
+            com.feralinteractive.GameMode RegisterGameByPID ii $$ "$pid" >/dev/null 2>&1 || true
         ;;
     check)
         appid=${2:?"usage: olymparch-game check APPID"}
+        [[ $appid =~ ^[0-9]{1,10}$ ]] || { echo "olymparch-game: APPID is a number" >&2; exit 2; }
         exec olymparch-proton check "$appid"
         ;;
     watch)
@@ -65,9 +75,10 @@ case ${1:-} in
         while true; do
             declare -A now=()
             for d in /proc/[0-9]*; do
+                mine "${d#/proc/}" || continue   # only our own Steam games
                 [ "$(cat "$d/comm" 2>/dev/null)" = reaper ] || continue
                 cmd=$(tr '\0' ' ' <"$d/cmdline" 2>/dev/null) || continue
-                [[ $cmd == *SteamLaunch* && $cmd =~ AppId=([0-9]+) ]] && now[${BASH_REMATCH[1]}]=1
+                [[ $cmd == *SteamLaunch* && $cmd =~ AppId=([0-9]{1,10})( |$) ]] && now[${BASH_REMATCH[1]}]=1
             done
             ts=$(date +%s)
             for id in "${!now[@]}"; do

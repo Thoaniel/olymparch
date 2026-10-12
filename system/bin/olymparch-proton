@@ -30,6 +30,8 @@ STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", HOME / ".local/state")) / "oly
 STATE = STATE_DIR / "state.json"
 QUEUE = STATE_DIR / "queue.json"
 CHAIN = ["default", "GE-Proton", "proton_experimental"]
+APPID_RE = re.compile(r"[0-9]{1,10}")
+TOOL_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}")  # compat tool names go into config.vdf: no quotes
 
 
 # ---- i18n: English in the code, other languages from /usr/share/olymparch/i18n/<lang>.json -------------------
@@ -177,6 +179,8 @@ def newest_ge():
             name = (vdf_get(tools, "compat_tools") or [[d.name]])[0][0]
         except (OSError, ValueError, IndexError, TypeError):
             pass
+        if not TOOL_RE.fullmatch(name):
+            continue
         nums = tuple(int(x) for x in re.findall(r"\d+", d.name))
         found.append((nums, name))
     return max(found)[1] if found else None
@@ -243,6 +247,8 @@ def apply():
         return 3
     q, st = load(QUEUE), load(STATE)
     for appid, tool in table("proton-table.tsv").items():
+        if not APPID_RE.fullmatch(appid):
+            continue
         s = st.setdefault(appid, {})
         if appid not in q and not s.get("table") and installed(appid) and not anticheat_denied(appid):
             tool = resolve(chain_class(tool)) if chain_class(tool) != "other" else tool
@@ -257,6 +263,8 @@ def apply():
     root = read_config()
     mapping = compat_mapping(root)
     for appid, tool in q.items():
+        if not (APPID_RE.fullmatch(appid) and TOOL_RE.fullmatch(tool)):
+            continue  # the queue file is ours, but never trust it into config.vdf
         mapping[:] = [kv for kv in mapping if kv[0] != appid]
         if tool != "default":
             mapping.append([appid, [["name", tool], ["config", ""], ["priority", "250"]]])
@@ -397,7 +405,8 @@ def check(appid):
 def main(argv):
     cmd, args = (argv[1] if len(argv) > 1 else "help"), argv[2:]
     need = {"check": 1, "get": 1, "set": 2, "apply": 0, "failed": 3, "ok": 1, "undo": 1, "restart-steam": 0}
-    if cmd not in need or len(args) != need[cmd] or (need[cmd] and not args[0].isdigit()):
+    bad = bool(need.get(cmd)) and not APPID_RE.fullmatch(args[0] if args else "")
+    if cmd not in need or len(args) != need[cmd] or bad or (cmd == "set" and not TOOL_RE.fullmatch(args[1])):
         print(__doc__.strip(), file=sys.stderr)
         return 2
     if cmd == "check":
