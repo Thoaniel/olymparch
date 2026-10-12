@@ -23,7 +23,8 @@ Scope {
             if (!critical) {
                 const ms = n.actions.length > 0 ? 15000 : 6000;
                 const t = Qt.createQmlObject(`import QtQuick; Timer { interval: ${ms}; running: true }`, notes);
-                t.triggered.connect(() => { if (n) n.expire(); t.destroy(); });
+                // the toast may be gone already (dismissed, or a button closed it)
+                t.triggered.connect(() => { try { if (n) n.expire(); } catch (e) {} t.destroy(); });
             }
         }
     }
