@@ -47,7 +47,13 @@ finish() {
     [[ $1 == PASS* ]]
     exit
 }
+past_limine() {  # the Limine menu is gold too: wait until the firmware starts it and its 3 s countdown is over
+    local i
+    for ((i = 0; i < 80; i++)); do seen 'BdsDxe: starting' && break; sleep 0.25; done
+    sleep 5
+}
 unlock_and_desktop() {  # PASSWORD: type it on the Plymouth screen, wait for the desktop
+    past_limine
     wait_gold 150 90 || { shot luks-feil "Pikselskjermen for diskpassordet kom ikke"; finish "FAIL · ingen passordskjerm"; }
     keys "$1\n" 1
     wait_for 'login:' 120 || { shot oppstart-feil "Systemet kom ikke opp"; finish "FAIL · systemet kom ikke opp"; }

@@ -75,8 +75,9 @@ wait_for 'SL-INSTALLED' 200 && installed=1
 sleep 2
 shot installert "Driveren («sl») er installert, varselet sier fra; loggen i /var/log/olymparch-hw.log"
 
-# 3. The boot check (sudo is still unlocked in this terminal): pretend the last boot had an RTX 4070, then run what olymparch-hw-boot.service runs
-keys "clear; sudo olymparch-hw boot-check >/dev/null; echo 10de:2786:1 | sudo tee /var/lib/olymparch/hw/gpu >/dev/null; sudo olymparch-hw boot-check | tee /tmp/offers; grep -q vm-qemu /tmp/offers && echo '<2>BOOT-OFFER' | sudo tee /dev/kmsg >/dev/null; olymparch-hw notify --boot &\n" 1
+# 3. The boot check (sudo is still unlocked in this terminal): the installer already put the guest agent in, so it is
+# removed to have something to offer; pretend the last boot had an RTX 4070, then run what olymparch-hw-boot.service runs
+keys "clear; sudo pacman -Rdd --noconfirm qemu-guest-agent >/dev/null 2>&1; sudo olymparch-hw boot-check >/dev/null; echo 10de:2786:1 | sudo tee /var/lib/olymparch/hw/gpu >/dev/null; sudo olymparch-hw boot-check | tee /tmp/offers; grep -q vm-qemu /tmp/offers && echo '<2>BOOT-OFFER' | sudo tee /dev/kmsg >/dev/null; olymparch-hw notify --boot &\n" 1
 offer=0
 wait_for 'BOOT-OFFER' 60 && offer=1
 if xy=$(button 1 40); then
