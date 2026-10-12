@@ -205,7 +205,7 @@ from pathlib import Path
 from PIL import Image
 o = Path(sys.argv[1])
 shots = {}
-for p in sorted(o.glob("*-skrivebord.png")):
+for p in sorted(o.glob("*-skrivebord.png"), key=lambda p: int(p.name.split("-")[0])):
     m = re.match(r"\d+-(.+)-(\d+)-skrivebord\.png", p.name)
     if m:
         shots.setdefault(m.group(1), []).append(p)

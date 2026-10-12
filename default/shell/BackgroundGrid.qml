@@ -36,7 +36,7 @@ Grid {
                 width: grid.thumbW; height: grid.thumbH
                 color: grid.theme.bg
                 border.width: card.focused ? 2 : 1
-                border.color: card.focused ? grid.theme.goldHi : card.now ? grid.theme.gold : grid.theme.line
+                border.color: card.focused ? grid.theme.goldHi : grid.theme.line   // focus only; the one in use has its ✓
                 Image {
                     anchors { fill: parent; margins: card.focused ? 2 : 1 }
                     source: card.modelData.thumb ? "file://" + encodeURI(card.modelData.thumb) : ""

@@ -1,7 +1,7 @@
 """Athene: ugla på olivengrenen i måneskinn, Parthenon i måneskinn, ugla som stjernebilde. (Tempelet er art/torch.py.)"""
 import math
 
-from common import sign
+from common import constellation, sign
 from pixel import H, W, hsh, mix
 
 OWL = """
@@ -115,28 +115,15 @@ def parthenon(c):
             c.put(x, y, mix(p.acc, p.bg, 0.3))
 
 
-OWL_SIGN = """
-  *          *
-  #+        +#
-  ############
- ##::##++##::##
- #:*##:##:##*:#
- #:##:####:##:#
- ##::##::##::##
-  ####:##:####
-  #####**#####
-  ############
- ##:########:##
- #####:##:#####
- ##:########:##
-  #####:#:####
-   ##########
-    ########
-     +    +
-"""
+# ugla: øretuster og to store øyne som de klareste stjernene, en kropp i omriss, nebb og føtter
+OWL_SIGN = constellation(37, 40, lines=[[(7, 1), (11, 8), (25, 8), (29, 1)], [(7, 1), (6, 12), (5, 22), (8, 31), (18, 37), (28, 31), (31, 22), (30, 12), (29, 1)],
+                                        [(18, 15), (18, 18)], [(14, 37), (13, 39)], [(22, 37), (23, 39)], [(9, 24), (13, 30)], [(27, 24), (23, 30)]],
+                         rings=[(12, 13, 4, 4), (24, 13, 4, 4)],
+                         stars=[(12, 13), (24, 13), (7, 1), (29, 1)], small=[(18, 18), (18, 37), (5, 22), (31, 22)])
+
 
 SCENES = {
     "owl": (32, owl),
     "parthenon": (32, parthenon),
-    "sign": sign(OWL_SIGN, scale=4, dy=-6),
+    "sign": sign(OWL_SIGN, scale=3, dy=-4),
 }

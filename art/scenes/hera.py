@@ -1,7 +1,7 @@
 """Hera: påfuglens hale, Melkeveien (melken fra Hera), påfuglfjæren som stjernebilde. (Tempelet er art/torch.py.)"""
 import math
 
-from common import sign
+from common import constellation, sign
 from pixel import H, TAU, W, hsh, mix
 
 
@@ -15,9 +15,9 @@ def peacock(c):
     barb = mix(p.surface, p.line, 0.35)
     # halen: fjær i en vifte, tre rader; hver fjær har et øye ytterst
     eyes = []
-    for row, (r, n) in enumerate(((118, 15), (92, 12), (64, 9))):
+    for row, (r, n) in enumerate(((104, 7), (80, 5), (56, 3))):
         for i in range(n):
-            a = math.pi * (0.08 + 0.84 * i / (n - 1)) + (0.5 / n if row == 1 else 0)
+            a = math.pi * (0.12 + 0.76 * i / max(1, n - 1))
             sway = 0.012 * c.wave(1, hsh(row, i))
             a += sway
             ex, ey = cx - math.cos(a) * r, cy - math.sin(a) * r * 0.92
@@ -32,12 +32,11 @@ def peacock(c):
     for ex, ey, row, i in eyes:
         rr = 5 - row
         tw = 0.5 + 0.5 * math.sin(TAU * (c.t + hsh(row, i, 3)))
-        c.ellipse(ex, ey, rr + 1.5, rr + 2.5, mix(p.surface, p.line, 0.9))
-        c.ellipse(ex, ey, rr, rr + 1, p.hi if tw > 0.25 else mix(p.hi, p.line, 0.5))
-        c.ellipse(ex, ey + 0.5, rr * 0.6, rr * 0.7, p.acc)
+        ring, iris = mix(p.surface, p.line, 0.6), mix(p.hi, p.surface, 0.45 if tw > 0.25 else 0.6)
+        c.ellipse(ex, ey, rr + 1.5, rr + 2.5, ring)
+        c.ellipse(ex, ey, rr, rr + 1, iris)
+        c.ellipse(ex, ey + 0.5, rr * 0.6, rr * 0.7, mix(p.acc, p.surface, 0.4))
         c.ellipse(ex, ey + 1, rr * 0.3, rr * 0.35, p.bg)
-        if tw > 0.85:
-            c.put(ex - 1, ey - rr, p.text)
     # fuglen selv: en liten mørk silhuett foran vifta
     body = """
 ..a.a.a...
@@ -94,34 +93,14 @@ def milkyway(c):
     c.gradient([mix(p.bg, p.surface, 0.3), p.bottom], 168, 180)
 
 
-FEATHER = """
-       :::::::
-     ::#######::
-    :##+#####+##:
-   :##+##***##+##:
-   :#+##*###*##+#:
-   :#+#*##*##*#+#:
-   :#+##*###*##+#:
-   :##+##***##+##:
-    :##+#####+##:
-   : :#########: :
-  :   :#######:   :
-   :    :###:    :
-     :   :#:   :
-       :  *  :
-         :+:
-          :
-          +
-          :
-          :
-          +
-          :
-          :
-          *
-"""
+# en påfuglfjær: et langt skaft, et dråpeformet øye med en stjerne i midten, skjegg som vifter ut
+FEATHER = constellation(37, 40, lines=[[(18, 39), (18, 18)], [(24, 10), (23, 14), (21, 17), (18, 18), (15, 17), (13, 14), (12, 10), (13, 6), (15, 3), (18, 2), (21, 3), (23, 6), (24, 10)]] + [[(18, y), (18 - 7 + (y - 18) // 5, y - 5)] for y in range(22, 38, 4)]
+                        + [[(18, y), (18 + 7 - (y - 18) // 5, y - 5)] for y in range(22, 38, 4)],
+                        stars=[(18, 10), (18, 2), (18, 39)], small=[(12, 10), (24, 10), (11, 17), (25, 17)])
+
 
 SCENES = {
     "peacock": (32, peacock),
     "milkyway": (32, milkyway),
-    "sign": sign(FEATHER, scale=4, dy=-8),
+    "sign": sign(FEATHER, scale=3, dy=-4),
 }

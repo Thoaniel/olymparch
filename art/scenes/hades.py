@@ -2,7 +2,7 @@
 (Tempelet er art/torch.py.)"""
 import math
 
-from common import sign
+from common import constellation, sign
 from pixel import H, TAU, W, hsh, mix
 
 BOAT = """
@@ -112,30 +112,14 @@ def embers(c):
     c.particles(14, 72, 80, 240, 168, 110, [p.hi, mix(p.hi, p.bg, 0.5)], rise=True, sway=1.5, life=0.7)
 
 
-BIDENT = """
- *       *
- #       #
- #       #
- +       +
- #       #
- ##     ##
-  ##   ##
-   ##*##
-    ###
-     #
-     +
-     #
-     :
-     #
-     +
-     #
-     :
-     #
-     *
-"""
+# tveforken: to brede tinder med mothaker, en tverrstang og et langt skaft
+BIDENT = constellation(33, 42, lines=[[(16, 12), (16, 41)], [(4, 12), (28, 12)], [(4, 12), (4, 0)], [(28, 12), (28, 0)],
+                                      [(4, 0), (1, 5)], [(28, 0), (31, 5)], [(4, 12), (7, 16), (16, 16)], [(28, 12), (25, 16), (16, 16)]],
+                       stars=[(4, 0), (28, 0), (4, 12), (28, 12), (16, 41), (16, 12)], small=[(1, 5), (31, 5), (16, 16)])
+
 
 SCENES = {
     "styx": (32, styx),
     "embers": (32, embers),
-    "sign": sign(BIDENT, scale=4, dy=-6),
+    "sign": sign(BIDENT, scale=3, dy=-6),
 }

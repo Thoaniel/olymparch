@@ -76,7 +76,7 @@ Scope {
             id: panel
             width: Math.min(parent.width - 48, grid.width + 40)
             height: col.implicitHeight + 36
-            anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 48 }
+            anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 20 }
             color: picker.theme.surface
             border.color: picker.theme.line
             Rectangle { x: -1; y: -1; width: 14; height: 2; color: picker.theme.gold }
@@ -121,7 +121,7 @@ Scope {
                     theme: picker.theme
                     columns: Math.min(picker.perRow, Math.max(1, picker.items.length))
                     // as wide as fits: up to six side by side, never wider than the screen (minus the frame)
-                    thumbW: Math.max(120, Math.min(192, Math.floor((panel.parent.width - 48 - 40 - (columns - 1) * spacing) / columns)))
+                    thumbW: Math.max(120, Math.min(160, Math.floor((panel.parent.width - 48 - 40 - (columns - 1) * spacing) / columns)))
                     items: picker.items
                     current: (picker.items[picker.was] || {}).id || ""
                     cursor: picker.cursor

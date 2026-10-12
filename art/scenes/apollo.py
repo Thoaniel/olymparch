@@ -67,13 +67,16 @@ def sunrise(c):
     c.sprite(HORSE, cx - 6, cy - 25 - bob, {"A": dark}, scale=2)
     # vogna: kassa og et hjul med eiker bak hestene
     c.line([(cx - 14, cy - 12), (cx - 6, cy - 12)], dark, 2)
-    c.rect(cx - 26, cy - 18, cx - 16, cy - 11, dark)
-    for a in range(16):
-        ang = a * math.pi / 8
-        c.put(cx - 21 + 6 * math.cos(ang), cy - 6 + 6 * math.sin(ang), dark)
+    # vognkassa: lav bak, buet og høy foran
+    c.poly([(cx - 29, cy - 11), (cx - 14, cy - 11), (cx - 12, cy - 14), (cx - 13, cy - 19), (cx - 16, cy - 22),
+            (cx - 17, cy - 18), (cx - 23, cy - 15), (cx - 29, cy - 15)], dark)
+    for a in range(28):
+        ang = a * math.pi / 14
+        c.put(cx - 21 + 7 * math.cos(ang), cy - 5 + 7 * math.sin(ang), dark)
+        c.put(cx - 21 + 6 * math.cos(ang), cy - 5 + 6 * math.sin(ang), dark)
     for a in range(4):
         ang = a * math.pi / 4 + c.loop(1) * math.pi / 2
-        c.line([(cx - 21 - 5 * math.cos(ang), cy - 6 - 5 * math.sin(ang)), (cx - 21 + 5 * math.cos(ang), cy - 6 + 5 * math.sin(ang))], dark)
+        c.line([(cx - 21 - 5 * math.cos(ang), cy - 5 - 5 * math.sin(ang)), (cx - 21 + 5 * math.cos(ang), cy - 5 + 5 * math.sin(ang))], dark)
     # havet: lyse bånd med glitter under sola
     c.gradient([mix(p.bg, p.line, 0.35), mix(p.bg, p.line, 0.2), p.bg], 130, 180)
     for y in range(132, 180, 3):
@@ -90,8 +93,8 @@ def lyre(c):
     p = c.p
     c.gradient([p.bg, p.bg, mix(p.bg, p.raised, 0.6), mix(p.bg, p.raised, 1.0)])
     c.glow(160, 100, 100, 80, p.halo, 0.95 + 0.05 * c.wave(1))
-    # lyren, skalert ×3, med strengene som skimrer
-    c.sprite(LYRE, 160 - 56, 100 - 36, {"A": p.gold[1], "B": p.gold[0], "C": mix(p.bg, p.gold[2], 0.6)}, scale=4)
+    # lyren, skalert ×3, i et mildt gull-brunt (ikke tyngre enn vinduene foran den)
+    c.sprite(LYRE, 160 - 42, 100 - 27, {"A": mix(p.bg, p.acc, 0.55), "B": mix(p.bg, p.acc, 0.7), "C": mix(p.bg, p.acc, 0.3)}, scale=3)
     # gylne lysfnugg som stiger sakte
     c.particles(26, 4, 70, 250, 150, 50, [p.gold[3], p.gold[2], mix(p.bg, p.gold[2], 0.5)], sway=3, life=0.9)
     # et lavt marmorgulv
@@ -101,25 +104,37 @@ def lyre(c):
 
 
 SUN = """
-.............*.............
-.............:.............
-....+........:........+....
-.....:.......:.......:.....
-......:...+*+*+*+...:......
-.......:+#########+:.......
-.......*###########*.......
-......+#############+......
-......*#############*......
-.*::::+#############+::::*.
-......*#############*......
-......+#############+......
-.......*###########*.......
-.......:+#########+:.......
-......:...+*+*+*+...:......
-.....:.......:.......:.....
-....+........:........+....
-.............:.............
-.............*.............
+            *           *
+            #           #
+             #         #
+             #         #
+             #         #
+              #       #
+              +       +
+
+               ###+###
+   *#         #       #         #*
+     ###     #         #     ###
+        #+  #           #  +#
+            #           #
+           #             #
+           #             #
+           +      *      +
+           #             #
+           #             #
+            #           #
+        #+  #           #  +#
+     ###     #         #     ###
+   *#         #       #         #*
+               ###+###
+
+              +       +
+              #       #
+             #         #
+             #         #
+             #         #
+            #           #
+            *           *
 """
 
 SCENES = {

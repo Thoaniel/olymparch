@@ -34,8 +34,8 @@ def wheat(c):
     c.gradient([mix(p.bg, p.surface, 0.8), mix(p.surface, p.hi, 0.12), mix(p.bg, p.surface, 0.5)], 116, 180)
     far_head = mix(p.surface, p.hi, 0.3)
     stalks(c, 130, 140, 1, 6, 10, mix(p.surface, p.line, 0.5), far_head, sway=1.0)
-    stalks(c, 150, 90, 2, 12, 18, mix(p.line, p.hi, 0.2), mix(p.line, p.hi, 0.55), sway=1.6)
-    stalks(c, 178, 46, 3, 22, 32, mix(p.line, p.hi, 0.35), mix(p.hi, p.gold[2], 0.2), sway=2.2)
+    stalks(c, 150, 60, 2, 12, 18, mix(p.surface, p.line, 0.7), mix(p.line, p.hi, 0.3), sway=1.6)
+    stalks(c, 178, 26, 3, 22, 32, mix(p.surface, p.line, 0.8), mix(p.line, p.hi, 0.4), sway=2.2)
     c.particles(6, 4, 40, 300, 140, 110, [p.gold[3], p.gold[2], p.gold[1]], sway=3, life=0.8)
 
 
@@ -48,7 +48,7 @@ def poppies(c):
     c.ridge(118, 6, 7, mix(p.bg, p.surface, 0.75), period=55)
     c.gradient([mix(p.bg, p.surface, 0.7), mix(p.bg, p.surface, 0.4)], 118, 180)
     stalks(c, 140, 120, 5, 6, 10, mix(p.surface, p.line, 0.5), mix(p.surface, p.hi, 0.25), sway=0.8)
-    stalks(c, 178, 60, 6, 22, 30, mix(p.line, p.hi, 0.25), mix(p.line, p.hi, 0.5), sway=1.6)
+    stalks(c, 178, 34, 6, 22, 30, mix(p.surface, p.line, 0.75), mix(p.line, p.hi, 0.3), sway=1.6)
     red, dark = p.danger, mix(p.danger, p.bg, 0.45)
     for i in range(26):  # valmuene: en rød blomst på en tynn stilk, som nikker sakte
         x0 = 10 + hsh(9, i) * 300
@@ -66,19 +66,41 @@ def poppies(c):
 
 
 EMBLEM = """
-....*....*....*....
-...*#*..*#*..*#*...
-...*#*..*#*..*#*...
-...*#*..*#*..*#*...
-....#....#....#....
-.....#...#...#.....
-......#..#..#......
-.......#.#.#.......
-......*******......
-.......#.#.#.......
-......#..#..#......
-.....#...#...#.....
-....*....*....*....
+                *
+                #
+               #:#
+     *         #:#         *
+     #         #:#         #
+    #:#       # : #       #:#
+    #:#       + : +       #:#
+    #:#       # : #       #:#
+   # : #       #:#       # : #
+   + : +        #        + : +
+    #:#         #         #:#
+    #:#         #         #:#
+    # #         #         # #
+     #          #          #
+      #         #         #
+       #        #        #
+        #       #       #
+         #      #      #
+          ##    #    ##
+            #   #   #
+             #  #  #
+              # # #
+            *#######*
+               ###
+              # # #
+              # # #
+             #  #  #
+             #  #  #
+            #   #   #
+            #   #   #
+            #   #   #
+           #    #    #
+           #    #    #
+          #     #     #
+          *     *     *
 """
 
 SCENES = {
