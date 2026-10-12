@@ -48,7 +48,7 @@ for g in schema["groups"]:
     if not any(p["group"] == g["id"] for p in schema["pages"]):
         bad(f"group {g['id']}: no pages")
 
-VIAS = {"shell", "hypr", "monitor", "idle", "audio", "cursor", "stored", "action", "info"}
+VIAS = {"shell", "hypr", "monitor", "idle", "audio", "cursor", "stored", "action", "info", "bluetooth", "power", "mime", "terminal", "unit", "dropin", "headset", "mangohud", "envd", "brightness", "system"}
 seen = set()
 for s in settings:
     k = s.get("key", "?")
@@ -212,6 +212,77 @@ with tempfile.TemporaryDirectory() as home:
             bad(f"olymparch-settings {' '.join(args)!r} was not refused")
     if list(Path(home).rglob("PWNED")) or list(Path(home).rglob(".*.??????")):
         bad("olymparch-settings left PWNED or temp files behind")
+
+# ── system state: olymparch-settings never escalates (no pkexec/sudo), and only switches units from its allow-list
+allowed_units = set(re.findall(r'\["(olymparch-[\w.-]+\.(?:path|timer|service))"\] = true', cli))
+for s in settings:
+    a = s["apply"]
+    for u in a.get("units", []) + ([a["unit"]] if a.get("unit") else []):
+        if u not in allowed_units:
+            bad(f"{s['key']}: unit {u} is not in olymparch-settings' USER_UNITS allow-list")
+code = re.sub(r'--[^\n]*', '', cli)
+if re.search(r'\b(sudo|pacman)\b', code) or code.count("pkexec") != code.count('"pkexec " .. HELPER .. " "') or code.count("pkexec") > 1:
+    bad("olymparch-settings may only run pkexec on its own helper (HELPER), never sudo or pacman")
+if 'local HELPER = "/usr/lib/olymparch/settings-apply"' not in cli:
+    bad("olymparch-settings: HELPER must be /usr/lib/olymparch/settings-apply")
+# the helper and the CLI allow exactly the same actions and values, and the schema stays inside them
+helper = (root / "system/lib/settings-apply").read_text()
+helper_allowed = set(re.findall(r'([a-z-]+:[a-z]+)', helper.split('case "$action:$value" in')[1].split(';;')[0]))
+cli_allowed = set()
+for m in re.finditer(r'(?:\["([a-z-]+)"\]|\b([a-z]+)) = \{ ((?:[a-z]+ = true,? ?)+)\}', cli.split("local SYSTEM_ACTIONS")[1].split("appliers")[0]):
+    act = m.group(1) or m.group(2)
+    for v in re.findall(r'([a-z]+) = true', m.group(3)):
+        cli_allowed.add(f"{act}:{v}")
+if not helper_allowed or helper_allowed != cli_allowed:
+    bad(f"settings-apply allows {sorted(helper_allowed)}, olymparch-settings {sorted(cli_allowed)}: they must match")
+for s in settings:
+    a = s["apply"]
+    if a.get("via") == "system":
+        vals = ["on", "off"] if s["type"] == "bool" else [o["value"] for o in s.get("options", [])]
+        for v in vals:
+            if f"{a.get('action')}:{v}" not in helper_allowed:
+                bad(f"{s['key']}: {a.get('action')} {v} is not allowed by settings-apply")
+if "PATH=/usr/bin" not in helper or '"$(id -u)" = 0' not in helper:
+    bad("settings-apply must reset PATH and refuse to run without root")
+pol = (root / "system/polkit/50-olymparch-settings.rules").read_text()
+if 'action.id == "org.olymparch.settings-apply"' not in pol or "subject.local && subject.active" not in pol:
+    bad("50-olymparch-settings.rules must be scoped to org.olymparch.settings-apply and the active local session")
+if "<annotate key=\"org.freedesktop.policykit.exec.path\">/usr/lib/olymparch/settings-apply</annotate>" not in (root / "system/polkit/org.olymparch.settings.policy").read_text():
+    bad("org.olymparch.settings.policy must name exactly /usr/lib/olymparch/settings-apply")
+
+# ── Wi-Fi: a saved WPA network is never joined through an open twin with the same name; a saved one is joined by
+#    UUID; no password ever reaches a command line. A stand-in nmcli logs every call.
+with tempfile.TemporaryDirectory() as home:
+    fake = Path(home, "bin")
+    fake.mkdir()
+    log = Path(home, "nmcli.log")
+    (fake / "nmcli").write_text(f'''#!/bin/sh
+echo "$*" >> {str(log)!r}
+case "$*" in
+  *"device wifi list"*) printf '%s\\n' "$NM_SCAN" ;;
+  *"-f UUID,TYPE connection show"*) printf '11111111-2222-3333-4444-555555555555:802-11-wireless\\n' ;;
+  *"connection show uuid"*) printf 'Home\\nwpa-psk\\n' ;;
+  *"-f TYPE device"*) printf 'wifi\\nethernet\\n' ;;
+esac
+exit 0
+''')
+    (fake / "nmcli").chmod(0o755)
+    env2 = dict(env, HOME=home, XDG_RUNTIME_DIR=home, PATH=f"{fake}:{os.environ['PATH']}")
+    def pick(scan):
+        log.write_text("")
+        r = subprocess.run([cli_path, "pick", "network.wifi", "Home"], env=dict(env2, NM_SCAN=scan), capture_output=True, text=True)
+        return r.returncode, log.read_text()
+    rc, calls = pick(":70::Home")   # only an open «Home» nearby
+    if rc != 3 or "connection up" in calls or "wifi connect" in calls:
+        bad(f"Wi-Fi: joined (or tried) an open twin of the saved WPA network «Home» (rc {rc}):\n{calls}")
+    rc, calls = pick(":70:WPA2:Home")
+    if rc != 0 or "connection up uuid 11111111-2222-3333-4444-555555555555" not in calls:
+        bad(f"Wi-Fi: the saved WPA network «Home» was not joined by its UUID (rc {rc}):\n{calls}")
+    r = subprocess.run([cli_path, "items", "network.wifi"], env=dict(env2, NM_SCAN=":70::Home"), capture_output=True, text=True)
+    if "\tsaved\t" in r.stdout or "⚠" not in r.stdout:
+        bad(f"Wi-Fi: the list shows an open twin of a saved WPA network as saved:\n{r.stdout}")
+    if re.search(r'password|psk|wifi-sec', log.read_text()):
+        bad("Wi-Fi: a password went through nmcli's command line")
 
 # ── Norwegian for every string the shell shows
 nb = json.loads((root / "default/i18n/nb.json").read_text())

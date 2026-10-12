@@ -1,0 +1,58 @@
+#!/bin/bash
+# pkexec helper behind the Settings rows that change system files: pkexec /usr/lib/olymparch/settings-apply ACTION VALUE
+# A fixed list of actions, each with a fixed list of values; it writes only its own files, never a path, unit or
+# package name from the caller. Everything is logged to /var/log/olymparch-settings.log.
+#   lid suspend|lock|ignore          /etc/systemd/logind.conf.d/50-olymparch-settings.conf   (laptop lid)
+#   connectivity on|off              /etc/NetworkManager/conf.d/20-olymparch-connectivity.conf
+#   bt-mode dual|le|bredr            ControllerMode in /etc/bluetooth/main.conf
+#   bt-fast on|off                   FastConnectable in /etc/bluetooth/main.conf
+set -euo pipefail
+export PATH=/usr/bin LC_ALL=C
+umask 022
+[ "$(id -u)" = 0 ] || { echo "settings-apply: run through pkexec" >&2; exit 1; }
+[ $# = 2 ] || { echo "usage: settings-apply ACTION VALUE" >&2; exit 2; }
+action=$1 value=$2
+case "$action:$value" in
+    lid:suspend | lid:lock | lid:ignore | connectivity:on | connectivity:off | \
+    bt-mode:dual | bt-mode:le | bt-mode:bredr | bt-fast:on | bt-fast:off) ;;
+    *) echo "settings-apply: not allowed: $action $value" >&2; exit 2 ;;
+esac
+log() { printf '%s settings-apply %s %s (uid %s)\n' "$(date '+%F %T')" "$action" "$value" "${PKEXEC_UID:-?}" >>/var/log/olymparch-settings.log; }
+
+# KEY = VALUE under [General] in bluez' main.conf (the file has no drop-in directory)
+bluez_general() {
+    local f=/etc/bluetooth/main.conf tmp
+    [ -f "$f" ] || printf '[General]\n' >"$f"
+    tmp=$(mktemp /etc/bluetooth/.main.conf.XXXXXX)
+    awk -v k="$1" -v v="$2" '
+        /^\[/ { if (sec == "General" && !done) { print k " = " v; done = 1 } sec = substr($0, 2, index($0, "]") - 2) }
+        sec == "General" && $0 ~ "^[ \t]*" k "[ \t]*=" { next }
+        { print }
+        sec == "General" && /^\[General\]/ && !done { print k " = " v; done = 1 }
+        END { if (!done) print "[General]\n" k " = " v }' "$f" >"$tmp"
+    chmod 644 "$tmp"
+    mv -f "$tmp" "$f"
+    systemctl try-restart bluetooth.service || true
+}
+
+case "$action" in
+    lid)
+        mkdir -p /etc/systemd/logind.conf.d
+        printf '# Written by Settings (power.lid)\n[Login]\nHandleLidSwitch=%s\nHandleLidSwitchExternalPower=%s\n' "$value" "$value" \
+            >/etc/systemd/logind.conf.d/50-olymparch-settings.conf
+        systemctl reload systemd-logind.service 2>/dev/null || systemctl kill -s HUP systemd-logind.service || true
+        ;;
+    connectivity)
+        f=/etc/NetworkManager/conf.d/20-olymparch-connectivity.conf
+        if [ "$value" = off ]; then
+            mkdir -p /etc/NetworkManager/conf.d
+            printf '# Written by Settings (network.connectivity_check)\n[connectivity]\nenabled=false\n' >"$f"
+        else
+            rm -f -- "$f"
+        fi
+        nmcli general reload conf 2>/dev/null || true
+        ;;
+    bt-mode) bluez_general ControllerMode "$value" ;;
+    bt-fast) bluez_general FastConnectable "$([ "$value" = on ] && echo true || echo false)" ;;
+esac
+log

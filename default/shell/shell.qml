@@ -20,7 +20,7 @@ ShellRoot {
     readonly property color surface: "#15151c"
     readonly property color raised: "#1c1c25"
     readonly property color red: "#e0605e"
-    readonly property string mono: "JetBrains Mono"
+    readonly property string mono: Settings.get("appearance.font") || "JetBrains Mono"   // Settings → Appearance
     readonly property string art: "/usr/share/olymparch/wallpaper"
     readonly property int frames: 48
     // Do not disturb: the setting (kept; the bell in the bar flips it), «olymparch dnd» for now, or a running game
@@ -152,7 +152,13 @@ ShellRoot {
 
     GameMode { id: gameMode }
     Launcher { theme: root }
-    Notifications { theme: root; dnd: gameMode.dnd || root.dndSetting }
+    // Settings → Notifications → in games: all (as usual), critical (only those), none (held back until it ends)
+    readonly property string inGames: Settings.get("notifications.in_games")
+    Notifications {
+        theme: root
+        dnd: (gameMode.active && root.inGames !== "all") || gameMode.manualDnd || root.dndSetting
+        silent: gameMode.active && root.inGames === "none"
+    }
     Power {}
     Osd { theme: root }
     SettingsWindow { theme: root }

@@ -13,7 +13,9 @@
 --   olymparch-settings open [PAGE]             open the Settings window
 --   olymparch-settings profiles                the saved layout of every monitor combination (* = in use)
 --   olymparch-settings monitors-changed        apply the layout for the monitors connected now (Hyprland runs it)
---   olymparch-settings about | files | check | pending
+--   olymparch-settings items KEY [--scan]      Wi-Fi networks, Bluetooth devices; pick KEY ID connects
+--   olymparch-settings choices KEY | missing   what a choice can be here; settings this machine can't use
+--   olymparch-settings about | files | check | pending | wired
 -- Per-monitor keys take the output after @, such as display.scale@DP-1.
 
 local HOME = os.getenv("HOME") or "."
@@ -187,8 +189,40 @@ local PATTERNS = {   -- strings from the hardware, and free text that goes into 
     ["display.position"] = "^%-?%d+x%-?%d+$", ["keyboard.variant"] = "^[%w_,-]*$", ["keyboard.model"] = "^[%w_-]*$",
     ["keyboard.options"] = "^[%w_,:-]*$",
 }
+-- Shortcuts (keys.*): "SUPER + SHIFT + G" — modifiers from MODS, then one key name. "" = no shortcut.
+-- A key without a modifier is only allowed for keys that type nothing (F1, Print, XF86…).
+local MODS = { SUPER = 1, CTRL = 2, ALT = 3, SHIFT = 4 }
+local function combo_parts(v)
+    if v == "" then return {}, nil end
+    local parts = {}
+    for p in (v .. "+"):gmatch("%s*([^+]-)%s*%+") do parts[#parts + 1] = p end
+    if #parts == 0 or #parts > 5 then return nil end
+    local key = table.remove(parts)
+    local seen = {}
+    for i, m in ipairs(parts) do
+        m = m:upper():gsub("^CONTROL$", "CTRL"):gsub("^MOD4$", "SUPER"):gsub("^WIN$", "SUPER")
+        if not MODS[m] or seen[m] then return nil end
+        seen[m] = true; parts[i] = m
+    end
+    if not key:match("^[%w_]+$") and not key:match("^mouse:%d+$") or #key > 32 then return nil end
+    if #parts == 0 and not (key:match("^[Ff]%d+$") or key:match("^XF86") or key:upper() == "PRINT" or key:upper() == "PAUSE") then return nil end
+    table.sort(parts, function(a, b) return MODS[a] < MODS[b] end)
+    return parts, key
+end
+local function combo_text(v)  -- canonical: mods in a fixed order, letters upper case
+    local mods, key = combo_parts(v)
+    if not mods then return nil end
+    if not key then return "" end
+    if #key == 1 or not key:match("^XF86") then key = key:upper() end
+    mods[#mods + 1] = key
+    return table.concat(mods, " + ")
+end
+
 local function valid(s, v, out)
     if out and not out:match("^[%w_.-]+$") then return false, "bad output name" end
+    if s.widget == "keys" then
+        return type(v) == "string" and combo_text(v) == v, "expected a shortcut like SUPER + SHIFT + G"
+    end
     if s.readonly or s.type == "action" then return false, "cannot be set" end
     if s.type == "bool" then return type(v) == "boolean", "expected on or off" end
     if s.type == "number" then
@@ -197,6 +231,9 @@ local function valid(s, v, out)
         return true
     end
     if type(v) ~= "string" then return false, "expected text" end
+    if s.options_from == "desktop" then   -- default apps: a desktop file name, or "" for the system's choice
+        return v == "" or (#v <= 120 and v:match("^[%w_.%-]+%.desktop$") ~= nil), "expected a .desktop file name"
+    end
     for _, o in ipairs(s.options or {}) do if o.value == v then return true end end
     if s.type == "choice" and not s.options_from then
         local list = {}
@@ -272,6 +309,7 @@ local function parse(s, text)
         if (s.min and n < s.min) or (s.max and n > s.max) then die(("%s: %s is outside %s–%s"):format(s.key, text, s.min, s.max), 2) end
         return math.tointeger(n) or n
     end
+    if s.widget == "keys" then return combo_text(text) or text end
     return text
 end
 local function checked(s, out, text)
@@ -279,6 +317,34 @@ local function checked(s, out, text)
     local ok, why = valid(s, v, out)
     if not ok then die(("%s: %s"):format(s.key, why), 2) end
     return v
+end
+
+-- Every key combination a shortcut setting takes ("SUPER + 1" … for one with `each`), as comparable text
+local function combos(s, v)
+    local list = {}
+    local function add(c)
+        local mods, key = combo_parts(c)
+        if mods and key then
+            table.sort(mods, function(a, b) return MODS[a] < MODS[b] end)
+            mods[#mods + 1] = key:lower()
+            list[#list + 1] = table.concat(mods, " + ")
+        end
+    end
+    if v == "" then return list end
+    if s.each then for _, e in ipairs(s.each) do add(v .. " + " .. e) end else add(v) end
+    return list
+end
+-- nil, or the setting that already uses one of the combinations S would take with V
+local function shortcut_conflict(s, v, values)
+    local mine = {}
+    for _, c in ipairs(combos(s, v)) do mine[c] = true end
+    for _, o in ipairs(schema.settings) do
+        if o.key ~= s.key and o.ready and o.apply.key == "bind" then
+            for _, c in ipairs(combos(o, value_of(values, o.key))) do
+                if mine[c] then return o, c end
+            end
+        end
+    end
 end
 
 ---------------------------------------------------------------------------------------------------- Hyprland
@@ -306,12 +372,22 @@ local function hypr_lines(values)  -- the user's hypr and cursor settings, as Lu
         local v = values[s.key]
         if v ~= nil and s.apply.via == "hypr" and s.apply.key ~= "bind" then
             lines[#lines + 1] = "hl.config(" .. lua_table(s.apply.key, v) .. ")   -- " .. s.key
+        elseif v ~= nil and s.apply.key == "bind" and s.ready and v ~= s.default then
+            lines[#lines + 1] = ("    [%q] = %q,"):format(s.key, v)
         elseif v ~= nil and s.apply.via == "cursor" then
             local n = math.tointeger(tonumber(v)) or 24
             lines[#lines + 1] = ('hl.env("XCURSOR_SIZE", "%d")   -- %s'):format(n, s.key)
             lines[#lines + 1] = ('hl.env("HYPRCURSOR_SIZE", "%d")'):format(n)
         end
     end
+    local first, last
+    for i, l in ipairs(lines) do if l:match('^    %["keys%.') then first = first or i; last = i end end
+    if first then   -- shortcuts moved in Settings; an older olymparch.lua without olymparch_keys skips them
+        table.insert(lines, last + 1, "})")
+        table.insert(lines, first, ';(rawget(_G, "olymparch_keys") or function() end)({')
+    end
+    local term = values["apps.terminal"]
+    if term ~= nil and term ~= "" then lines[#lines + 1] = ("hl.env(\"OLYMPARCH_TERMINAL\", %q)   -- apps.terminal"):format(term) end
     return lines
 end
 
@@ -445,7 +521,8 @@ appliers["info"] = function() end
 appliers["hypr"] = function(s, values, key)
     ensure_loader(values)
     write_hypr(values)
-    if s.apply.key ~= "bind" then hyprctl_eval("hl.config(" .. lua_table(s.apply.key, value_of(values, key)) .. ")") end
+    if s.apply.key ~= "bind" then hyprctl_eval("hl.config(" .. lua_table(s.apply.key, value_of(values, key)) .. ")")
+    elseif os.getenv("HYPRLAND_INSTANCE_SIGNATURE") then os.execute("hyprctl reload >/dev/null 2>&1") end   -- binds: the whole config again
 end
 appliers["cursor"] = function(s, values, key)
     ensure_loader(values)
@@ -470,6 +547,132 @@ appliers["audio"] = function(s, values, key)
 end
 appliers["action"] = function(s)
     os.execute("setsid -f sh -c " .. sh_quote(s.apply.command) .. " >/dev/null 2>&1")
+end
+
+-- ── devices, apps and events (every value below was checked by valid() before it gets here)
+appliers["bluetooth"] = function(s, values, key)   -- bluetooth.enabled
+    local on = value_of(values, key) == true
+    if on then os.execute("rfkill unblock bluetooth >/dev/null 2>&1") end
+    if have("bluetoothctl") then os.execute("timeout 5 bluetoothctl power " .. (on and "on" or "off") .. " >/dev/null 2>&1") end
+end
+appliers["power"] = function(s, values, key)       -- power.profile (power-profiles-daemon)
+    if have("powerprofilesctl") then os.execute("powerprofilesctl set " .. sh_quote(value_of(values, key)) .. " >/dev/null 2>&1") end
+end
+-- default apps: our lines in [Default Applications] of ~/.config/mimeapps.list ("" = the system's choice again)
+appliers["mime"] = function(s, values, key)
+    local path = CONFIG .. "/mimeapps.list"
+    local app, types = value_of(values, key), {}
+    for _, t in ipairs(s.apply.types) do types[t] = true end
+    local out, section, done = {}, nil, false
+    local function add_ours()
+        if app ~= "" then for _, t in ipairs(s.apply.types) do out[#out + 1] = t .. "=" .. app end end
+        done = true
+    end
+    for line in ((read(path) or "") .. "\n"):gmatch("([^\n]*)\n") do
+        local sec = line:match("^%[(.+)%]%s*$")
+        if sec then
+            section = sec
+            out[#out + 1] = line
+            if sec == "Default Applications" and not done then add_ours() end
+        else
+            local t = line:match("^([^=]+)=")
+            if not (section == "Default Applications" and t and types[t]) then out[#out + 1] = line end
+        end
+    end
+    if not done and app ~= "" then
+        if #out > 0 and out[#out] ~= "" then out[#out + 1] = "" end
+        out[#out + 1] = "[Default Applications]"
+        add_ours()
+    end
+    while #out > 0 and out[#out] == "" do out[#out] = nil end
+    write(path, table.concat(out, "\n") .. "\n")
+end
+appliers["terminal"] = function(s, values)         -- apps.terminal: the terminal shortcut starts $OLYMPARCH_TERMINAL
+    ensure_loader(values)
+    write_hypr(values)
+    if os.getenv("HYPRLAND_INSTANCE_SIGNATURE") then os.execute("hyprctl reload >/dev/null 2>&1") end
+end
+-- The only units Settings may switch or configure. The schema names them; anything else is refused, so no
+-- value, file or schema edit can make this run systemctl on another unit. All of it is --user: no root.
+local USER_UNITS = { ["olymparch-downloads.path"] = true, ["olymparch-heat-check.timer"] = true, ["olymparch-disk-check.service"] = true }
+local function allowed_unit(u)
+    if not USER_UNITS[u] then die("unit not allowed: " .. tostring(u), 5) end
+    return u
+end
+-- a user unit on or off: masked in ~/.config/systemd/user, which also wins over the global enable
+appliers["unit"] = function(s, values, key)
+    local on = value_of(values, key) == true
+    for _, u in ipairs(s.apply.units) do
+        allowed_unit(u)
+        if on then os.execute(("systemctl --user unmask %s >/dev/null 2>&1; systemctl --user start %s >/dev/null 2>&1"):format(sh_quote(u), sh_quote(u)))
+        else os.execute(("systemctl --user mask --now %s >/dev/null 2>&1"):format(sh_quote(u))) end
+    end
+end
+-- a number for a user unit, as Environment= in a drop-in next to it
+appliers["dropin"] = function(s, values, key)
+    local n = math.tointeger(value_of(values, key)) or die("expected a whole number")
+    if not (s.apply.key or ""):match("^OLYMPARCH_[A-Z_]+$") then die("bad variable: " .. tostring(s.apply.key), 5) end
+    local dir = CONFIG .. "/systemd/user/" .. allowed_unit(s.apply.unit) .. ".d"
+    write(dir .. "/olymparch-settings.conf", ("# Written by olymparch-settings (%s)\n[Service]\nEnvironment=%s=%d\n"):format(s.key, s.apply.key, n))
+    os.execute("systemctl --user daemon-reload >/dev/null 2>&1")
+end
+-- MangoHud for games started through olymparch-launch-steam: Olymparch's MangoHud.conf with your choices, in
+-- ~/.config/olymparch/MangoHud.conf (your own ~/.config/MangoHud/MangoHud.conf, if you have one, still wins).
+-- «off» is read by olymparch-launch-steam, which then starts Steam without MangoHud. From the next Steam start.
+appliers["mangohud"] = function(s, values)
+    local mode = value_of(values, "games.mangohud")
+    local cap = math.tointeger(value_of(values, "games.fps_cap")) or 0
+    local base = read("/usr/share/olymparch/games/MangoHud.conf") or "toggle_hud=Shift_L+F12\nfps\nframetime\n"
+    local out = { "# Written by olymparch-settings (Settings → Games) from /usr/share/olymparch/games/MangoHud.conf" }
+    for line in base:gmatch("[^\n]+") do
+        if not line:match("^no_display%s*$") and not line:match("^fps_limit") and not line:match("^#") then out[#out + 1] = line end
+    end
+    if mode ~= "shown" then out[#out + 1] = "no_display" end
+    if cap > 0 then out[#out + 1] = ("fps_limit=%d"):format(cap) end
+    write(CONFIG .. "/olymparch/MangoHud.conf", table.concat(out, "\n") .. "\n")
+end
+-- session variables for games (from the next login): ~/.config/environment.d/olymparch-games.conf
+appliers["envd"] = function(s, values)
+    local gb = math.tointeger(value_of(values, "games.shader_cache")) or 10
+    write(CONFIG .. "/environment.d/olymparch-games.conf",
+        ("# Written by olymparch-settings (Settings → Games)\nMESA_SHADER_CACHE_MAX_SIZE=%dG\n__GL_SHADER_DISK_CACHE_SIZE=%d\n"):format(gb, gb * 1024 * 1024 * 1024))
+end
+appliers["brightness"] = function(s, values, key)   -- the built-in screen (laptops)
+    if have("brightnessctl") then
+        os.execute(("brightnessctl -q set %d%% >/dev/null 2>&1"):format(math.tointeger(value_of(values, key)) or 100))
+    end
+end
+-- System files (/etc): only through the pkexec helper, which takes these actions and values and nothing else
+-- (system/lib/settings-apply has the same list; tests/settings-coverage compares them).
+local HELPER = "/usr/lib/olymparch/settings-apply"
+local SYSTEM_ACTIONS = {
+    lid = { suspend = true, lock = true, ignore = true },
+    connectivity = { on = true, off = true },
+    ["bt-mode"] = { dual = true, le = true, bredr = true },
+    ["bt-fast"] = { on = true, off = true },
+}
+appliers["system"] = function(s, values, key)
+    local v = value_of(values, key)
+    if type(v) == "boolean" then v = v and "on" or "off" end
+    local act = s.apply.action
+    if not (SYSTEM_ACTIONS[act] and SYSTEM_ACTIONS[act][v]) then die(("%s: %s is not allowed"):format(key, tostring(v)), 5) end
+    if not io.open(HELPER) then die(HELPER .. " is missing (olymparch update)", 3) end
+    if not os.execute("pkexec " .. HELPER .. " " .. sh_quote(act) .. " " .. sh_quote(v) .. " >/dev/null 2>&1") then
+        die(key .. ": not changed (the system said no)", 3)
+    end
+end
+-- headset switch: /etc/pipewire/pipewire-pulse.conf.d/50-olymparch-switch-on-connect.conf loads the module unless
+-- olymparch.switch-on-connect is false; this drop-in says so. pactl changes the running server too.
+appliers["headset"] = function(s, values, key)
+    local on = value_of(values, key) == true
+    local path = CONFIG .. "/pipewire/pipewire-pulse.conf.d/90-olymparch-settings.conf"
+    if on then os.remove(path)
+    else write(path, "# Written by olymparch-settings (audio.headset_switch)\npulse.properties = { olymparch.switch-on-connect = false }\n") end
+    if have("pactl") then
+        local loaded = capture("pactl list modules short"):find("module%-switch%-on%-connect") ~= nil
+        if on and not loaded then os.execute("pactl load-module module-switch-on-connect >/dev/null 2>&1")
+        elseif not on and loaded then os.execute("pactl unload-module module-switch-on-connect >/dev/null 2>&1") end
+    end
 end
 
 local function apply(key, values, override)
@@ -670,6 +873,14 @@ elseif cmd == "set" then
     local v = checked(s, out, text)
     local try = arg[4] == "--try" and (tonumber(arg[5]) or 15) or nil
     local values = load_values()
+    if s.installed and v ~= "" and not have(v) then die(("%s: %s is not installed"):format(s.key, v), 2) end
+    if s.apply.key == "bind" then
+        local o, c = shortcut_conflict(s, v, values)
+        if o then
+            local nb = (os.getenv("LANG") or ""):match("^n[bno]")
+            die((nb and "%s er allerede «%s» (%s)" or "%s is already «%s» (%s)"):format(c:upper(), label(o), o.key), 4)
+        end
+    end
     if try then
         revert()   -- one question at a time
         local token = ("%d%06d"):format(os.time(), math.random(0, 999999))
@@ -677,6 +888,10 @@ elseif cmd == "set" then
         apply(key, values, { key = key, value = v })
         os.execute(("setsid -f sh -c %s >/dev/null 2>&1"):format(sh_quote(("sleep %d; exec %s revert --token %s"):format(try, sh_quote(SELF), token))))
         print("pending " .. token)
+    elseif s.apply.via == "system" then   -- /etc: remembered only once the helper has done it
+        values[key] = v
+        apply(key, values)
+        save_values(values)
     else
         values[key] = v
         save_values(values)
@@ -790,6 +1005,174 @@ elseif cmd == "profiles" then
                 if v ~= nil then parts[#parts + 1] = s .. "=" .. tostring(v) end
             end
             print("    " .. id .. ": " .. (#parts > 0 and table.concat(parts, " ") or "default"))
+        end
+    end
+
+-- ── lists the window shows as rows you click: Wi-Fi networks, Bluetooth devices.
+--   items KEY [--scan]   one per line: ID <tab> STATE (on, saved, new) <tab> NAME <tab> DETAIL; or "! MESSAGE"
+--   pick KEY ID          connect / disconnect what was clicked
+elseif cmd == "items" or cmd == "pick" then
+    local key = arg[2] or die("usage: " .. cmd .. " KEY …", 2)
+    local function clean(t) return ((t or ""):gsub("%c", " ")) end
+    if cmd == "pick" then   -- what was clicked is checked before anything else runs
+        local id = arg[3] or die("usage: pick KEY ID", 2)
+        if key == "network.wifi" and (#id > 32 or id == "" or id:find("%c")) then die("not a network name", 2) end
+        if key == "bluetooth.devices" and not id:match("^%x%x:%x%x:%x%x:%x%x:%x%x:%x%x$") then die("not a device address", 2) end
+    end
+    if key == "network.wifi" then
+        if not have("nmcli") then print("! nonm NetworkManager (nmcli) is not installed"); os.exit(0) end
+        -- security as a class: open, wep or wpa (WPA2/WPA3/OWE/802.1X). A saved network is only joined through its
+        -- own connection (by UUID), and only when an access point with that name offers the same class: an open
+        -- or WEP twin of a WPA network is never joined in its place.
+        local function class_of_scan(sec)
+            if sec == "" or sec == "--" then return "open" end
+            if sec:find("WEP") and not sec:find("WPA") then return "wep" end
+            return "wpa"
+        end
+        local function class_of_keymgmt(km)
+            if km == "" then return "open" end
+            if km == "none" or km == "ieee8021x" then return "wep" end
+            return "wpa"   -- wpa-psk, sae, wpa-eap, owe …
+        end
+        local function wifi_list()
+            local list = {}
+            for l in capture("nmcli -t -f IN-USE,SIGNAL,SECURITY,SSID device wifi list --rescan no"):gmatch("[^\n]+") do
+                local inuse, signal, sec, ssid = l:match("^([^:]*):(%d*):([^:]*):(.*)$")
+                ssid = ssid and ssid:gsub("\\:", ":"):gsub("\\\\", "\\")
+                if ssid and ssid ~= "" and #ssid <= 32 and not ssid:find("%c") then
+                    list[#list + 1] = { ssid = ssid, on = inuse == "*", signal = tonumber(signal) or 0, class = class_of_scan(sec) }
+                end
+            end
+            return list
+        end
+        local saved = {}   -- SSID → { uuid, class }
+        for l in capture("nmcli -t -f UUID,TYPE connection show"):gmatch("[^\n]+") do
+            local uuid = l:match("^([%x-]+):802%-11%-wireless$")
+            if uuid then
+                local g = capture("nmcli -t -g 802-11-wireless.ssid,802-11-wireless-security.key-mgmt connection show uuid " .. sh_quote(uuid))
+                local ssid, km = g:match("^([^\n]*)\n([^\n]*)")
+                if ssid and ssid ~= "" then saved[ssid] = { uuid = uuid, class = class_of_keymgmt(km or "") } end
+            end
+        end
+        local function offers(ssid, class)
+            for _, n in ipairs(wifi_list()) do if n.ssid == ssid and n.class == class then return true end end
+            return false
+        end
+        if cmd == "items" then
+            if capture("nmcli -t -f TYPE device"):find("wifi") == nil then print("! nowifi no Wi-Fi adapter"); os.exit(0) end
+            if arg[3] == "--scan" then os.execute("nmcli device wifi rescan >/dev/null 2>&1; sleep 3") end
+            local seen = {}
+            for _, n in ipairs(wifi_list()) do
+                if not seen[n.ssid] then
+                    seen[n.ssid] = true
+                    local sv = saved[n.ssid]
+                    local twin = sv and not offers(n.ssid, sv.class)
+                    print(table.concat({ n.ssid, n.on and "on" or (sv and not twin) and "saved" or "new", n.ssid,
+                        n.signal .. "%" .. (n.class ~= "open" and " · 🔒" or "") .. (twin and " · ⚠ not the saved network's security" or "") }, "\t"))
+                end
+            end
+        else
+            local ssid = arg[3] or die("usage: pick network.wifi SSID", 2)
+            if #ssid > 32 or ssid:find("%c") then die("not a network name", 2) end
+            local net
+            for _, n in ipairs(wifi_list()) do if n.ssid == ssid and (not net or n.on) then net = n end end
+            if net and net.on then
+                local sv = saved[ssid]
+                os.exit(os.execute("nmcli connection down " .. (sv and ("uuid " .. sh_quote(sv.uuid)) or ("id " .. sh_quote(ssid))) .. " >/dev/null 2>&1") and 0 or 1)
+            end
+            local sv = saved[ssid]
+            if sv then
+                if not offers(ssid, sv.class) then
+                    die(("%s: the saved network uses %s, but %s nearby does not; not connecting (forget it in nmtui if it really changed)"):format(ssid, sv.class, ssid), 3)
+                end
+                os.exit(os.execute("nmcli connection up uuid " .. sh_quote(sv.uuid) .. " >/dev/null 2>&1") and 0 or 1)
+            end
+            if net and net.class == "open" then os.exit(os.execute("nmcli device wifi connect " .. sh_quote(ssid) .. " >/dev/null 2>&1") and 0 or 1) end
+            -- a password is needed: nmtui asks for it in a terminal, so it never passes through a command line
+            os.execute("setsid -f foot -e nmtui connect " .. sh_quote(ssid) .. " >/dev/null 2>&1")
+        end
+    elseif key == "bluetooth.devices" then
+        local function bt(args) return capture("timeout 5 bluetoothctl " .. args) end
+        if not have("bluetoothctl") then print("! nobluez Bluetooth (bluez) is not installed: no adapter was found"); os.exit(0) end
+        local show = bt("show")
+        if not show:find("Controller") then print("! nobt no Bluetooth adapter"); os.exit(0) end
+        local function set_of(args)
+            local t = {}
+            for mac in bt(args):gmatch("Device (%x%x:%x%x:%x%x:%x%x:%x%x:%x%x)") do t[mac] = true end
+            return t
+        end
+        if cmd == "items" then
+            if not show:find("Powered: yes") then print("! btoff Bluetooth is off"); os.exit(0) end
+            if arg[3] == "--scan" then os.execute("timeout 12 bluetoothctl --timeout 10 scan on >/dev/null 2>&1") end
+            local paired, connected = set_of("devices Paired"), set_of("devices Connected")
+            for mac, name in bt("devices"):gmatch("Device (%x%x:%x%x:%x%x:%x%x:%x%x:%x%x) ([^\n]*)") do
+                print(table.concat({ mac, connected[mac] and "on" or paired[mac] and "saved" or "new", clean(name), mac }, "\t"))
+            end
+        else
+            local mac = arg[3] or die("usage: pick bluetooth.devices MAC", 2)
+            if not mac:match("^%x%x:%x%x:%x%x:%x%x:%x%x:%x%x$") then die("not a device address", 2) end
+            local q = sh_quote(mac)
+            if set_of("devices Connected")[mac] then os.exit(os.execute("timeout 10 bluetoothctl disconnect " .. q .. " >/dev/null 2>&1") and 0 or 1) end
+            if not set_of("devices Paired")[mac] then
+                os.execute("timeout 25 bluetoothctl --timeout 20 pair " .. q .. " >/dev/null 2>&1")
+                os.execute("timeout 5 bluetoothctl trust " .. q .. " >/dev/null 2>&1")
+            end
+            os.exit(os.execute("timeout 15 bluetoothctl connect " .. q .. " >/dev/null 2>&1") and 0 or 1)
+        end
+    else
+        die(key .. " has no list", 2)
+    end
+
+-- wired network: what NetworkManager says (Settings → Network → Wired)
+elseif cmd == "wired" then
+    if not have("nmcli") then print("NetworkManager (nmcli) is not installed"); os.exit(0) end
+    local any = false
+    for l in capture("nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device"):gmatch("[^\n]+") do
+        local dev, typ, state, conn = l:match("^([^:]*):([^:]*):([^:]*):(.*)$")
+        if typ == "ethernet" then
+            any = true
+            local ip = capture("nmcli -g IP4.ADDRESS device show " .. sh_quote(dev)):match("[^\n|]+") or ""
+            local speed = (read("/sys/class/net/" .. dev .. "/speed") or ""):match("%d+")
+            print(("%s  %s%s%s%s"):format(dev, state, conn ~= "" and ("  " .. conn) or "", ip ~= "" and ("  " .. ip) or "",
+                speed and tonumber(speed) > 0 and ("  " .. speed .. " Mb/s") or ""))
+        end
+    end
+    if not any then print("no wired adapter") end
+
+-- settings that need a program this machine doesn't have (the window hides them): one key per line
+elseif cmd == "missing" then
+    for _, s in ipairs(schema.settings) do
+        if (s.needs and not have(s.needs)) or (s.needs_file and not io.open(s.needs_file)) then print(s.key) end
+    end
+
+-- what a choice can be on this machine: VALUE <tab> LABEL per line (default apps, terminals)
+elseif cmd == "choices" then
+    local s = entry(arg[2] or die("usage: choices KEY", 2))
+    local function clean_name(t) return (t:gsub("%c", " ")) end
+    if s.options_from == "desktop" then
+        local want = {}
+        for _, t in ipairs(s.apply.types or {}) do want[t] = true end
+        local seen = {}
+        local dirs = { (os.getenv("XDG_DATA_HOME") or (HOME .. "/.local/share")) .. "/applications" }
+        for d in (os.getenv("XDG_DATA_DIRS") or "/usr/local/share:/usr/share"):gmatch("[^:]+") do dirs[#dirs + 1] = d .. "/applications" end
+        for _, dir in ipairs(dirs) do
+            for f in capture("ls -1 " .. sh_quote(dir)):gmatch("[^\n]+") do
+                if f:match("^[%w_.%-]+%.desktop$") and not seen[f] then
+                    seen[f] = true
+                    local text = read(dir .. "/" .. f) or ""
+                    local entry_ = text:match("%[Desktop Entry%](.-)\n%[") or text:match("%[Desktop Entry%](.*)") or ""
+                    local mimes = entry_:match("\nMimeType=([^\n]*)") or ""
+                    local hit = false
+                    for m in mimes:gmatch("[^;]+") do if want[m] then hit = true end end
+                    if hit and not entry_:find("\nNoDisplay=true") then
+                        print(f .. "\t" .. clean_name(entry_:match("\nName=([^\n]*)") or f))
+                    end
+                end
+            end
+        end
+    else
+        for _, o in ipairs(s.options or {}) do
+            if o.value == "" or not s.installed or have(o.value) then print(o.value .. "\t" .. label(o)) end
         end
     end
 

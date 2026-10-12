@@ -51,9 +51,9 @@ Singleton {
     // olymparch-settings ARGS…; onDone(stdout, exitCode) when it finishes, then settings.json is read again
     function run(args, onDone) {
         const p = runner.createObject(settings, { command: ["olymparch-settings"].concat(args) });
-        p.done.connect((out, code) => {
+        p.done.connect((out, code, err) => {
             user.reload();
-            if (onDone) onDone(out, code);
+            if (onDone) onDone(out, code, err);
             p.destroy();
         });
         p.running = true;
@@ -64,9 +64,10 @@ Singleton {
     Component {
         id: runner
         Process {
-            signal done(string out, int code)
+            signal done(string out, int code, string err)
             stdout: StdioCollector { id: out }
-            onExited: code => done(out.text, code)
+            stderr: StdioCollector { id: err }
+            onExited: code => done(out.text, code, err.text)
         }
     }
 }
