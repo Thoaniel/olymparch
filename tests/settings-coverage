@@ -379,6 +379,60 @@ gb = root / "system/bin/olymparch-gitbackup"
 r = subprocess.run(["bash", str(gb), "selftest"], capture_output=True, text=True)
 if r.returncode or "selftest ok" not in r.stdout:
     bad(f"olymparch-gitbackup selftest failed:\n{r.stdout}{r.stderr}")
+# Restore never unpacks blindly: ../, absolute paths, symlinks, hard links and folders that are not backed up are
+# refused, nothing is written through a symlink in the home folder, and nothing outside it is written at all.
+import io
+import tarfile
+def tgz(path, entries):   # entries: (name, kind, data-or-link)
+    with tarfile.open(path, "w:gz") as t:
+        for name, kind, x in entries:
+            ti = tarfile.TarInfo(name)
+            if kind == "file":
+                ti.size = len(x)
+                t.addfile(ti, io.BytesIO(x))
+            elif kind == "dir":
+                ti.type = tarfile.DIRTYPE
+                t.addfile(ti)
+            else:
+                ti.type = tarfile.SYMTYPE if kind == "symlink" else tarfile.LNKTYPE
+                ti.linkname = x
+                t.addfile(ti)
+with tempfile.TemporaryDirectory() as top:
+    home = Path(top, "home")
+    home.mkdir()
+    outside = Path(top, "outside")
+    outside.mkdir()
+    genv = {k: v for k, v in os.environ.items() if not k.startswith("XDG_")}
+    genv.update(HOME=str(home), LANG="C", PATH="/usr/bin:/bin")
+    ok_file = ("" ".config/olymparch/settings.json", "file", b'{"restored": true}\n')
+    evil = {
+        "dotdot": [ok_file, ("../outside/pwned.txt", "file", b"x")],
+        "absolute": [ok_file, (str(outside / "abs.txt"), "file", b"x")],
+        "symlink": [("" ".config/olymparch/link", "symlink", str(outside)), ("" ".config/olymparch/link/pwned.txt", "file", b"x")],
+        "hardlink": [ok_file, ("" ".config/olymparch/hard", "hardlink", "/etc/passwd")],
+        "not-included": [("Documents/x.txt", "file", b"x")],
+    }
+    for label, entries in evil.items():
+        a = Path(top, label + ".tar.gz")
+        tgz(a, entries)
+        r = subprocess.run(["bash", str(gb), "restore-file", str(a)], env=genv, input="y\n", capture_output=True, text=True)
+        written = [p for p in home.rglob("*") if p.is_file()] + list(outside.rglob("*"))
+        if "refused" not in r.stdout or written:
+            bad(f"olymparch-gitbackup restore took an evil archive ({label}); wrote {written}:\n{r.stdout}{r.stderr}")
+    # ~/.config/olymparch is a symlink to somewhere else: refused, the other place untouched
+    (home / ".config").mkdir()
+    (home / ".config/olymparch").symlink_to(outside)
+    a = Path(top, "good.tar.gz")
+    tgz(a, [("" ".config", "dir", None), ("" ".config/olymparch", "dir", None), ok_file])
+    r = subprocess.run(["bash", str(gb), "restore-file", str(a)], env=genv, input="y\n", capture_output=True, text=True)
+    if "refused" not in r.stdout or list(outside.rglob("*")):
+        bad(f"olymparch-gitbackup restore wrote through a symlink in the home folder:\n{r.stdout}{r.stderr}")
+    (home / ".config/olymparch").unlink()
+    r = subprocess.run(["bash", str(gb), "restore-file", str(a)], env=genv, input="y\n", capture_output=True, text=True)
+    if r.returncode or (home / ".config/olymparch/settings.json").read_text() != '{"restored": true}\n':
+        bad(f"olymparch-gitbackup restore of a good archive failed (rc {r.returncode}):\n{r.stdout}{r.stderr}")
+    if list(home.joinpath(".local/state/olymparch/gitbackup").glob("restore.*")):
+        bad("olymparch-gitbackup restore left its staging folder behind")
 if "ExecStart=/usr/bin/olymparch-gitbackup run --if-due" not in (root / "default/systemd/user/olymparch-gitbackup.service").read_text():
     bad("olymparch-gitbackup.service must run `olymparch-gitbackup run --if-due`")
 if "olymparch-gitbackup.timer" not in (root / "bin/olymparch-install").read_text():

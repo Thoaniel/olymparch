@@ -235,34 +235,90 @@ cmd_deploy_key() {
 }
 
 cmd_restore() {
-    local url key work a top
+    local url key work
     offer_install || { WAIT=1 wait_enter; exit 1; }
     url=$(remote) || { WAIT=1 wait_enter; exit 1; }
     read -r -p "$(L "age key file [$KEY]: " "age-nøkkelfil [$KEY]: ")" key
     key=${key:-$KEY}; key=${key/#\~/$HOME}
     [ -r "$key" ] || { say "$(L "Cannot read" "Kan ikke lese") $key"; WAIT=1 wait_enter; exit 1; }
     git_env
-    mkdir -p -- "$DATA"
-    work=$(mktemp -d "$DATA/restore.XXXXXX") || die mktemp
+    mkdir -p -- "$STATE"
+    work=$(mktemp -d "$STATE/restore.XXXXXX") || die mktemp   # mode 700, private: never /tmp
     # shellcheck disable=SC2064
     trap "rm -rf -- '$work'" EXIT
     say "$(L "Fetching" "Henter") $url …"
     git clone -q --depth 1 -- "$url" "$work/repo" || { say "$(L "Could not fetch the repository" "Fikk ikke hentet repoet")"; WAIT=1 wait_enter; exit 1; }
     [ -f "$work/repo/$FILE" ] || { say "$(L "No backup in that repository" "Ingen backup i det repoet")"; WAIT=1 wait_enter; exit 1; }
     say "$(L "Backup from" "Backup fra"): $(git -C "$work/repo" log -1 --format=%cd --date=format:'%F %R')"
-    age -d -i "$key" -- "$work/repo/$FILE" | tar -tzf - >"$work/list" 2>/dev/null || { say "$(L "Could not decrypt it with that key" "Fikk ikke dekryptert den med den nøkkelen")"; WAIT=1 wait_enter; exit 1; }
-    if grep -qE '^/|(^|/)\.\.(/|$)' "$work/list"; then say "$(L "The backup has paths outside your home folder: refused" "Backupen har stier utenfor hjemmemappa: avvist")"; WAIT=1 wait_enter; exit 1; fi
-    say ""
-    say "$(L "These are put back in your home folder; files that exist are overwritten:" "Disse legges tilbake i hjemmemappa; filer som finnes, overskrives:")"
-    while IFS= read -r top; do
-        say "  ~/$top  ($(grep -c -- "^$top/" "$work/list") $(L "files" "filer")$([ -e "$HOME/$top" ] && L ", exists" ", finnes"))"
-    done < <(awk -F/ '{ if ($1 == ".config" || $1 == ".local") print $1 "/" $2; else print $1 }' "$work/list" | grep -v '/$' | sort -u)
-    read -r -p "$(L "Restore and overwrite? [y/N] " "Gjenopprette og overskrive? [j/N] ")" a
-    [[ $a == [jJyY]* ]] || { say "$(L "Nothing changed." "Ingenting endret.")"; WAIT=1 wait_enter; exit 0; }
-    age -d -i "$key" -- "$work/repo/$FILE" | tar -C "$HOME" -xzf - --no-same-owner || { say "$(L "Restoring failed" "Gjenopprettingen feilet")"; WAIT=1 wait_enter; exit 1; }
-    say "$(L "Restored. Log out and in again so everything reads its settings anew." "Gjenopprettet. Logg ut og inn igjen så alt leser innstillingene på nytt.")"
+    # age is authenticated encryption: only an archive made with this key decrypts, and any change to it makes age fail.
+    # Fail closed: nothing is used unless age exits 0.
+    if ! age -d -i "$key" -o "$work/backup.tar.gz" -- "$work/repo/$FILE" 2>/dev/null; then
+        say "$(L "Could not decrypt it with that key, or it was changed: refused" "Fikk ikke dekryptert den med den nøkkelen, eller den er endret: avvist")"
+        WAIT=1 wait_enter; exit 1
+    fi
+    restore_tar "$work/backup.tar.gz" "$work"
+    local rc=$?
     WAIT=1 wait_enter
+    exit $rc
 }
+
+# restore_tar TAR.GZ WORKDIR: check every entry, unpack into a private staging folder, then copy regular files home.
+# Refused: absolute paths, .., anything but files and folders (symlinks, hard links, devices, fifos), paths outside
+# ~/.config/olymparch, ~/.olympus and backup.include, and targets reached through a symlink in your home folder.
+restore_tar() {
+    local tarball=$1 work=$2 stage roots=(.config/olymparch .olympus) f n t name a rel target dir p over=0 files=0
+    parse_include "$(setting backup.include)" && roots+=("${FOLDERS[@]}")
+    tar -tzf "$tarball" >"$work/names" 2>/dev/null && tar --quoting-style=literal -tvzf "$tarball" >"$work/types" 2>/dev/null \
+        || { say "$(L "Not a valid archive: refused" "Ikke et gyldig arkiv: avvist")"; return 1; }
+    n=$(wc -l <"$work/names")
+    [ "$n" = "$(wc -l <"$work/types")" ] && ((n > 0)) || { say "$(L "Odd entries in the archive: refused" "Rare oppføringer i arkivet: avvist")"; return 1; }
+    local names types i ok
+    mapfile -t names <"$work/names"; mapfile -t types <"$work/types"
+    for i in "${!names[@]}"; do
+        name=${names[i]%/}; t=${types[i]:0:1}
+        [[ $t == [-d] ]] || { say "$(L "The archive has a link or special file: refused" "Arkivet har en lenke eller spesialfil: avvist"): $name"; return 1; }
+        [[ -z $name || $name == /* || /$name/ == */../* || /$name/ == */./* || $name == *$'\r'* ]] && { say "$(L "Path outside your home folder: refused" "Sti utenfor hjemmemappa: avvist"): $name"; return 1; }
+        ok=0
+        for p in "${roots[@]}"; do
+            [[ $name == "$p" || $name == "$p"/* ]] && ok=1              # in a backed-up folder
+            [[ $t == d && $p == "$name"/* ]] && ok=1                     # a folder on the way to one (.config)
+        done
+        ((ok)) || { say "$(L "Not one of the backed-up folders (add it to «More folders» first): refused" "Ikke en av mappene som tas med (legg den til i «Flere mapper» først): avvist"): $name"; return 1; }
+    done
+    stage=$work/stage
+    mkdir -m 700 -- "$stage" || return 1
+    tar -C "$stage" -xzf "$tarball" --no-same-owner --no-same-permissions --no-overwrite-dir || { say "$(L "Unpacking failed" "Utpakkingen feilet")"; return 1; }
+    rm -f -- "$tarball"
+    chmod -R u+rwX -- "$stage" || return 1   # only files and folders are in it (checked above): readable for the copy
+    # what would be overwritten, and anything that would go through a symlink in your home folder
+    while IFS= read -r -d '' f; do
+        rel=${f#"$stage"/}; target=$HOME/$rel; files=$((files + 1))
+        p=$HOME
+        local parts=()
+        [[ $rel == */* ]] && IFS=/ read -r -a parts <<<"${rel%/*}"
+        for a in "${parts[@]}"; do
+            p=$p/$a
+            [ -L "$p" ] && { say "$(L "A folder on the way is a symlink: refused" "En mappe på veien er en symbolsk lenke: avvist"): ${p/#$HOME/\~}"; return 1; }
+        done
+        [ -L "$target" ] && { say "$(L "The target is a symlink: refused" "Målet er en symbolsk lenke: avvist"): ~/$rel"; return 1; }
+        [ -e "$target" ] && over=$((over + 1))
+    done < <(find "$stage" -type f -print0)
+    if find "$stage" ! -type f ! -type d | grep -q .; then say "$(L "Not only files and folders: refused" "Ikke bare filer og mapper: avvist")"; return 1; fi
+    say ""
+    say "$(L "Put back in your home folder: $files files, $over of them overwrite what is there now:" "Legges tilbake i hjemmemappa: $files filer, $over av dem overskriver det som er der nå:")"
+    find "$stage" -mindepth 1 -maxdepth 2 -type d | sed "s|^$stage/|  ~/|" | sort | head -n 20
+    read -r -p "$(L "Restore and overwrite? [y/N] " "Gjenopprette og overskrive? [j/N] ")" a
+    [[ $a == [jJyY]* ]] || { say "$(L "Nothing changed." "Ingenting endret.")"; return 0; }
+    while IFS= read -r -d '' f; do
+        rel=${f#"$stage"/}; target=$HOME/$rel; dir=${target%/*}
+        mkdir -p -- "$dir" || return 1
+        # checked again right before writing; --remove-destination never writes through what is at the target
+        [ -L "$target" ] || [ -L "$dir" ] && { say "$(L "Symlink appeared: stopped" "En symbolsk lenke dukket opp: stoppet"): ~/$rel"; return 1; }
+        cp --remove-destination --no-dereference -- "$f" "$target" || { say "$(L "Could not write" "Fikk ikke skrevet") ~/$rel"; return 1; }
+    done < <(find "$stage" -type f -print0)
+    say "$(L "Restored. Log out and in again so everything reads its settings anew." "Gjenopprettet. Logg ut og inn igjen så alt leser innstillingene på nytt.")"
+}
+
 
 cmd_selftest() {   # the validation rules (tests/settings-coverage runs this; no network, no files)
     local bad=0 r i
@@ -285,5 +341,11 @@ case ${1:-} in
     deploy-key) cmd_deploy_key ;;
     restore) cmd_restore ;;
     selftest) cmd_selftest ;;
+    restore-file)   # restore-file TAR.GZ: the checks and copy of `restore` on an unencrypted archive (tests)
+        [ -f "${2:-}" ] || die "usage: restore-file TAR.GZ"
+        mkdir -p -- "$STATE"; w=$(mktemp -d "$STATE/restore.XXXXXX") || die mktemp
+        # shellcheck disable=SC2064
+        trap "rm -rf -- '$w'" EXIT
+        cp -- "$2" "$w/backup.tar.gz" && restore_tar "$w/backup.tar.gz" "$w" ;;
     *) sed -n '2,/^$/{s/^# \{0,1\}//p}' "$0"; [ -z "${1:-}" ] || [ "$1" = help ] || exit 2 ;;
 esac
