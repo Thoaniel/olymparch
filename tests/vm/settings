@@ -253,6 +253,10 @@ check connectivity-on 'olymparch-settings set network.connectivity_check on && [
 check helper-refuses 'pkexec /usr/lib/olymparch/settings-apply lid "x;id"; a=$?; pkexec /usr/lib/olymparch/settings-apply /etc/passwd root; b=$?; [ $a = 2 ] && [ $b = 2 ]'
 check helper-logged 'grep -q "settings-apply connectivity on" /var/log/olymparch-settings.log'
 check lid-hidden 'olymparch-settings missing | grep -q power.lid'
+check dns 'olymparch-settings set network.dns quad9 && grep -q "^servers=9.9.9.9," /etc/NetworkManager/conf.d/30-olymparch-dns.conf && olymparch-settings set network.dns auto && [ ! -e /etc/NetworkManager/conf.d/30-olymparch-dns.conf ] && ! olymparch-settings set network.dns 8.8.8.8'
+check mac-random 'olymparch-settings set network.mac_random on && grep -q "^wifi.cloned-mac-address=stable" /etc/NetworkManager/conf.d/30-olymparch-mac.conf && olymparch-settings set network.mac_random off && [ ! -e /etc/NetworkManager/conf.d/30-olymparch-mac.conf ]'
+check snapshots 'olymparch-settings set updates.snapshots 7 && grep -q "settings-apply snapshots 7" /var/log/olymparch-settings.log && [ "$(olymparch-settings get updates.snapshots)" = 7 ] && ! olymparch-settings set updates.snapshots 51'
+check helper-ranges 'for v in "dns 8.8.8.8" "snapshots 1" "snapshots 51" "snapshots 07" "mac-random yes"; do pkexec /usr/lib/olymparch/settings-apply $v; [ $? = 2 ] || exit 1; done'
 
 # ── Headset switch: module-switch-on-connect loaded by default, gone when off (also after a restart), back when on
 check headset-default 'pactl list modules short | grep -q switch-on-connect'
@@ -268,6 +272,12 @@ close_settings
 # ── The rest through the same command Zeus will use
 check keyboard 'olymparch-settings set keyboard.layout no && hyprctl getoption input.kb_layout | grep -q "str: no" && grep -q "kb_layout = .no." ~/.config/olymparch/hypr.lua; olymparch-settings set keyboard.layout us'
 check idle 'olymparch-settings set account.lock_minutes 5 && grep -q "timeout = 300" ~/.config/hypr/hypridle.conf'
+check sleep-after 'olymparch-settings set power.suspend 30 && grep -q "timeout = 1800" ~/.config/hypr/hypridle.conf && grep -q "systemctl suspend" ~/.config/hypr/hypridle.conf && olymparch-settings set power.suspend 0 && ! grep -q "systemctl suspend" ~/.config/hypr/hypridle.conf'
+check shell-settings 'olymparch-settings set accessibility.text_size 125 && olymparch-settings set accessibility.high_contrast on && olymparch-settings set account.lock_shows nothing && olymparch-settings set power.low_battery_saver off && olymparch-settings check'
+keys "clear; olymparch-settings open accessibility\n" 2.5
+shot tilgjengelighet-stor-tekst "Tilgjengelighet: 125 % tekst og høy kontrast i hele skallet"
+close_settings
+check shell-reset 'olymparch-settings reset accessibility.text_size && olymparch-settings reset accessibility.high_contrast'
 check audio-out 's=$(wpctl status -n | grep -o "alsa_output[^ ]*" | head -1); olymparch-settings set audio.output "$s" && wpctl inspect @DEFAULT_AUDIO_SINK@ | grep -q "$s"'
 check audio-in 's=$(wpctl status -n | grep -o "alsa_input[^ ]*" | head -1); olymparch-settings set audio.input "$s" && wpctl inspect @DEFAULT_AUDIO_SOURCE@ | grep -q "$s"'
 check channel 'olymparch-settings set updates.channel edge && [ "$(olymparch-settings get updates.channel)" = edge ]'
