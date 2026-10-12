@@ -1,5 +1,6 @@
 //@ pragma ShellId olymparch
-// Olymparch shell: the animated temple wallpaper, the bar, the menu (Super+Space), notifications and the volume OSD.
+// Olymparch shell: the animated temple wallpaper, the bar (BarStatus: media, mic/camera, network, volume, battery,
+// do not disturb, clock), the menu (Super+Space), notifications and the volume OSD.
 // Spillmodus (GameMode.qml) hides the bar and turns on do not disturb while a game runs.
 import QtQuick
 import Quickshell
@@ -20,6 +21,7 @@ ShellRoot {
     readonly property string mono: "JetBrains Mono"
     readonly property string art: "/usr/share/olymparch/wallpaper"
     readonly property int frames: 48
+    property bool manualDnd: false   // the bell in the bar
 
     // One frame counter for every monitor. 8 fps, and it stops while every workspace in view has windows.
     property int frame: 0
@@ -103,18 +105,16 @@ ShellRoot {
                 color: root.gold
             }
 
-            SystemClock { id: clock; precision: SystemClock.Minutes }
-            Text {
+            BarStatus {
+                theme: root
                 anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
-                text: Qt.formatDateTime(clock.date, "ddd d. MMM  HH:mm")
-                font { family: root.mono; pixelSize: 13 }
-                color: root.text
             }
         }
     }
 
     GameMode { id: gameMode }
     Launcher { theme: root }
-    Notifications { theme: root; dnd: gameMode.dnd }
+    Notifications { theme: root; dnd: gameMode.dnd || root.manualDnd }
+    Power {}
     Osd { theme: root }
 }

@@ -17,5 +17,7 @@
   "proton.none_title": "Ingen Proton-versjon virket for {game}",
   "proton.none_body": "Olymparch har prøvd alle. Se ProtonDB for tips.",
   "proton.ac_title": "{game} kan ikke kjøres på Linux",
-  "proton.ac_body": "Anti-cheaten blokkerer Linux. En annen Proton hjelper ikke."
+  "proton.ac_body": "Anti-cheaten blokkerer Linux. En annen Proton hjelper ikke.",
+  "power.saver": "Strømsparing er på",
+  "power.saver.body": "Batteriet er under 20 %. Det slås av igjen når du kobler til laderen."
 }
