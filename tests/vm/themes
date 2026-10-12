@@ -71,7 +71,8 @@ for id in "${ids[@]}"; do
     accent=$(python3 -I -c 'import json, sys; print(json.load(open(sys.argv[1]))["palette"]["accent"][1:])' "default/themes/$id/theme.json")
     name=$(python3 -I -c 'import json, sys; print(json.load(open(sys.argv[1]))["name"]["nb"])' "default/themes/$id/theme.json")
     # switch (the terminal closes), then a new terminal in the new colours, and two notifications
-    keys "olymparch-theme set $id && sleep 0.5 && exit\n" 2.5
+    keys "\n" 0.8   # the first key after the lock screen can go missing
+    keys " olymparch-theme set $id && sleep 0.5 && exit\n" 2.5
     press meta_l+ret; sleep 1.5
     keys "bash /mnt/tests/vm/theme-check.sh $id $bg $accent\n" 0.3
     wait_for "CHK-$id-files-(OK|NO)" 20
