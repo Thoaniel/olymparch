@@ -1,0 +1,351 @@
+#!/bin/bash
+# Settings → Backup: your Olymparch settings, Zeus' data and the folders you name, encrypted with age, to a private
+# GitHub repository you own. One encrypted file per run (olymparch-backup.tar.gz.age); older runs stay in the
+# repository's history. Nothing leaves the machine unencrypted, and nothing unencrypted is written to disk on the way.
+#
+#   olymparch-gitbackup status            what is set up, the last run, what is missing (Settings shows it)
+#   olymparch-gitbackup run [--if-due]    back up now (--if-due: only when on and backup.days have passed; the timer)
+#   olymparch-gitbackup keys              make the age key, and help you keep a copy (in a terminal)
+#   olymparch-gitbackup deploy-key        an SSH key for this one repository, to add on GitHub (in a terminal)
+#   olymparch-gitbackup restore           fetch, decrypt, show what would be overwritten, ask, then restore
+#
+# Settings (olymparch-settings get): backup.github (on/off), backup.repo, backup.include, backup.days.
+# Always included: ~/.config/olymparch and ~/.olympus (without models, logs and other downloads).
+# Values are checked here again with the same rules as olymparch-settings, and only ever passed as single arguments.
+set -uo pipefail
+export LC_ALL=C.UTF-8
+umask 077
+
+L() { case ${LANG:-} in nb* | nn* | no*) printf '%s' "$2" ;; *) printf '%s' "$1" ;; esac; }
+say() { printf '%s\n' "$*"; }
+die() {   # in a terminal (Back up now …) the window stays until Enter, so the reason can be read
+    printf 'olymparch-gitbackup: %s\n' "$*" >&2
+    ((BASH_SUBSHELL == 0)) && wait_enter
+    exit 1
+}
+
+STATE=${XDG_STATE_HOME:-$HOME/.local/state}/olymparch/gitbackup
+DATA=${XDG_DATA_HOME:-$HOME/.local/share}/olymparch/gitbackup
+REPO_DIR=$DATA/repo
+KEY=$DATA/age-key.txt                       # the age identity; never inside what is backed up
+DEPLOY_KEY=$HOME/.ssh/olymparch-backup_ed25519
+FILE=olymparch-backup.tar.gz.age
+MAX_BYTES=$((95 * 1024 * 1024))             # GitHub refuses files over 100 MB
+# Never in the archive: models and other big downloads Olympus can fetch again, logs, and the backup's own keys
+EXCLUDES=(--exclude=.olympus/models --exclude=.olympus/logs --exclude=.olympus/clamav --exclude=.olympus/library
+          --exclude=.olympus/library-src --exclude=.olympus/sessions/tmp --exclude='*.sock'
+          --exclude=.local/share/olymparch/gitbackup --exclude=.ssh/olymparch-backup_ed25519)
+
+setting() { olymparch-settings get "$1" 2>/dev/null; }
+
+# ── the same rules as olymparch-settings (backup_repo, backup_include)
+valid_repo() {
+    local re_ssh='^git@github\.com:([A-Za-z0-9][A-Za-z0-9-]{0,38})/([A-Za-z0-9_][A-Za-z0-9_.-]{0,99})\.git$'
+    local re_https='^https://github\.com/([A-Za-z0-9][A-Za-z0-9-]{0,38})/([A-Za-z0-9_][A-Za-z0-9_.-]{0,99})\.git$'
+    [[ $1 =~ $re_ssh || $1 =~ $re_https ]]
+}
+# INCLUDE text → the array FOLDERS (relative to ~), or fail
+FOLDERS=()
+parse_include() {
+    local text=$1 part p
+    FOLDERS=()
+    [[ $text =~ ^[[:space:]]*$ ]] && return 0
+    ((${#text} <= 400)) || return 1
+    local IFS=,
+    for part in $text; do
+        p=${part#"${part%%[![:space:]]*}"}; p=${p%"${p##*[![:space:]]}"}   # trim
+        [[ $p == '~/'* ]] || return 1
+        p=${p#'~/'}
+        while [[ $p == */ ]]; do p=${p%/}; done
+        [ -n "$p" ] && ((${#FOLDERS[@]} < 20)) || return 1
+        [[ $p =~ ^[A-Za-z0-9_.\ /-]+$ ]] || return 1
+        [[ $p == *//* || /$p/ == */../* || /$p/ == */./* ]] && return 1
+        FOLDERS+=("$p")
+    done
+    return 0
+}
+
+remote() {   # the repository to use: backup.repo (or OLYMPARCH_GITBACKUP_REMOTE, a local path, for tests)
+    if [ -n "${OLYMPARCH_GITBACKUP_REMOTE:-}" ]; then printf '%s' "$OLYMPARCH_GITBACKUP_REMOTE"; return; fi
+    local r
+    r=$(setting backup.repo)
+    [ -n "$r" ] || die "$(L "no repository: Settings → Backup → Repository" "ikke noe repo: Innstillinger → Backup → Repo")"
+    valid_repo "$r" || die "$(L "backup.repo is not a GitHub repository address" "backup.repo er ikke en GitHub-repoadresse")"
+    printf '%s' "$r"
+}
+git_env() {   # the deploy key, when there is one, for an SSH address; no questions from ssh or git in a timer
+    export GIT_TERMINAL_PROMPT=0
+    if [ -f "$DEPLOY_KEY" ]; then
+        export GIT_SSH_COMMAND="ssh -i $DEPLOY_KEY -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new"
+    else
+        export GIT_SSH_COMMAND="ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new"
+    fi
+}
+missing_tools() { local t; for t in git age age-keygen ssh; do command -v "$t" >/dev/null || printf '%s ' "$t"; done; }
+offer_install() {   # one click: git, openssh and age from the official repositories (pkexec install-app backup)
+    local m
+    m=$(missing_tools)
+    [ -z "$m" ] && return 0
+    say "$(L "Missing: $m(packages git, openssh, age)" "Mangler: $m(pakkene git, openssh, age)")"
+    [ -t 0 ] || return 1
+    read -r -p "$(L "Install them now? [y/N] " "Installere dem nå? [j/N] ")" a
+    [[ $a == [jJyY]* ]] || return 1
+    pkexec /usr/lib/olymparch/install-app backup || return 1
+    [ -z "$(missing_tools)" ]
+}
+notify_fail() {
+    printf '%s %s\n' "$(date '+%F %T')" "$1" >"$STATE/last-error"
+    [ -t 1 ] && return
+    notify-send -a Olymparch "$(L "Backup failed" "Backupen feilet")" "$1  ($(L "Settings → Backup" "Innstillinger → Backup"))" >/dev/null 2>&1 || true
+}
+wait_enter() { [ "${WAIT:-0}" = 1 ] && [ -t 0 ] && { read -r -p "$(L "Enter …" "Enter …")" _; }; return 0; }
+
+cmd_status() {
+    local on repo days inc last err next m
+    on=$(setting backup.github); repo=$(setting backup.repo); days=$(setting backup.days); inc=$(setting backup.include)
+    say "$(L "Backup" "Backup"): $([ "$on" = true ] && L "on, every $days days" "på, hver $days. dag" || L "off" "av")"
+    say "$(L "Repository" "Repo"): ${repo:-$(L "not set" "ikke satt")}"
+    say "$(L "Included" "Tas med"): ~/.config/olymparch$([ -d "$HOME/.olympus" ] && printf ', ~/.olympus')${inc:+, $inc}"
+    last=$(cat "$STATE/last-ok" 2>/dev/null) && say "$(L "Last backup" "Siste backup"): $(date -d "@$last" '+%F %R')"
+    [ -z "${last:-}" ] && say "$(L "Last backup: never" "Siste backup: aldri")"
+    if [ -n "${last:-}" ] && [ "$on" = true ]; then
+        next=$((last + days * 86400)); say "$(L "Next" "Neste"): $(date -d "@$next" '+%F') ($(L "checked daily" "sjekkes daglig"))"
+    fi
+    err=$(cat "$STATE/last-error" 2>/dev/null) && say "$(L "Last error" "Siste feil"): $err"
+    m=$(missing_tools)
+    [ -n "$m" ] && say "! $(L "Missing programs: $m— «Encryption key» offers to install them" "Mangler programmer: $m— «Krypteringsnøkkel» tilbyr å installere dem")"
+    [ -f "$KEY" ] && say "$(L "Encryption key" "Krypteringsnøkkel"): $KEY" || say "! $(L "No encryption key yet: «Encryption key»" "Ingen krypteringsnøkkel ennå: «Krypteringsnøkkel»")"
+    if [[ $repo == git@* ]]; then
+        [ -f "$DEPLOY_KEY" ] && say "$(L "Deploy key" "Deploy-nøkkel"): $DEPLOY_KEY.pub" || say "· $(L "No deploy key: your own SSH key is used" "Ingen deploy-nøkkel: din egen SSH-nøkkel brukes")"
+    fi
+    systemctl --user is-enabled -q olymparch-gitbackup.timer 2>/dev/null || say "! $(L "The daily timer (olymparch-gitbackup.timer) is not enabled" "Den daglige timeren (olymparch-gitbackup.timer) er ikke slått på")"
+    return 0
+}
+
+cmd_run() {
+    local due=0 on days last now url pub size
+    [ "${1:-}" = --if-due ] && due=1
+    mkdir -p "$STATE" "$DATA"
+    on=$(setting backup.github)
+    if ((due)); then
+        [ "$on" = true ] || exit 0
+        days=$(setting backup.days); [[ $days =~ ^[0-9]+$ ]] && ((days >= 1 && days <= 365)) || days=7
+        last=$(cat "$STATE/last-ok" 2>/dev/null); now=$(date +%s)
+        [[ ${last:-} =~ ^[0-9]+$ ]] && ((now - last < days * 86400 - 3600)) && exit 0
+    fi
+    [ -z "$(missing_tools)" ] || offer_install || { notify_fail "$(L "git, ssh or age is missing" "git, ssh eller age mangler")"; die "$(L "git, ssh or age is missing" "git, ssh eller age mangler")"; }
+    [ -f "$KEY" ] || { notify_fail "$(L "no encryption key" "ingen krypteringsnøkkel")"; die "$(L "no encryption key yet: Settings → Backup → Encryption key" "ingen krypteringsnøkkel ennå: Innstillinger → Backup → Krypteringsnøkkel")"; }
+    url=$(remote) || { notify_fail "$(L "no valid repository" "ikke noe gyldig repo")"; exit 1; }
+    parse_include "$(setting backup.include)" || { notify_fail "backup.include"; die "$(L "backup.include is not a list of folders in your home folder" "backup.include er ikke en liste med mapper i hjemmemappa")"; }
+    git_env
+    say "$(L "Repository" "Repo"): $url"
+    if [ ! -d "$REPO_DIR/.git" ]; then
+        rm -rf -- "${REPO_DIR:?}"
+        git clone -q -- "$url" "$REPO_DIR" || { notify_fail "git clone"; die "$(L "could not reach the repository (deploy key added with write access?)" "fikk ikke kontakt med repoet (deploy-nøkkel lagt inn med skrivetilgang?)")"; }
+    else
+        git -C "$REPO_DIR" remote set-url origin "$url"
+    fi
+    if git -C "$REPO_DIR" ls-remote --exit-code --heads origin main >/dev/null 2>&1; then
+        git -C "$REPO_DIR" fetch -q origin main && git -C "$REPO_DIR" checkout -q -B main FETCH_HEAD || { notify_fail "git fetch"; die "git fetch"; }
+    else
+        git -C "$REPO_DIR" symbolic-ref HEAD refs/heads/main
+    fi
+    local items=(.config/olymparch) f
+    [ -d "$HOME/.olympus" ] && items+=(.olympus)
+    for f in "${FOLDERS[@]}"; do
+        if [ -e "$HOME/$f" ]; then items+=("$f"); else say "· $(L "not found, skipped" "finnes ikke, hoppet over"): ~/$f"; fi
+    done
+    pub=$(age-keygen -y "$KEY") || die "$(L "the encryption key cannot be read" "krypteringsnøkkelen kan ikke leses")"
+    say "$(L "Packing and encrypting" "Pakker og krypterer"): ${items[*]/#/\~/}"
+    # tar → age straight into the repository: nothing unencrypted is written anywhere. tar's 1 = a file changed while
+    # it was read (Zeus' database, say): that file is as it was a moment ago, which is fine for a backup.
+    tar -C "$HOME" "${EXCLUDES[@]}" --warning=no-file-changed -czf - -- "${items[@]}" 2>"$STATE/tar.log" | age -r "$pub" -o "$REPO_DIR/$FILE.new"
+    local st=("${PIPESTATUS[@]}")
+    if ((st[0] > 1 || st[1] != 0)); then
+        rm -f -- "$REPO_DIR/$FILE.new"; notify_fail "tar | age"; die "$(L "packing failed" "pakkingen feilet"): $(tail -n 3 "$STATE/tar.log")"
+    fi
+    size=$(stat -c %s -- "$REPO_DIR/$FILE.new")
+    if ((size > MAX_BYTES)); then
+        rm -f -- "$REPO_DIR/$FILE.new"; notify_fail "$(L "too big" "for stor")"
+        die "$(L "the backup is $((size / 1048576)) MB; GitHub takes 100 MB per file. Remove a folder from «More folders»." "backupen er $((size / 1048576)) MB; GitHub tar 100 MB per fil. Fjern en mappe fra «Flere mapper».")"
+    fi
+    mv -f -- "$REPO_DIR/$FILE.new" "$REPO_DIR/$FILE"
+    printf '%s\n' "Olymparch backup, encrypted with age (https://age-encryption.org)." \
+        "Restore: Settings → Backup → Restore (olymparch-gitbackup restore), with your age key." >"$REPO_DIR/README.md"
+    git -C "$REPO_DIR" add -- "$FILE" README.md
+    git -C "$REPO_DIR" -c user.name=Olymparch -c user.email=backup@olymparch.invalid -c commit.gpgsign=false \
+        commit -q -m "Backup $(date '+%F %R')" || { notify_fail "git commit"; die "git commit"; }
+    git -C "$REPO_DIR" push -q origin HEAD:main || { notify_fail "git push"; die "$(L "could not push (write access for the deploy key?)" "fikk ikke sendt (skrivetilgang for deploy-nøkkelen?)")"; }
+    date +%s >"$STATE/last-ok"
+    rm -f -- "$STATE/last-error"
+    say "$(L "Done" "Ferdig"): $((size / 1024)) KB $(L "encrypted" "kryptert") → $url"
+}
+
+cmd_keys() {
+    mkdir -p "$DATA"
+    offer_install || { say "$(L "age is needed for the key" "age trengs for nøkkelen")"; WAIT=1 wait_enter; exit 1; }
+    if [ -f "$KEY" ]; then
+        say "$(L "Your encryption key" "Krypteringsnøkkelen din"): $KEY"
+    else
+        age-keygen -o "$KEY" 2>/dev/null || die "age-keygen"
+        chmod 600 -- "$KEY"
+        say "$(L "Made a new encryption key" "Laget en ny krypteringsnøkkel"): $KEY"
+    fi
+    say "$(L "Public part" "Offentlig del"): $(age-keygen -y "$KEY")"
+    say ""
+    say "$(L "Without this file no backup can be opened, not even by you. Keep a copy off this machine:" "Uten denne fila kan ingen backup åpnes, heller ikke av deg. Ta vare på en kopi utenfor maskinen:")"
+    say "$(L "  a USB stick, or the file's text in a password manager. Never in the backup repository." "  en minnepinne, eller teksten i fila i en passordbehandler. Aldri i backup-repoet.")"
+    say ""
+    read -r -p "$(L "Copy it to a folder now (such as a USB stick under /run/media)? Folder, or Enter to skip: " "Kopiere den til en mappe nå (som en minnepinne under /run/media)? Mappe, eller Enter for å hoppe over: ")" dest
+    if [ -n "$dest" ]; then
+        dest=${dest/#\~/$HOME}
+        if [ -d "$dest" ]; then
+            install -m600 -- "$KEY" "$dest/olymparch-backup-age-key.txt" && say "$(L "Copied to" "Kopiert til") $dest/olymparch-backup-age-key.txt"
+        else
+            say "$(L "Not a folder" "Ikke en mappe"): $dest"
+        fi
+    fi
+    WAIT=1 wait_enter
+}
+
+cmd_deploy_key() {
+    local url owner repo
+    offer_install || { WAIT=1 wait_enter; exit 1; }
+    url=$(setting backup.repo)
+    if ! valid_repo "${url:-}"; then say "$(L "Set Settings → Backup → Repository first" "Sett Innstillinger → Backup → Repo først")"; WAIT=1 wait_enter; exit 1; fi
+    if [[ $url != git@* ]]; then
+        say "$(L "Deploy keys work with the SSH address (git@github.com:OWNER/REPO.git); an https address uses your own git login." "Deploy-nøkler virker med SSH-adressen (git@github.com:EIER/REPO.git); en https-adresse bruker din egen git-innlogging.")"
+        WAIT=1 wait_enter; exit 0
+    fi
+    [[ $url =~ ^git@github\.com:([^/]+)/(.+)\.git$ ]] && owner=${BASH_REMATCH[1]} repo=${BASH_REMATCH[2]}
+    mkdir -p -- "$HOME/.ssh" && chmod 700 -- "$HOME/.ssh"
+    if [ ! -f "$DEPLOY_KEY" ]; then
+        ssh-keygen -q -t ed25519 -N '' -C "olymparch-backup@$(uname -n)" -f "$DEPLOY_KEY" || die ssh-keygen
+    fi
+    say "$(L "1. Open" "1. Åpne") https://github.com/$owner/$repo/settings/keys/new"
+    say "$(L "2. Title: Olymparch backup. Key: the line below. Tick «Allow write access». Add key." "2. Tittel: Olymparch backup. Key: linja under. Kryss av «Allow write access». Add key.")"
+    say ""
+    cat -- "$DEPLOY_KEY.pub"
+    say ""
+    command -v wl-copy >/dev/null && wl-copy <"$DEPLOY_KEY.pub" && say "$(L "(The line is on the clipboard.)" "(Linja ligger på utklippstavla.)")"
+    read -r -p "$(L "Enter when it is added, to test it … " "Enter når den er lagt inn, for å teste … ")" _
+    git_env
+    if git ls-remote -- "$url" >/dev/null 2>&1; then say "$(L "✓ The repository answers." "✓ Repoet svarer.")"; else say "$(L "✗ No answer yet: check the key and the address." "✗ Ikke svar ennå: sjekk nøkkelen og adressen.")"; fi
+    WAIT=1 wait_enter
+}
+
+cmd_restore() {
+    local url key work
+    offer_install || { WAIT=1 wait_enter; exit 1; }
+    url=$(remote) || { WAIT=1 wait_enter; exit 1; }
+    read -r -p "$(L "age key file [$KEY]: " "age-nøkkelfil [$KEY]: ")" key
+    key=${key:-$KEY}; key=${key/#\~/$HOME}
+    [ -r "$key" ] || { say "$(L "Cannot read" "Kan ikke lese") $key"; WAIT=1 wait_enter; exit 1; }
+    git_env
+    mkdir -p -- "$STATE"
+    work=$(mktemp -d "$STATE/restore.XXXXXX") || die mktemp   # mode 700, private: never /tmp
+    # shellcheck disable=SC2064
+    trap "rm -rf -- '$work'" EXIT
+    say "$(L "Fetching" "Henter") $url …"
+    git clone -q --depth 1 --branch main -- "$url" "$work/repo" || { say "$(L "Could not fetch the repository" "Fikk ikke hentet repoet")"; WAIT=1 wait_enter; exit 1; }
+    [ -f "$work/repo/$FILE" ] || { say "$(L "No backup in that repository" "Ingen backup i det repoet")"; WAIT=1 wait_enter; exit 1; }
+    say "$(L "Backup from" "Backup fra"): $(git -C "$work/repo" log -1 --format=%cd --date=format:'%F %R')"
+    # age is authenticated encryption: only an archive made with this key decrypts, and any change to it makes age fail.
+    # Fail closed: nothing is used unless age exits 0.
+    if ! age -d -i "$key" -o "$work/backup.tar.gz" -- "$work/repo/$FILE" 2>/dev/null; then
+        say "$(L "Could not decrypt it with that key, or it was changed: refused" "Fikk ikke dekryptert den med den nøkkelen, eller den er endret: avvist")"
+        WAIT=1 wait_enter; exit 1
+    fi
+    restore_tar "$work/backup.tar.gz" "$work"
+    local rc=$?
+    WAIT=1 wait_enter
+    exit $rc
+}
+
+# restore_tar TAR.GZ WORKDIR: check every entry, unpack into a private staging folder, then copy regular files home.
+# Refused: absolute paths, .., anything but files and folders (symlinks, hard links, devices, fifos), paths outside
+# ~/.config/olymparch, ~/.olympus and backup.include, and targets reached through a symlink in your home folder.
+restore_tar() {
+    local tarball=$1 work=$2 stage roots=(.config/olymparch .olympus) f n t name a rel target dir p over=0 files=0
+    parse_include "$(setting backup.include)" && roots+=("${FOLDERS[@]}")
+    tar -tzf "$tarball" >"$work/names" 2>/dev/null && tar --quoting-style=literal -tvzf "$tarball" >"$work/types" 2>/dev/null \
+        || { say "$(L "Not a valid archive: refused" "Ikke et gyldig arkiv: avvist")"; return 1; }
+    n=$(wc -l <"$work/names")
+    [ "$n" = "$(wc -l <"$work/types")" ] && ((n > 0)) || { say "$(L "Odd entries in the archive: refused" "Rare oppføringer i arkivet: avvist")"; return 1; }
+    local names types i ok
+    mapfile -t names <"$work/names"; mapfile -t types <"$work/types"
+    for i in "${!names[@]}"; do
+        name=${names[i]%/}; t=${types[i]:0:1}
+        [[ $t == [-d] ]] || { say "$(L "The archive has a link or special file: refused" "Arkivet har en lenke eller spesialfil: avvist"): $name"; return 1; }
+        [[ -z $name || $name == /* || /$name/ == */../* || /$name/ == */./* || $name == *$'\r'* ]] && { say "$(L "Path outside your home folder: refused" "Sti utenfor hjemmemappa: avvist"): $name"; return 1; }
+        ok=0
+        for p in "${roots[@]}"; do
+            [[ $name == "$p" || $name == "$p"/* ]] && ok=1              # in a backed-up folder
+            [[ $t == d && $p == "$name"/* ]] && ok=1                     # a folder on the way to one (.config)
+        done
+        ((ok)) || { say "$(L "Not one of the backed-up folders (add it to «More folders» first): refused" "Ikke en av mappene som tas med (legg den til i «Flere mapper» først): avvist"): $name"; return 1; }
+    done
+    stage=$work/stage
+    mkdir -m 700 -- "$stage" || return 1
+    tar -C "$stage" -xzf "$tarball" --no-same-owner --no-same-permissions --no-overwrite-dir || { say "$(L "Unpacking failed" "Utpakkingen feilet")"; return 1; }
+    rm -f -- "$tarball"
+    chmod -R u+rwX -- "$stage" || return 1   # only files and folders are in it (checked above): readable for the copy
+    # what would be overwritten, and anything that would go through a symlink in your home folder
+    while IFS= read -r -d '' f; do
+        rel=${f#"$stage"/}; target=$HOME/$rel; files=$((files + 1))
+        p=$HOME
+        local parts=()
+        [[ $rel == */* ]] && IFS=/ read -r -a parts <<<"${rel%/*}"
+        for a in "${parts[@]}"; do
+            p=$p/$a
+            [ -L "$p" ] && { say "$(L "A folder on the way is a symlink: refused" "En mappe på veien er en symbolsk lenke: avvist"): ${p/#$HOME/\~}"; return 1; }
+        done
+        [ -L "$target" ] && { say "$(L "The target is a symlink: refused" "Målet er en symbolsk lenke: avvist"): ~/$rel"; return 1; }
+        [ -e "$target" ] && over=$((over + 1))
+    done < <(find "$stage" -type f -print0)
+    if find "$stage" ! -type f ! -type d | grep -q .; then say "$(L "Not only files and folders: refused" "Ikke bare filer og mapper: avvist")"; return 1; fi
+    say ""
+    say "$(L "Put back in your home folder: $files files, $over of them overwrite what is there now:" "Legges tilbake i hjemmemappa: $files filer, $over av dem overskriver det som er der nå:")"
+    find "$stage" -mindepth 1 -maxdepth 2 -type d | sed "s|^$stage/|  ~/|" | sort | head -n 20
+    read -r -p "$(L "Restore and overwrite? [y/N] " "Gjenopprette og overskrive? [j/N] ")" a
+    [[ $a == [jJyY]* ]] || { say "$(L "Nothing changed." "Ingenting endret.")"; return 0; }
+    while IFS= read -r -d '' f; do
+        rel=${f#"$stage"/}; target=$HOME/$rel; dir=${target%/*}
+        mkdir -p -- "$dir" || return 1
+        # checked again right before writing; --remove-destination never writes through what is at the target
+        [ -L "$target" ] || [ -L "$dir" ] && { say "$(L "Symlink appeared: stopped" "En symbolsk lenke dukket opp: stoppet"): ~/$rel"; return 1; }
+        cp --remove-destination --no-dereference -- "$f" "$target" || { say "$(L "Could not write" "Fikk ikke skrevet") ~/$rel"; return 1; }
+    done < <(find "$stage" -type f -print0)
+    say "$(L "Restored. Log out and in again so everything reads its settings anew." "Gjenopprettet. Logg ut og inn igjen så alt leser innstillingene på nytt.")"
+}
+
+
+cmd_selftest() {   # the validation rules (tests/settings-coverage runs this; no network, no files)
+    local bad=0 r i
+    for r in 'git@github.com:me/backup.git' 'https://github.com/me-2/olymparch.backup.git'; do valid_repo "$r" || { echo "refused good repo $r"; bad=1; }; done
+    for r in 'ext::sh -c touch% x' 'git@github.com:-oProxyCommand=x/r.git' 'https://github.com/me/..git' 'https://evil.example/me/r.git' \
+             'git@github.com:me/r.git x' "git@github.com:me/r.git
+x" 'file:///etc/r.git' ''; do valid_repo "$r" && { echo "took bad repo $r"; bad=1; }; done
+    parse_include '~/Documents, ~/My Pictures/Screens/' && [ "${FOLDERS[*]}" = 'Documents My Pictures/Screens' ] || { echo "include: good list refused (${FOLDERS[*]})"; bad=1; }
+    parse_include '' && ((${#FOLDERS[@]} == 0)) || { echo "include: empty refused"; bad=1; }
+    for i in '~/../etc' '/etc' '~/a,~/b/../../x' '~/$(touch x)' '~/a;b' '~/' '~/./a' "~/a
+b"; do parse_include "$i" && { echo "include: took $i"; bad=1; }; done
+    ((bad == 0)) && echo "selftest ok"
+    return $bad
+}
+
+case ${1:-} in
+    status) cmd_status ;;
+    run) shift; [ "${1:-}" = --wait ] && { WAIT=1; shift; }; cmd_run "$@"; rc=$?; wait_enter; exit $rc ;;
+    keys) cmd_keys ;;
+    deploy-key) cmd_deploy_key ;;
+    restore) cmd_restore ;;
+    selftest) cmd_selftest ;;
+    restore-file)   # restore-file TAR.GZ: the checks and copy of `restore` on an unencrypted archive (tests)
+        [ -f "${2:-}" ] || die "usage: restore-file TAR.GZ"
+        mkdir -p -- "$STATE"; w=$(mktemp -d "$STATE/restore.XXXXXX") || die mktemp
+        # shellcheck disable=SC2064
+        trap "rm -rf -- '$w'" EXIT
+        cp -- "$2" "$w/backup.tar.gz" && restore_tar "$w/backup.tar.gz" "$w" ;;
+    *) sed -n '2,/^$/{s/^# \{0,1\}//p}' "$0"; [ -z "${1:-}" ] || [ "$1" = help ] || exit 2 ;;
+esac

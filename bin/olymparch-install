@@ -229,7 +229,7 @@ install -Dm755 /usr/lib/olymparch/launch-shell /mnt/usr/lib/olymparch/launch-she
 install -Dm644 /usr/share/olymparch/foot/foot.ini /mnt/etc/xdg/foot/foot.ini
 # Events: virus check of downloads, disk-space check, archive extraction, default apps
 install -Dm644 -t /mnt/usr/lib/systemd/user /usr/share/olymparch/systemd/user/*
-arch-chroot /mnt systemctl --global enable olymparch-downloads.path olymparch-disk-check.timer olymparch-heat-check.timer >/dev/null 2>&1
+arch-chroot /mnt systemctl --global enable olymparch-downloads.path olymparch-disk-check.timer olymparch-heat-check.timer olymparch-gitbackup.timer >/dev/null 2>&1
 arch-chroot /mnt systemctl enable clamav-freshclam.service >/dev/null 2>&1 || true
 install -Dm644 /usr/share/olymparch/apps/olymparch-extract.desktop /mnt/usr/share/applications/olymparch-extract.desktop
 install -Dm644 /usr/share/olymparch/apps/mimeapps.list /mnt/etc/xdg/mimeapps.list

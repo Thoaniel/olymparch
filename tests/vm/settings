@@ -323,6 +323,58 @@ press meta_l+spc; sleep 1; keys "innst" 1
 shot meny-innstillinger "Menyen (Super+Space) finner Innstillinger"
 press esc; sleep 0.5
 
+# ── Zeus and Backup (olymparch-gitbackup). Zeus is not installed here: only «Install Zeus» shows. Then a stand-in
+#    olympus (tests/vm/olympus-stub) that only answers what Settings asks: models, config set, auth, zeus.
+keys "clear; sudo install -m755 /mnt/system/bin/olymparch-gitbackup /usr/bin/ && sudo install -m644 /mnt/default/systemd/user/olymparch-gitbackup.service /mnt/default/systemd/user/olymparch-gitbackup.timer /usr/lib/systemd/user/ && sudo install -Dm755 /mnt/system/lib/install-app /usr/lib/olymparch/install-app && systemctl --user daemon-reload && systemctl --user enable olymparch-gitbackup.timer && echo '<2>GITBACKUP-READY' > /dev/kmsg; clear\n" 1
+keys "$PW\n" 1
+wait_for 'GITBACKUP-READY' 30 || fails+=(gitbackup-install)
+keys "clear\n" 0.5
+check zeus-hidden 'm=$(olymparch-settings missing); for k in zeus.overview zeus.model zeus.local_model zeus.api_keys zeus.hotkey zeus.params zeus.vram_limit zeus.setup; do echo "$m" | grep -qx $k || exit 1; done; ! echo "$m" | grep -qx zeus.install'
+keys "clear; olymparch-settings open zeus\n" 2.5
+shot zeus-ikke-installert "Zeus uten Olympus: bare «Installer Zeus» (og Zeus av/på for oppsettstilbudet)"
+close_settings
+keys "clear; install -Dm755 /mnt/tests/vm/olympus-stub ~/.local/bin/olympus; rm -f ~/olympus.log; clear\n" 1
+check zeus-shown '! olymparch-settings missing | grep -q "^zeus\.\(model\|local_model\|api_keys\|hotkey\|params\|vram_limit\)$" && olymparch-settings missing | grep -qx zeus.install'
+check zeus-choices 'olymparch-settings choices zeus.model | grep -q "^groq/openai/gpt-oss-120b" && [ "$(olymparch-settings choices zeus.local_model | cut -f1 | tr "\n" " ")" = "gemma4-26b-a4b qwen35-9b " ] && [ "$(olymparch-settings get zeus.model)" = gemma4-26b-a4b ]'
+check zeus-model 'olymparch-settings set zeus.model qwen35-9b && grep -qx "modell qwen35-9b" ~/olympus.log && ! olymparch-settings set zeus.model llama-not-downloaded && ! olymparch-settings set zeus.local_model groq/openai/gpt-oss-120b && ! grep -q llama-not ~/olympus.log'
+check zeus-config 'olymparch-settings set zeus.local_model gemma4-26b-a4b && olymparch-settings set zeus.params "temperature=0.4, context=8192" && olymparch-settings set zeus.vram_limit 10 && grep -q "config set general.local_model .gemma4-26b-a4b." ~/olympus.log && grep -q "config set agents.zeus.temperature 0.40" ~/olympus.log && grep -q "config set llamacpp.ctx_size 8192" ~/olympus.log && grep -q "config set vram.budget_gb 10.0" ~/olympus.log && ! olymparch-settings set zeus.params "temperature=0.4; reboot"'
+keys "clear; olymparch-settings open zeus\n" 3
+shot zeus-installert "Zeus med Olympus (stand-in): modell qwen35-9b fra lista, lokal modell, nøkler, Super+Z, parametre, VRAM 10 GB"
+search zeus.model
+press spc; sleep 1
+shot zeus-modellvalg "Modell: bare det olympus modell viser (lokale som er lastet ned, skymodeller med nøkkel)"
+press esc; sleep 0.5
+close_settings
+keys "clear; sleep 4; c zeus-hotkey 'pgrep -f \"olympus zeus\"'\n" 0.3
+press meta_l+z; sleep 5
+wait_for 'CHK-zeus-hotkey-(OK|NO)' 20; seen 'CHK-zeus-hotkey-OK' || fails+=(zeus-hotkey)
+shot zeus-hurtigtast "Super+Z åpner Zeus (olympus zeus) i en terminal"
+press meta_l+q; sleep 1.5
+keys "clear; olymparch-settings run zeus.api_keys; sleep 3\n" 3.5
+shot zeus-nokler "API-nøkler: Olympus spør selv i en terminal og lagrer i ~/.olympus/auth.json; ingenting går gjennom Innstillinger"
+keys "\n" 1.5
+check zeus-keys-status 'grep -qx "auth status anthropic" ~/olympus.log && ! grep -q "auth login" ~/olympus.log && ! grep -qiE "sk-|api_key|auth" ~/.config/olymparch/settings.json'
+
+check backup-refuses '! olymparch-settings set backup.repo "ext::sh -c id" && ! olymparch-settings set backup.repo "https://evil.example/a/b.git" && ! olymparch-settings set backup.include "~/../etc" && ! olymparch-settings set backup.include /etc'
+check backup-settings 'olymparch-settings set backup.repo git@github.com:olymp-test/backup.git && olymparch-settings set backup.include "~/Documents, ~/Ikke her" && olymparch-settings set backup.days 3 && olymparch-settings set backup.github on && olymparch-settings run backup.overview | grep -q "git@github.com:olymp-test/backup.git" && systemctl --user is-enabled -q olymparch-gitbackup.timer'
+keys "clear; olymparch-settings open backup\n" 2.5
+search backup.overview
+press ret; sleep 2
+shot backup-status "Backup: på, repo, hver 3. dag, og det som mangler (git/age, nøkkel)"
+close_settings
+# git, openssh and age with one click (pkexec install-app backup), then a real round trip to a local bare repository
+keys "clear; command -v age && command -v git || pkexec /usr/lib/olymparch/install-app backup; c backup-install 'command -v age && command -v git && command -v ssh'\n" 1
+wait_for 'CHK-backup-install-(OK|NO)' 300; seen 'CHK-backup-install-OK' || fails+=(backup-install)
+keys "clear; mkdir -p ~/Documents && echo HEMMELIG-NOTAT-42 > ~/Documents/notat.txt && git init -q --bare ~/remote.git && printf '\n' | olymparch-gitbackup keys; export OLYMPARCH_GITBACKUP_REMOTE=~/remote.git; olymparch-gitbackup run\n" 8
+shot backup-kjort "olymparch-gitbackup run: nøkkel laget, mappene pakket og kryptert, sendt (~/Ikke her finnes ikke og hoppes over)"
+check backup-pushed 'git --git-dir ~/remote.git log --oneline main | grep -q Backup && git --git-dir ~/remote.git show main:olymparch-backup.tar.gz.age | head -c 40 | grep -aq age-encryption.org && ! git --git-dir ~/remote.git show main:olymparch-backup.tar.gz.age | zcat 2>/dev/null | grep -aq HEMMELIG'
+check backup-content 'git --git-dir ~/remote.git show main:olymparch-backup.tar.gz.age | age -d -i ~/.local/share/olymparch/gitbackup/age-key.txt | tar -tzf - | grep -qx Documents/notat.txt && [ "$(stat -c %a ~/.local/share/olymparch/gitbackup/age-key.txt)" = 600 ]'
+check backup-not-due 'olymparch-gitbackup run --if-due && [ "$(git --git-dir ~/remote.git rev-list --count main)" = 1 ]'
+keys "clear; rm ~/Documents/notat.txt; printf '\nj\n' | olymparch-gitbackup restore\n" 6
+shot backup-gjenopprett "Gjenopprett: henter, dekrypterer, viser hva som overskrives, spør (svarte j)"
+check backup-restored 'grep -qx HEMMELIG-NOTAT-42 ~/Documents/notat.txt'
+keys "clear; unset OLYMPARCH_GITBACKUP_REMOTE; rm -f ~/.local/bin/olympus; olymparch-settings set backup.github off; clear\n" 1
+
 # last, because a critical notification stays until it is clicked
 keys "olymparch-settings set notifications.dnd on; notify-send -u critical Disk 'Disken er 95 % full'; sleep 1.5; c dnd-critical 'hyprctl layers | grep -q olymparch-notifications'\n" 1
 wait_for 'CHK-dnd-critical-(OK|NO)' 30; seen 'CHK-dnd-critical-OK' || fails+=(dnd-critical)

@@ -53,6 +53,7 @@
   "settings.items.pair": "Par ›",
   "settings.items.nonm": "NetworkManager (nmcli) er ikke installert",
   "settings.items.nowifi": "Ingen Wi-Fi-adapter",
+  "settings.zeus.no_models": "Ingen modeller ennå: «Sett opp» laster ned en, etter å ha spurt",
   "settings.items.nobluez": "Bluetooth (bluez) er ikke installert: ingen adapter er funnet",
   "settings.items.nobt": "Ingen Bluetooth-adapter",
   "settings.items.btoff": "Bluetooth er av"
