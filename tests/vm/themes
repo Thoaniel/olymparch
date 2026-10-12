@@ -54,7 +54,7 @@ sys.exit(0 if all(abs(x - y) <= 6 for x, y in zip(a, b)) else 1)' "$1" "$2"
 }
 
 vm boot.log -virtfs local,path="$PWD",mount_tag=olysrc,security_model=none,readonly=on,id=src \
-    -audiodev none,id=snd0 -device ich9-intel-hda -device hda-output,audiodev=snd0
+    -audiodev none,id=snd0 -device ich9-intel-hda -device hda-output,audiodev=snd0 -device qemu-xhci -device usb-tablet
 unlock_and_desktop "$PW"
 
 # This repo's files in place (the themes with their frames), the shell restarted in Norwegian, the check helper
@@ -83,6 +83,8 @@ for id in "${ids[@]}"; do
     shot "$id-skrivebord" "$name: skrivebordet (levende bakgrunn, baren, varslene)"
     px=$(bar_pixel)
     near "$px" "$bg" || fails+=("$id-bar ($px, ventet $bg)")
+    # a click dismisses each notification (the critical ones stay until then), so they don't cover the next pictures
+    for _ in 1 2 3 4; do python3 -I tests/vm/qmp.py "$QMP" click 1088 70 1280 800; sleep 0.4; done
     press meta_l+1; sleep 0.8
     keys "olymparch-settings open appearance\n" 2.5
     shot "$id-innstillinger" "$name: Innstillinger → Utseende med temavelgeren"

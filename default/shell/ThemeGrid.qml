@@ -28,8 +28,16 @@ Grid {
             readonly property bool focused: grid.cursor === index
             width: grid.cardW; height: grid.cardH
             color: sw[0]
-            border.width: now || focused ? 2 : 1
-            border.color: focused ? grid.theme.goldHi : now ? grid.theme.gold : grid.theme.line
+            // in use: ✓ and «in use» on the card; keyboard focus: a thick frame and a ring around it
+            border.width: focused ? 2 : 1
+            border.color: focused ? grid.theme.goldHi : grid.theme.line
+            Rectangle {
+                visible: card.focused
+                anchors { fill: parent; margins: -4 }
+                color: "transparent"
+                border.width: 1
+                border.color: grid.theme.goldHi
+            }
 
             Text {
                 id: sign
@@ -52,13 +60,12 @@ Grid {
                 font { family: "Symbols Nerd Font Mono"; pixelSize: grid.theme.px(14) }
                 color: card.sw[3]
             }
-            Text {
+            Text {   // «in use», or «light» on a light theme
                 x: 12
                 anchors { bottom: strip.top; bottomMargin: 6 }
-                text: card.modelData.light ? I18n.t("theme.light", "light") : I18n.t("theme.dark", "dark")
-                font { family: grid.theme.mono; pixelSize: grid.theme.px(10); letterSpacing: 1 }
-                color: card.sw[4]
-                opacity: 0.75
+                text: card.now ? I18n.t("theme.in_use", "IN USE") : card.modelData.light ? I18n.t("theme.light", "LIGHT") : ""
+                font { family: grid.theme.mono; pixelSize: grid.theme.px(10); bold: card.now; letterSpacing: 1.5 }
+                color: card.now ? card.sw[3] : card.sw[4]
             }
             Row {   // the palette: surface, accent, accent emphasised, text, danger
                 id: strip

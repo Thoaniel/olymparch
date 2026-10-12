@@ -40,7 +40,7 @@ if len(sys.argv) > 5:
         HALO = [mix(bg, hi, t) for t in (0.06, 0.12, 0.2, 0.3)]
         HALO = [mix(h, (255, 214, 120), 0.25) for h in HALO]
         GOLD = [mix(acc, (0, 0, 0), 0.55), mix(acc, (0, 0, 0), 0.3), acc, mix(acc, hi, 0.5), mix(hi, (255, 255, 255), 0.15)]
-        SCAN = 0.94
+        SCAN = 0.97  # på det lyse er skannlinjene bare et streif
     else:
         warm = mix(acc, (0, 0, 0), 0.35)  # glorien: en mørkere, varmere utgave av aksenten
         HALO = [mix(bg, warm, t) for t in (0.13, 0.2, 0.31, 0.45)]

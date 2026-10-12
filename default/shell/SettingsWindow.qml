@@ -508,7 +508,8 @@ Scope {
                                 readonly property string w: s.widget || ({ bool: "switch", choice: "select", number: "slider", text: "field", action: "button" })[s.type]
                                 readonly property var opts: s.type === "choice" ? win.options(s) : []
                                 width: content.width
-                                height: Math.max(info.implicitHeight, ctl.height) + 18 + (out.visible ? out.height + 8 : 0)
+                                readonly property bool wide: w === "themes"   // the theme cards get the whole width, under the text
+                                height: (wide ? info.implicitHeight + 10 + ctl.height : Math.max(info.implicitHeight, ctl.height)) + 18 + (out.visible ? out.height + 8 : 0)
 
                                 Column {
                                     id: info
@@ -541,9 +542,9 @@ Scope {
 
                                 Item {
                                     id: ctl
-                                    x: 316
-                                    y: 7
-                                    width: row.width - 316
+                                    x: row.wide ? 0 : 316
+                                    y: row.wide ? info.y + info.implicitHeight + 10 : 7
+                                    width: row.width - x
                                     height: Math.max(26, sw.visible ? sw.height : seg.visible ? seg.height : sel.visible ? sel.height
                                                            : sld.visible ? sld.height : fld.visible ? fld.height : btn.visible ? btn.height : kc.visible ? kc.height
                                                            : thm.visible ? thm.height : itm.visible ? itm.implicitHeight : info2.height)

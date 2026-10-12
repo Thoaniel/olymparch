@@ -51,7 +51,7 @@ ShellRoot {
     readonly property color field: mix(bg, surface, 0.4)          // input boxes, switches, sliders
     readonly property color selected: mix(bg, gold, 0.1)          // a row that is waiting for you (recording a shortcut)
     readonly property color onAccent: bg                          // text on an accent-filled button
-    readonly property color dim: mix(muted, bg, 0.3)              // the file/command hint under a setting
+    readonly property color dim: mix(muted, bg, 0.15)             // the file/command hint under a setting
     readonly property color scrim: Qt.rgba(bg.r, bg.g, bg.b, 0.6) // behind a question in the middle of the screen
     readonly property color wallpaperBg: light ? bg : Qt.darker(bg, 1.25)
     readonly property string glyph: {   // the god's sign in the bar (a Nerd Font code point)

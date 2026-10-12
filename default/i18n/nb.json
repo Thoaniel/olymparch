@@ -65,6 +65,6 @@
   "settings.install.failed": "Ikke installert: se /var/log/olymparch-install-app.log",
   "theme.title": "GUDENE PÅ OLYMPEN",
   "theme.hint": "←↑↓→ velg · Enter bruk · Esc lukk · Innstillinger → Utseende",
-  "theme.light": "lyst",
-  "theme.dark": "mørkt"
+  "theme.light": "LYST",
+  "theme.in_use": "I BRUK"
 }
