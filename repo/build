@@ -34,6 +34,7 @@ build)
             [[ " ${ours[*]} " == *" $dep "* ]] || deps+=("$dep")
         done < <(srcinfo_deps "$d/.SRCINFO")
         [ ${#deps[@]} -eq 0 ] || pacman -S --noconfirm --needed --asdeps "${deps[@]}" >/dev/null
+        sudo -u builder mkdir -p "$d/pkg"
         (cd "$d" && sudo -u builder env PKGDEST="$d/pkg" makepkg --nodeps --noconfirm --clean --nocheck >/dev/null)
         cp "$d"/pkg/*.pkg.tar.zst "$out/"
     done <repo/packages.tsv
