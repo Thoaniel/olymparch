@@ -58,7 +58,7 @@ unlock_and_desktop "$PW"
 # Put this repo's files in place, restart the shell in Norwegian, and define the check helper in the terminal.
 # /dev/kmsg is opened up so checks can report without sudo (this VM is thrown away).
 press meta_l+ret; sleep 2
-keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /mnt/default/settings /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -m755 /mnt/system/bin/olymparch-settings /mnt/system/bin/olymparch-doctor /usr/bin/ && sudo install -Dm644 /mnt/default/settings/olymparch-settings.desktop /usr/share/applications/olymparch-settings.desktop && sudo install -Dm644 /mnt/default/audio/olymparch-switch-on-connect.conf /etc/pipewire/pipewire-pulse.conf.d/50-olymparch-switch-on-connect.conf && systemctl --user restart pipewire-pulse && sudo chmod 666 /dev/kmsg && hyprctl reload >/dev/null; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=nb_NO.UTF-8 setsid -f /usr/lib/olymparch/launch-shell; echo '<2>SETTINGS-UPDATED' > /dev/kmsg\n" 1
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /mnt/default/settings /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -m755 /mnt/system/bin/olymparch-settings /mnt/system/bin/olymparch-doctor /usr/bin/ && sudo install -Dm644 /mnt/default/settings/olymparch-settings.desktop /usr/share/applications/olymparch-settings.desktop && sudo install -Dm755 /mnt/system/lib/settings-apply /usr/lib/olymparch/settings-apply && sudo install -Dm644 /mnt/system/polkit/org.olymparch.settings.policy /usr/share/polkit-1/actions/org.olymparch.settings.policy && sudo install -Dm644 /mnt/system/polkit/50-olymparch-settings.rules /usr/share/polkit-1/rules.d/50-olymparch-settings.rules && sudo install -Dm644 /mnt/default/audio/olymparch-switch-on-connect.conf /etc/pipewire/pipewire-pulse.conf.d/50-olymparch-switch-on-connect.conf && systemctl --user restart pipewire-pulse && sudo chmod 666 /dev/kmsg && hyprctl reload >/dev/null; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=nb_NO.UTF-8 setsid -f /usr/lib/olymparch/launch-shell; echo '<2>SETTINGS-UPDATED' > /dev/kmsg\n" 1
 keys "$PW\n" 1
 wait_for 'SETTINGS-UPDATED' 40 || finish "FAIL · fikk ikke kopiert filene inn"
 keys "c() { if eval \"\$2\" >/dev/null 2>&1; then echo \"<2>CHK-\$1-OK\"; else echo \"<2>CHK-\$1-NO\"; fi > /dev/kmsg; }; clear\n" 0.5
@@ -158,7 +158,7 @@ wait_for 'CHK-keys-new-works-(OK|NO)' 20; seen 'CHK-keys-new-works-OK' || fails+
 keys "sleep 4; c keys-old-gone '[ \$(hyprctl clients | grep -c \"class: foot\") -eq 1 ]'\n" 0.3
 press meta_l+ret; sleep 5
 wait_for 'CHK-keys-old-gone-(OK|NO)' 20; seen 'CHK-keys-old-gone-OK' || fails+=(keys-old-gone)
-press ctrl+c; sleep 0.5   # the unbound Super+Enter reached the terminal: clear the line
+keys "\nclear\n" 1   # the unbound Super+Enter reached the terminal as an escape sequence: end that line (ctrl+c on the VM ends Hyprland)
 check keys-conflict-cli '! olymparch-settings set keys.workspace "SUPER + SHIFT" && olymparch-settings set keys.workspace "SUPER + ALT"'
 keys "clear; sleep 3; c keys-workspace 'hyprctl activeworkspace | grep -q \"ID 4 \"'\n" 0.3
 press meta_l+alt+4; sleep 4
@@ -168,7 +168,7 @@ press meta_l+alt+1; sleep 1.5
 keys "clear; sleep 3; c keys-old-workspace-gone 'hyprctl activeworkspace | grep -q \"ID 1 \"'\n" 0.3
 press meta_l+4; sleep 4
 wait_for 'CHK-keys-old-workspace-gone-(OK|NO)' 20; seen 'CHK-keys-old-workspace-gone-OK' || fails+=(keys-old-workspace-gone)
-press ctrl+c; sleep 0.5
+keys "\nclear\n" 1
 press meta_l+1; sleep 1
 press meta_l+comma; sleep 1.5
 search hurtigtast
@@ -247,6 +247,13 @@ keys "clear; olymparch-settings set appearance.font 'DejaVu Serif'; sleep 1.5\n"
 shot skrift "Skrift satt til DejaVu Serif: baren følger med"
 keys "clear; olymparch-settings reset appearance.font; olymparch-settings set settings.advanced off; clear\n" 1.5
 
+# ── System files through the pkexec helper: the connectivity check off and on; the helper refuses anything off its list
+check connectivity-off 'olymparch-settings set network.connectivity_check off && grep -q "^enabled=false" /etc/NetworkManager/conf.d/20-olymparch-connectivity.conf && grep -q "network.connectivity_check.: false" ~/.config/olymparch/settings.json'
+check connectivity-on 'olymparch-settings set network.connectivity_check on && [ ! -e /etc/NetworkManager/conf.d/20-olymparch-connectivity.conf ]'
+check helper-refuses 'pkexec /usr/lib/olymparch/settings-apply lid "x;id"; a=$?; pkexec /usr/lib/olymparch/settings-apply /etc/passwd root; b=$?; [ $a = 2 ] && [ $b = 2 ]'
+check helper-logged 'grep -q "settings-apply connectivity on" /var/log/olymparch-settings.log'
+check lid-hidden 'olymparch-settings missing | grep -q power.lid'
+
 # ── Headset switch: module-switch-on-connect loaded by default, gone when off (also after a restart), back when on
 check headset-default 'pactl list modules short | grep -q switch-on-connect'
 check headset-off 'olymparch-settings set audio.headset_switch off && ! pactl list modules short | grep -q switch-on-connect && systemctl --user restart pipewire-pulse && sleep 2 && ! pactl list modules short | grep -q switch-on-connect'
@@ -308,7 +315,7 @@ errors=$(awk '/Launching config/ {n = 0} /ERROR|TypeError|ReferenceError/ {n++} 
 ((errors == 0)) || fails+=("$errors feil i skall-loggen")
 
 if ((${#fails[@]} == 0)); then
-    finish "PASS · innstillinger: 21 sider, bakgrunn (fakkel $torch / rolig $calm / av $still bilder), skala med angring og «Behold», ikke forstyrr, tastatur, lås, lyd, kanal på $((SECONDS - t0)) s"
+    finish "PASS · innstillinger: 21 sider, bakgrunn (fakkel $torch / rolig $calm / av $still bilder), skala med angring og «Behold», ikke forstyrr, hurtigtaster, nett, Bluetooth, strøm, standardapper, personvern, hendelser, spill, headset, systemhjelper, tastatur, lås, lyd, kanal på $((SECONDS - t0)) s"
 else
     finish "FAIL · ${fails[*]} ($((SECONDS - t0)) s)"
 fi
