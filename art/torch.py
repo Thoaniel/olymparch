@@ -32,9 +32,9 @@ def ramp(colors, t, x, y):
 def flicker(t):
     """0..1 over løkka -> (styrke, radius, løft). Helt antall perioder: sømløs løkke."""
     a = 2 * math.pi * t
-    s = 0.35 * math.sin(a * 2 + 0.3) + 0.30 * math.sin(a * 7 + 1.7) + 0.20 * math.sin(a * 13 + 0.9) + 0.15 * math.sin(a * 19 + 2.2)
+    s = 0.35 * math.sin(a * 2 + 0.3) + 0.30 * math.sin(a * 7 + 1.7) + 0.20 * math.sin(a * 13 + 4.0) + 0.15 * math.sin(a * 19 + 2.9)
     lift = round(0.8 * math.sin(a * 3 + 0.4) + 0.5 * math.sin(a * 11 + 1.1))  # hele piksler: ingen dither-kryp
-    return 1 + 0.22 * s, 1 + 0.05 * s, lift
+    return 1 + 0.34 * s, 1 + 0.07 * s, lift
 
 
 def temple(px):
@@ -69,17 +69,17 @@ for n in range(N):
             ry = 30 * rad * (1.18 if dy < 0 else 0.92)
             if dy < 0:  # flammetunger: kanten over tempelet bølger oppover og forskyves over løkka
                 th = math.atan2(dy, x - cx + 0.5)
-                ry *= 1 + 0.07 * math.sin(5 * th + 2 * math.pi * n / N * 6) + 0.04 * math.sin(9 * th - 2 * math.pi * n / N * 10)
+                ry *= 1 + 0.11 * math.sin(5 * th + 2 * math.pi * n / N * 6) + 0.06 * math.sin(9 * th - 2 * math.pi * n / N * 10)
             g = max(0.0, 1 - math.hypot((x - cx + 0.5) / (46 * rad), dy / ry))
             px[x, y] = ramp([base, *HALO], min(1, (g ** 1.6) * amp * 0.85), x, y) if g > 0 else base
     temple(px)
-    # gnister: tre stykker stiger fra gavlen og slukner; hver bruker hele løkka, så den går sømløst rundt
-    for k, (x0, ph, sway) in enumerate(((-5, 0.0, 1), (6, 0.37, -1), (-1, 0.71, 1))):
+    # gnister: seks stykker stiger fra gavlen og slukner; hver bruker hele løkka, så den går sømløst rundt
+    for k, (x0, ph, sway) in enumerate(((-5, 0.0, 1), (6, 0.17, -1), (-1, 0.34, 1), (9, 0.5, -1), (-9, 0.67, 1), (2, 0.84, -1))):
         t = (n / N + ph) % 1
-        if t > 0.55:
+        if t > 0.65:
             continue
         sx = cx + x0 + round(sway * 1.5 * math.sin(2 * math.pi * t * 2))
-        sy = cy + 8 - 24 - round(t * 20)
+        sy = cy + 8 - 24 - round(t * 14)
         px[sx, sy] = GOLD[3] if t < 0.2 else GOLD[2] if t < 0.4 else GOLD[1]
     big = img.resize((W * S, H * S), Image.NEAREST).crop((0, 0, OW, OH))
     d = big.load()

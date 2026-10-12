@@ -1,0 +1,108 @@
+#!/bin/bash
+# VM test 2: install Olymparch from the ISO onto an empty 24 GB NVMe disk, reboot into it, type the disk
+# password at the boot prompt and reach the login of the installed system. Screenshot of every step.
+#   tests/vm/install-disk [ISO]
+set -uo pipefail
+cd "$(dirname "$0")/../.."
+. dev/env
+ISO=${1:-$(ls -t out/*.iso 2>/dev/null | head -n 1)}
+[ -f "$ISO" ] || { echo "fant ingen ISO" >&2; exit 2; }
+O=tests/vm/out/install-disk
+rm -rf -- tests/vm/out/install-disk
+mkdir -p "$O" cache
+cp "$OLYMPARCH_OVMF_VARS" "$O/vars.fd"
+qemu-img create -q -f qcow2 "$O/disk.qcow2" 24G
+PW='olymp-test-123'
+cat >"$O/answers.env" <<EOF
+DISK=/dev/nvme0n1
+DISK_SERIAL=OLYTEST1
+HOSTNAME=olymparch
+USERNAME=zeus
+PASSWORD='$PW'
+KEYMAP=us
+LOCALE=en_US.UTF-8
+TIMEZONE=Europe/Oslo
+EOF
+QMP=$O/qmp.sock
+n=0
+shot() {
+    n=$((n + 1))
+    local f; f=$(printf '%02d-%s.png' "$n" "$1")
+    python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/$f" 2>/dev/null && printf '%s\t%s\n' "$f" "$2" >>"$O/steps.txt"
+}
+keys() { python3 -I tests/vm/qmp.py "$QMP" keys "$1"; }
+seen() { grep -qaE "$1" "$O/$LOG"; }
+wait_for() {  # wait_for REGEX SECONDS
+    local i
+    for ((i = 0; i < $2; i++)); do seen "$1" && return 0; kill -0 "$QPID" 2>/dev/null || return 1; sleep 1; done
+    return 1
+}
+qemu() {  # qemu LOG [extra args]: start the VM with the test disk
+    LOG=$1; shift
+    qemu-system-x86_64 -L "$OLYMPARCH_QEMU_DATA" -machine q35,accel=kvm -cpu host -smp 4 -m 4096 \
+        -drive if=pflash,format=raw,readonly=on,file="$OLYMPARCH_OVMF_CODE" \
+        -drive if=pflash,format=raw,file="$O/vars.fd" \
+        -drive id=d0,if=none,format=qcow2,file="$O/disk.qcow2" -device nvme,serial=OLYTEST1,drive=d0 \
+        -nic user,model=virtio-net-pci -vga std -display none \
+        -serial file:"$O/$LOG" -qmp unix:"$QMP",server=on,wait=off -no-reboot "$@" &
+    QPID=$!
+    sleep 2
+}
+finish() {
+    echo "$1" >"$O/result.txt"
+    python3 -I tests/vm/qmp.py "$QMP" quit 2>/dev/null
+    echo "install-disk: $1"
+    [[ $1 == PASS* ]]
+    exit
+}
+trap 'kill "$QPID" 2>/dev/null' EXIT
+t0=$SECONDS
+
+# --- 1. live ISO
+qemu live.log -cdrom "$ISO" -boot d \
+    -fw_cfg name=opt/olymparch/answers,file="$O/answers.env" \
+    -virtfs local,path="$PWD/cache",mount_tag=pkgcache,security_model=none,id=c0
+wait_for 'login:' 120 || { shot live-feil "Live-miljøet kom ikke opp"; finish "FAIL · live-miljøet startet ikke"; }
+sleep 4
+shot live "Live-miljøet fra ISO-en, logget inn som root"
+keys 'modprobe qemu_fw_cfg && cp /sys/firmware/qemu_fw_cfg/by_name/opt/olymparch/answers/raw /tmp/answers.env && mount -t 9p -o trans=virtio pkgcache /var/cache/pacman/pkg && OLYMPARCH_TEST=1 OLYMPARCH_HOST_CACHE=1 olymparch-install --answers /tmp/answers.env; echo "<2>INSTALL-EXIT=$?" > /dev/kmsg\n'
+sleep 3
+shot start "Installasjonen startes med svarfila (disk OLYTEST1)"
+
+# --- 2. the installer, one screenshot per step it reports
+declare -A done_step
+for ((i = 0; i < 1500; i++)); do
+    while IFS= read -r line; do
+        s=${line#*olymparch-install: }
+        [ -n "${done_step[$s]:-}" ] && continue
+        done_step[$s]=1
+        slug=$(echo "$s" | tr 'A-ZÆØÅ' 'a-zæøå' | tr -cs 'a-zæøå0-9' '-' | cut -c1-24 | sed 's/-$//')
+        shot "$slug" "Installasjonen: $s"
+    done < <(grep -aoE 'olymparch-install: [^'$'\r'']*' "$O/$LOG" | sed 's/\x1b\[[0-9;]*m//g')
+    seen 'INSTALL-EXIT=' && break
+    kill -0 "$QPID" 2>/dev/null || break
+    sleep 1
+done
+code=$(grep -aoE 'INSTALL-EXIT=[0-9]+' "$O/$LOG" | tail -n 1 | cut -d= -f2)
+[ "$code" = 0 ] || { shot feil "Installasjonen stoppet"; finish "FAIL · installasjonen stoppet (kode ${code:-ingen}) etter $((SECONDS - t0)) s"; }
+keys 'poweroff\n'
+for ((i = 0; i < 60; i++)); do kill -0 "$QPID" 2>/dev/null || break; sleep 1; done
+kill "$QPID" 2>/dev/null; wait "$QPID" 2>/dev/null
+
+# --- 3. the installed system, from the disk only
+qemu boot.log
+sleep 3
+shot limine "Limine-menyen på den installerte disken"
+wait_for 'enter passphrase' 90 || { shot oppstart-feil "Fikk aldri spørsmål om diskpassordet"; finish "FAIL · ingen passordspørsmål fra disken"; }
+sleep 2
+shot luks "Systemet ber om diskpassordet"
+keys "$PW\n"
+sleep 2
+shot luks-skrevet "Passordet er skrevet"
+if wait_for 'olymparch login:' 120; then
+    sleep 2
+    shot innlogging "Det installerte Olymparch er oppe (innlogging)"
+    finish "PASS · installert og startet på $((SECONDS - t0)) s"
+fi
+shot innlogging-feil "Fikk ingen innlogging"
+finish "FAIL · ingen innlogging etter passordet"

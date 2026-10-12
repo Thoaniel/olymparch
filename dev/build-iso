@@ -5,6 +5,14 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 . dev/env
 mkdir -p cache out
-rm -rf -- work
-mkarchiso -v -r -w work -o out iso
+rm -rf -- work profile
+# Build from a staged copy of the profile, so the olymparch-* commands come from bin/ without being copied into git
+cp -r iso profile
+install -Dm755 -t profile/airootfs/usr/local/bin bin/olymparch-*
+# archiso gives every file mode 644 unless it is listed in file_permissions
+for f in bin/olymparch-*; do
+    printf 'file_permissions+=(["/usr/local/bin/%s"]="0:0:755")\n' "${f##*/}" >>profile/profiledef.sh
+done
+mkarchiso -v -r -w work -o out profile
+rm -rf -- profile
 ls -lh out/*.iso | tail -1
