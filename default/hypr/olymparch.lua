@@ -1,5 +1,6 @@
--- Olymparch default Hyprland config (0.56, Lua). Loaded from ~/.config/hypr/hyprland.lua; the user's own
--- files are loaded after this and win.
+-- Olymparch default Hyprland config (0.56, Lua). Loaded from ~/.config/hypr/hyprland.lua; then what Settings
+-- wrote (~/.config/olymparch/monitors.lua and hypr.lua), then the user's own lines, which win. Every option a
+-- user could want to change here has an entry in /usr/share/olymparch/settings/schema.json (tests/settings-coverage).
 
 local gold, line = "rgb(d4a73a)", "rgb(3a3644)"
 
@@ -18,7 +19,7 @@ if hwenv then
     hwenv:close()
 end
 
--- Every monitor at its preferred mode; the monitor menu in Settings writes real layouts later.
+-- Every monitor at its preferred mode; Settings → Displays writes per-monitor rules to monitors.lua.
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
 
 hl.config({
@@ -68,6 +69,7 @@ hl.animation({ leaf = "workspaces", enabled = true, speed = 4, bezier = "olymp",
 local mod = "SUPER"
 hl.bind(mod .. " + RETURN", hl.dsp.exec_cmd("foot"))
 hl.bind(mod .. " + SPACE", hl.dsp.global("olymparch:launcher"))
+hl.bind(mod .. " + COMMA", hl.dsp.global("olymparch:settings"))
 hl.bind(mod .. " + L", hl.dsp.exec_cmd("olymparch-lock"))
 hl.bind(mod .. " + Q", hl.dsp.window.close())
 hl.bind(mod .. " + V", hl.dsp.window.float({ action = "toggle" }))
@@ -87,6 +89,9 @@ hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"), { locked = true, repeating = true })
 hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"), { locked = true, repeating = true })
 hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { locked = true })
+
+-- Settings is a window of the shell; it floats in the middle instead of taking a tile
+hl.window_rule({ name = "olymparch-settings", match = { title = "^Olymparch Settings$" }, float = true, center = true, size = "monitor_w*0.82 monitor_h*0.86" })
 
 -- The shell (bar, wallpaper) starts with the session
 hl.on("hyprland.start", function()

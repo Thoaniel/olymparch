@@ -1,6 +1,7 @@
 //@ pragma ShellId olymparch
 // Olymparch shell: the animated temple wallpaper, the bar (BarStatus: media, mic/camera, network, volume, battery,
-// do not disturb, clock), the menu (Super+Space), notifications and the volume OSD.
+// do not disturb, clock), the menu (Super+Space), notifications, the volume OSD and Settings (Super+comma).
+// What can be changed is read from Settings (settings.json) and follows it live.
 // Spillmodus (GameMode.qml) hides the bar and turns on do not disturb while a game runs.
 import QtQuick
 import Quickshell
@@ -21,18 +22,25 @@ ShellRoot {
     readonly property string mono: "JetBrains Mono"
     readonly property string art: "/usr/share/olymparch/wallpaper"
     readonly property int frames: 48
-    property alias manualDnd: gameMode.manualDnd   // the bell in the bar (same switch as «olymparch dnd»)
+    // Do not disturb: the setting (kept; the bell in the bar flips it), «olymparch dnd» for now, or a running game
+    readonly property bool dndSetting: Settings.get("notifications.dnd") === true
+    function toggleDnd() {
+        Quickshell.execDetached(["olymparch-settings", "set", "notifications.dnd", dndSetting ? "off" : "on"]);
+    }
 
-    // One frame counter for every monitor. 8 fps, and it stops while every workspace in view has windows.
+    // One frame counter for every monitor. Torch 8 fps, Calm 4 fps, Off (or reduced motion) stays on frame 00.
+    // It stops while every workspace in view has windows.
+    readonly property string wallpaper: Settings.get("accessibility.reduced_motion") === true ? "off" : Settings.get("appearance.wallpaper")
+    onWallpaperChanged: if (wallpaper === "off") frame = 0
     property int frame: 0
     readonly property bool templeVisible: {
         const ws = Hyprland.focusedWorkspace;
         return !ws || !ws.toplevels || ws.toplevels.values.length === 0;
     }
     Timer {
-        interval: 125
+        interval: root.wallpaper === "calm" ? 250 : 125
         repeat: true
-        running: root.templeVisible
+        running: root.templeVisible && root.wallpaper !== "off"
         onTriggered: root.frame = (root.frame + 1) % root.frames
     }
 
@@ -66,8 +74,8 @@ ShellRoot {
         PanelWindow {
             required property var modelData
             screen: modelData
+            visible: Settings.get("appearance.bar") !== false && !gameMode.active
             WlrLayershell.namespace: "olymparch-bar"
-            visible: !gameMode.active
             anchors { top: true; left: true; right: true }
             implicitHeight: 34
             color: root.bg
@@ -122,6 +130,8 @@ ShellRoot {
             BarStatus {
                 id: barStatus
                 theme: root
+                clockFormat: (Settings.get("appearance.clock_format") === "12h" ? "ddd d%1 MMM  h:mm AP" : "ddd d%1 MMM  HH:mm")
+                    .arg(Qt.locale().name.startsWith("nb") || Qt.locale().name.startsWith("nn") ? "." : "")
                 anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
             }
         }
@@ -129,7 +139,8 @@ ShellRoot {
 
     GameMode { id: gameMode }
     Launcher { theme: root }
-    Notifications { theme: root; dnd: gameMode.dnd }
+    Notifications { theme: root; dnd: gameMode.dnd || root.dndSetting }
     Power {}
     Osd { theme: root }
+    SettingsWindow { theme: root }
 }

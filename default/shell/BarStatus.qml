@@ -12,8 +12,7 @@ import Quickshell.Services.UPower
 Row {
     id: status
     required property var theme
-    // day and month in the session's language; Norwegian writes the day with a dot (man. 12. okt.)
-    property string clockFormat: Qt.locale().name.startsWith("nb") || Qt.locale().name.startsWith("nn") ? "ddd d. MMM  HH:mm" : "ddd d MMM  HH:mm"
+    property string clockFormat: "ddd d MMM  HH:mm"   // day and month in the session's language (shell.qml sets it)
     TextMetrics { id: digits; font { family: status.theme.mono; pixelSize: 13 } text: "0" }
     spacing: 4   // the cells have 6 px padding of their own: 16 px between icons
 
@@ -154,10 +153,10 @@ Row {
         alert: pct < 0.1 && !charging
     }
     Cell {
-        icon: status.theme.manualDnd ? "\u{F009B}" : "\u{F009A}"
-        tint: status.theme.manualDnd ? status.theme.gold : status.theme.muted
+        icon: status.theme.dndSetting ? "\u{F009B}" : "\u{F009A}"
+        tint: status.theme.dndSetting ? status.theme.gold : status.theme.muted
         clickable: true
-        onClicked: status.theme.manualDnd = !status.theme.manualDnd
+        onClicked: status.theme.toggleDnd()
     }
     SystemClock { id: clock; precision: SystemClock.Minutes }
     Text {

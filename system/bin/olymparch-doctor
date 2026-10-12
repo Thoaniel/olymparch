@@ -1,0 +1,29 @@
+#!/bin/bash
+# Check that the parts of Olymparch are where they should be. Prints one line per check (✓ or ✗) and exits 1 if
+# anything failed. Read-only: it never fixes anything by itself. Settings → About Olymparch runs it too.
+fails=0
+ok() { printf '✓ %s\n' "$1"; }
+bad() { printf '✗ %s\n' "$1"; fails=$((fails + 1)); }
+check() {  # check "what" command...
+    local what=$1; shift
+    if "$@" >/dev/null 2>&1; then ok "$what"; else bad "$what"; fi
+}
+
+check "Hyprland is running" pgrep -x Hyprland
+check "the shell (quickshell) is running" pgrep -x quickshell
+check "idle and lock (hypridle) is running" pgrep -x hypridle
+check "sound (PipeWire and WirePlumber)" sh -c 'pgrep -x pipewire && pgrep -x wireplumber'
+if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+    errs=$(hyprctl configerrors 2>/dev/null | grep -v '^\s*$')
+    [ -z "$errs" ] && ok "Hyprland config has no errors" || bad "Hyprland config errors: $errs"
+fi
+check "settings are valid (olymparch-settings check)" olymparch-settings check
+free=$(df --output=avail -k / | tail -n 1)
+(( free > 3 * 1024 * 1024 )) && ok "more than 3 GB free on /" || bad "under 3 GB free on / ($((free / 1024)) MB)"
+check "snapshots are set up (snapper)" test -f /etc/snapper/configs/root
+check "network is up (NetworkManager)" systemctl is-active --quiet NetworkManager
+failed=$(systemctl --failed --no-legend 2>/dev/null | wc -l)
+(( failed == 0 )) && ok "no failed system services" || bad "$failed failed system services (systemctl --failed)"
+echo
+(( fails == 0 )) && echo "Everything looks fine." || echo "$fails problem(s) found."
+exit $(( fails > 0 ))

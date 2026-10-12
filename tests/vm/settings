@@ -1,0 +1,186 @@
+#!/bin/bash
+# VM test: Settings. Copies the shell, the Hyprland defaults, the settings schema and olymparch-settings from this
+# repo into a copy of the installed disk (no rebuild), opens Settings with Super+comma, takes a picture of every
+# page, then changes the live wallpaper, the scale (once left to revert by itself, once kept) and do not disturb
+# through the window, and checks each effect: frames on screen, hyprctl, the files written, the layers shown.
+# The shell runs with LANG=nb_NO so the pictures show the Norwegian text.
+set -uo pipefail
+cd "$(dirname "$0")/../.."
+. dev/env
+SRC=${OLYMPARCH_BASE:-tests/vm/out/install-disk}   # a read-only installed disk to test on (overlay)
+[ -f "$SRC/disk.qcow2" ] || { echo "kjør tests/vm/install-disk først (eller sett OLYMPARCH_BASE)" >&2; exit 2; }
+O=tests/vm/out/settings
+rm -rf -- tests/vm/out/settings
+mkdir -p "$O"
+cp "$SRC/vars.fd" "$O/vars.fd"
+qemu-img create -q -f qcow2 -b "$(realpath "$SRC/disk.qcow2")" -F qcow2 "$O/disk.qcow2"
+QMP=$O/qmp.sock
+. tests/vm/lib.sh
+PW='olymp-test-123'
+trap 'kill "$QPID" 2>/dev/null; python3 -I tests/vm/report.py tests/vm/out/report.html "$O" >/dev/null 2>&1' EXIT
+t0=$SECONDS
+fails=()
+
+# check NAME 'condition': runs in the VM terminal (needs focus there), the answer comes back on the serial console
+check() {
+    keys "c $1 '$2'\n" 0.3
+    wait_for "CHK-$1-(OK|NO)" 30
+    seen "CHK-$1-OK" || fails+=("$1")
+}
+# how many different pictures 10 screendumps over ~2 s show (the clock only changes once a minute)
+frames() {
+    local i
+    for i in 0 1 2 3 4 5 6 7 8 9; do python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/f$i.ppm" 2>/dev/null; sleep 0.12; done
+    # below the bar only: the clock may tick over a minute while we look
+    python3 -I -c 'import sys, hashlib
+seen = set()
+for f in sys.argv[1:]:
+    d = open(f, "rb").read()
+    h = d.split(b"\n", 3)
+    w = int(h[1].split()[0])
+    seen.add(hashlib.md5(h[3][w * 3 * 40:]).hexdigest())
+print(len(seen))' "$O"/f?.ppm
+    rm -f "$O"/f?.ppm
+}
+search() {  # search WORD: Ctrl+F in Settings, type, Enter goes to the first control
+    press ctrl+f; keys "$1" 0.8
+    shot "sok-$1" "Søk: «$1»"
+    press ret; sleep 0.5
+}
+close_settings() { press esc; press esc; sleep 1; }
+
+vm boot.log -virtfs local,path="$PWD",mount_tag=olysrc,security_model=none,readonly=on,id=src \
+    -audiodev none,id=snd0 -device ich9-intel-hda -device hda-duplex,audiodev=snd0
+unlock_and_desktop "$PW"
+
+# Put this repo's files in place, restart the shell in Norwegian, and define the check helper in the terminal.
+# /dev/kmsg is opened up so checks can report without sudo (this VM is thrown away).
+press meta_l+ret; sleep 2
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /mnt/default/settings /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -m755 /mnt/system/bin/olymparch-settings /mnt/system/bin/olymparch-doctor /usr/bin/ && sudo install -Dm644 /mnt/default/settings/olymparch-settings.desktop /usr/share/applications/olymparch-settings.desktop && sudo chmod 666 /dev/kmsg && hyprctl reload >/dev/null; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=nb_NO.UTF-8 setsid -f /usr/lib/olymparch/launch-shell; echo '<2>SETTINGS-UPDATED' > /dev/kmsg\n" 1
+keys "$PW\n" 1
+wait_for 'SETTINGS-UPDATED' 40 || finish "FAIL · fikk ikke kopiert filene inn"
+keys "c() { if eval \"\$2\" >/dev/null 2>&1; then echo \"<2>CHK-\$1-OK\"; else echo \"<2>CHK-\$1-NO\"; fi > /dev/kmsg; }; clear\n" 0.5
+sleep 4
+shot skrivebord "Skrivebordet med det nye skallet (norsk)"
+
+# Every page, in the order of the sidebar (↓ in the search field goes to the next page)
+press meta_l+comma; sleep 2
+shot skjermer "Super+komma åpner Innstillinger: Skjermer (skjermene som de står, oppløsning, Hz, VRR, skala)"
+for p in lyd mus-og-kontrollere nett-og-vpn bluetooth strom disker maskinvare-og-drivere spill zeus-og-ai hendelser \
+         standardapper konto-og-las tastatur-og-sprak utseende varsler tilgjengelighet personvern oppdateringer backup om-olymparch; do
+    press down; sleep 0.8
+    [ "$p" = om-olymparch ] && sleep 1
+    shot "side-$p" "Siden ${p//-/ }"
+done
+press down; sleep 0.5   # round to Skjermer again
+
+# ── Live wallpaper: Fakkel (8 fps) → Rolig (4 fps) → Av (stillbilde 00). Measured on the empty workspace 3.
+press meta_l+3; sleep 2.5
+torch=$(frames)
+shot bakgrunn-fakkel "Levende bakgrunn: Fakkel ($torch ulike bilder på 2 s)"
+press meta_l+1; sleep 1
+search bakgrunn
+press right; sleep 1
+shot bakgrunn-rolig-valgt "Levende bakgrunn satt til Rolig"
+press meta_l+3; sleep 2.5
+calm=$(frames)
+shot bakgrunn-rolig "Rolig: $calm ulike bilder på 2 s"
+press meta_l+1; sleep 1
+press right; sleep 1
+shot bakgrunn-av-valgt "Levende bakgrunn satt til Av"
+press meta_l+3; sleep 2.5
+still=$(frames)
+shot bakgrunn-av "Av: $still ulikt bilde på 2 s (stillbilde 00)"
+press meta_l+1; sleep 1
+echo "bakgrunn: fakkel=$torch rolig=$calm av=$still" >>"$O/measure.txt"
+{ ((torch >= 3)) && ((calm >= 2)) && ((calm <= torch)) && ((still == 1)); } || fails+=("wallpaper fakkel=$torch rolig=$calm av=$still")
+
+# ── Scale 125 % with «Keep?»: first left alone (goes back after 15 s), then kept
+search skala
+press right; sleep 2.5
+shot skala-sporsmal "Skala 125 %: «Beholde?» midt på skjermen, teller ned fra 15 s"
+sleep 16
+shot skala-tilbake "Ingen svar: skalaen gikk tilbake til 100 % av seg selv"
+close_settings
+check scale-reverted '[ "$(olymparch-settings get display.scale@Virtual-1)" = 1 ] && hyprctl monitors -j | grep -q "scale.: 1," && [ -z "$(olymparch-settings pending)" ]'
+press meta_l+comma; sleep 1.5
+search skala
+press right; sleep 2.5
+press ret; sleep 2
+shot skala-beholdt "Behold: skalaen er 125 % (alt er større)"
+close_settings
+check scale-kept 'hyprctl monitors -j | grep -q "scale.: 1.25" && grep -q "scale = 1.25" ~/.config/olymparch/monitors.lua && grep -q "display.scale@Virtual-1.: .1.25" ~/.config/olymparch/settings.json'
+check loader 'grep -q "olymparch/monitors.lua and hypr.lua" ~/.config/hypr/hyprland.lua'
+keys "hyprctl reload >/dev/null; sleep 2\n" 3
+check scale-after-reload 'hyprctl monitors -j | grep -q "scale.: 1.25" && [ -z "$(hyprctl configerrors | tr -d "[:space:]")" ]'
+shot skala-etter-reload "Etter hyprctl reload: 125 % står seg (monitors.lua lastes fra hyprland.lua)"
+keys "olymparch-settings set display.scale@Virtual-1 1; clear\n" 3
+
+# ── Do not disturb: on in Settings, then a normal notification shows nothing, a critical one still does
+press meta_l+comma; sleep 1.5
+search forstyrr
+press spc; sleep 1
+shot ikke-forstyrr "Ikke forstyrr: på"
+close_settings
+check dnd-saved 'grep -q "notifications.dnd.: true" ~/.config/olymparch/settings.json'
+keys "notify-send Steam 'Hades II er oppdatert'; sleep 1.5; c dnd-hidden '! hyprctl layers | grep -q olymparch-notifications'\n" 1
+wait_for 'CHK-dnd-hidden-(OK|NO)' 30; seen 'CHK-dnd-hidden-OK' || fails+=(dnd-hidden)
+shot dnd-stille "Ikke forstyrr: et vanlig varsel vises ikke"
+keys "olymparch-settings set notifications.dnd off; notify-send Steam 'Varselet vises'; sleep 1.5; c dnd-off-shows 'hyprctl layers | grep -q olymparch-notifications'\n" 1
+wait_for 'CHK-dnd-off-shows-(OK|NO)' 30; seen 'CHK-dnd-off-shows-OK' || fails+=(dnd-off-shows)
+shot dnd-av "Ikke forstyrr av (fra kommandolinja): varselet vises"
+
+# ── The rest through the same command Zeus will use
+check keyboard 'olymparch-settings set keyboard.layout no && hyprctl getoption input.kb_layout | grep -q "str: no" && grep -q "kb_layout = .no." ~/.config/olymparch/hypr.lua; olymparch-settings set keyboard.layout us'
+check idle 'olymparch-settings set account.lock_minutes 5 && grep -q "timeout = 300" ~/.config/hypr/hypridle.conf'
+check audio-out 's=$(wpctl status -n | grep -o "alsa_output[^ ]*" | head -1); olymparch-settings set audio.output "$s" && wpctl inspect @DEFAULT_AUDIO_SINK@ | grep -q "$s"'
+check audio-in 's=$(wpctl status -n | grep -o "alsa_input[^ ]*" | head -1); olymparch-settings set audio.input "$s" && wpctl inspect @DEFAULT_AUDIO_SOURCE@ | grep -q "$s"'
+check channel 'olymparch-settings set updates.channel edge && [ "$(olymparch-settings get updates.channel)" = edge ]'
+check reject '! olymparch-settings set appearance.wallpaper blue'
+check settings-valid 'olymparch-settings check'
+keys "clear; olymparch-settings list display | head -20\n" 2
+shot kommandolinja "olymparch-settings list display: det samme som vinduet viser"
+
+# Advanced view, set from the terminal: the open window follows (settings.json is watched)
+keys "olymparch-settings set settings.advanced on; olymparch-settings open display; sleep 1; c settings-open 'hyprctl clients | grep -q \"title: Olymparch Settings\"'\n" 2.5
+wait_for 'CHK-settings-open-(OK|NO)' 30; seen 'CHK-settings-open-OK' || fails+=(settings-open)
+shot skjermer-avansert "Avansert visning (satt fra kommandolinja): Skjermer med alle valg"
+press down; sleep 0.8
+shot lyd-avansert "Lyd, avansert: utgang og inngang fra PipeWire"
+
+# About: doctor runs inside the window
+press ctrl+f; keys "doctor" 0.8; press ret; sleep 0.5
+press ret; sleep 4
+shot doctor "Om Olymparch: «Sjekk systemet» kjører olymparch doctor"
+close_settings
+check doctor-runs 'olymparch-settings run about.doctor | grep -q "Hyprland is running"'
+
+# Update now: a terminal with olymparch update (it stops at the sudo password; Super+Q closes it)
+keys "olymparch-settings run updates.now; sleep 2; c update-terminal 'pgrep -f olymparch-update'\n" 3
+wait_for 'CHK-update-terminal-(OK|NO)' 30; seen 'CHK-update-terminal-OK' || fails+=(update-terminal)
+shot oppdater-na "«Oppdater nå» åpner en terminal med olymparch update"
+press meta_l+q; sleep 1.5
+
+# The menu finds Settings too
+press meta_l+spc; sleep 1; keys "innst" 1
+shot meny-innstillinger "Menyen (Super+Space) finner Innstillinger"
+press esc; sleep 0.5
+
+# last, because a critical notification stays until it is clicked
+keys "olymparch-settings set notifications.dnd on; notify-send -u critical Disk 'Disken er 95 % full'; sleep 1.5; c dnd-critical 'hyprctl layers | grep -q olymparch-notifications'\n" 1
+wait_for 'CHK-dnd-critical-(OK|NO)' 30; seen 'CHK-dnd-critical-OK' || fails+=(dnd-critical)
+shot dnd-kritisk "Ikke forstyrr på: kritiske varsler vises likevel"
+keys "olymparch-settings set notifications.dnd off; clear\n" 1
+
+# The shell's own log, for errors
+keys "tail -n 60 ~/.local/state/olymparch/shell.log | while IFS= read -r l; do echo \"<2>QS: \$l\" > /dev/kmsg; done; echo '<2>LOG-DONE' > /dev/kmsg\n" 1
+wait_for 'LOG-DONE' 20
+grep -aoE 'QS: .*' "$O/$LOG" | sed 's/\x1b\[[0-9;]*m//g' >"$O/shell-log.txt"
+errors=$(awk '/Launching config/ {n = 0} /ERROR|TypeError|ReferenceError/ {n++} END {print n + 0}' "$O/shell-log.txt")
+((errors == 0)) || fails+=("$errors feil i skall-loggen")
+
+if ((${#fails[@]} == 0)); then
+    finish "PASS · innstillinger: 21 sider, bakgrunn (fakkel $torch / rolig $calm / av $still bilder), skala med angring og «Behold», ikke forstyrr, tastatur, lås, lyd, kanal på $((SECONDS - t0)) s"
+else
+    finish "FAIL · ${fails[*]} ($((SECONDS - t0)) s)"
+fi

@@ -1,6 +1,6 @@
 // The notification server: the shell is the only one (no mako, dunst or swaync). Toasts top right under the
-// bar, at most 3 at a time, 6 s each (ones with buttons and critical ones stay until answered or dismissed).
-// Do not disturb (spillmodus): only critical notifications are shown.
+// bar, at most as many as Settings says, for as long as it says (ones with buttons and critical ones stay until
+// answered or dismissed); all of it is in Settings → Notifications. Do not disturb hides everything but critical.
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
@@ -9,7 +9,13 @@ import Quickshell.Services.Notifications
 Scope {
     id: notes
     required property var theme
-    property bool dnd: false
+    property bool dnd: false   // shell.qml: Settings → do not disturb (also the bell in the bar), or spillmodus
+    readonly property string position: Settings.get("notifications.position")
+    readonly property bool top: position.startsWith("top")
+    readonly property bool left: position.endsWith("left")
+    readonly property var shown: server.trackedNotifications.values
+        .filter(n => !dnd || n.urgency === NotificationUrgency.Critical)
+        .slice(-Settings.get("notifications.max_visible")).reverse()
 
     NotificationServer {
         id: server
@@ -22,7 +28,7 @@ Scope {
             n.tracked = true;
             // offers with buttons («Install driver», «Undo» …) stay until answered, like critical ones
             if (!critical && n.actions.length === 0) {
-                const t = Qt.createQmlObject("import QtQuick; Timer { interval: 6000; running: true }", notes);
+                const t = Qt.createQmlObject(`import QtQuick; Timer { interval: ${Settings.get("notifications.duration") * 1000}; running: true }`, notes);
                 // the toast may be gone already (dismissed)
                 t.triggered.connect(() => { try { if (n) n.expire(); } catch (e) {} t.destroy(); });
             }
@@ -31,12 +37,12 @@ Scope {
 
     PanelWindow {
         screen: Quickshell.screens[0]
-        visible: server.trackedNotifications.values.length > 0
+        visible: notes.shown.length > 0
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "olymparch-notifications"
         exclusionMode: ExclusionMode.Ignore
-        anchors { top: true; right: true }
-        margins { top: 42; right: 12 }
+        anchors { top: notes.top; bottom: !notes.top; left: notes.left; right: !notes.left }
+        margins { top: 42; bottom: 10; left: 10; right: 12 }
         implicitWidth: 360
         implicitHeight: column.implicitHeight
         color: "transparent"
@@ -46,7 +52,7 @@ Scope {
             width: parent.width
             spacing: 8
             Repeater {
-                model: server.trackedNotifications.values.slice(-3).reverse()
+                model: notes.shown
                 delegate: Rectangle {
                     id: card
                     required property var modelData
