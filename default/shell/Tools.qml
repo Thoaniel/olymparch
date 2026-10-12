@@ -25,7 +25,7 @@ Singleton {
     // a recording that was running when the shell (re)started
     Process {
         running: true
-        command: ["sh", "-c", 'read -r p _ < "${XDG_RUNTIME_DIR:-/tmp}/olymparch/recording" 2>/dev/null && kill -0 "$p" 2>/dev/null']
+        command: ["sh", "-c", '[ -n "$XDG_RUNTIME_DIR" ] && read -r p _ < "$XDG_RUNTIME_DIR/olymparch-tool/recording" 2>/dev/null && kill -0 "$p" 2>/dev/null']
         onExited: code => tools.recording = code === 0
     }
 }

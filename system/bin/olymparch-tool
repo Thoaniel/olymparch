@@ -20,8 +20,17 @@
 #   emoji-type TEXT  copies TEXT and types it into the focused window (wtype)
 set -uo pipefail
 
-RUN=${XDG_RUNTIME_DIR:-/tmp/olymparch-$UID}/olymparch
-mkdir -p -m 700 "$RUN"
+# State (recording and watcher PIDs, clipboard thumbnails, colour swatches) lives in a private folder of ours in
+# $XDG_RUNTIME_DIR (else ~/.local/state/olymparch/run), never in /tmp. A symlink there, or a folder that is not
+# ours, is refused rather than followed.
+if [ -n "${XDG_RUNTIME_DIR:-}" ]; then RUN=$XDG_RUNTIME_DIR/olymparch-tool
+else RUN=$HOME/.local/state/olymparch/run; mkdir -p -m 700 -- "${RUN%/*}"; fi
+[ -L "$RUN" ] || mkdir -p -m 700 -- "$RUN" 2>/dev/null
+if [ -L "$RUN" ] || [ ! -d "$RUN" ] || [ ! -O "$RUN" ]; then
+    echo "olymparch-tool: $RUN is not a private folder of yours; refusing" >&2
+    exit 1
+fi
+chmod 700 -- "$RUN"
 SHELL_DIR=/usr/share/olymparch/shell
 case ${LANG:-} in nb* | nn* | no*) nb=1 ;; *) nb=0 ;; esac
 L() { if [ $nb = 1 ]; then printf '%s' "$2"; else printf '%s' "$1"; fi; }
@@ -150,7 +159,8 @@ colorpicker() {
     hex=$(printf '#%02x%02x%02x' "$r" "$g" "$b")
     printf '%s' "$hex" | wl-copy
     # the swatch: a 96×32 PPM (Qt reads it; no image tools needed)
-    swatch=$RUN/swatch-${hex#\#}.ppm
+    find "$RUN" -maxdepth 1 -name "swatch.*" -mmin +10 -delete 2>/dev/null   # old ones (the toast is long gone)
+    swatch=$(mktemp --suffix=.ppm "$RUN/swatch.XXXXXX") || exit 1
     { printf 'P6\n96 32\n255\n'; printf "$(printf '\\x%02x\\x%02x\\x%02x' "$r" "$g" "$b")%.0s" $(seq 3072); } >"$swatch"
     notify "$(L 'Colour picker' Fargevelger)" "$hex $(L copied kopiert)" "rgb($r, $g, $b)" -h "string:image-path:$swatch"
 }
