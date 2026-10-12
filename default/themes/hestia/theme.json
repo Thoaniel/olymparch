@@ -39,5 +39,10 @@
     "#d1aac5",
     "#a3c6b9",
     "#ffffff"
+  ],
+  "backgrounds": [
+    {"id": "hearth", "name": {"en": "The hearth", "nb": "Ildstedet"}},
+    {"id": "lamp", "name": {"en": "Oil lamps", "nb": "Oljelamper"}},
+    {"id": "sign", "name": {"en": "Sign in the stars", "nb": "Tegn på himmelen"}}
   ]
 }

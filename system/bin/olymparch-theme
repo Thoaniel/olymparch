@@ -9,6 +9,10 @@
 --   olymparch-theme validate DIR        check a theme folder without installing it
 --   olymparch-theme install URL         a community theme from https://github.com/OWNER/REPO(.git)
 --   olymparch-theme remove ID           remove a theme you installed
+--   olymparch-theme background [list [--json] [THEME] | current | set N|ID | next | prev]
+--                                       the backgrounds of the theme in use: the temple, the theme's scenes and
+--                                       your pictures (~/.config/olymparch/backgrounds/THEME/ and …/all/); each
+--                                       theme remembers its own (appearance.background@THEME)
 --
 -- A theme is data only: theme.json and optional wallpaper frames (PNG). Nothing in a theme is ever run, and no
 -- symlink in it is followed. Every value is checked here before it reaches the shell, Hyprland or foot; the shell
@@ -29,6 +33,9 @@ end
 local DEFAULT_WALLPAPER = "/usr/share/olymparch/wallpaper"   -- Zeus' torch frames (1080/, 1440/)
 local OUT = CONFIG .. "/olymparch/theme"                      -- what the shell, lock screen, foot and Hyprland read
 local DEFAULT = "zeus"
+local USER_BG = CONFIG .. "/olymparch/backgrounds"            -- your pictures: <theme>/ and all/
+local MAX_PICTURE = 20 * 1024 * 1024
+local MAX_BACKGROUNDS = 16
 local PALETTE = { "bg", "surface", "raised", "line", "text", "muted", "accent", "accentHi", "danger" }
 local MAX_FRAMES = 48
 
@@ -192,7 +199,7 @@ local function contrast(a, b)
     return (x + 0.05) / (y + 0.05)
 end
 local ALLOWED = { id = true, name = true, god = true, description = true, light = true, glyph = true, palette = true,
-    terminal = true, author = true, version = true }
+    terminal = true, author = true, version = true, backgrounds = true }
 -- theme.json text → the checked theme, or nil and why. EXPECT_ID: the folder's name must match.
 local function check_theme(text, expect_id)
     if not text then return nil, "no theme.json" end
@@ -227,6 +234,18 @@ local function check_theme(text, expect_id)
     if type(t.terminal) ~= "table" or #t.terminal ~= 16 then return nil, "terminal must be a list of 16 colours" end
     for k in pairs(t.terminal) do if math.type(k) ~= "integer" or k < 1 or k > 16 then return nil, "terminal must be a list of 16 colours" end end
     for i, c in ipairs(t.terminal) do if not colour(c) then return nil, ("terminal[%d] must be #RRGGBB"):format(i - 1) end end
+    if t.backgrounds ~= nil then   -- the theme's own scenes, in order: [{ "id": "storm", "name": { "en", "nb" } }]
+        if type(t.backgrounds) ~= "table" or #t.backgrounds > MAX_BACKGROUNDS then return nil, "backgrounds must be a list of at most 16" end
+        for k in pairs(t.backgrounds) do if math.type(k) ~= "integer" or k < 1 or k > #t.backgrounds then return nil, "backgrounds must be a list" end end
+        local seen = {}
+        for i, b in ipairs(t.backgrounds) do
+            if type(b) ~= "table" or #b > 0 then return nil, ("backgrounds[%d] must be an object"):format(i - 1) end
+            for k in pairs(b) do if k ~= "id" and k ~= "name" then return nil, ("backgrounds[%d]: unknown field %s"):format(i - 1, tostring(k)) end end
+            if not valid_id(b.id) or b.id == "temple" or seen[b.id] then return nil, ("backgrounds[%d]: id must match ^[a-z0-9-]{1,32}$, be unique and not temple"):format(i - 1) end
+            if not lang_text(b.name, 40) then return nil, ("backgrounds[%d]: name must be { \"en\": \"…\", \"nb\": \"…\" } (one line, at most 40 bytes)"):format(i - 1) end
+            seen[b.id] = true
+        end
+    end
     local p = t.palette
     for _, pair in ipairs({ { "text", "bg" }, { "text", "surface" } }) do
         local c = contrast(p[pair[1]], p[pair[2]])
@@ -299,6 +318,68 @@ local function wallpaper(d)
     return { dir = DEFAULT_WALLPAPER, frames = MAX_FRAMES, sets = { "1080", "1440" } }
 end
 
+-- ── Backgrounds. A theme has the temple (its wallpaper/ folder, or Zeus' frames) first, then its scenes
+--   (backgrounds/<id>/1080/frame-00.png …, named in theme.json), then pictures: loose PNG, JPEG or WebP files in the
+--   theme's backgrounds/ folder (pack:), in ~/.config/olymparch/backgrounds/<theme>/ (mine:) and in …/all/ (all:).
+--   A picture must be a regular file (no symlink), at most 20 MiB, and start like the format its name says.
+local function picture_name(f)
+    if #f > 100 or not f:match("^[%w][%w _.,()+-]*$") or f:find("%.%.") then return nil end
+    local l = f:lower()
+    return (l:match("%.png$") and "png") or (l:match("%.jpe?g$") and "jpeg") or (l:match("%.webp$") and "webp") or nil
+end
+local function picture_ok(path, kind)
+    if not regular_file(path) then return false end
+    local size = tonumber(capture("stat -c %s -- " .. sh_quote(path))) or math.huge
+    if size > MAX_PICTURE or size < 16 then return false end
+    local head = read(path, 16) or ""
+    if kind == "png" then return head:sub(1, 8) == "\137PNG\r\n\26\n" end
+    if kind == "jpeg" then return head:sub(1, 3) == "\255\216\255" end
+    return head:sub(1, 4) == "RIFF" and head:sub(9, 12) == "WEBP"
+end
+local function pictures_in(dir, prefix, list, source)
+    if not regular_dir(dir) then return end
+    local names = {}
+    for name in capture("find -P " .. sh_quote(dir) .. " -mindepth 1 -maxdepth 1 -type f -printf '%f\\n'"):gmatch("[^\n]+") do
+        if picture_name(name) then names[#names + 1] = name end
+    end
+    table.sort(names)
+    for _, name in ipairs(names) do
+        if #list >= 64 then return end
+        local path = dir .. "/" .. name
+        if picture_ok(path, picture_name(name)) then
+            local label = name:gsub("%.[^.]+$", "")
+            list[#list + 1] = { id = prefix .. ":" .. name, name = { en = label, nb = label }, kind = "image", image = path,
+                thumb = path, frames = 1, source = source }
+        end
+    end
+end
+local function frames_set(dir)   -- DIR/1080 (and 1440) frames → { dir, frames, sets } or nil
+    if not (regular_dir(dir) and regular_dir(dir .. "/1080")) then return nil end
+    local n = frames_in(dir .. "/1080")
+    if n == 0 then return nil end
+    local n2 = regular_dir(dir .. "/1440") and frames_in(dir .. "/1440") or 0
+    return { dir = dir, frames = n, sets = n2 >= n and { "1080", "1440" } or { "1080" } }
+end
+local function backgrounds(t, d)
+    local list = {}
+    local wp = wallpaper(d)
+    list[1] = { id = "temple", name = { en = "Temple", nb = "Tempelet" }, kind = "frames", dir = wp.dir, frames = wp.frames,
+        sets = wp.sets, thumb = wp.dir .. "/1080/frame-00.png", source = "built-in" }
+    if regular_dir(d .. "/backgrounds") then
+        for _, b in ipairs(t.backgrounds or {}) do
+            local f = frames_set(d .. "/backgrounds/" .. b.id)
+            if f then
+                list[#list + 1] = { id = b.id, name = b.name, kind = "frames", dir = f.dir, frames = f.frames, sets = f.sets,
+                    thumb = f.dir .. "/1080/frame-00.png", source = "theme" }
+            end
+        end
+        pictures_in(d .. "/backgrounds", "pack", list, "theme")
+    end
+    pictures_in(USER_BG .. "/" .. t.id, "mine", list, "yours")
+    pictures_in(USER_BG .. "/all", "all", list, "all")
+    return list
+end
+
 ---------------------------------------------------------------------------------------------------- settings
 local function settings_cmd()
     local mine = script_dir() .. "/olymparch-settings"
@@ -308,6 +389,14 @@ local function current()
     local id = capture(sh_quote(settings_cmd()) .. " get appearance.theme"):gsub("%s+$", "")
     if not valid_id(id) then id = DEFAULT end
     return id
+end
+local function chosen_background(id)   -- the id remembered for theme ID ("temple" if none)
+    local v = capture(sh_quote(settings_cmd()) .. " get " .. sh_quote("appearance.background@" .. id)):gsub("%s+$", "")
+    return v ~= "" and v or "temple"
+end
+local function pick_background(list, want)   -- a background that is gone (a deleted picture) falls back to the temple
+    for i, b in ipairs(list) do if b.id == want then return b, i end end
+    return list[1], 1
 end
 
 ---------------------------------------------------------------------------------------------------- apply
@@ -343,9 +432,11 @@ local function apply(quiet)
         t, d = load(DEFAULT)
         if not t then die("the default theme is missing: " .. tostring(d)) end
     end
-    local wp = wallpaper(d)
+    local bg = pick_background(backgrounds(t, d), chosen_background(t.id))
+    local wp = bg.kind == "frames" and bg or wallpaper(d)   -- a picture keeps the temple's frames for the lock screen's fallback
     local resolved = { id = t.id, name = t.name, god = t.god, light = t.light == true, glyph = t.glyph or "f0e7",
-        palette = t.palette, wallpaper = wp.dir, frames = wp.frames, sets = wp.sets }
+        palette = t.palette, wallpaper = wp.dir, frames = bg.kind == "image" and 1 or wp.frames, sets = wp.sets,
+        background = bg.id, image = bg.kind == "image" and bg.image or nil }
     write(OUT .. "/foot.ini", foot_ini(t))
     write(OUT .. "/hypr.lua", "-- Written by olymparch-theme (theme: " .. t.id .. "); olymparch.lua loads it.\n" .. hypr_code(t) .. "\n")
     write(OUT .. "/theme.json", json.encode(resolved) .. "\n")   -- last: the shell and lock screen watch this one
@@ -387,26 +478,39 @@ local function install(url)
     if theme_dir(t.id) and not select(2, theme_dir(t.id)) then
         io.stderr:write(L("note: this overrides the built-in theme ", "merk: dette overstyrer det innebygde temaet ") .. t.id .. "\n")
     end
-    -- only what a theme may hold is copied: theme.json (written again from the checked data) and wallpaper frames
-    -- that really are PNG files (regular files, at most 8 MiB each, at most 48 per size)
+    -- only what a theme may hold is copied: theme.json (written again from the checked data), frames that really are
+    -- PNG files (regular files, at most 8 MiB each, at most 48 per size) for the wallpaper and each named background,
+    -- and pictures in backgrounds/ (PNG, JPEG or WebP by their first bytes, at most 20 MiB, at most 32)
     local new = stage .. "/theme"
     os.execute("mkdir -p " .. sh_quote(new))
     local f = assert(io.open(new .. "/theme.json", "wb")); f:write(json.encode(t) .. "\n"); f:close()
     local copied = 0
-    for _, set in ipairs({ "1080", "1440" }) do
-        local from = src .. "/wallpaper/" .. set
-        if regular_dir(src .. "/wallpaper") and regular_dir(from) then
-            local n = frames_in(from)
-            for i = 0, n - 1 do
-                local name = ("frame-%02d.png"):format(i)
-                local head = read(from .. "/" .. name, 8)
-                local size = tonumber(capture("stat -c %s -- " .. sh_quote(from .. "/" .. name))) or math.huge
-                if head ~= "\137PNG\r\n\26\n" or size > 8388608 then cleanup(); die(("wallpaper/%s/%s is not a PNG under 8 MiB"):format(set, name), 5) end
-                os.execute("mkdir -p " .. sh_quote(new .. "/wallpaper/" .. set))
-                if not ok("cp -P -- " .. sh_quote(from .. "/" .. name) .. " " .. sh_quote(new .. "/wallpaper/" .. set .. "/" .. name)) then cleanup(); die("copy failed") end
-                copied = copied + 1
+    local function copy_frames(rel)   -- rel: wallpaper or backgrounds/<id>
+        for _, set in ipairs({ "1080", "1440" }) do
+            local from = src .. "/" .. rel .. "/" .. set
+            if regular_dir(src .. "/" .. rel:match("^[^/]+")) and regular_dir(src .. "/" .. rel) and regular_dir(from) then
+                local n = frames_in(from)
+                for i = 0, n - 1 do
+                    local name = ("frame-%02d.png"):format(i)
+                    local head = read(from .. "/" .. name, 8)
+                    local size = tonumber(capture("stat -c %s -- " .. sh_quote(from .. "/" .. name))) or math.huge
+                    if head ~= "\137PNG\r\n\26\n" or size > 8388608 then cleanup(); die(("%s/%s/%s is not a PNG under 8 MiB"):format(rel, set, name), 5) end
+                    os.execute("mkdir -p " .. sh_quote(new .. "/" .. rel .. "/" .. set))
+                    if not ok("cp -P -- " .. sh_quote(from .. "/" .. name) .. " " .. sh_quote(new .. "/" .. rel .. "/" .. set .. "/" .. name)) then cleanup(); die("copy failed") end
+                    copied = copied + 1
+                end
             end
         end
+    end
+    copy_frames("wallpaper")
+    for _, b in ipairs(t.backgrounds or {}) do copy_frames("backgrounds/" .. b.id) end
+    local pics = {}
+    pictures_in(src .. "/backgrounds", "pack", pics, "theme")
+    for i, b in ipairs(pics) do
+        if i > 32 then break end
+        os.execute("mkdir -p " .. sh_quote(new .. "/backgrounds"))
+        if not ok("cp -P -- " .. sh_quote(b.image) .. " " .. sh_quote(new .. "/backgrounds/" .. b.id:sub(6))) then cleanup(); die("copy failed") end
+        copied = copied + 1
     end
     os.execute("mkdir -p " .. sh_quote(USER_DIR))
     if regular_dir(dest) then os.execute("rm -rf -- " .. sh_quote(dest)) end
@@ -414,7 +518,7 @@ local function install(url)
     if not ok("mv -T -- " .. sh_quote(new) .. " " .. sh_quote(dest)) then cleanup(); die("cannot install into " .. dest) end
     cleanup()
     for _, w in ipairs(warnings(t)) do io.stderr:write(L("warning: ", "advarsel: ") .. w .. "\n") end
-    print(("%s %s (%s, %d %s)"):format(L("installed", "installerte"), t.id, t.name.en, copied, L("wallpaper frames", "bakgrunnsbilder")))
+    print(("%s %s (%s, %d %s)"):format(L("installed", "installerte"), t.id, t.name.en, copied, L("background files", "bakgrunnsfiler")))
     print(L("use it: olymparch-theme set ", "bruk det: olymparch-theme set ") .. t.id)
 end
 
@@ -474,7 +578,53 @@ elseif cmd == "remove" then
         if theme_dir(id) then apply(true)   -- the built-in one with that id again
         else os.execute(sh_quote(settings_cmd()) .. " set appearance.theme " .. DEFAULT) end
     end
+elseif cmd == "background" or cmd == "backgrounds" then
+    local sub = arg[2] or "list"
+    local id = current()
+    if sub == "list" then
+        local other = arg[3] ~= "--json" and arg[3] or arg[4]
+        if other then
+            if not valid_id(other) then die("bad theme id", 2) end
+            id = other
+        end
+    end
+    local t, d = load(id)
+    if not t then die(tostring(d), 2) end
+    local list = backgrounds(t, d)
+    local now, at = pick_background(list, chosen_background(id))
+    local function set_to(b)
+        if not os.execute(sh_quote(settings_cmd()) .. " set " .. sh_quote("appearance.background@" .. id) .. " " .. sh_quote(b.id)) then os.exit(1) end
+        print(L("background ", "bakgrunn ") .. b.id)
+    end
+    if sub == "list" then
+        if arg[3] == "--json" then
+            local parts = {}
+            for i, b in ipairs(list) do
+                parts[i] = json.encode({ index = i, id = b.id, name = b.name, kind = b.kind, thumb = b.thumb, image = b.image,
+                    dir = b.dir, frames = b.frames, sets = b.sets, source = b.source, current = i == at }, "  ")
+            end
+            print("[" .. table.concat(parts, ",\n") .. "]")
+        else
+            for i, b in ipairs(list) do
+                print(("%s %2d  %-24s %s%s"):format(i == at and "*" or " ", i, b.id, nb and (b.name.nb or b.name.en) or b.name.en,
+                    b.kind == "image" and L("  (picture)", "  (bilde)") or b.frames > 1 and "" or L("  (still)", "  (stille)")))
+            end
+        end
+    elseif sub == "current" then
+        print(now.id)
+    elseif sub == "set" then
+        local want = arg[3] or die("usage: background set N|ID", 2)
+        local n = want:match("^%d+$") and tonumber(want)
+        local b = n and list[n]
+        if not b then for _, x in ipairs(list) do if x.id == want then b = x end end end
+        if not b then die(L("no background ", "ingen bakgrunn ") .. want .. " (" .. id .. "; olymparch-theme background list)", 2) end
+        set_to(b)
+    elseif sub == "next" or sub == "prev" then
+        set_to(list[(at - 1 + (sub == "next" and 1 or -1)) % #list + 1])
+    else
+        die("usage: olymparch-theme background [list [--json] [THEME] | current | set N|ID | next | prev]", 2)
+    end
 else
-    io.stderr:write("usage: olymparch-theme list [--json] | current | set ID | apply | validate DIR | install URL | remove ID\n")
+    io.stderr:write("usage: olymparch-theme list [--json] | current | set ID | apply | validate DIR | install URL | remove ID | background …\n")
     os.exit(2)
 end

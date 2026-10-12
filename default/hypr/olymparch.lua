@@ -93,6 +93,7 @@ shortcut("keys.terminal", mod .. " + RETURN", nil, function(k) hl.bind(k, hl.dsp
 shortcut("keys.menu", mod .. " + SPACE", nil, function(k) hl.bind(k, hl.dsp.global("olymparch:launcher")) end)
 shortcut("keys.settings", mod .. " + COMMA", nil, function(k) hl.bind(k, hl.dsp.global("olymparch:settings")) end)
 shortcut("keys.themes", mod .. " + CTRL + SHIFT + SPACE", nil, function(k) hl.bind(k, hl.dsp.global("olymparch:themes")) end)   -- the theme picker
+shortcut("keys.backgrounds", mod .. " + CTRL + SPACE", nil, function(k) hl.bind(k, hl.dsp.global("olymparch:backgrounds")) end)   -- the background picker
 shortcut("keys.lock", mod .. " + L", nil, function(k) hl.bind(k, hl.dsp.exec_cmd("olymparch-lock")) end)
 shortcut("keys.close", mod .. " + Q", nil, function(k) hl.bind(k, hl.dsp.window.close()) end)
 shortcut("keys.float", mod .. " + V", nil, function(k) hl.bind(k, hl.dsp.window.float({ action = "toggle" })) end)

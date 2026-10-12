@@ -39,5 +39,10 @@
     "#bfa4e7",
     "#91c0da",
     "#ffffff"
+  ],
+  "backgrounds": [
+    { "id": "peacock", "name": { "en": "Peacock's tail", "nb": "Påfuglens hale" } },
+    { "id": "milkyway", "name": { "en": "Hera's Milky Way", "nb": "Heras melkevei" } },
+    { "id": "sign", "name": { "en": "Sign in the stars", "nb": "Tegn på himmelen" } }
   ]
 }

@@ -56,6 +56,35 @@ for t in default/themes/*/theme.json; do
         cp "$cache"/frame-*.png "$share/themes/$id/wallpaper/$h/"
     done
 done
+# Every theme's own backgrounds (art/scenes/<id>.py, named in its theme.json) next to the temple: themes/<id>/backgrounds/
+# <scene>/<h>/frame-NN.png. Made in parallel, once, and kept in build/backgrounds/<id>/<scene>/<h> until the theme or
+# its art changes. All of them together must stay small (docs/themes.md: at most 120 MB on the ISO).
+jobs=() made=()
+for t in default/themes/*/theme.json; do
+    id=$(basename "$(dirname "$t")")
+    [ -f "art/scenes/$id.py" ] || continue
+    for scene in $(py art/scenes/render.py "$t" --list | cut -d' ' -f1); do
+        made+=("$id/$scene")
+        for size in 1920x1080 2560x1440; do
+            w=${size%x*} h=${size#*x}
+            cache=build/backgrounds/$id/$scene/$h
+            if [ -s "$cache/frame-00.png" ] && [ -z "$(find "$t" "art/scenes/$id.py" art/scenes/pixel.py art/scenes/common.py -newer "$cache/frame-00.png")" ]; then :; else
+                rm -rf -- "$cache"
+                jobs+=("$t $scene $cache $w $h")
+            fi
+        done
+    done
+done
+if [ ${#jobs[@]} -gt 0 ]; then
+    printf '%s\n' "${jobs[@]}" | xargs -P "$(nproc)" -L1 sh -c 'if command -v uv >/dev/null; then uv run -q --no-project --with pillow python art/scenes/render.py "$@"; else python art/scenes/render.py "$@"; fi >/dev/null' render
+fi
+for m in "${made[@]}"; do
+    for h in 1080 1440; do
+        mkdir -p "$share/themes/${m%%/*}/backgrounds/${m#*/}/$h"
+        cp build/backgrounds/"$m/$h"/frame-*.png "$share/themes/${m%%/*}/backgrounds/${m#*/}/$h/"
+    done
+done
+du -sh "$share/themes" "$share/wallpaper"
 # (Plymouth and the Limine menu stay gold for every theme: they run before anyone has logged in.)
 # ── end Themes
 # the public half of the repo signing key, for the installer

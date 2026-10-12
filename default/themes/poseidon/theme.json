@@ -39,5 +39,10 @@
     "#b2addc",
     "#84c9d0",
     "#ffffff"
+  ],
+  "backgrounds": [
+    { "id": "waves", "name": { "en": "Trident from the sea", "nb": "Treforken av havet" } },
+    { "id": "deep", "name": { "en": "The deep sea", "nb": "Havdypet" } },
+    { "id": "sign", "name": { "en": "Sign in the stars", "nb": "Tegn på himmelen" } }
   ]
 }

@@ -10,10 +10,14 @@ Fails if
 - there are fewer than 10 themes, Zeus is missing, or there is no light theme;
 - olymparch-theme takes a theme with a bad colour, an unknown field, a symlink, a wrong id or unreadable text, an
   install URL that is not https://github.com/OWNER/REPO, or removes a built-in theme;
-- olymparch-settings takes an appearance.theme that is no theme.
+- olymparch-settings takes an appearance.theme that is no theme;
+- a theme names backgrounds art/scenes doesn't make, or olymparch-theme lists a picture that is no picture (wrong first
+  bytes, over 20 MiB, a symlink), forgets a theme's background across a switch or takes a bad background id.
 """
 import json
 import os
+import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -69,6 +73,15 @@ for d in themes:
     rows.append((d.name, ratios))
 if not light:
     bad("no light theme")
+for d in themes:   # theme.json's backgrounds and art/scenes/<id>.py's SCENES are the same ids, in that order
+    t = json.loads((d / "theme.json").read_text())
+    named = [b["id"] for b in t.get("backgrounds", [])]
+    art = root / "art/scenes" / f"{d.name}.py"
+    made = re.findall(r'^\s+"([a-z]+)":\s*(?:\(|sign\()', art.read_text().split("SCENES = {")[-1], re.M) if art.exists() else []
+    if named != made:
+        bad(f"{d.name}: theme.json backgrounds {named} but art/scenes/{d.name}.py makes {made}")
+    if not 2 <= len(named) + 1 <= 6:
+        bad(f"{d.name}: {len(named) + 1} backgrounds; 3 to 4 expected (the temple and the scenes)")
 
 # ── olymparch-theme refuses bad themes, URLs and removals
 GOOD = json.loads((root / "default/themes/zeus/theme.json").read_text())
@@ -161,6 +174,76 @@ with tempfile.TemporaryDirectory() as home:
     for v in ("../zeus", "Zeus", "x" * 33, "nope", "zeus; rm -rf ~"):
         if subprocess.run([settings_cli, "set", "appearance.theme", v], capture_output=True, env=e).returncode != 2:
             bad(f"olymparch-settings set appearance.theme {v!r} was not refused")
+
+    # ── backgrounds (docs/themes.md): scenes named in theme.json, your pictures, remembered per theme
+    PNG = b"\x89PNG\r\n\x1a\n" + b"\0" * 40   # only the first bytes are checked; the shell decodes it
+    for label, bgs in {"temple id": [{"id": "temple", "name": {"en": "T"}}], "unknown field": [{"id": "a", "name": {"en": "A"}, "cmd": "x"}],
+                       "bad id": [{"id": "../a", "name": {"en": "A"}}], "twice": [{"id": "a", "name": {"en": "A"}}] * 2,
+                       "no name": [{"id": "a"}], "object": {"a": {"en": "A"}}, "too many": [{"id": f"b{i}", "name": {"en": "B"}} for i in range(17)]}.items():
+        d = theme("evil", variant(backgrounds=bgs))
+        if subprocess.run([cli, "validate", str(d)], capture_output=True, env=e).returncode == 0:
+            bad(f"olymparch-theme validate took bad backgrounds ({label})")
+    shutil.rmtree(user / "evil")
+    d = theme("mine", dict(variant(), id="mine", backgrounds=[{"id": "dawn", "name": {"en": "Dawn", "nb": "Daggry"}},
+                                                               {"id": "gone", "name": {"en": "Not built", "nb": "Ikke laget"}}]))
+    for rel in ("wallpaper/1080", "backgrounds/dawn/1080", "backgrounds/dawn/1440"):
+        (d / rel).mkdir(parents=True)
+        for i in range(3):
+            (d / rel / f"frame-{i:02d}.png").write_bytes(PNG)
+    mine_bg = Path(home, ".config/olymparch/backgrounds/mine")
+    all_bg = Path(home, ".config/olymparch/backgrounds/all")
+    mine_bg.mkdir(parents=True)
+    all_bg.mkdir(parents=True)
+    (mine_bg / "beach.png").write_bytes(PNG)
+    (mine_bg / "Photo (2).JPG").write_bytes(b"\xff\xd8\xff\xe0" + b"\0" * 40)
+    (all_bg / "sky.webp").write_bytes(b"RIFF\0\0\0\0WEBPVP8 " + b"\0" * 40)
+    (d / "backgrounds/pack.png").write_bytes(PNG)
+    (mine_bg / "fake.png").write_text("#!/bin/sh\ntouch PWNED\n" * 4)          # not a PNG inside
+    (mine_bg / "big.png").write_bytes(PNG)
+    os.truncate(mine_bg / "big.png", 20 * 1024 * 1024 + 1)                       # over 20 MiB
+    secret.write_bytes(PNG)
+    (mine_bg / "link.png").symlink_to(secret)                                     # a symlink
+    (mine_bg / ".hidden.png").write_bytes(PNG)
+    (mine_bg / "notes.txt").write_bytes(PNG)
+    subprocess.run([cli, "set", "mine"], capture_output=True, env=e)
+    r = subprocess.run([cli, "background", "list", "--json"], capture_output=True, text=True, env=e)
+    try:
+        got = [b["id"] for b in json.loads(r.stdout)]
+    except ValueError:
+        got = r.stdout + r.stderr
+    want = ["temple", "dawn", "pack:pack.png", "mine:Photo (2).JPG", "mine:beach.png", "all:sky.webp"]
+    if got != want:
+        bad(f"olymparch-theme background list: {got}, expected {want}")
+    r = subprocess.run([cli, "background", "set", "2"], capture_output=True, text=True, env=e)
+    out_theme = json.loads(Path(home, ".config/olymparch/theme/theme.json").read_text())
+    if r.returncode or out_theme.get("background") != "dawn" or not out_theme.get("wallpaper", "").endswith("/mine/backgrounds/dawn") \
+            or out_theme.get("frames") != 3 or out_theme.get("sets") != ["1080", "1440"]:
+        bad(f"olymparch-theme background set 2 did not use dawn: {out_theme} {r.stderr}")
+    subprocess.run([cli, "background", "next"], capture_output=True, env=e)
+    subprocess.run([cli, "background", "set", "mine:beach.png"], capture_output=True, env=e)
+    out_theme = json.loads(Path(home, ".config/olymparch/theme/theme.json").read_text())
+    if out_theme.get("image") != str(mine_bg / "beach.png") or out_theme.get("frames") != 1:
+        bad(f"a picture of yours did not reach the shell: {out_theme}")
+    subprocess.run([cli, "set", "zeus"], capture_output=True, env=e)
+    if json.loads(Path(home, ".config/olymparch/theme/theme.json").read_text()).get("background") != "temple":
+        bad("zeus did not start on its temple")
+    subprocess.run([cli, "set", "mine"], capture_output=True, env=e)
+    if json.loads(Path(home, ".config/olymparch/theme/theme.json").read_text()).get("background") != "mine:beach.png":
+        bad("mine did not remember its background across a theme switch")
+    (mine_bg / "beach.png").unlink()
+    subprocess.run([cli, "apply"], capture_output=True, env=e)
+    if json.loads(Path(home, ".config/olymparch/theme/theme.json").read_text()).get("background") != "temple":
+        bad("a deleted picture did not fall back to the temple")
+    for v in ("fake.png", "link.png", "big.png", "nope", "99", "0"):
+        if subprocess.run([cli, "background", "set", "mine:" + v if v.endswith(".png") else v], capture_output=True, env=e).returncode != 2:
+            bad(f"olymparch-theme background set {v!r} was not refused")
+    for v in ("mine:../../secret.json", "mine:/etc/passwd", "file:x.png", "mine:a.png; rm", "mine:.hidden.png", "Temple", "x" * 33, "mine:a.txt"):
+        if subprocess.run([settings_cli, "set", "appearance.background@mine", v], capture_output=True, env=e).returncode != 2:
+            bad(f"olymparch-settings set appearance.background@mine {v!r} was not refused")
+    for k in ("appearance.background", "appearance.background@../x", "appearance.background@Mine"):
+        if subprocess.run([settings_cli, "set", k, "temple"], capture_output=True, env=e).returncode != 2:
+            bad(f"olymparch-settings set {k} was not refused")
+    shutil.rmtree(user / "mine")
     if list(Path(home).rglob("PWNED")):
         bad("something ran PWNED")
 
@@ -172,4 +255,4 @@ cols = ["text/bg", "text/surface", "muted/bg", "accent/bg", "accent/surface", "a
 print(f"{'theme':12}" + "".join(f"{c:>16}" for c in cols))
 for name, r in rows:
     print(f"{name:12}" + "".join(f"{r[c]:>14.2f}:1" for c in cols))
-print(f"PASS · {len(rows)} themes, every pair at least 4.5:1; bad themes, URLs and ids refused")
+print(f"PASS · {len(rows)} themes, every pair at least 4.5:1; bad themes, URLs and ids refused; backgrounds listed, remembered per theme and checked")

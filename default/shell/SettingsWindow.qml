@@ -80,6 +80,7 @@ Scope {
             if ((s.options_from === "desktop" || s.installed || /^olympus\./.test(s.options_from || "")) && !choices[s.key]) loadChoices(s);   // olympus.*: Zeus' models
             if (s.widget === "items" && !items[s.key]) loadItems(s.key, false);
             if (s.widget === "themes" && !themeList.length) themeLister.running = true;
+            if (s.widget === "backgrounds") bgLister.running = true;
         }
     }
     onRowsChanged: if (open) loadFor(rows)
@@ -91,13 +92,24 @@ Scope {
         stdout: StdioCollector { id: themeListed }
         onExited: { try { win.themeList = JSON.parse(themeListed.text) || []; } catch (e) { win.themeList = []; } }
     }
+    // Backgrounds (appearance.background@THEME): the theme in use's, as thumbnails (BackgroundGrid); read again when the
+    // theme or the choice changes
+    property var bgList: []
+    Process {
+        id: bgLister
+        command: ["olymparch-theme", "background", "list", "--json"]
+        stdout: StdioCollector { id: bgListed }
+        onExited: { try { win.bgList = JSON.parse(bgListed.text) || []; } catch (e) { win.bgList = []; } }
+    }
+    readonly property string bgTheme: theme.themeId + " " + (theme.themeData.background || "")
+    onBgThemeChanged: if (open && rows.some(s => s.widget === "backgrounds")) bgLister.running = true
     // ── end Themes
     property var pending: null           // a --try waiting for «Keep»: { key, value, text, token }
     property int countdown: 0
 
     function tr(o) { return o ? (o[lang] || o.en || "") : ""; }
     function pageOf(id) { return Settings.schema.pages.find(p => p.id === id); }
-    function keyOf(s) { return s.per === "monitor" ? s.key + "@" + monitor : s.key; }
+    function keyOf(s) { return s.per === "monitor" ? s.key + "@" + monitor : s.per === "theme" ? s.key + "@" + theme.themeId : s.key; }
     function valueOf(s) {
         const k = keyOf(s);
         if (pending && pending.key === k) return pending.value;
@@ -508,7 +520,7 @@ Scope {
                                 readonly property string w: s.widget || ({ bool: "switch", choice: "select", number: "slider", text: "field", action: "button" })[s.type]
                                 readonly property var opts: s.type === "choice" ? win.options(s) : []
                                 width: content.width
-                                readonly property bool wide: w === "themes"   // the theme cards get the whole width, under the text
+                                readonly property bool wide: w === "themes" || w === "backgrounds"   // cards and thumbnails get the whole width, under the text
                                 height: (wide ? info.implicitHeight + 10 + ctl.height : Math.max(info.implicitHeight, ctl.height)) + 18 + (out.visible ? out.height + 8 : 0)
 
                                 Column {
@@ -547,7 +559,7 @@ Scope {
                                     width: row.width - x
                                     height: Math.max(26, sw.visible ? sw.height : seg.visible ? seg.height : sel.visible ? sel.height
                                                            : sld.visible ? sld.height : fld.visible ? fld.height : btn.visible ? btn.height : kc.visible ? kc.height
-                                                           : thm.visible ? thm.height : itm.visible ? itm.implicitHeight : info2.height)
+                                                           : thm.visible ? thm.height : bgs.visible ? bgs.height : itm.visible ? itm.implicitHeight : info2.height)
                                     opacity: row.ready ? 1 : 0.45
                                     enabled: row.ready
 
@@ -560,6 +572,18 @@ Scope {
                                         themes: visible ? win.themeList : []
                                         current: String(row.value)
                                         onPicked: id => { if (id !== String(row.value)) win.change(row.s, id); }
+                                    }
+
+                                    // backgrounds: thumbnails of the theme in use's backgrounds; a click uses one at once
+                                    BackgroundGrid {
+                                        id: bgs
+                                        visible: row.w === "backgrounds"
+                                        theme: win.theme
+                                        thumbW: 168
+                                        columns: Math.max(1, Math.floor((ctl.width + spacing) / (thumbW + spacing)))
+                                        items: visible ? win.bgList : []
+                                        current: String(row.value)
+                                        onPicked: i => { const b = win.bgList[i]; if (b && b.id !== String(row.value)) win.change(row.s, b.id); }
                                     }
 
                                     // switch

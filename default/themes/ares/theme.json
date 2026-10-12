@@ -39,5 +39,10 @@
     "#cca8d0",
     "#9ec4c4",
     "#ffffff"
+  ],
+  "backgrounds": [
+    { "id": "battlefield", "name": { "en": "Battlefield at sunset", "nb": "Slagmarken i solnedgang" } },
+    { "id": "helm", "name": { "en": "The bronze helmet", "nb": "Bronsehjelmen" } },
+    { "id": "sign", "name": { "en": "Sign in the stars", "nb": "Tegn på himmelen" } }
   ]
 }

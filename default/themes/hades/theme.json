@@ -39,5 +39,10 @@
     "#c4a3e5",
     "#96bfd8",
     "#ffffff"
+  ],
+  "backgrounds": [
+    { "id": "styx", "name": { "en": "Charon on the Styx", "nb": "Kharon på Styx" } },
+    { "id": "embers", "name": { "en": "Embers of the underworld", "nb": "Glør fra underverdenen" } },
+    { "id": "sign", "name": { "en": "Sign in the stars", "nb": "Tegn på himmelen" } }
   ]
 }
