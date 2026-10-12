@@ -1,5 +1,8 @@
 #%PAM-1.0
-# The Olymparch lock screen: the account password through Arch's normal login stack. The number of tries before
-# a pause is set in /etc/security/faillock.conf (Olymparch: 10 tries, then 2 minutes).
-auth       include    login
-account    include    login
+# The Olymparch lock screen: the account password with faillock scoped to this screen (10 tries, then a
+# 2 minute pause). sudo and console logins keep Arch's stricter defaults from /etc/security/faillock.conf.
+auth       required                     pam_faillock.so preauth deny=10 unlock_time=120
+auth       [success=1 default=bad]      pam_unix.so try_first_pass nullok
+auth       [default=die]                pam_faillock.so authfail deny=10 unlock_time=120
+auth       optional                     pam_faillock.so authsucc deny=10 unlock_time=120
+account    include                      login
