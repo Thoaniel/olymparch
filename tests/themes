@@ -1,0 +1,175 @@
+#!/usr/bin/env python3
+"""Themes (no VM): every built-in theme is valid and readable, and olymparch-theme never takes a bad one.
+
+  tests/themes        exit 0 and a table of contrast ratios, or 1 and one line per problem
+
+Fails if
+- a theme in default/themes is refused by `olymparch-theme validate`, its folder is not its id, or it lacks en/nb text;
+- text, muted text, the accents or danger fall below 4.5:1 (WCAG AA) on the background, surface or raised colour,
+  or the background on the accent (text on an accent button) does;
+- there are fewer than 10 themes, Zeus is missing, or there is no light theme;
+- olymparch-theme takes a theme with a bad colour, an unknown field, a symlink, a wrong id or unreadable text, an
+  install URL that is not https://github.com/OWNER/REPO, or removes a built-in theme;
+- olymparch-settings takes an appearance.theme that is no theme.
+"""
+import json
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+root = Path(__file__).resolve().parent.parent
+cli = str(root / "system/bin/olymparch-theme")
+settings_cli = str(root / "system/bin/olymparch-settings")
+problems = []
+bad = problems.append
+
+
+def lum(h):
+    def ch(v):
+        v /= 255
+        return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+    r, g, b = (int(h[i:i + 2], 16) for i in (1, 3, 5))
+    return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b)
+
+
+def contrast(a, b):
+    x, y = sorted((lum(a), lum(b)), reverse=True)
+    return (x + 0.05) / (y + 0.05)
+
+
+PAIRS = [("text", "bg"), ("text", "surface"), ("text", "raised"), ("muted", "bg"), ("muted", "surface"),
+         ("accent", "bg"), ("accent", "surface"), ("accentHi", "bg"), ("accentHi", "raised"), ("danger", "bg"),
+         ("danger", "surface"), ("bg", "accent")]
+env = {k: v for k, v in os.environ.items() if k not in ("HYPRLAND_INSTANCE_SIGNATURE", "WAYLAND_DISPLAY", "XDG_CONFIG_HOME")}
+
+themes = sorted(p for p in (root / "default/themes").iterdir() if p.is_dir())
+ids = [p.name for p in themes]
+if len(themes) < 10:
+    bad(f"only {len(themes)} themes; at least 10")
+if "zeus" not in ids:
+    bad("the default theme zeus is missing")
+rows, light = [], 0
+for d in themes:
+    r = subprocess.run([cli, "validate", str(d)], capture_output=True, text=True, env=env)
+    if r.returncode or r.stdout.strip() != f"ok {d.name}":
+        bad(f"{d.name}: olymparch-theme validate refused it: {r.stderr.strip()}")
+        continue
+    t = json.loads((d / "theme.json").read_text())
+    light += t.get("light") is True
+    for f in ("name", "description"):
+        if not (t[f].get("en") and t[f].get("nb")):
+            bad(f"{d.name}: {f} needs en and nb")
+    p = t["palette"]
+    ratios = {f"{a}/{b}": contrast(p[a], p[b]) for a, b in PAIRS}
+    for k, v in ratios.items():
+        if v < 4.5:
+            bad(f"{d.name}: {k} contrast {v:.2f}:1 is below 4.5:1")
+    rows.append((d.name, ratios))
+if not light:
+    bad("no light theme")
+
+# ── olymparch-theme refuses bad themes, URLs and removals
+GOOD = json.loads((root / "default/themes/zeus/theme.json").read_text())
+with tempfile.TemporaryDirectory() as home:
+    e = dict(env, HOME=home, XDG_RUNTIME_DIR=home, OLYMPARCH_SETTINGS_SCHEMA=str(root / "default/settings/schema.json"))
+    user = Path(home, ".config/olymparch/themes")
+
+    def theme(id_, data=None, raw=None):
+        d = user / id_
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "theme.json").write_text(raw if raw is not None else json.dumps(data))
+        return d
+
+    def variant(**kw):
+        t = json.loads(json.dumps(GOOD))
+        t["id"] = "evil"
+        for k, v in kw.items():
+            if k.startswith("palette_"):
+                t["palette"][k[8:]] = v
+            elif v is None:
+                t.pop(k, None)
+            else:
+                t[k] = v
+        return t
+    evil = {
+        "colour": variant(palette_bg='#000000"); os.execute("touch PWNED'),
+        "short colour": variant(palette_accent="#fff"),
+        "named colour": variant(palette_text="white"),
+        "unknown field": variant(exec="touch PWNED"),
+        "unknown palette": variant(palette_shader="#000000"),
+        "terminal 15": variant(terminal=GOOD["terminal"][:15]),
+        "terminal bad": variant(terminal=GOOD["terminal"][:15] + ["rgb(1,2,3)"]),
+        "wrong id": dict(variant(), id="other"),
+        "id pattern": dict(variant(), id="Evil/../x"),
+        "control char": variant(name={"en": "Evil\nline"}),
+        "no en": variant(name={"nb": "Ond"}),
+        "unreadable": variant(palette_text="#111111", palette_bg="#000000"),
+        "glyph": variant(glyph="41"),
+        "number": variant(light=1),
+    }
+    for label, data in evil.items():
+        d = theme("evil", data)
+        r = subprocess.run([cli, "validate", str(d)], capture_output=True, text=True, env=e)
+        if r.returncode == 0 and label != "wrong id":   # (validate checks a cloned repo, whose folder is no id)
+            bad(f"olymparch-theme validate took an evil theme ({label})")
+        r = subprocess.run([settings_cli, "set", "appearance.theme", "evil"], capture_output=True, text=True, env=e)
+        out = Path(home, ".config/olymparch/theme/theme.json")
+        if out.exists() and '"evil"' in out.read_text():
+            bad(f"olymparch-theme applied an evil theme ({label})")
+    # a symlinked theme.json or theme folder is never read
+    secret = Path(home, "secret.json")
+    secret.write_text(json.dumps(variant()))
+    d = user / "evil"
+    (d / "theme.json").unlink()
+    (d / "theme.json").symlink_to(secret)
+    r = subprocess.run([cli, "list"], capture_output=True, text=True, env=e)
+    if " evil " in r.stdout or subprocess.run([cli, "validate", str(d)], capture_output=True, env=e).returncode == 0:
+        bad("olymparch-theme followed a symlinked theme.json")
+    (d / "theme.json").unlink()
+    d.rmdir()
+    real = Path(home, "elsewhere/evil")
+    real.mkdir(parents=True)
+    (real / "theme.json").write_text(json.dumps(variant()))
+    (user / "evil").symlink_to(real)
+    r = subprocess.run([cli, "list"], capture_output=True, text=True, env=e)
+    if " evil " in r.stdout:
+        bad("olymparch-theme followed a symlinked theme folder")
+    (user / "evil").unlink()
+    # a good user theme is listed, can be used, overrides nothing it shouldn't, and can be removed
+    theme("mine", dict(variant(), id="mine"))
+    r = subprocess.run([cli, "set", "mine"], capture_output=True, text=True, env=e)
+    out = Path(home, ".config/olymparch/theme")
+    if r.returncode or '"id": "mine"' not in (out / "theme.json").read_text() or "background=0a0a0e" not in (out / "foot.ini").read_text() \
+            or 'active_border = "rgb(d4a73a)"' not in (out / "hypr.lua").read_text():
+        bad(f"olymparch-theme set mine did not write the theme files: {r.stderr}")
+    for p in out.iterdir():
+        if p.suffix == ".lua" and subprocess.run(["luac", "-p", str(p)], capture_output=True).returncode:
+            bad(f"{p.name} written by olymparch-theme is not valid Lua")
+    r = subprocess.run([cli, "remove", "mine"], capture_output=True, text=True, env=e)
+    if r.returncode or (user / "mine").exists() or subprocess.run([cli, "current"], capture_output=True, text=True, env=e).stdout.strip() != "zeus":
+        bad(f"olymparch-theme remove mine did not remove it and go back to zeus: {r.stderr}")
+    if subprocess.run([cli, "remove", "zeus"], capture_output=True, env=e).returncode != 2:
+        bad("olymparch-theme removed a built-in theme")
+    for url in ("http://github.com/a/b", "https://github.com/a/b;touch PWNED", "git@github.com:a/b.git", "https://evil.example/a/b",
+                "https://github.com/-a/b", "https://github.com/a/..", "https://github.com/a/b/c", "ext::sh -c touch PWNED",
+                "--upload-pack=touch PWNED", "https://github.com/a/b.git --depth", "file:///etc"):
+        r = subprocess.run([cli, "install", url], capture_output=True, text=True, env=e)
+        if r.returncode != 2:
+            bad(f"olymparch-theme install {url!r} was not refused (rc {r.returncode})")
+    for v in ("../zeus", "Zeus", "x" * 33, "nope", "zeus; rm -rf ~"):
+        if subprocess.run([settings_cli, "set", "appearance.theme", v], capture_output=True, env=e).returncode != 2:
+            bad(f"olymparch-settings set appearance.theme {v!r} was not refused")
+    if list(Path(home).rglob("PWNED")):
+        bad("something ran PWNED")
+
+if problems:
+    print("\n".join(problems))
+    print(f"FAIL · {len(problems)} problem(s)")
+    sys.exit(1)
+cols = ["text/bg", "text/surface", "muted/bg", "accent/bg", "accent/surface", "accentHi/raised", "danger/bg"]
+print(f"{'theme':12}" + "".join(f"{c:>16}" for c in cols))
+for name, r in rows:
+    print(f"{name:12}" + "".join(f"{r[c]:>14.2f}:1" for c in cols))
+print(f"PASS · {len(rows)} themes, every pair at least 4.5:1; bad themes, URLs and ids refused")

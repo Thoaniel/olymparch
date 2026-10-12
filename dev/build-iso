@@ -39,6 +39,25 @@ for size in 1920x1080 2560x1440; do
     mkdir -p "$share/wallpaper/$h"
     cp build/wallpaper/"$h"/frame-*.png "$share/wallpaper/$h/"
 done
+# ── Themes (docs/themes.md): every built-in theme, and its own recoloured torch frames (Zeus uses the ones above).
+# Made once per palette and kept in build/wallpaper/themes/<id>/<h>; a changed theme.json makes them again.
+mkdir -p "$share/themes"
+cp -r default/themes/. "$share/themes/"
+for t in default/themes/*/theme.json; do
+    id=$(basename "$(dirname "$t")")
+    [ "$id" = zeus ] && continue
+    for size in 1920x1080 2560x1440; do
+        w=${size%x*} h=${size#*x}
+        cache=build/wallpaper/themes/$id/$h
+        if [ -s "$cache/frame-47.png" ] && [ "$cache/frame-47.png" -nt "$t" ] && [ "$cache/frame-47.png" -nt art/torch.py ]; then :; else
+            py art/torch.py "$cache" "$w" "$h" 48 "$t" >/dev/null
+        fi
+        mkdir -p "$share/themes/$id/wallpaper/$h"
+        cp "$cache"/frame-*.png "$share/themes/$id/wallpaper/$h/"
+    done
+done
+# (Plymouth and the Limine menu stay gold for every theme: they run before anyone has logged in.)
+# ── end Themes
 # the public half of the repo signing key, for the installer
 install -Dm644 repo/olymparch-signing.asc "$share/repo/olymparch-signing.asc"
 # no Python byte-code from local test runs on the ISO

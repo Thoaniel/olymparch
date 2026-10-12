@@ -12,12 +12,31 @@ import Quickshell.Services.Pam
 
 ShellRoot {
     id: root
-    readonly property color gold: "#d4a73a"
-    readonly property color goldHi: "#f4d35e"
-    readonly property color text: "#e8e6df"
-    readonly property color muted: "#9a96a3"
-    readonly property color line: "#3a3644"
-    readonly property color red: "#e0605e"
+    // ── Theme: the active theme's colours and still wallpaper, from the checked copy olymparch-theme writes
+    //    (~/.config/olymparch/theme/theme.json); Zeus' black and gold when it is missing. See docs/themes.md.
+    FileView {
+        id: themeFile
+        path: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/olymparch/theme/theme.json"
+        blockLoading: true
+        printErrors: false
+    }
+    readonly property var themeData: { try { return JSON.parse(themeFile.text() || "{}") || {}; } catch (e) { return {}; } }
+    function themeColour(k, zeus) {
+        const v = (themeData.palette || {})[k];
+        return /^#[0-9a-fA-F]{6}$/.test(v || "") ? v : zeus;
+    }
+    readonly property bool light: themeData.light === true
+    readonly property color bg: themeColour("bg", "#0a0a0e")
+    readonly property color gold: themeColour("accent", "#d4a73a")
+    readonly property color goldHi: themeColour("accentHi", "#f4d35e")
+    readonly property color text: themeColour("text", "#e8e6df")
+    readonly property color muted: themeColour("muted", "#9a96a3")
+    readonly property color line: themeColour("line", "#3a3644")
+    readonly property color red: themeColour("danger", "#e0605e")
+    readonly property color field: Qt.tint(bg, Qt.rgba(1, 1, 1, light ? 0 : 0.02))
+    readonly property string art: /^\/[^\0]*$/.test(themeData.wallpaper || "") && (themeData.wallpaper || "").indexOf("..") < 0 ? themeData.wallpaper : "/usr/share/olymparch/wallpaper"
+    readonly property bool has1440: !themeData.sets || themeData.sets.indexOf("1440") >= 0
+    // ── end Theme
     readonly property string mono: "JetBrains Mono"
     property string password: ""
     property bool checking: false
@@ -63,11 +82,11 @@ ShellRoot {
         locked: true
 
         WlSessionLockSurface {
-            color: "#08080c"
+            color: root.light ? root.bg : Qt.darker(root.bg, 1.25)
 
             Image {
                 anchors.fill: parent
-                source: `file:///usr/share/olymparch/wallpaper/${parent.height >= 1300 ? "1440" : "1080"}/frame-00.png`
+                source: `file://${root.art}/${parent.height >= 1300 && root.has1440 ? "1440" : "1080"}/frame-00.png`
                 fillMode: Image.PreserveAspectCrop
                 smooth: false
             }
@@ -107,7 +126,7 @@ ShellRoot {
                 Rectangle {
                     id: frame
                     anchors.fill: parent
-                    color: "#0d0d12"
+                    color: root.field
                     border.color: root.failed ? root.red : root.line
                     Rectangle { x: -1; y: -1; width: 12; height: 2; color: root.gold }
                     Rectangle { x: -1; y: -1; width: 2; height: 12; color: root.gold }

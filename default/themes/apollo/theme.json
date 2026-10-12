@@ -1,0 +1,43 @@
+{
+  "id": "apollo",
+  "name": {
+    "en": "Apollo",
+    "nb": "Apollon"
+  },
+  "god": "Apollo",
+  "description": {
+    "en": "The sun at noon: warm white and burnished gold. A light theme.",
+    "nb": "Sola midt på dagen: varmt hvitt og blankt gull. Et lyst tema."
+  },
+  "light": true,
+  "glyph": "f05a8",
+  "palette": {
+    "bg": "#fbf6ea",
+    "surface": "#f3ebd7",
+    "raised": "#eadfc4",
+    "line": "#c9b48a",
+    "text": "#2a2113",
+    "muted": "#5f523b",
+    "accent": "#8a5800",
+    "accentHi": "#6b4200",
+    "danger": "#b3261e"
+  },
+  "terminal": [
+    "#2a2113",
+    "#b3261e",
+    "#2e7d32",
+    "#8a5800",
+    "#1f5fa8",
+    "#7b3fa0",
+    "#0f7480",
+    "#6b5d44",
+    "#5f523b",
+    "#c62828",
+    "#38803d",
+    "#a35f00",
+    "#2a6fc0",
+    "#8e4bb8",
+    "#127b86",
+    "#2a2113"
+  ]
+}

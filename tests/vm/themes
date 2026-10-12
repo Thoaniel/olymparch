@@ -1,0 +1,111 @@
+#!/bin/bash
+# VM test: themes. Copies the shell, lock screen, Hyprland defaults, foot, the settings schema, olymparch-settings,
+# olymparch-theme and every theme (with its recoloured torch frames, made here with art/torch.py) into a copy of the
+# installed disk, then switches through every theme with `olymparch-theme set ID` and takes pictures of each: a new
+# terminal with notifications, the desktop (wallpaper, bar), Settings → Appearance, the theme picker
+# (Super+Ctrl+Shift+Space) and the lock screen. Checks that every theme reached the files, Hyprland's border and the
+# bar's pixels. The pictures end up in tests/vm/out/themes/ (and tests/vm/out/themes.html).
+#   OLYMPARCH_BASE=$HOME/dev/olymparch-base tests/vm/themes [ID …]
+set -uo pipefail
+cd "$(dirname "$0")/../.."
+. dev/env
+SRC=${OLYMPARCH_BASE:-tests/vm/out/install-disk}   # a read-only installed disk to test on (overlay)
+[ -f "$SRC/disk.qcow2" ] || { echo "kjør tests/vm/install-disk først (eller sett OLYMPARCH_BASE)" >&2; exit 2; }
+O=tests/vm/out/themes
+rm -rf -- tests/vm/out/themes
+mkdir -p "$O"
+install -m644 "$SRC/vars.fd" "$O/vars.fd"   # a writable copy (the base is read-only)
+qemu-img create -q -f qcow2 -b "$(realpath "$SRC/disk.qcow2")" -F qcow2 "$O/disk.qcow2"
+QMP=$O/qmp.sock
+. tests/vm/lib.sh
+PW='olymp-test-123'
+trap 'kill "$QPID" 2>/dev/null; python3 -I tests/vm/report.py tests/vm/out/themes.html "$O" >/dev/null 2>&1' EXIT
+t0=$SECONDS
+fails=()
+if [ $# -gt 0 ]; then ids=("$@"); else
+    ids=(zeus)
+    for t in default/themes/*/theme.json; do id=$(basename "$(dirname "$t")"); [ "$id" = zeus ] || ids+=("$id"); done
+fi
+
+# The recoloured torch frames for 1080 (the VM's screen is smaller), made on this machine, kept between runs
+py() { if command -v uv >/dev/null; then uv run -q --no-project --with pillow python "$@"; else python "$@"; fi; }
+W=tests/vm/out/themes-wallpaper
+for id in "${ids[@]}"; do
+    [ "$id" = zeus ] && continue
+    t=default/themes/$id/theme.json
+    if [ -s "$W/$id/1080/frame-47.png" ] && [ "$W/$id/1080/frame-47.png" -nt "$t" ] && [ "$W/$id/1080/frame-47.png" -nt art/torch.py ]; then :; else
+        py art/torch.py "$W/$id/1080" 1920 1080 48 "$t" >/dev/null &
+    fi
+done
+wait
+
+bar_pixel() {  # the colour of the bar at x=300 (between the workspaces and the wordmark), as rrggbb
+    python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/probe.ppm" 2>/dev/null
+    python3 -I -c 'import sys
+d = open(sys.argv[1], "rb").read().split(b"\n", 3)
+w = int(d[1].split()[0])
+i = (14 * w + 300) * 3
+print("%02x%02x%02x" % tuple(d[3][i:i + 3]))' "$O/probe.ppm"
+}
+near() {  # near RRGGBB RRGGBB: within 6 per channel
+    python3 -I -c 'import sys
+a, b = (bytes.fromhex(x) for x in sys.argv[1:3])
+sys.exit(0 if all(abs(x - y) <= 6 for x, y in zip(a, b)) else 1)' "$1" "$2"
+}
+
+vm boot.log -virtfs local,path="$PWD",mount_tag=olysrc,security_model=none,readonly=on,id=src \
+    -audiodev none,id=snd0 -device ich9-intel-hda -device hda-output,audiodev=snd0 -device qemu-xhci -device usb-tablet
+unlock_and_desktop "$PW"
+
+# This repo's files in place (the themes with their frames), the shell restarted in Norwegian, the check helper
+press meta_l+ret; sleep 2
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /mnt/default/settings /mnt/default/lock /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -Dm644 /mnt/default/foot/foot.ini /etc/xdg/foot/foot.ini && sudo install -m755 /mnt/system/bin/olymparch-settings /mnt/system/bin/olymparch-theme /usr/bin/ && sudo mkdir -p /usr/share/olymparch/themes && sudo cp -r /mnt/default/themes/. /usr/share/olymparch/themes/ && for d in /mnt/tests/vm/out/themes-wallpaper/*/; do i=\$(basename \$d); sudo mkdir -p /usr/share/olymparch/themes/\$i/wallpaper && sudo cp -r \$d/1080 /usr/share/olymparch/themes/\$i/wallpaper/; done; sudo chmod 666 /dev/kmsg && olymparch-theme apply --quiet; hyprctl reload >/dev/null; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=nb_NO.UTF-8 setsid -f /usr/lib/olymparch/launch-shell; echo '<2>THEMES-UPDATED' > /dev/kmsg\n" 1
+keys "$PW\n" 1
+wait_for 'THEMES-UPDATED' 60 || finish "FAIL · fikk ikke kopiert filene inn"
+keys "c() { if eval \"\$2\" >/dev/null 2>&1; then echo \"<2>CHK-\$1-OK\"; else echo \"<2>CHK-\$1-NO\"; fi > /dev/kmsg; }; clear\n" 0.5
+sleep 4
+shot start "Skrivebordet før temaene (Zevs)"
+
+for id in "${ids[@]}"; do
+    bg=$(python3 -I -c 'import json, sys; print(json.load(open(sys.argv[1]))["palette"]["bg"][1:])' "default/themes/$id/theme.json")
+    accent=$(python3 -I -c 'import json, sys; print(json.load(open(sys.argv[1]))["palette"]["accent"][1:])' "default/themes/$id/theme.json")
+    name=$(python3 -I -c 'import json, sys; print(json.load(open(sys.argv[1]))["name"]["nb"])' "default/themes/$id/theme.json")
+    # switch (the terminal closes), then a new terminal in the new colours, and two notifications
+    keys "\n" 0.8   # the first key after the lock screen can go missing
+    keys " olymparch-theme set $id && sleep 0.5 && exit\n" 2.5
+    press meta_l+ret; sleep 1.5
+    keys "bash /mnt/tests/vm/theme-check.sh $id $bg $accent\n" 0.3
+    wait_for "CHK-$id-files-(OK|NO)" 20
+    seen "CHK-$id-files-OK" || fails+=("$id-files")
+    keys "clear; bash /mnt/tests/vm/palette.sh; notify-send 'Steam' 'Hades II er oppdatert'; notify-send -u critical 'Disk' 'Disken er 95 % full'\n" 1.2
+    shot "$id-terminal" "$name: ny terminal i temaets farger, et vanlig og et kritisk varsel"
+    press meta_l+2; sleep 1.2
+    shot "$id-skrivebord" "$name: skrivebordet (levende bakgrunn, baren, varslene)"
+    px=$(bar_pixel)
+    near "$px" "$bg" || fails+=("$id-bar ($px, ventet $bg)")
+    # a click dismisses each notification (the critical ones stay until then), so they don't cover the next pictures
+    for _ in 1 2 3 4 5; do python3 -I tests/vm/qmp.py "$QMP" click 1088 70 1280 800; sleep 0.8; done
+    python3 -I tests/vm/qmp.py "$QMP" click 640 420 1280 800   # the pointer back in the middle: focus follows it
+    press meta_l+1; sleep 0.8
+    keys "olymparch-settings open appearance\n" 2.5
+    shot "$id-innstillinger" "$name: Innstillinger → Utseende med temavelgeren"
+    press esc; press esc; sleep 1.5
+    press ctrl+shift+meta_l+spc; sleep 1.5
+    shot "$id-temavelger" "$name: Super+Ctrl+Shift+Space, temavelgeren"
+    press esc; sleep 1
+    press meta_l+l; sleep 2.5
+    keys "abcdef" 0.5
+    shot "$id-las" "$name: låseskjermen (stillbilde, klokke, passordboks)"
+    press esc; sleep 0.3
+    keys "$PW\n" 3
+    python3 -I tests/vm/qmp.py "$QMP" click 640 420 1280 800   # the terminal has the keyboard again
+    sleep 0.5
+done
+
+# The shell's own log on the serial console
+keys "sh -c 'tail -n 60 ~/.local/state/olymparch/shell.log | while IFS= read -r l; do echo \"<2>QS: \$l\" > /dev/kmsg; done; echo \"<2>LOG-DONE\" > /dev/kmsg'\n" 1
+wait_for 'LOG-DONE' 20
+grep -aoE 'QS: .*' "$O/$LOG" | sed 's/\x1b\[[0-9;]*m//g' >"$O/shell-log.txt"
+errors=$(awk '/Launching config/ {n = 0} /ERROR|TypeError|ReferenceError/ {n++} END {print n + 0}' "$O/shell-log.txt")
+((errors == 0)) || fails+=("$errors feil i skall-loggen")
+finish "$([ ${#fails[@]} = 0 ] && echo PASS || echo "FAIL (${fails[*]})") · ${#ids[@]} temaer: terminal, skrivebord, innstillinger, temavelger og låseskjerm i hvert på $((SECONDS - t0)) s"

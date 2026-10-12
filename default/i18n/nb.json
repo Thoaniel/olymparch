@@ -78,5 +78,9 @@
   "emoji.search": "Søk etter emoji (norsk eller engelsk) …",
   "emoji.none": "Ingen emoji passer.",
   "emoji.recent": "nylig brukt",
-  "emoji.keys": "Piltaster velg · Enter skriv inn · Esc lukk"
+  "emoji.keys": "Piltaster velg · Enter skriv inn · Esc lukk",
+  "theme.title": "GUDENE PÅ OLYMPEN",
+  "theme.hint": "←↑↓→ velg · Enter bruk · Esc lukk · Innstillinger → Utseende",
+  "theme.light": "LYST",
+  "theme.in_use": "I BRUK"
 }
