@@ -166,6 +166,22 @@ pacstrap "${pacstrap_opts[@]}" /mnt base "$KERNEL" mkinitcpio btrfs-progs crypts
     pipewire pipewire-pulse wireplumber xdg-desktop-portal-hyprland plymouth upower \
     firefox thunar tumbler gvfs thunar-volman imv mpv xdg-utils xdg-user-dirs udiskie udisks2 clamav pacman-contrib
 
+# --- Hardware (olymparch-hw): the live system is the same machine, so its plan is the new system's plan.
+# Drivers, microcode and only the firmware this machine needs, the initramfs MODULES for a built-in keyboard,
+# and the boot check, hotplug offers and pkexec helper. Not fatal: mesa drives any screen, and what is
+# missing is offered with one click after boot. Runs before mkinitcpio -P below, so the drop-in is used.
+step "$(L "Hardware (olymparch-hw)" "Maskinvare (olymparch-hw)")"
+# 32-bit drivers (lib32-vulkan-*) are in [multilib]: on for every install, so the plan can be applied in full
+sed -i '/^#\[multilib\]$/,/^#Include/ s/^#//' /mnt/etc/pacman.conf
+hw=/usr/share/olymparch/system/bin/olymparch-hw
+if [ -x "$hw" ]; then
+    mkdir -p /mnt/var/log
+    "$hw" plan --root /mnt | tee /mnt/var/log/olymparch-hw-install.txt
+    "$hw" apply --root /mnt --when install 2>&1 | tee -a /mnt/var/log/olymparch-hw-install.txt ||
+        step "$(L "Warning: some drivers were not installed. They are offered after boot (see /var/log/olymparch-hw-install.txt)." "Advarsel: noen drivere ble ikke installert. De tilbys etter oppstart (se /var/log/olymparch-hw-install.txt).")"
+    "$hw" setup-system --root /mnt || step "$(L "Warning: the hardware check at boot was not set up" "Advarsel: maskinvaresjekken ved oppstart ble ikke satt opp")"
+fi
+
 step "$(L "Configuration" "Oppsett")"
 genfstab -U /mnt | sed -E 's/,subvolid=[0-9]+//' >/mnt/etc/fstab
 echo "$HOSTNAME" >/mnt/etc/hostname

@@ -1,0 +1,46 @@
+Olymparch hardware plan
+
+  Machine    laptop · Example Computers Book 14 IA
+  CPU        12th Gen Intel(R) Core(TM) i7-1260P (GenuineIntel)
+  Graphics   0000:00:02.0 8086:46a6 (i915, primary)
+
+Matched rules
+  gpu-intel                  Intel graphics: Vulkan and video decoding
+                               packages: vulkan-intel lib32-vulkan-intel intel-media-driver
+  gpu-intel-vpl              Intel graphics: video encoding (oneVPL)
+                               packages: vpl-gpu-rt
+  ucode-intel                Intel CPU microcode
+                               packages: intel-ucode
+  audio-sof                  Intel SOF sound: firmware and topology
+                               packages: sof-firmware
+  laptop-power               Laptop: power profiles and screen brightness
+                               packages: power-profiles-daemon brightnessctl
+  laptop-thermald            Intel laptop: thermal daemon
+                               packages: thermald
+                               services: thermald.service
+  laptop-keyboard-initramfs  Built-in keyboard at the disk password
+                               initramfs-modules: i2c_hid_acpi i2c_designware_platform intel_lpss_pci pinctrl_tigerlake
+  wifi                       Wi-Fi: regulatory database and tools
+                               packages: wireless-regdb iw
+  bluetooth                  Bluetooth
+                               packages: bluez bluez-utils
+                               services: bluetooth.service
+
+Firmware
+  linux-firmware-intel       for i915 iwlwifi
+
+To install (14)
+  vulkan-intel lib32-vulkan-intel intel-media-driver vpl-gpu-rt intel-ucode sof-firmware
+  power-profiles-daemon brightnessctl thermald wireless-regdb iw bluez bluez-utils
+  linux-firmware-intel
+
+Configuration
+  /etc/mkinitcpio.conf.d/20-olymparch-hw.conf
+    MODULES+=(i2c_hid_acpi i2c_designware_platform intel_lpss_pci pinctrl_tigerlake)
+
+Notes
+  gpu-intel: beta: should work, not yet tested on real machines
+  gpu-intel-vpl: beta: should work, not yet tested on real machines
+  laptop-power: beta: should work, not yet tested on real machines
+  laptop-thermald: beta: should work, not yet tested on real machines
+  laptop-keyboard-initramfs: beta: should work, not yet tested on real machines

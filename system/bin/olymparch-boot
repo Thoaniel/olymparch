@@ -12,6 +12,8 @@ K=/boot/olymparch/k
 CONF=/etc/olymparch/boot.conf      # written by the installer: UUID, CMDLINE, KERNEL
 # shellcheck disable=SC1090
 . "$CONF"
+# kernel options from the hardware rules (olymparch-hw), one line of words
+[ -r /etc/olymparch/cmdline.d/hw.conf ] && CMDLINE+=" $(grep -v '^#' /etc/olymparch/cmdline.d/hw.conf | xargs)"
 
 kver_of() {  # kernel version in a root tree: the module directory that has a vmlinuz
     local d

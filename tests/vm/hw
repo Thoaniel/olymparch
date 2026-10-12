@@ -1,0 +1,108 @@
+#!/bin/bash
+# VM test: hardware detection (olymparch-hw) on a copy of the installed disk. Copies this repo's pieces in
+# over 9p (no rebuild), then:
+#   1. olymparch-hw scan / plan / explain in a terminal
+#   2. hotplug: a USB keyboard added through QMP → udev → user unit → notification with an Install button;
+#      the click runs pkexec /usr/lib/olymparch/hw-apply, which installs the test rule's package (sl)
+#   3. the boot check: a faked graphics card swap and the offer it leads to ("Not now" is clicked)
+#   4. hw-apply refuses bad or non-matching rule IDs; olymparch-hw apply --when install, as the installer runs it
+set -uo pipefail
+cd "$(dirname "$0")/../.."
+. dev/env
+SRC=${OLYMPARCH_BASE:-tests/vm/out/install-disk}   # a read-only installed disk to test on (overlay)
+[ -f "$SRC/disk.qcow2" ] || { echo "kjør tests/vm/install-disk først" >&2; exit 2; }
+O=tests/vm/out/hw
+rm -rf -- tests/vm/out/hw
+mkdir -p "$O"
+cp "$SRC/vars.fd" "$O/vars.fd"
+qemu-img create -q -f qcow2 -b "$(realpath "$SRC/disk.qcow2")" -F qcow2 "$O/disk.qcow2"
+QMP=$O/qmp.sock
+. tests/vm/lib.sh
+PW='olymp-test-123'
+term() {  # run a command line in a new terminal on the desktop
+    press meta_l+ret
+    sleep 2
+    keys "$1\n" 1
+}
+button() {  # button N: wait until the newest notification shows its buttons; prints "X Y W H" of button N
+    local i
+    for ((i = 0; i < ${2:-40}; i++)); do
+        python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/probe.ppm" 2>/dev/null &&
+            python3 -I tests/vm/button.py "$O/probe.ppm" "$1" 2>/dev/null && return 0
+        sleep 1
+    done
+    return 1
+}
+trap 'kill "$QPID" 2>/dev/null' EXIT
+t0=$SECONDS
+vm boot.log -virtfs local,path="$PWD",mount_tag=olysrc,security_model=none,readonly=on,id=src \
+    -device qemu-xhci,id=xhci -device usb-tablet,bus=xhci.0
+unlock_and_desktop "$PW"
+
+# Put olymparch-hw, its rules, units, polkit files and the shell's notification buttons in place
+term "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo bash /mnt/tests/vm/hw-guest.sh; pkill -x quickshell; hyprctl reload >/dev/null; exit"
+keys "$PW\n" 1
+wait_for 'HW-READY' 60 || { shot oppsett-feil "olymparch-hw kom ikke på plass"; finish "FAIL · fikk ikke kopiert olymparch-hw inn"; }
+rules=$(grep -aoE 'HW-READY.*' "$O/$LOG" | tail -n 1 | sed 's/\x1b\[[0-9;]*m//g')
+sleep 5
+
+# 1. What it finds
+term "olymparch-hw scan"
+sleep 2
+shot scan "olymparch-hw scan: QEMU-maskinen, virtio-grafikk, enhetene og driverne deres"
+keys "clear; olymparch-hw plan\n" 3
+shot plan "olymparch-hw plan: regelen vm-qemu passer (gjesteagenten), ingen GPU-drivere trengs i en VM"
+keys "clear; olymparch-hw explain vm-qemu; olymparch-hw explain gpu-amd; olymparch-hw explain vm-hotplug-test\n" 3
+shot explain "olymparch-hw explain: hvorfor en regel passer (✓) eller ikke (✗), med enheten som avgjorde"
+
+# 2. Hotplug: a USB keyboard appears; the test rule offers its "driver" (sl)
+keys "clear; pacman -Q sl; echo 'plugging in a USB keyboard (QMP device_add usb-kbd)'\n" 1
+python3 -I tests/vm/qmp.py "$QMP" device_add usb-kbd kbd1 xhci.0
+if xy=$(button 0 45); then
+    shot hotplug-varsel "USB-tastatur koblet til (QMP device_add): udev → olymparch-hw-notify@vm-hotplug-test → varsel med Installer-knapp"
+else
+    shot hotplug-feil "Ingen varsel etter hotplug"
+    finish "FAIL · ingen varsel etter hotplug ($rules)"
+fi
+# shellcheck disable=SC2086
+python3 -I tests/vm/qmp.py "$QMP" click $xy
+sleep 2
+shot installerer "Klikk på Installer: pkexec /usr/lib/olymparch/hw-apply vm-hotplug-test (polkit: wheel i aktiv økt, ett klikk)"
+keys "clear; for i in \$(seq 90); do pacman -Q sl >/dev/null 2>&1 && break; sleep 2; done; pacman -Q sl && echo '<2>SL-INSTALLED' | sudo tee /dev/kmsg; tail -n 8 /var/log/olymparch-hw.log\n" 1
+keys "$PW\n" 1
+installed=0
+wait_for 'SL-INSTALLED' 200 && installed=1
+sleep 2
+shot installert "Driveren («sl») er installert, varselet sier fra; loggen i /var/log/olymparch-hw.log"
+
+# 3. The boot check (sudo is still unlocked in this terminal): pretend the last boot had an RTX 4070, then run what olymparch-hw-boot.service runs
+keys "clear; sudo olymparch-hw boot-check >/dev/null; echo 10de:2786:1 | sudo tee /var/lib/olymparch/hw/gpu >/dev/null; sudo olymparch-hw boot-check | tee /tmp/offers; grep -q vm-qemu /tmp/offers && echo '<2>BOOT-OFFER' | sudo tee /dev/kmsg >/dev/null; olymparch-hw notify --boot &\n" 1
+offer=0
+wait_for 'BOOT-OFFER' 60 && offer=1
+if xy=$(button 1 40); then
+    shot oppstart-tilbud "Oppstartssjekken: skjermkortet er byttet (falsk fingeravtrykk), og gjesteagenten tilbys med ett klikk"
+    # shellcheck disable=SC2086
+    python3 -I tests/vm/qmp.py "$QMP" click $xy
+    sleep 2
+    shot ikke-naa "«Ikke nå»: tilbudet blir borte og huskes (~/.local/state/olymparch/hw-ignored)"
+else
+    shot oppstart-feil "Ingen varsel fra oppstartssjekken"
+    offer=0
+fi
+
+# 4. The helper refuses what is not a matching rule ID; apply as the installer runs it (all install rules)
+keys "clear; sudo /usr/lib/olymparch/hw-apply 'x;reboot'; a=\$?; sudo /usr/lib/olymparch/hw-apply gpu-amd; b=\$?; echo \"hw-apply refused: bad id -> \$a, gpu-amd (no AMD here) -> \$b\"; [ \$a = 2 ] && [ \$b != 0 ] && echo '<2>HELPER-SAFE' | sudo tee /dev/kmsg >/dev/null\n" 3
+keys "sudo olymparch-hw apply --when install 2>&1 | tail -n 6; pacman -Q qemu-guest-agent && systemctl is-enabled olymparch-hw-boot.service && echo '<2>APPLY-OK' | sudo tee /dev/kmsg >/dev/null\n" 1
+safe=0 applied=0
+wait_for 'HELPER-SAFE' 30 && safe=1
+wait_for 'APPLY-OK' 240 && applied=1
+sleep 2
+shot apply "hw-apply nekter ugyldige/ikke-passende regler; olymparch-hw apply --when install (som installasjonen) installerer gjesteagenten"
+
+# The shell's own log: the new notification buttons must not have broken it
+keys "clear; n=\$(awk '/Launching config/ {n = 0} /ERROR|TypeError|ReferenceError/ {n++} END {print n + 0}' ~/.local/state/olymparch/shell.log); echo \"<2>QSERR=\$n\" | sudo tee /dev/kmsg\n" 1
+wait_for 'QSERR=' 20
+qserr=$(grep -aoE 'QSERR=[0-9]+' "$O/$LOG" | tail -n 1 | cut -d= -f2)
+
+msg="hw: scan/plan/explain, hotplug-varsel, ett klikk installerte=$installed, oppstartstilbud=$offer, hjelperen nekter=$safe, apply=$applied, skallfeil=${qserr:-?} på $((SECONDS - t0)) s"
+if [[ $rules == *vm-qemu* ]] && ((installed && offer && safe && applied)) && [ "${qserr:-1}" = 0 ]; then finish "PASS · $msg"; else finish "FAIL · $msg ($rules)"; fi

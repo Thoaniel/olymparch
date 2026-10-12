@@ -1,0 +1,8 @@
+# Sound. Plain HD Audio (snd_hda_intel) needs nothing; Intel SOF (most laptops since 2019) needs its
+# firmware and topology files (55 MiB), so only when a SOF driver is bound.
+
+id=audio-sof
+name=Intel SOF sound: firmware and topology
+name.nb=Intel SOF-lyd: fastvare og topologi
+driver=sof-audio-*
+packages=sof-firmware

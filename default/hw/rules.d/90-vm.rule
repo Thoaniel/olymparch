@@ -1,0 +1,7 @@
+# Virtual machines (the tests): the guest agent for clean shutdown and clock sync. No games.
+
+id=vm-qemu
+name=QEMU/KVM guest agent
+name.nb=QEMU/KVM-gjesteagent
+dmi.sys_vendor=QEMU
+packages=qemu-guest-agent

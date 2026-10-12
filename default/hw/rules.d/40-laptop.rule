@@ -1,0 +1,27 @@
+# Laptops: chassis types 8, 9, 10, 14, 30, 31 and 32 in DMI.
+
+id=laptop-power
+name=Laptop: power profiles and screen brightness
+name.nb=Bærbar: strømprofiler og skjermlysstyrke
+support=beta
+chassis=laptop
+packages=power-profiles-daemon brightnessctl
+
+# Intel CPU on battery: thermald keeps it cool without hard throttling
+id=laptop-thermald
+name=Intel laptop: thermal daemon
+name.nb=Intel-bærbar: varmestyring (thermald)
+support=beta
+cpu.vendor=GenuineIntel
+battery=yes
+packages=thermald
+services=thermald.service
+
+# The keyboard must work at the disk password: built-in I2C-HID / Intel THC keyboards need their whole driver
+# chain (and pinctrl) in the initramfs. The modules come from the keyboard's sysfs ancestors.
+id=laptop-keyboard-initramfs
+name=Built-in keyboard at the disk password
+name.nb=Innebygd tastatur ved diskpassordet
+support=beta
+keyboard=internal
+initramfs-modules=@internal-keyboard

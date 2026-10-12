@@ -1,0 +1,8 @@
+# VM test only (tests/vm/hw): QEMU's USB keyboard (usb-kbd, added with QMP device_add) stands in for new
+# hardware. The "driver" is the tiny package sl. Installed to /etc/olymparch/hw/rules.d in the test VM.
+id=vm-hotplug-test
+name=Test: new USB keyboard found
+name.nb=Test: nytt USB-tastatur funnet
+modalias=usb:v0627p0001*ic03isc01ip01*
+packages=sl
+when=hotplug

@@ -1,5 +1,5 @@
 // The notification server: the shell is the only one (no mako, dunst or swaync). Toasts top right under the
-// bar, at most 3 at a time, 6 s each (15 s with buttons; critical ones stay until dismissed).
+// bar, at most 3 at a time, 6 s each (ones with buttons and critical ones stay until answered or dismissed).
 // Do not disturb (spillmodus): only critical notifications are shown.
 import QtQuick
 import Quickshell
@@ -20,10 +20,10 @@ Scope {
             const critical = n.urgency === NotificationUrgency.Critical;
             if (notes.dnd && !critical) return;   // not tracked: dropped quietly
             n.tracked = true;
-            if (!critical) {
-                const ms = n.actions.length > 0 ? 15000 : 6000;
-                const t = Qt.createQmlObject(`import QtQuick; Timer { interval: ${ms}; running: true }`, notes);
-                // the toast may be gone already (dismissed, or a button closed it)
+            // offers with buttons («Install driver», «Undo» …) stay until answered, like critical ones
+            if (!critical && n.actions.length === 0) {
+                const t = Qt.createQmlObject("import QtQuick; Timer { interval: 6000; running: true }", notes);
+                // the toast may be gone already (dismissed)
                 t.triggered.connect(() => { try { if (n) n.expire(); } catch (e) {} t.destroy(); });
             }
         }
@@ -48,6 +48,7 @@ Scope {
             Repeater {
                 model: server.trackedNotifications.values.slice(-3).reverse()
                 delegate: Rectangle {
+                    id: card
                     required property var modelData
                     readonly property bool critical: modelData.urgency === NotificationUrgency.Critical
                     width: column.width
@@ -109,7 +110,7 @@ Scope {
                             }
                         }
                     }
-                    MouseArea { anchors.fill: parent; onClicked: parent.modelData.dismiss() }
+                    MouseArea { anchors.fill: parent; z: -1; onClicked: parent.modelData.dismiss() }
                 }
             }
         }

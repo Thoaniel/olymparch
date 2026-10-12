@@ -1,0 +1,15 @@
+# The test VM: QEMU q35 with virtio-vga, a USB tablet, NVMe and ICH9 HD Audio, CPU passed through (-cpu host).
+dmi chassis_type 1
+dmi sys_vendor QEMU
+dmi product_name Standard PC (Q35 + ICH9, 2009)
+cpu vendor_id GenuineIntel
+cpu model_name Intel(R) Core(TM) i7-14700F
+cpu flags hypervisor
+dev pci 0000:00:01.0 path=pci0000:00/0000:00:01.0 driver=virtio-pci module=virtio_pci builtin=1 class=030000 vd=1af4:1050 boot_vga=1 modalias=pci:v00001AF4d00001050sv00001AF4sd00001100bc03sc00i00
+dev pci 0000:00:02.0 path=pci0000:00/0000:00:02.0 driver=nvme module=nvme class=010802 vd=1b36:0010 modalias=pci:v00001B36d00000010sv00001AF4sd00001100bc01sc08i02
+dev pci 0000:00:1b.0 path=pci0000:00/0000:00:1b.0 driver=snd_hda_intel module=snd_hda_intel class=040300 vd=8086:293e modalias=pci:v00008086d0000293Esv00001AF4sd00001100bc04sc03i00
+dev pci 0000:00:1d.0 path=pci0000:00/0000:00:1d.0 driver=xhci_hcd module=xhci_pci builtin=1 class=0c0330 vd=1b36:000d modalias=pci:v00001B36d0000000Dsv00001AF4sd00001100bc0Csc03i30
+dev usb 1-1:1.0 path=pci0000:00/0000:00:1d.0/usb1/1-1/1-1:1.0 driver=usbhid module=usbhid builtin=1 modalias=usb:v0627p0001d0000dc00dsc00dp00ic03isc00ip00in00
+dev platform i8042 path=platform/i8042 driver=i8042 module=i8042 builtin=1 modalias=platform:i8042
+kbd input1 path=platform/i8042/serio0/input/input1
+node path=platform/i8042/serio0 driver=atkbd module=atkbd builtin=1

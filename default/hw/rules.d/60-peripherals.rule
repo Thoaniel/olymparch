@@ -1,0 +1,45 @@
+# Peripherals. Controllers work through kernel drivers (xpad, hid-playstation, hid-nintendo, hid-steam,
+# hid-microsoft); only the Xbox wireless dongle and Thrustmaster wheels need out-of-tree drivers (DKMS).
+# Never blacklist xpad.
+
+# RGB: MSI Mystic Light, ASUS Aura, Corsair, NZXT, Gigabyte RGB Fusion, SteelSeries.
+# openrgb ships its own udev rules (60-openrgb.rules). Never acpi_enforce_resources=lax.
+id=rgb
+name=RGB lighting: OpenRGB
+name.nb=RGB-lys: OpenRGB
+modalias=usb:v1462p7[CDE]*
+modalias=usb:v0B05p18F3*
+modalias=usb:v0B05p19AF*
+modalias=usb:v0B05p1939*
+modalias=usb:v1B1Cp1B*
+modalias=usb:v1E71p*
+modalias=usb:v048Dp5702*
+modalias=usb:v1038p12*
+optional=openrgb
+when=install hotplug
+
+# Xbox Wireless Adapter (the dongle). Its firmware is under Microsoft's terms, shown before it is fetched.
+id=xbox-dongle
+name=Xbox wireless adapter: xone driver
+name.nb=Xbox trådløs adapter: xone-driver
+support=beta
+modalias=usb:v045Ep02E6*
+modalias=usb:v045Ep02FE*
+modalias=usb:v045Ep02F9*
+modalias=usb:v045Ep091E*
+ourrepo=xone-dkms
+when=install hotplug
+
+# Thrustmaster T300RS, T248, TX and TS-XW/TS-PC: force feedback needs hid-tmff2 (MOK enrolment under Secure Boot)
+id=thrustmaster-wheel
+name=Thrustmaster wheel: force feedback (hid-tmff2)
+name.nb=Thrustmaster-ratt: kraftrespons (hid-tmff2)
+support=beta
+modalias=usb:v044FpB65D*
+modalias=usb:v044FpB66[6DEF]*
+modalias=usb:v044FpB669*
+modalias=usb:v044FpB689*
+modalias=usb:v044FpB692*
+modalias=usb:v044FpB696*
+ourrepo=hid-tmff2-dkms
+when=install hotplug

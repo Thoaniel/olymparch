@@ -68,5 +68,12 @@ if __name__ == "__main__":
         for down in (True, False):
             q.cmd("input-send-event", events=[{"type": "btn", "data": {"down": down, "button": "left"}}])
             time.sleep(0.1)
+    elif op == "device_add":  # device_add DRIVER ID [BUS]
+        args = {"driver": sys.argv[3], "id": sys.argv[4]}
+        if len(sys.argv) > 5:
+            args["bus"] = sys.argv[5]
+        q.cmd("device_add", **args)
+    elif op == "device_del":
+        q.cmd("device_del", id=sys.argv[3])
     elif op == "quit":
         q.cmd("quit")

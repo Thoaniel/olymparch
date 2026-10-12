@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- pkexec /usr/lib/olymparch/hw-apply RULE: install what a matching hardware rule needs.
+     50-olymparch-hw.rules lets the desktop's own (wheel) user do it with the one click. -->
+<policyconfig>
+  <vendor>Olymparch</vendor>
+  <action id="org.olymparch.hw-apply">
+    <description>Install drivers for hardware that was found</description>
+    <description xml:lang="nb">Installer drivere for maskinvare som ble funnet</description>
+    <message>Authentication is required to install drivers</message>
+    <message xml:lang="nb">Du må logge inn for å installere drivere</message>
+    <icon_name>drive-harddisk</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/olymparch/hw-apply</annotate>
+  </action>
+</policyconfig>

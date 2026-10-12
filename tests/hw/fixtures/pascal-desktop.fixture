@@ -1,0 +1,15 @@
+# Older gaming desktop: GTX 1070 (Pascal, nouveau), Ryzen 5 3600, Intel ethernet, an Xbox wireless dongle
+# and a Realtek USB Bluetooth dongle whose firmware the kernel asked for but could not find.
+dmi chassis_type 3
+dmi sys_vendor Example Builder
+dmi product_name Tower B450
+cpu vendor_id AuthenticAMD
+cpu model_name AMD Ryzen 5 3600 6-Core Processor
+dev pci 0000:07:00.0 path=pci0000:00/0000:00:03.1/0000:07:00.0 driver=nouveau module=nouveau class=030000 vd=10de:1b81 boot_vga=1 modalias=pci:v000010DEd00001B81sv00001458sd00003772bc03sc00i00
+dev pci 0000:07:00.1 path=pci0000:00/0000:00:03.1/0000:07:00.1 driver=snd_hda_intel module=snd_hda_intel class=040300 vd=10de:10f0 modalias=pci:v000010DEd000010F0sv00001458sd00003772bc04sc03i00
+dev pci 0000:09:00.3 path=pci0000:00/0000:00:07.1/0000:09:00.3 driver=xhci_hcd module=xhci_pci builtin=1 class=0c0330 vd=1022:149c modalias=pci:v00001022d0000149Csv00001458sd00005007bc0Csc03i30
+dev pci 0000:03:00.0 path=pci0000:00/0000:00:01.2/0000:03:00.0 driver=igb module=igb class=020000 vd=8086:1539 modalias=pci:v00008086d00001539sv00001458sd0000E000bc02sc00i00
+dev usb 1-4:1.0 path=pci0000:00/0000:00:07.1/0000:09:00.3/usb1/1-4/1-4:1.0 modalias=usb:v045Ep02FEd0101dcFFdscFFdpFFicFFisc47ipD0in00
+dev usb 1-5:1.0 path=pci0000:00/0000:00:07.1/0000:09:00.3/usb1/1-5/1-5:1.0 driver=btusb module=btusb modalias=usb:v0BDAp8771d0200dcE0dsc01dp01icE0isc01ip01in00
+fw nouveau nvidia/gp104/gr/fecs_bl.bin
+kmsg Direct firmware load for rtl_bt/rtl8761bu_fw.bin failed with error -2

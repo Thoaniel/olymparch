@@ -1,0 +1,46 @@
+Olymparch maskinvareplan
+
+  Maskin     bærbar · Example Computers Book 14 IA
+  Prosessor  12th Gen Intel(R) Core(TM) i7-1260P (GenuineIntel)
+  Grafikk    0000:00:02.0 8086:46a6 (i915, hoved)
+
+Regler som passer
+  gpu-intel                  Intel-grafikk: Vulkan og videoavspilling
+                               packages: vulkan-intel lib32-vulkan-intel intel-media-driver
+  gpu-intel-vpl              Intel-grafikk: videokoding (oneVPL)
+                               packages: vpl-gpu-rt
+  ucode-intel                Mikrokode for Intel-prosessor
+                               packages: intel-ucode
+  audio-sof                  Intel SOF-lyd: fastvare og topologi
+                               packages: sof-firmware
+  laptop-power               Bærbar: strømprofiler og skjermlysstyrke
+                               packages: power-profiles-daemon brightnessctl
+  laptop-thermald            Intel-bærbar: varmestyring (thermald)
+                               packages: thermald
+                               services: thermald.service
+  laptop-keyboard-initramfs  Innebygd tastatur ved diskpassordet
+                               initramfs-modules: i2c_hid_acpi i2c_designware_platform intel_lpss_pci pinctrl_tigerlake
+  wifi                       Wi-Fi: regelverksdatabase og verktøy
+                               packages: wireless-regdb iw
+  bluetooth                  Bluetooth
+                               packages: bluez bluez-utils
+                               services: bluetooth.service
+
+Fastvare
+  linux-firmware-intel       for i915 iwlwifi
+
+Installeres (14)
+  vulkan-intel lib32-vulkan-intel intel-media-driver vpl-gpu-rt intel-ucode sof-firmware
+  power-profiles-daemon brightnessctl thermald wireless-regdb iw bluez bluez-utils
+  linux-firmware-intel
+
+Oppsett
+  /etc/mkinitcpio.conf.d/20-olymparch-hw.conf
+    MODULES+=(i2c_hid_acpi i2c_designware_platform intel_lpss_pci pinctrl_tigerlake)
+
+Merknader
+  gpu-intel: beta: skal virke, men er ikke testet på ekte maskiner ennå
+  gpu-intel-vpl: beta: skal virke, men er ikke testet på ekte maskiner ennå
+  laptop-power: beta: skal virke, men er ikke testet på ekte maskiner ennå
+  laptop-thermald: beta: skal virke, men er ikke testet på ekte maskiner ennå
+  laptop-keyboard-initramfs: beta: skal virke, men er ikke testet på ekte maskiner ennå

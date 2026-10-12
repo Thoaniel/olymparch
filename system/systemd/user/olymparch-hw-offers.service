@@ -1,0 +1,12 @@
+# The offers olymparch-hw-boot.service found this boot (a new graphics card's Vulkan driver, missing
+# firmware), one notification each, with an Install button.
+[Unit]
+Description=Olymparch: hardware offers from this boot
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/olymparch-hw notify --boot
+
+[Install]
+WantedBy=default.target

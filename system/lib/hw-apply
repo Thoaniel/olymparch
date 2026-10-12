@@ -1,0 +1,20 @@
+#!/bin/bash
+# pkexec helper behind the Install button: pkexec /usr/lib/olymparch/hw-apply RULE...
+# Takes hardware rule IDs only, never package names or paths; olymparch-hw installs only what a rule that
+# matches this machine right now asks for. Everything is logged to /var/log/olymparch-hw.log.
+set -euo pipefail
+export PATH=/usr/bin LC_ALL=C
+unset OLYMPARCH_SYSROOT OLYMPARCH_HW_DATA OLYMPARCH_HW_NO_LOCAL
+[ "$(id -u)" = 0 ] || { echo "hw-apply: run through pkexec" >&2; exit 1; }
+[ $# -ge 1 ] && [ $# -le 8 ] || { echo "bruk: hw-apply REGEL..." >&2; exit 2; }
+for id in "$@"; do
+    [[ $id =~ ^[a-z0-9][a-z0-9-]{0,63}$ ]] || { echo "hw-apply: ugyldig regel-id" >&2; exit 2; }
+done
+user=''
+[ -n "${PKEXEC_UID:-}" ] && user=$(id -nu "$PKEXEC_UID" 2>/dev/null || true)
+exec </dev/null 9>/run/olymparch-hw-apply.lock
+flock 9   # one install at a time (pacman has its own lock, but a queue is friendlier than a failure)
+{
+    printf '\n== %s hw-apply %s (uid %s)\n' "$(date '+%F %T')" "$*" "${PKEXEC_UID:-?}"
+    /usr/bin/olymparch-hw apply --when hotplug ${user:+--user "$user"} -- "$@"
+} >>/var/log/olymparch-hw.log 2>&1
