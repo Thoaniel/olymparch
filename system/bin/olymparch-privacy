@@ -5,8 +5,8 @@ set -uo pipefail
 echo "Olymparch selv: pakkespeil (pacman), GitHub (oppdateringer/backup hvis slått på), nettsjekken til NetworkManager."
 echo "Ingen telemetri."
 echo
-echo "Åpne tilkoblinger nå (dine programmer):"
+echo "Åpne tilkoblinger nå («ukjent program»: en prosess du ikke har innsyn i, f.eks. en annen bruker eller en sandkasse):"
 # columns with a state filter: Recv-Q Send-Q Local Peer [Process]
 ss -Htnp state established 2>/dev/null | awk '{
-    p = "?"; if (match($0, /users:\(\("[^"]+"/)) p = substr($0, RSTART + 9, RLENGTH - 10)
-    printf "  %-18s %s\n", p, $4 }' | sort -u
+    p = "(ukjent program)"; if (match($0, /users:\(\("[^"]+"/)) p = substr($0, RSTART + 9, RLENGTH - 10)
+    printf "  %-20s %s\n", p, $4 }' | sort -u
