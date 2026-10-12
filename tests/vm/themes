@@ -84,7 +84,8 @@ for id in "${ids[@]}"; do
     px=$(bar_pixel)
     near "$px" "$bg" || fails+=("$id-bar ($px, ventet $bg)")
     # a click dismisses each notification (the critical ones stay until then), so they don't cover the next pictures
-    for _ in 1 2 3 4; do python3 -I tests/vm/qmp.py "$QMP" click 1088 70 1280 800; sleep 0.4; done
+    for _ in 1 2 3 4 5; do python3 -I tests/vm/qmp.py "$QMP" click 1088 70 1280 800; sleep 0.8; done
+    python3 -I tests/vm/qmp.py "$QMP" click 640 420 1280 800   # the pointer back in the middle: focus follows it
     press meta_l+1; sleep 0.8
     keys "olymparch-settings open appearance\n" 2.5
     shot "$id-innstillinger" "$name: Innstillinger → Utseende med temavelgeren"
@@ -97,6 +98,8 @@ for id in "${ids[@]}"; do
     shot "$id-las" "$name: låseskjermen (stillbilde, klokke, passordboks)"
     press esc; sleep 0.3
     keys "$PW\n" 3
+    python3 -I tests/vm/qmp.py "$QMP" click 640 420 1280 800   # the terminal has the keyboard again
+    sleep 0.5
 done
 
 # The shell's own log on the serial console
