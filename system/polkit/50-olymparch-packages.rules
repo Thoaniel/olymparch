@@ -1,0 +1,10 @@
+// The menu's package helper (/usr/lib/olymparch/packages install|remove NAME) always asks for your password
+// (remembered a few minutes): it can install any official package as root, so a click alone is not enough.
+// Only the active, local admin (wheel) user may be asked at all; everyone else is refused outright.
+// The password prompt is the shell itself (PasswordPrompt.qml, the session's polkit agent).
+polkit.addRule(function (action, subject) {
+    if (action.id == "org.olymparch.packages") {
+        if (subject.local && subject.active && subject.isInGroup("wheel")) return polkit.Result.AUTH_ADMIN_KEEP;
+        return polkit.Result.NO;
+    }
+});

@@ -1,0 +1,132 @@
+#!/bin/bash
+# The Olymparch menu's package helper (Install → Package, Remove). Fixed actions, one package name, official
+# repositories only. Read-only actions run as you; install and remove only through pkexec, which always asks for
+# your password (50-olymparch-packages.rules), and the menu runs them only after you confirmed what `preview` showed.
+#
+#   packages search WORDS…        pacman -Ss in the allowed repositories (read-only): repo/name<TAB>version<TAB>description
+#   packages preview install NAME what installing NAME pulls in: repo/name<TAB>version<TAB>size (read-only)
+#   packages preview remove NAME  what removing NAME takes with it: name<TAB>version (read-only)
+#   packages removable            packages you can remove here: explicitly installed, not part of the system
+#   pkexec /usr/lib/olymparch/packages install NAME
+#   pkexec /usr/lib/olymparch/packages remove NAME
+#
+# NAME must match ^[a-z0-9@._+-]+$, may not start with - or ., and must be one package pacman -Si finds in core,
+# extra, multilib or olymparch (never the AUR, a group, a file or a URL); everything it pulls in must come from
+# those repositories too. Remove refuses the protected list below, every package the installer put in
+# (/var/lib/olymparch/base-packages) and anything removing NAME would take with it from those. pacman runs with
+# --noconfirm (the menu asked), never with -dd, --overwrite or -c. Everything is logged to
+# /var/log/olymparch-packages.log. Exit codes: 0 done, 1 failed or not root, 2 refused.
+set -euo pipefail
+export PATH=/usr/bin LC_ALL=C
+REPOS=(core extra multilib olymparch)
+BASE_LIST=/var/lib/olymparch/base-packages   # written by olymparch-install: `pacman -Qqe` right after installing
+LOG=/var/log/olymparch-packages.log
+# Never removed, whatever the base list says (it may be missing on older installs)
+PROTECTED=(base base-devel linux linux-lts linux-zen linux-hardened linux-firmware linux-api-headers glibc gcc-libs
+    systemd systemd-libs systemd-sysvcompat dbus dbus-broker pacman pacman-mirrorlist archlinux-keyring sudo bash
+    coreutils filesystem util-linux shadow pam polkit mkinitcpio limine grub efibootmgr btrfs-progs cryptsetup snapper
+    networkmanager hyprland hypridle hyprlock quickshell xdg-desktop-portal-hyprland pipewire pipewire-pulse
+    wireplumber foot ttf-jetbrains-mono ttf-nerd-fonts-symbols-mono adwaita-cursors libnotify plymouth upower mesa
+    nvidia nvidia-open nvidia-dkms nvidia-utils intel-ucode amd-ucode lua olymparch olymparch-base)
+# What olymparch-install puts in (pacstrap), for installs from before it wrote $BASE_LIST
+INSTALLER=(firefox thunar tumbler gvfs gvfs-mtp gvfs-gphoto2 thunar-volman imv mpv xdg-utils xdg-user-dirs udiskie
+    udisks2 clamav pacman-contrib fakeroot)
+
+refuse() { echo "packages: $*" >&2; exit 2; }
+valid_name() {   # one package name, nothing pacman could read as an option, a path or a URL
+    [[ ${#1} -le 128 && $1 =~ ^[a-z0-9@._+-]+$ && $1 != [-.]* ]]
+}
+allowed_repo() { local r; for r in "${REPOS[@]}"; do [ "$1" = "$r" ] && return 0; done; return 1; }
+protected() {
+    local p
+    for p in "${PROTECTED[@]}"; do [ "$1" = "$p" ] && return 0; done
+    if [ -r "$BASE_LIST" ]; then grep -qxF -- "$1" "$BASE_LIST" && return 0
+    else for p in "${INSTALLER[@]}"; do [ "$1" = "$p" ] && return 0; done; fi
+    pacman -Qlq -- "$1" 2>/dev/null | grep -q '^/usr/lib/modules/[^/]*/vmlinuz$'   # any kernel
+}
+# repo of NAME in the sync databases (exactly that name: not a provider, not a group), or refuse
+repo_of() {
+    local info repo name
+    info=$(pacman -Si -- "$1" 2>/dev/null) || refuse "$1 is not in the official repositories (core, extra, multilib, olymparch)"
+    repo=$(sed -n 's/^Repository *: *//p' <<<"$info" | head -n 1)
+    name=$(sed -n 's/^Name *: *//p' <<<"$info" | head -n 1)
+    [ "$name" = "$1" ] || refuse "$1 is not a package name"
+    allowed_repo "$repo" || refuse "$1 is in $repo, not in an official repository"
+    echo "$repo"
+}
+# what installing repo/NAME pulls in; every one must come from an allowed repository
+install_targets() {
+    local out line r
+    out=$(pacman -Sp --needed --print-format '%r/%n	%v	%s' -- "$1/$2" 2>&1) || refuse "pacman cannot install $2: $(tail -n 1 <<<"$out")"
+    while IFS= read -r line; do
+        [ -n "$line" ] || continue
+        r=${line%%/*}
+        allowed_repo "$r" || refuse "$2 needs ${line%%	*} from $r, not an official repository"
+    done <<<"$out"
+    printf '%s\n' "$out"
+}
+# what removing NAME takes with it (pacman -Rs: its dependencies nothing else needs); none may be protected
+remove_targets() {
+    local out p
+    pacman -Qq -- "$1" >/dev/null 2>&1 || refuse "$1 is not installed"
+    pacman -Qqe -- "$1" >/dev/null 2>&1 || refuse "$1 was installed as a dependency, not by you"
+    protected "$1" && refuse "$1 is part of the system and is never removed here"
+    out=$(pacman -Rsp --print-format '%n	%v' -- "$1" 2>&1) || refuse "pacman cannot remove $1: $(grep -m1 'breaks dependency' <<<"$out" || tail -n 1 <<<"$out")"
+    while IFS=$'\t' read -r p _; do
+        [ -n "$p" ] || continue
+        protected "$p" && refuse "removing $1 would remove $p, which is part of the system"
+    done <<<"$out"
+    printf '%s\n' "$out"
+}
+
+action=${1:-}
+case $action in
+    search)
+        shift
+        [ $# -ge 1 ] && [ $# -le 4 ] || refuse "usage: search WORDS"
+        for w in "$@"; do [[ ${#w} -le 64 && $w =~ ^[a-z0-9@._+-]+$ && $w != -* ]] || refuse "search words are letters, digits and @._+-"; done
+        filter=$(IFS='|'; echo "${REPOS[*]}")
+        pacman -Ss -- "$@" 2>/dev/null | awk -v ok="^($filter)/" '
+            /^[^ ]/ { keep = ($1 ~ ok); if (keep) { name = $1; ver = $2; inst = ($0 ~ /\[installed/) ? "installed" : "" } ; next }
+            keep { sub(/^ +/, ""); printf "%s\t%s\t%s\t%s\n", name, ver, $0, inst; keep = 0 }' | head -n 60
+        exit 0 ;;
+    preview)
+        [ $# = 3 ] || refuse "usage: preview install|remove NAME"
+        valid_name "$3" || refuse "not a package name"
+        case $2 in
+            install) repo=$(repo_of "$3"); install_targets "$repo" "$3" ;;
+            remove) remove_targets "$3" ;;
+            *) refuse "unknown action" ;;
+        esac
+        exit 0 ;;
+    removable)
+        [ $# = 1 ] || refuse "usage: removable"
+        pacman -Qqe | while IFS= read -r p; do protected "$p" || echo "$p"; done
+        exit 0 ;;
+    install | remove) ;;
+    *) refuse "unknown action (install, remove, search, preview, removable)" ;;
+esac
+
+[ $# = 2 ] || refuse "usage: $action NAME"
+name=$2
+valid_name "$name" || refuse "not a package name"
+if [ "$action" = install ]; then
+    repo=$(repo_of "$name")
+    targets=$(install_targets "$repo" "$name")
+else
+    targets=$(remove_targets "$name")
+fi
+[ "$(id -u)" = 0 ] || { echo "packages: $action runs through pkexec" >&2; exit 1; }
+
+exec </dev/null 9>/run/olymparch-packages.lock
+flock 9
+umask 022
+{
+    printf '\n== %s %s %s (uid %s)\n%s\n' "$(date '+%F %T')" "$action" "$name" "${PKEXEC_UID:-?}" "$targets"
+    for _ in $(seq 60); do [ -e /var/lib/pacman/db.lck ] || break; sleep 2; done   # another install is running
+    if [ "$action" = install ]; then
+        pacman -S --noconfirm --needed -- "$repo/$name"
+    else
+        pacman -Rs --noconfirm -- "$name"
+    fi
+} 2>&1 | tee -a "$LOG"

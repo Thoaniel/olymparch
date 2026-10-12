@@ -511,6 +511,12 @@
     { "key": "keys.notification_dismiss", "page": "keyboard", "level": "simple", "type": "text", "default": "SUPER + SHIFT + ESCAPE", "binds": ["^SUPER \\+ SHIFT \\+ ESCAPE$"], "widget": "keys", "ready": true,
       "label": { "en": "Shortcut: close the notification", "nb": "Hurtigtast: lukk varselet" }, "description": { "en": "The newest one goes away", "nb": "Det nyeste forsvinner" },
       "apply": { "via": "hypr", "file": "~/.config/olymparch/hypr.lua", "key": "bind" } },
+    { "key": "keys.olymparch_menu", "page": "keyboard", "level": "simple", "type": "text", "default": "SUPER + ALT + SPACE", "binds": ["^SUPER \\+ ALT \\+ SPACE$"], "widget": "keys", "ready": true,
+      "label": { "en": "Shortcut: Olymparch menu", "nb": "Hurtigtast: Olymparch-menyen" }, "description": { "en": "Everything in one menu: apps, style, install, tools, setup, update, system, help", "nb": "Alt i én meny: apper, stil, installer, verktøy, oppsett, oppdater, system, hjelp" },
+      "apply": { "via": "hypr", "file": "~/.config/olymparch/hypr.lua", "key": "bind" } },
+    { "key": "keys.cheatsheet", "page": "keyboard", "level": "simple", "type": "text", "default": "SUPER + K", "binds": ["^SUPER \\+ K$"], "widget": "keys", "ready": true,
+      "label": { "en": "Shortcut: list of shortcuts", "nb": "Hurtigtast: liste over hurtigtaster" }, "description": { "en": "Every shortcut that works right now, searchable", "nb": "Alle hurtigtastene som virker nå, søkbart" },
+      "apply": { "via": "hypr", "file": "~/.config/olymparch/hypr.lua", "key": "bind" } },
 
     { "key": "appearance.theme", "page": "appearance", "level": "simple", "type": "choice", "widget": "themes", "default": "zeus", "options_from": "themes", "ready": true,
       "label": { "en": "Theme", "nb": "Tema" }, "description": { "en": "One god, the whole look: bar, menus, lock screen, borders, terminal and wallpaper. Super+Ctrl+Shift+Space picks one anywhere", "nb": "Én gud, hele utseendet: bar, menyer, låseskjerm, kanter, terminal og bakgrunn. Super+Ctrl+Shift+Space velger hvor som helst" },

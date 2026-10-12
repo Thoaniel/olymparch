@@ -6,102 +6,590 @@
     "needs: a program on PATH that shows it is installed. needs_file: a file that shows it instead (~ = home).",
     "repo: \"olymparch\" when the package only comes from Olymparch's own repo [olymparch]: offer it only when",
     "/etc/pacman.conf has [olymparch]. webapp: after install (Chromium), run «olymparch-webapp add WEBAPP»;",
-    "it is installed when needs_file exists. installer: the olymparch-setup option that installs it too."
+    "it is installed when needs_file exists. installer: the olymparch-setup option that installs it too.",
+    "categories have both name and label (the menu reads label)."
   ],
   "version": 1,
   "categories": [
-    { "id": "games", "name": { "en": "Games", "nb": "Spill" } },
-    { "id": "cloud-gaming", "name": { "en": "Cloud gaming", "nb": "Skyspill" } },
-    { "id": "webapps", "name": { "en": "Web apps", "nb": "Webapper" } },
-    { "id": "apps", "name": { "en": "Apps", "nb": "Apper" } },
-    { "id": "dev", "name": { "en": "Coding", "nb": "Koding" } },
-    { "id": "terminal", "name": { "en": "Terminal and tools", "nb": "Terminal og verktøy" } }
+    {
+      "id": "games",
+      "name": {
+        "en": "Games",
+        "nb": "Spill"
+      },
+      "label": {
+        "en": "Games",
+        "nb": "Spill"
+      }
+    },
+    {
+      "id": "cloud-gaming",
+      "name": {
+        "en": "Cloud gaming",
+        "nb": "Skyspill"
+      },
+      "label": {
+        "en": "Cloud gaming",
+        "nb": "Skyspill"
+      }
+    },
+    {
+      "id": "webapps",
+      "name": {
+        "en": "Web apps",
+        "nb": "Webapper"
+      },
+      "label": {
+        "en": "Web apps",
+        "nb": "Webapper"
+      }
+    },
+    {
+      "id": "apps",
+      "name": {
+        "en": "Apps",
+        "nb": "Apper"
+      },
+      "label": {
+        "en": "Apps",
+        "nb": "Apper"
+      }
+    },
+    {
+      "id": "dev",
+      "name": {
+        "en": "Coding",
+        "nb": "Koding"
+      },
+      "label": {
+        "en": "Coding",
+        "nb": "Koding"
+      }
+    },
+    {
+      "id": "terminal",
+      "name": {
+        "en": "Terminal and tools",
+        "nb": "Terminal og verktøy"
+      },
+      "label": {
+        "en": "Terminal and tools",
+        "nb": "Terminal og verktøy"
+      }
+    },
+    {
+      "id": "internet",
+      "name": {
+        "en": "Internet",
+        "nb": "Internett"
+      },
+      "label": {
+        "en": "Internet",
+        "nb": "Internett"
+      }
+    },
+    {
+      "id": "media",
+      "name": {
+        "en": "Media",
+        "nb": "Media"
+      },
+      "label": {
+        "en": "Media",
+        "nb": "Media"
+      }
+    },
+    {
+      "id": "creative",
+      "name": {
+        "en": "Creative",
+        "nb": "Kreativt"
+      },
+      "label": {
+        "en": "Creative",
+        "nb": "Kreativt"
+      }
+    },
+    {
+      "id": "system",
+      "name": {
+        "en": "System",
+        "nb": "System"
+      },
+      "label": {
+        "en": "System",
+        "nb": "System"
+      }
+    },
+    {
+      "id": "accessibility",
+      "name": {
+        "en": "Accessibility",
+        "nb": "Tilgjengelighet"
+      },
+      "label": {
+        "en": "Accessibility",
+        "nb": "Tilgjengelighet"
+      }
+    }
   ],
   "apps": [
-    { "id": "lutris", "category": "games", "install": "lutris", "needs": "lutris", "installer": "lutris",
-      "name": { "en": "Lutris", "nb": "Lutris" },
-      "description": { "en": "One place for games from GOG, Epic, Battle.net, emulators and installers", "nb": "Ett sted for spill fra GOG, Epic, Battle.net, emulatorer og installasjonsprogrammer" } },
-    { "id": "moonlight", "category": "games", "install": "moonlight", "needs": "moonlight", "installer": "moonlight",
-      "name": { "en": "Moonlight", "nb": "Moonlight" },
-      "description": { "en": "Stream games from your own gaming PC (Sunshine or NVIDIA GameStream)", "nb": "Strøm spill fra din egen spill-PC (Sunshine eller NVIDIA GameStream)" } },
-    { "id": "minecraft", "category": "games", "install": "minecraft", "needs": "prismlauncher", "installer": "minecraft",
-      "name": { "en": "Minecraft (Prism Launcher)", "nb": "Minecraft (Prism Launcher)" },
-      "description": { "en": "Open-source Minecraft launcher: sign in with your Microsoft account, many instances and mods", "nb": "Minecraft-starter med åpen kildekode: logg inn med Microsoft-kontoen, mange instanser og mods" } },
-    { "id": "discord", "category": "apps", "install": "discord", "needs": "discord", "installer": "discord",
-      "name": { "en": "Discord", "nb": "Discord" },
-      "description": { "en": "Voice, video and text chat (the desktop app)", "nb": "Tale-, video- og tekstprat (skrivebordsappen)" } },
-    { "id": "spotify", "category": "apps", "install": "spotify", "needs": "spotify-launcher", "installer": "spotify",
-      "name": { "en": "Spotify", "nb": "Spotify" },
-      "description": { "en": "Music streaming (the desktop app, kept up to date by spotify-launcher)", "nb": "Musikkstrømming (skrivebordsappen, holdes oppdatert av spotify-launcher)" } },
-    { "id": "obs", "category": "apps", "install": "obs", "needs": "obs", "installer": "obs",
-      "name": { "en": "OBS Studio", "nb": "OBS Studio" },
-      "description": { "en": "Record and stream your screen and games", "nb": "Ta opp og strøm skjermen og spill" } },
-    { "id": "obsidian", "category": "apps", "install": "obsidian", "needs": "obsidian", "installer": "obsidian",
-      "name": { "en": "Obsidian", "nb": "Obsidian" },
-      "description": { "en": "Notes in plain Markdown files, linked together", "nb": "Notater i vanlige Markdown-filer, lenket sammen" } },
-    { "id": "localsend", "category": "apps", "install": "localsend", "needs": "localsend", "repo": "olymparch", "installer": "localsend",
-      "name": { "en": "LocalSend", "nb": "LocalSend" },
-      "description": { "en": "Send files to phones and computers on the same network, like AirDrop", "nb": "Send filer til telefoner og datamaskiner på samme nett, som AirDrop" } },
-    { "id": "webapp-xbox-cloud-gaming", "category": "cloud-gaming", "install": "webapps", "webapp": "xbox-cloud-gaming", "installer": "cloud",
-      "needs": "chromium", "needs_file": "~/.local/share/applications/webapp-xbox-cloud-gaming.desktop",
-      "name": { "en": "Xbox Cloud Gaming", "nb": "Xbox Cloud Gaming" },
-      "description": { "en": "Game Pass games streamed from Microsoft, in their own window (web app)", "nb": "Game Pass-spill strømmet fra Microsoft, i sitt eget vindu (webapp)" } },
-    { "id": "webapp-geforce-now", "category": "cloud-gaming", "install": "webapps", "webapp": "geforce-now", "installer": "cloud",
-      "needs": "chromium", "needs_file": "~/.local/share/applications/webapp-geforce-now.desktop",
-      "name": { "en": "GeForce NOW", "nb": "GeForce NOW" },
-      "description": { "en": "Your Steam and Epic games streamed from NVIDIA, in their own window (web app)", "nb": "Steam- og Epic-spillene dine strømmet fra NVIDIA, i sitt eget vindu (webapp)" } },
-    { "id": "webapp-youtube", "category": "webapps", "install": "webapps", "webapp": "youtube",
-      "needs": "chromium", "needs_file": "~/.local/share/applications/webapp-youtube.desktop",
-      "name": { "en": "YouTube", "nb": "YouTube" },
-      "description": { "en": "YouTube in its own window, with its own login (web app)", "nb": "YouTube i sitt eget vindu, med egen innlogging (webapp)" } },
-    { "id": "webapp-whatsapp", "category": "webapps", "install": "webapps", "webapp": "whatsapp",
-      "needs": "chromium", "needs_file": "~/.local/share/applications/webapp-whatsapp.desktop",
-      "name": { "en": "WhatsApp", "nb": "WhatsApp" },
-      "description": { "en": "WhatsApp Web in its own window; link it with your phone (web app)", "nb": "WhatsApp Web i sitt eget vindu; kobles til telefonen (webapp)" } },
-    { "id": "webapp-discord-web", "category": "webapps", "install": "webapps", "webapp": "discord-web",
-      "needs": "chromium", "needs_file": "~/.local/share/applications/webapp-discord-web.desktop",
-      "name": { "en": "Discord Web", "nb": "Discord Web" },
-      "description": { "en": "Discord in its own window, without the desktop app (web app)", "nb": "Discord i sitt eget vindu, uten skrivebordsappen (webapp)" } },
-    { "id": "webapp-spotify-web", "category": "webapps", "install": "webapps", "webapp": "spotify-web",
-      "needs": "chromium", "needs_file": "~/.local/share/applications/webapp-spotify-web.desktop",
-      "name": { "en": "Spotify Web", "nb": "Spotify Web" },
-      "description": { "en": "The Spotify web player in its own window (web app)", "nb": "Spotifys nettspiller i sitt eget vindu (webapp)" } },
-    { "id": "webapp-chatgpt", "category": "webapps", "install": "webapps", "webapp": "chatgpt",
-      "needs": "chromium", "needs_file": "~/.local/share/applications/webapp-chatgpt.desktop",
-      "name": { "en": "ChatGPT", "nb": "ChatGPT" },
-      "description": { "en": "ChatGPT in its own window (web app)", "nb": "ChatGPT i sitt eget vindu (webapp)" } },
-    { "id": "code", "category": "dev", "install": "code", "needs": "code", "installer": "code",
-      "name": { "en": "Code (VS Code)", "nb": "Kode (VS Code)" },
-      "description": { "en": "The open-source build of Visual Studio Code", "nb": "Åpen kildekode-utgaven av Visual Studio Code" } },
-    { "id": "neovim", "category": "dev", "install": "neovim", "needs": "nvim", "installer": "neovim",
-      "name": { "en": "Neovim", "nb": "Neovim" },
-      "description": { "en": "Terminal editor, with a small sensible default config (line numbers, mouse, Space as leader)", "nb": "Terminalredigerer, med et lite fornuftig standardoppsett (linjenumre, mus, mellomrom som leader)" } },
-    { "id": "helix", "category": "dev", "install": "helix", "needs": "helix", "installer": "helix",
-      "name": { "en": "Helix", "nb": "Helix" },
-      "description": { "en": "Modal terminal editor that works out of the box (run it as «helix»)", "nb": "Modal terminalredigerer som virker uten oppsett (startes som «helix»)" } },
-    { "id": "zed", "category": "dev", "install": "zed", "needs": "zeditor", "installer": "zed",
-      "name": { "en": "Zed", "nb": "Zed" },
-      "description": { "en": "Fast graphical code editor (run it as «zeditor»)", "nb": "Rask grafisk koderedigerer (startes som «zeditor»)" } },
-    { "id": "shell-tools", "category": "terminal", "install": "shell-tools", "needs": "fzf", "installer": "shelltools",
-      "name": { "en": "Shell tools", "nb": "Skallverktøy" },
-      "description": { "en": "fzf (Ctrl+R search), zoxide (z to jump), ripgrep (rg) and the starship prompt; on in every new terminal", "nb": "fzf (Ctrl+R-søk), zoxide (z for å hoppe), ripgrep (rg) og starship-ledeteksten; på i hver nye terminal" } },
-    { "id": "btop", "category": "terminal", "install": "btop", "needs": "btop", "installer": "tuis",
-      "name": { "en": "btop", "nb": "btop" },
-      "description": { "en": "CPU, memory, disks, network and processes in the terminal", "nb": "Prosessor, minne, disker, nett og prosesser i terminalen" } },
-    { "id": "lazygit", "category": "terminal", "install": "lazygit", "needs": "lazygit", "installer": "tuis",
-      "name": { "en": "lazygit", "nb": "lazygit" },
-      "description": { "en": "Git in the terminal, with menus", "nb": "Git i terminalen, med menyer" } },
-    { "id": "lazydocker", "category": "terminal", "install": "lazydocker", "needs": "lazydocker", "installer": "tuis",
-      "name": { "en": "lazydocker", "nb": "lazydocker" },
-      "description": { "en": "Docker containers in the terminal (Docker itself is not included)", "nb": "Docker-containere i terminalen (Docker selv følger ikke med)" } },
-    { "id": "alacritty", "category": "terminal", "install": "alacritty", "needs": "alacritty", "installer": "alacritty",
-      "name": { "en": "Alacritty", "nb": "Alacritty" },
-      "description": { "en": "GPU terminal; pick it under Settings → Default apps → Terminal", "nb": "GPU-terminal; velg den under Innstillinger → Standardapper → Terminal" } },
-    { "id": "kitty", "category": "terminal", "install": "kitty", "needs": "kitty", "installer": "kitty",
-      "name": { "en": "kitty", "nb": "kitty" },
-      "description": { "en": "GPU terminal with tabs and splits; pick it under Settings → Default apps → Terminal", "nb": "GPU-terminal med faner og delte vinduer; velg den under Innstillinger → Standardapper → Terminal" } },
-    { "id": "ghostty", "category": "terminal", "install": "ghostty", "needs": "ghostty", "installer": "ghostty",
-      "name": { "en": "Ghostty", "nb": "Ghostty" },
-      "description": { "en": "Fast native terminal; pick it under Settings → Default apps → Terminal", "nb": "Rask, innebygd terminal; velg den under Innstillinger → Standardapper → Terminal" } }
-  ]
+    {
+      "id": "lutris",
+      "category": "games",
+      "install": "lutris",
+      "needs": "lutris",
+      "installer": "lutris",
+      "name": {
+        "en": "Lutris",
+        "nb": "Lutris"
+      },
+      "description": {
+        "en": "One place for games from GOG, Epic, Battle.net, emulators and installers",
+        "nb": "Ett sted for spill fra GOG, Epic, Battle.net, emulatorer og installasjonsprogrammer"
+      }
+    },
+    {
+      "id": "moonlight",
+      "category": "games",
+      "install": "moonlight",
+      "needs": "moonlight",
+      "installer": "moonlight",
+      "name": {
+        "en": "Moonlight",
+        "nb": "Moonlight"
+      },
+      "description": {
+        "en": "Stream games from your own gaming PC (Sunshine or NVIDIA GameStream)",
+        "nb": "Strøm spill fra din egen spill-PC (Sunshine eller NVIDIA GameStream)"
+      }
+    },
+    {
+      "id": "minecraft",
+      "category": "games",
+      "install": "minecraft",
+      "needs": "prismlauncher",
+      "installer": "minecraft",
+      "name": {
+        "en": "Minecraft (Prism Launcher)",
+        "nb": "Minecraft (Prism Launcher)"
+      },
+      "description": {
+        "en": "Open-source Minecraft launcher: sign in with your Microsoft account, many instances and mods",
+        "nb": "Minecraft-starter med åpen kildekode: logg inn med Microsoft-kontoen, mange instanser og mods"
+      }
+    },
+    {
+      "id": "discord",
+      "category": "apps",
+      "install": "discord",
+      "needs": "discord",
+      "installer": "discord",
+      "name": {
+        "en": "Discord",
+        "nb": "Discord"
+      },
+      "description": {
+        "en": "Voice, video and text chat (the desktop app)",
+        "nb": "Tale-, video- og tekstprat (skrivebordsappen)"
+      }
+    },
+    {
+      "id": "spotify",
+      "category": "apps",
+      "install": "spotify",
+      "needs": "spotify-launcher",
+      "installer": "spotify",
+      "name": {
+        "en": "Spotify",
+        "nb": "Spotify"
+      },
+      "description": {
+        "en": "Music streaming (the desktop app, kept up to date by spotify-launcher)",
+        "nb": "Musikkstrømming (skrivebordsappen, holdes oppdatert av spotify-launcher)"
+      }
+    },
+    {
+      "id": "obs",
+      "category": "apps",
+      "install": "obs",
+      "needs": "obs",
+      "installer": "obs",
+      "name": {
+        "en": "OBS Studio",
+        "nb": "OBS Studio"
+      },
+      "description": {
+        "en": "Record and stream your screen and games",
+        "nb": "Ta opp og strøm skjermen og spill"
+      }
+    },
+    {
+      "id": "obsidian",
+      "category": "apps",
+      "install": "obsidian",
+      "needs": "obsidian",
+      "installer": "obsidian",
+      "name": {
+        "en": "Obsidian",
+        "nb": "Obsidian"
+      },
+      "description": {
+        "en": "Notes in plain Markdown files, linked together",
+        "nb": "Notater i vanlige Markdown-filer, lenket sammen"
+      }
+    },
+    {
+      "id": "localsend",
+      "category": "apps",
+      "install": "localsend",
+      "needs": "localsend",
+      "repo": "olymparch",
+      "installer": "localsend",
+      "name": {
+        "en": "LocalSend",
+        "nb": "LocalSend"
+      },
+      "description": {
+        "en": "Send files to phones and computers on the same network, like AirDrop",
+        "nb": "Send filer til telefoner og datamaskiner på samme nett, som AirDrop"
+      }
+    },
+    {
+      "id": "webapp-xbox-cloud-gaming",
+      "category": "cloud-gaming",
+      "install": "webapps",
+      "webapp": "xbox-cloud-gaming",
+      "installer": "cloud",
+      "needs": "chromium",
+      "needs_file": "~/.local/share/applications/webapp-xbox-cloud-gaming.desktop",
+      "name": {
+        "en": "Xbox Cloud Gaming",
+        "nb": "Xbox Cloud Gaming"
+      },
+      "description": {
+        "en": "Game Pass games streamed from Microsoft, in their own window (web app)",
+        "nb": "Game Pass-spill strømmet fra Microsoft, i sitt eget vindu (webapp)"
+      }
+    },
+    {
+      "id": "webapp-geforce-now",
+      "category": "cloud-gaming",
+      "install": "webapps",
+      "webapp": "geforce-now",
+      "installer": "cloud",
+      "needs": "chromium",
+      "needs_file": "~/.local/share/applications/webapp-geforce-now.desktop",
+      "name": {
+        "en": "GeForce NOW",
+        "nb": "GeForce NOW"
+      },
+      "description": {
+        "en": "Your Steam and Epic games streamed from NVIDIA, in their own window (web app)",
+        "nb": "Steam- og Epic-spillene dine strømmet fra NVIDIA, i sitt eget vindu (webapp)"
+      }
+    },
+    {
+      "id": "webapp-youtube",
+      "category": "webapps",
+      "install": "webapps",
+      "webapp": "youtube",
+      "needs": "chromium",
+      "needs_file": "~/.local/share/applications/webapp-youtube.desktop",
+      "name": {
+        "en": "YouTube",
+        "nb": "YouTube"
+      },
+      "description": {
+        "en": "YouTube in its own window, with its own login (web app)",
+        "nb": "YouTube i sitt eget vindu, med egen innlogging (webapp)"
+      }
+    },
+    {
+      "id": "webapp-whatsapp",
+      "category": "webapps",
+      "install": "webapps",
+      "webapp": "whatsapp",
+      "needs": "chromium",
+      "needs_file": "~/.local/share/applications/webapp-whatsapp.desktop",
+      "name": {
+        "en": "WhatsApp",
+        "nb": "WhatsApp"
+      },
+      "description": {
+        "en": "WhatsApp Web in its own window; link it with your phone (web app)",
+        "nb": "WhatsApp Web i sitt eget vindu; kobles til telefonen (webapp)"
+      }
+    },
+    {
+      "id": "webapp-discord-web",
+      "category": "webapps",
+      "install": "webapps",
+      "webapp": "discord-web",
+      "needs": "chromium",
+      "needs_file": "~/.local/share/applications/webapp-discord-web.desktop",
+      "name": {
+        "en": "Discord Web",
+        "nb": "Discord Web"
+      },
+      "description": {
+        "en": "Discord in its own window, without the desktop app (web app)",
+        "nb": "Discord i sitt eget vindu, uten skrivebordsappen (webapp)"
+      }
+    },
+    {
+      "id": "webapp-spotify-web",
+      "category": "webapps",
+      "install": "webapps",
+      "webapp": "spotify-web",
+      "needs": "chromium",
+      "needs_file": "~/.local/share/applications/webapp-spotify-web.desktop",
+      "name": {
+        "en": "Spotify Web",
+        "nb": "Spotify Web"
+      },
+      "description": {
+        "en": "The Spotify web player in its own window (web app)",
+        "nb": "Spotifys nettspiller i sitt eget vindu (webapp)"
+      }
+    },
+    {
+      "id": "webapp-chatgpt",
+      "category": "webapps",
+      "install": "webapps",
+      "webapp": "chatgpt",
+      "needs": "chromium",
+      "needs_file": "~/.local/share/applications/webapp-chatgpt.desktop",
+      "name": {
+        "en": "ChatGPT",
+        "nb": "ChatGPT"
+      },
+      "description": {
+        "en": "ChatGPT in its own window (web app)",
+        "nb": "ChatGPT i sitt eget vindu (webapp)"
+      }
+    },
+    {
+      "id": "code",
+      "category": "dev",
+      "install": "code",
+      "needs": "code",
+      "installer": "code",
+      "name": {
+        "en": "Code (VS Code)",
+        "nb": "Kode (VS Code)"
+      },
+      "description": {
+        "en": "The open-source build of Visual Studio Code",
+        "nb": "Åpen kildekode-utgaven av Visual Studio Code"
+      }
+    },
+    {
+      "id": "neovim",
+      "category": "dev",
+      "install": "neovim",
+      "needs": "nvim",
+      "installer": "neovim",
+      "name": {
+        "en": "Neovim",
+        "nb": "Neovim"
+      },
+      "description": {
+        "en": "Terminal editor, with a small sensible default config (line numbers, mouse, Space as leader)",
+        "nb": "Terminalredigerer, med et lite fornuftig standardoppsett (linjenumre, mus, mellomrom som leader)"
+      }
+    },
+    {
+      "id": "helix",
+      "category": "dev",
+      "install": "helix",
+      "needs": "helix",
+      "installer": "helix",
+      "name": {
+        "en": "Helix",
+        "nb": "Helix"
+      },
+      "description": {
+        "en": "Modal terminal editor that works out of the box (run it as «helix»)",
+        "nb": "Modal terminalredigerer som virker uten oppsett (startes som «helix»)"
+      }
+    },
+    {
+      "id": "zed",
+      "category": "dev",
+      "install": "zed",
+      "needs": "zeditor",
+      "installer": "zed",
+      "name": {
+        "en": "Zed",
+        "nb": "Zed"
+      },
+      "description": {
+        "en": "Fast graphical code editor (run it as «zeditor»)",
+        "nb": "Rask grafisk koderedigerer (startes som «zeditor»)"
+      }
+    },
+    {
+      "id": "shell-tools",
+      "category": "terminal",
+      "install": "shell-tools",
+      "needs": "fzf",
+      "installer": "shelltools",
+      "name": {
+        "en": "Shell tools",
+        "nb": "Skallverktøy"
+      },
+      "description": {
+        "en": "fzf (Ctrl+R search), zoxide (z to jump), ripgrep (rg) and the starship prompt; on in every new terminal",
+        "nb": "fzf (Ctrl+R-søk), zoxide (z for å hoppe), ripgrep (rg) og starship-ledeteksten; på i hver nye terminal"
+      }
+    },
+    {
+      "id": "btop",
+      "category": "terminal",
+      "install": "btop",
+      "needs": "btop",
+      "installer": "tuis",
+      "name": {
+        "en": "btop",
+        "nb": "btop"
+      },
+      "description": {
+        "en": "CPU, memory, disks, network and processes in the terminal",
+        "nb": "Prosessor, minne, disker, nett og prosesser i terminalen"
+      }
+    },
+    {
+      "id": "lazygit",
+      "category": "terminal",
+      "install": "lazygit",
+      "needs": "lazygit",
+      "installer": "tuis",
+      "name": {
+        "en": "lazygit",
+        "nb": "lazygit"
+      },
+      "description": {
+        "en": "Git in the terminal, with menus",
+        "nb": "Git i terminalen, med menyer"
+      }
+    },
+    {
+      "id": "lazydocker",
+      "category": "terminal",
+      "install": "lazydocker",
+      "needs": "lazydocker",
+      "installer": "tuis",
+      "name": {
+        "en": "lazydocker",
+        "nb": "lazydocker"
+      },
+      "description": {
+        "en": "Docker containers in the terminal (Docker itself is not included)",
+        "nb": "Docker-containere i terminalen (Docker selv følger ikke med)"
+      }
+    },
+    {
+      "id": "alacritty",
+      "category": "terminal",
+      "install": "alacritty",
+      "needs": "alacritty",
+      "installer": "alacritty",
+      "name": {
+        "en": "Alacritty",
+        "nb": "Alacritty"
+      },
+      "description": {
+        "en": "GPU terminal; pick it under Settings → Default apps → Terminal",
+        "nb": "GPU-terminal; velg den under Innstillinger → Standardapper → Terminal"
+      }
+    },
+    {
+      "id": "kitty",
+      "category": "terminal",
+      "install": "kitty",
+      "needs": "kitty",
+      "installer": "kitty",
+      "name": {
+        "en": "kitty",
+        "nb": "kitty"
+      },
+      "description": {
+        "en": "GPU terminal with tabs and splits; pick it under Settings → Default apps → Terminal",
+        "nb": "GPU-terminal med faner og delte vinduer; velg den under Innstillinger → Standardapper → Terminal"
+      }
+    },
+    {
+      "id": "ghostty",
+      "category": "terminal",
+      "install": "ghostty",
+      "needs": "ghostty",
+      "installer": "ghostty",
+      "name": {
+        "en": "Ghostty",
+        "nb": "Ghostty"
+      },
+      "description": {
+        "en": "Fast native terminal; pick it under Settings → Default apps → Terminal",
+        "nb": "Rask, innebygd terminal; velg den under Innstillinger → Standardapper → Terminal"
+      }
+    },
+    {
+      "id": "transmission",
+      "category": "internet",
+      "install": "torrent",
+      "needs": "transmission-gtk",
+      "name": {
+        "en": "Transmission",
+        "nb": "Transmission"
+      },
+      "description": {
+        "en": "Torrent client",
+        "nb": "Torrent-klient"
+      }
+    },
+    {
+      "id": "tailscale",
+      "category": "internet",
+      "install": "tailscale",
+      "needs": "tailscale",
+      "name": {
+        "en": "Tailscale",
+        "nb": "Tailscale"
+      },
+      "description": {
+        "en": "Private network between your devices",
+        "nb": "Privat nett mellom enhetene dine"
+      }
+    },
+    {
+      "id": "hyprsunset",
+      "category": "system",
+      "install": "nightlight",
+      "needs": "hyprsunset",
+      "name": {
+        "en": "Night light",
+        "nb": "Nattlys"
+      },
+      "description": {
+        "en": "Warmer screen in the evening (hyprsunset)",
+        "nb": "Varmere skjerm om kvelden (hyprsunset)"
+      }
+    },
+    {
+      "id": "orca",
+      "category": "accessibility",
+      "install": "screen-reader",
+      "needs": "orca",
+      "name": {
+        "en": "Orca screen reader",
+        "nb": "Orca skjermleser"
+      },
+      "description": {
+        "en": "Reads the screen aloud",
+        "nb": "Leser skjermen høyt"
+      }
+    }
+  ],
+  "about": "Apps the Olymparch menu offers under Install → Apps (and lists under Remove once installed). Data only: each app is installed with one click through pkexec /usr/lib/olymparch/install-app <install>, whose fixed list decides the packages (tests/menu-check fails if <install> is not on it). needs = the program that shows it is installed (command -v), also used to find the package to remove. Add an app: an install-app ID first, then an entry here."
 }

@@ -378,6 +378,16 @@ if curl -fsIL --max-time 15 "$REPO_URL/olymparch.db" >/dev/null 2>&1 && [ -f /us
     arch-chroot /mnt pacman -Sy --noconfirm >/dev/null 2>&1 || true
 fi
 
+# ── The Olymparch menu (Super+Alt+Space): Install → Package and Remove go through one narrow pkexec helper.
+# The system as installed so far (before the optional apps, which stay removable) is the base it never removes.
+install -Dm755 /usr/share/olymparch/system/lib/packages /mnt/usr/lib/olymparch/packages
+install -Dm644 /usr/share/olymparch/system/polkit/org.olymparch.packages.policy /mnt/usr/share/polkit-1/actions/org.olymparch.packages.policy
+install -Dm644 /usr/share/olymparch/system/polkit/50-olymparch-packages.rules /mnt/usr/share/polkit-1/rules.d/50-olymparch-packages.rules
+# (the password prompt for it is the shell itself: PasswordPrompt.qml is the session's polkit agent)
+mkdir -p /mnt/var/lib/olymparch
+arch-chroot /mnt pacman -Qqe >/mnt/var/lib/olymparch/base-packages
+# ── (end of the menu block)
+
 install_options
 
 step "$(L "Boot menu (Limine) and snapshots" "Oppstartsmeny (Limine) og øyeblikksbilder")"
