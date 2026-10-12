@@ -40,6 +40,7 @@ hl.config({
     },
     misc = {
         force_default_wallpaper = 0,
+        background_color = "rgb(08080c)",   -- same as the boot screen, so the hand-off never flashes
         disable_hyprland_logo = true,
         disable_splash_rendering = true,
         vrr = 2,

@@ -74,14 +74,20 @@ sed -i "s/^#\\($LOCALE\\)/\\1/" /mnt/etc/locale.gen
 echo "LANG=$LOCALE" >/mnt/etc/locale.conf
 arch-chroot /mnt locale-gen >/dev/null
 cat >/mnt/etc/mkinitcpio.conf.d/10-olymparch.conf <<'EOF'
-HOOKS=(base systemd sd-volatile autodetect microcode modconf kms keyboard sd-vconsole plymouth block sd-encrypt filesystems fsck)
+HOOKS=(base systemd sd-volatile autodetect microcode modconf kms keyboard sd-vconsole plymouth olymparch block sd-encrypt filesystems fsck)
 EOF
 # Olymparch name and the pixel password screen (before mkinitcpio, so the theme is in the initramfs)
 install -Dm644 /usr/share/olymparch/branding/os-release /mnt/usr/lib/os-release
 install -Dm644 /usr/share/olymparch/branding/olymparch-os-release.hook /mnt/etc/pacman.d/hooks/olymparch-os-release.hook
 install -Dm644 /usr/share/olymparch/branding/issue /mnt/etc/issue
-mkdir -p /mnt/usr/share/plymouth/themes
-cp -r /usr/share/olymparch/plymouth /mnt/usr/share/plymouth/themes/olymparch
+theme=/mnt/usr/share/plymouth/themes/olymparch
+mkdir -p "$theme"
+cp /usr/share/olymparch/plymouth/olymparch.plymouth /usr/share/olymparch/plymouth/olymparch.script /usr/share/olymparch/plymouth/s*.png "$theme/"
+# the boot screen's signals: "unlocked" from the initramfs, "handoff" just before it quits (and it keeps its last frame)
+install -Dm644 /usr/share/olymparch/plymouth/olymparch-mkinitcpio-install /mnt/usr/lib/initcpio/install/olymparch
+install -Dm644 -t /mnt/usr/lib/systemd/system /usr/share/olymparch/plymouth/units/olymparch-unlocked.service /usr/share/olymparch/plymouth/units/olymparch-handoff.service
+install -Dm644 /usr/share/olymparch/plymouth/units/plymouth-quit-retain.conf /mnt/etc/systemd/system/plymouth-quit.service.d/olymparch.conf
+arch-chroot /mnt systemctl enable olymparch-handoff.service >/dev/null 2>&1
 printf '[Daemon]\nTheme=olymparch\nShowDelay=0\nDeviceScale=1\n' >/mnt/etc/plymouth/plymouthd.conf
 arch-chroot /mnt mkinitcpio -P
 arch-chroot /mnt useradd -m -G wheel "$USERNAME"
@@ -145,13 +151,28 @@ KERNEL=$KERNEL
 ROOTARGS="rd.luks.name=$uuid=root root=/dev/mapper/root"
 CMDLINE="quiet splash loglevel=3 rd.udev.log_level=3 vt.global_cursor_default=0 $CMDLINE_EXTRA"
 EOF
+h=$(for m in /sys/class/drm/card*-*/modes; do head -n 1 "$m"; done 2>/dev/null | head -n 1 | cut -dx -f2)
+s=$(( (${h:-1080} + 90) / 180 ))
+if ((s <= 5)); then s=4; elif ((s <= 7)); then s=6; elif ((s <= 10)); then s=8; else s=12; fi
+install -Dm644 "/usr/share/olymparch/limine/limine-s$s.png" /mnt/boot/olymparch/limine-bg.png
 cat >/mnt/etc/olymparch/limine-header.conf <<'EOF'
 timeout: 3
-interface_branding: Olymparch
-interface_branding_colour: d4a73a
-term_palette: 08080c;e0605e;d4a73a;d4a73a;3a3644;b08ad0;6fb3c0;e8e6df
-term_background: 08080c
-term_foreground: e8e6df
+wallpaper: boot():/olymparch/limine-bg.png
+wallpaper_style: centered
+backdrop: 08080c
+term_background: ff08080c
+term_foreground: f4c634
+term_background_bright: ff08080c
+term_foreground_bright: ffea76
+term_palette: 08080c;e0605e;d4a73a;f4c634;3a3644;b08ad0;6fb3c0;e8e6df
+term_palette_bright: 3a3644;f08a88;f4c634;ffea76;9cbde6;c9a9e3;93cad4;ffffff
+term_font_scale: 2x2
+term_margin: 0
+term_margin_gradient: 0
+interface_help_hidden: yes
+interface_help_colour: d4a73a
+interface_help_colour_bright: ffea76
+interface_branding:
 EOF
 # snapper wants to create /.snapshots itself; we keep our own @snapshots subvolume mounted there instead
 umount /mnt/.snapshots

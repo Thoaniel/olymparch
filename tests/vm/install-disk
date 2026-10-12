@@ -108,7 +108,12 @@ shot luks "Pikselskjermen ber om diskpassordet (Plymouth, gullpiksler: $gold)"
 keys "${PW:0:6}"
 sleep 1
 shot luks-prikker "Seks tegn skrevet: seks gullprikker i boksen"
-keys "${PW:6}\n"
+keys "${PW:6}\n" 0
+# the boot animation after Enter: checking, unlocked (flash, light spreading), progress, hand-off
+for k in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    sleep 0.6
+    shot "oppstart-$k" "Oppstarten etter Enter, bilde $k (sjekker, låst opp, lyset sprer seg, fremdrift, overgang)"
+done
 wait_for 'olymparch login:' 120 || { shot innlogging-feil "Systemet kom ikke opp"; finish "FAIL · systemet kom ikke opp etter passordet"; }
 # Autologin starts Hyprland and the shell. Wait until the screen shows the gold bar and temple.
 for ((i = 0; i < 90; i += 3)); do

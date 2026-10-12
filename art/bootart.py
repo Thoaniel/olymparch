@@ -1,46 +1,35 @@
-"""Olymparch boot art: the OLYMPARCH pixel wordmark, the temple, torch-halo frames and sparks for Plymouth, and
-an animated preview of the whole boot (Limine → Plymouth → unlock → desktop).
+"""Assets for the Olymparch boot: the Plymouth theme images for every pixel size, and the Limine wallpapers.
 
-Usage: bootart.py <out-dir> [width height]          default 1280 720 (the preview size)
-The temple sits exactly where it is on the desktop wallpaper, so the boot flows straight into the desktop.
+Usage: bootart.py <out-dir>
+Writes s<S>-*.png for S in 4, 6, 8, 12 (one art pixel = S screen pixels; Plymouth picks S from the screen height,
+like the desktop wallpaper does: S = round(height / 180)), and limine-s<S>.png.
 """
 import math
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 
-out = Path(sys.argv[1]); out.mkdir(parents=True, exist_ok=True)
-OW, OH = (int(sys.argv[2]), int(sys.argv[3])) if len(sys.argv) > 3 else (1280, 720)
-S = max(2, round(OH / 180))
-W, H = math.ceil(OW / S), math.ceil(OH / S)
-cx, cy = W // 2, int(H * 0.56)          # same temple position as the wallpaper (minimal.py / torch.py)
+out = Path(sys.argv[1])
+out.mkdir(parents=True, exist_ok=True)
 BG = (8, 8, 12)
 HALO = [(30, 22, 10), (42, 29, 12), (60, 39, 12), (84, 52, 14)]
 GOLD = [(90, 44, 8), (156, 94, 12), (214, 148, 22), (244, 198, 52), (255, 234, 118)]
-LINE = (58, 54, 68)
+LINE, BOXBG = (58, 54, 68), (13, 13, 18)
 BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
-
-GLYPHS = {
-    "O": [".#######.", "###...###", "###...###", "###...###", "###...###", "###...###", "###...###",
-          "###...###", "###...###", "###...###", "###...###", "###...###", ".#######."],
-    "L": ["###......", "###......", "###......", "###......", "###......", "###......", "###......",
-          "###......", "###......", "###......", "###......", "#########", "#########"],
-    "Y": ["###...###", "###...###", "###...###", "###...###", ".###.###.", "..#####..", "...###...",
-          "...###...", "...###...", "...###...", "...###...", "...###...", "...###..."],
-    "M": ["###...###", "####.####", "#########", "###.#.###", "###...###", "###...###", "###...###",
-          "###...###", "###...###", "###...###", "###...###", "###...###", "###...###"],
-    "P": ["########.", "###...###", "###...###", "###...###", "###...###", "########.", "###......",
-          "###......", "###......", "###......", "###......", "###......", "###......"],
-    "A": [".#######.", "###...###", "###...###", "###...###", "###...###", "#########", "###...###",
-          "###...###", "###...###", "###...###", "###...###", "###...###", "###...###"],
-    "R": ["########.", "###...###", "###...###", "###...###", "###...###", "########.", "###.###..",
-          "###..###.", "###...###", "###...###", "###...###", "###...###", "###...###"],
-    "C": [".########", "###......", "###......", "###......", "###......", "###......", "###......",
-          "###......", "###......", "###......", "###......", "###......", ".########"],
-    "H": ["###...###", "###...###", "###...###", "###...###", "###...###", "#########", "###...###",
-          "###...###", "###...###", "###...###", "###...###", "###...###", "###...###"],
+GL = {
+    "O": [".#####.", "#######", "##...##", "##...##", "##...##", "##...##", "##...##", "##...##", "##...##", "#######", ".#####."],
+    "L": ["##.....", "##.....", "##.....", "##.....", "##.....", "##.....", "##.....", "##.....", "##.....", "#######", "#######"],
+    "Y": ["##...##", "##...##", "##...##", "###.###", ".#####.", "..###..", "..###..", "..###..", "..###..", "..###..", "..###.."],
+    "M": ["##...##", "###.###", "#######", "##.#.##", "##.#.##", "##...##", "##...##", "##...##", "##...##", "##...##", "##...##"],
+    "P": ["######.", "#######", "##...##", "##...##", "#######", "######.", "##.....", "##.....", "##.....", "##.....", "##....."],
+    "A": [".#####.", "#######", "##...##", "##...##", "#######", "#######", "##...##", "##...##", "##...##", "##...##", "##...##"],
+    "R": ["######.", "#######", "##...##", "##...##", "#######", "######.", "##.##..", "##..##.", "##...##", "##...##", "##...##"],
+    "C": [".######", "#######", "##.....", "##.....", "##.....", "##.....", "##.....", "##.....", "##.....", "#######", ".######"],
+    "H": ["##...##", "##...##", "##...##", "##...##", "#######", "#######", "##...##", "##...##", "##...##", "##...##", "##...##"],
 }
+LOCK_C = ["..###..", ".#...#.", ".#...#.", "#######", "###.###", "###.###", "#######"]
+LOCK_O = ["..###..", ".#...#.", ".#.....", "#######", "###.###", "###.###", "#######"]
 
 
 def ramp(colors, t, x, y):
@@ -49,255 +38,169 @@ def ramp(colors, t, x, y):
     return colors[min(i + (f * 16 > BAYER[y % 4][x % 4] + 0.5), len(colors) - 1)]
 
 
-def wordmark():
-    text = "OLYMPARCH"
-    w = len(text) * 9 + (len(text) - 1) * 2
-    img = Image.new("RGBA", (w, 13), (0, 0, 0, 0))
-    for i, ch in enumerate(text):
-        for y, row in enumerate(GLYPHS[ch]):
-            for x, c in enumerate(row):
-                if c == "#":
-                    # gold gradient: bright top, deep bottom, a highlight on the top row
-                    col = GOLD[4] if y == 0 else GOLD[3] if y < 5 else GOLD[2] if y < 10 else GOLD[1]
-                    img.putpixel((i * 11 + x, y), col + (255,))
-    return img
-
-
-def temple():
+def temple(tint=None):
     t = Image.new("RGBA", (34, 25), (0, 0, 0, 0))
     px = t.load()
     tcx, by = 17, 24
+
+    def put(x, y, c):
+        px[x, y] = (tint or c) + (255,)
     for i, (w, c) in enumerate(((34, GOLD[1]), (30, GOLD[2]), (26, GOLD[3]))):
         for x in range(tcx - w // 2, tcx + w // 2):
-            px[x, by - i] = c + (255,)
+            put(x, by - i, c)
     for k in range(6):
         x = tcx - 11 + k * 4
         for y in range(by - 13, by - 2):
-            px[x, y] = GOLD[3] + (255,)
-            px[x + 1, y] = GOLD[1] + (255,)
+            put(x, y, GOLD[3]); put(x + 1, y, GOLD[1])
     for x in range(tcx - 14, tcx + 14):
-        px[x, by - 14] = GOLD[2] + (255,)
-        px[x, by - 15] = GOLD[4] + (255,)
+        put(x, by - 14, GOLD[2]); put(x, by - 15, GOLD[4])
     for k in range(8):
         for x in range(tcx - 14 + k * 2, tcx + 14 - k * 2):
             edge = x in (tcx - 14 + k * 2, tcx + 13 - k * 2)
-            px[x, by - 16 - k] = (GOLD[4] if edge else GOLD[1] if k > 1 else GOLD[2]) + (255,)
+            put(x, by - 16 - k, GOLD[4] if edge else GOLD[1] if k > 1 else GOLD[2])
     return t
 
 
-def flicker(t):
-    a = 2 * math.pi * t
-    s = 0.35 * math.sin(a * 2 + 0.3) + 0.30 * math.sin(a * 7 + 1.7) + 0.20 * math.sin(a * 13 + 4.0) + 0.15 * math.sin(a * 19 + 2.9)
-    return 1 + 0.34 * s, 1 + 0.07 * s, round(0.8 * math.sin(a * 3 + 0.4) + 0.5 * math.sin(a * 11 + 1.1))
-
-
-def halo(px, n, N, strength):
-    """Draw the torch halo into an RGB pixel access at loop position n/N, scaled by strength (0..1)."""
-    amp, rad, lift = flicker(n / N)
-    for y in range(max(0, cy - 60), min(H, cy + 40)):
-        for x in range(max(0, cx - 70), min(W, cx + 70)):
-            dy = y - cy + 8 + lift
-            ry = 30 * rad * (1.18 if dy < 0 else 0.92)
-            if dy < 0:
-                th = math.atan2(dy, x - cx + 0.5)
-                ry *= 1 + 0.11 * math.sin(5 * th + 2 * math.pi * n / N * 6) + 0.06 * math.sin(9 * th - 2 * math.pi * n / N * 10)
-            g = max(0.0, 1 - math.hypot((x - cx + 0.5) / (46 * rad), dy / ry))
-            if g > 0:
-                v = min(1, (g ** 1.6) * amp * 0.85 * strength)
-                if v > 0.02:
-                    px[x, y] = ramp([BG, *HALO], v, x, y)
-
-
-SPARKS = ((-5, 0.0, 1), (6, 0.17, -1), (-1, 0.34, 1), (9, 0.5, -1), (-9, 0.67, 1), (2, 0.84, -1))
-
-
-def sparks(px, n, N):
-    for x0, ph, sway in SPARKS:
-        t = (n / N + ph) % 1
-        if t > 0.65:
-            continue
-        sx = cx + x0 + round(sway * 1.5 * math.sin(2 * math.pi * t * 2))
-        sy = cy + 8 - 24 - round(t * 14)
-        px[sx, sy] = GOLD[3] if t < 0.2 else GOLD[2] if t < 0.4 else GOLD[1]
-
-
-WM, TP = wordmark(), temple()
-TX, TY = cx - 17, cy + 8 - 24              # temple top-left (matches the wallpaper)
-WX, WY = cx - WM.width // 2, cy + 8 + 10   # wordmark under the temple
-BX, BY, BW = cx - 22, WY + 13 + 9, 44      # password box
-LOCK = ["..###..", ".#...#.", ".#...#.", "#######", "###.###", "###.###", "#######"]
-
-# --- Plymouth assets (art pixel size S) ---
-def save(img, name):
-    img.resize((img.width * S, img.height * S), Image.NEAREST).save(out / name, optimize=True)
-
-
-save(WM, "wordmark.png")
-save(TP, "temple.png")
-lk = Image.new("RGBA", (7, 7), (0, 0, 0, 0))
-for y, row in enumerate(LOCK):
-    for x, ch in enumerate(row):
-        if ch == "#":
-            lk.putpixel((x, y), GOLD[3] + (255,))
-save(lk, "lock.png")
-box = Image.new("RGBA", (BW, 7), (13, 13, 18, 255))
-for x in range(BW):
-    box.putpixel((x, 0), LINE + (255,)); box.putpixel((x, 6), LINE + (255,))
-for y in range(7):
-    box.putpixel((0, y), LINE + (255,)); box.putpixel((BW - 1, y), LINE + (255,))
-for x, y in ((0, 0), (1, 0), (0, 1), (BW - 1, 6), (BW - 2, 6), (BW - 1, 5)):
-    box.putpixel((x, y), GOLD[2] + (255,))
-save(box, "box.png")
-save(Image.new("RGBA", (1, 1), GOLD[3] + (255,)), "bullet.png")
-save(Image.new("RGBA", (1, 1), GOLD[3] + (255,)), "spark.png")
-pb = Image.new("RGBA", (BW, 3), (13, 13, 18, 255))
-for x in range(BW):
-    pb.putpixel((x, 0), LINE + (255,)); pb.putpixel((x, 2), LINE + (255,))
-pb.putpixel((0, 1), LINE + (255,)); pb.putpixel((BW - 1, 1), LINE + (255,))
-save(pb, "progress_box.png")
-save(Image.new("RGBA", (BW - 2, 1), GOLD[3] + (255,)), "progress_bar.png")
-# halo frames as transparent layers (Plymouth draws them under the temple)
-HN = 48
-for n in range(HN):
-    layer = Image.new("RGB", (W, H), BG)
-    halo(layer.load(), n, HN, 1.0)
-    crop = layer.crop((cx - 70, cy - 60, cx + 70, cy + 40)).convert("RGBA")
-    data = [(r, g, b, 0) if (r, g, b) == BG else (r, g, b, 255) for r, g, b, _ in crop.getdata()]
-    crop.putdata(data)
-    save(crop, f"halo-{n:02d}.png")
-
-# --- Animated preview of the whole boot (12 fps) ---
-try:
-    font = ImageFont.truetype("/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Bold.ttf", 14)
-except OSError:
-    font = ImageFont.load_default()
-
-
-def base(scan=None):
-    img = Image.new("RGB", (W, H), BG)
-    for y in range(H):
-        k = y / H
-        c = tuple(int(13 + (8 - 13) * k) if i < 2 else int(18 + (12 - 18) * k) for i in range(3))
-        for x in range(W):
-            img.putpixel((x, y), c)
+def wordmark(k=3):
+    text = "OLYMPARCH"
+    w, h = (len(text) * 8 - 1) * k, 11 * k
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    for i, ch in enumerate(text):
+        for gy, row in enumerate(GL[ch]):
+            for gx, c in enumerate(row):
+                if c == "#":
+                    for dy in range(k):
+                        for dx in range(k):
+                            y = gy * k + dy
+                            f = y / h
+                            col = GOLD[4] if f < 0.09 else GOLD[3] if f < 0.45 else GOLD[2] if f < 0.82 else GOLD[1]
+                            img.putpixel((i * 8 * k + gx * k + dx, y), col + (255,))
     return img
 
 
-BASE = base()
-frames = []
+def halo_layers():
+    """The torch halo around the big (2x) temple, split into 3 brightness layers that the script fades."""
+    w, h = 300, 163                             # ends just above the wordmark
+    hcx, hcy = w / 2, 120                       # 16 art px below the big temple's top
+    layers = [Image.new("RGBA", (w, h), (0, 0, 0, 0)) for _ in range(3)]
+    for y in range(h):
+        for x in range(w):
+            dy = y - hcy
+            ry = 60 * (1.18 if dy < 0 else 0.92)
+            g = max(0.0, 1 - math.hypot((x - hcx + 0.5) / 92, dy / ry))
+            if g <= 0:
+                continue
+            v = min(1, (g ** 1.6) * 0.85 * 1.15)
+            c = ramp([BG, *HALO], v, x, y)
+            if c == BG:
+                continue
+            k = 0 if v > 0.55 else 1 if v > 0.28 else 2
+            layers[k].putpixel((x, y), c + (255,))
+    return layers
 
 
-def finish(img, overlay=None):
-    big = img.resize((W * S, H * S), Image.NEAREST).crop((0, 0, OW, OH))
-    d = big.load()
-    for y in range(0, OH, max(2, S // 2)):
-        for x in range(OW):
-            r, g, b = d[x, y]
-            d[x, y] = (r * 3 // 4, g * 3 // 4, b * 3 // 4)
-    if overlay:
-        overlay(ImageDraw.Draw(big))
-    frames.append(big)
+def spread():
+    """The unlock light, a big warm dithered glow at art resolution (the script scales it to the screen)."""
+    w, h = 320, 180
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    for y in range(h):
+        for x in range(w):
+            g = max(0.0, 1 - math.hypot((x - w / 2 + 0.5) / (w * 0.62), (y - h * 0.4) / (h * 0.62)))
+            v = min(1, g ** 2.0 * 1.3)
+            if v > 0.03:
+                c = ramp([BG, (19, 15, 11), *HALO, GOLD[0]], v, x, y)
+                if c != BG:
+                    img.putpixel((x, y), c + (255,))
+    return img
 
 
-def paste(img, sprite, x, y, rows=None):
-    if rows is None:
-        img.paste(sprite, (x, y), sprite)
-    else:
-        part = sprite.crop((0, 0, sprite.width, max(0, min(sprite.height, rows))))
-        if part.height:
-            img.paste(part, (x, y), part)
+def pattern(rows, color):
+    img = Image.new("RGBA", (len(rows[0]), len(rows)), (0, 0, 0, 0))
+    for y, row in enumerate(rows):
+        for x, c in enumerate(row):
+            if c == "#":
+                img.putpixel((x, y), color + (255,))
+    return img
 
 
-f = 0
-# 1. Limine: the temple already on screen (no halo yet), the menu over it
-for i in range(18):
-    img = BASE.copy(); paste(img, TP, TX, TY)
-    def menu(dr, i=i):
-        dr.text((OW // 2, 24), "Olymparch", fill=GOLD[3], font=font, anchor="mm")
-        dr.text((OW // 2, 50), "ARROWS Select   ENTER Boot   E Edit", fill=(154, 150, 163), font=font, anchor="mm")
-        dr.rectangle((OW // 2 - 60, OH // 2 - 230, OW // 2 + 60, OH // 2 - 210), fill=GOLD[3])
-        dr.text((OW // 2, OH // 2 - 220), "Olymparch", fill=(10, 10, 14), font=font, anchor="mm")
-        dr.text((OW // 2, OH - 30), f"Booting automatically in {3 - i // 6}...", fill=GOLD[2], font=font, anchor="mm")
-    finish(img, menu)
-# 2. Plymouth: black, then a gold scanline draws the temple and the wordmark from the top
-top, bot = TY, WY + 13
-for i in range(20):
-    y = top + (bot - top) * i // 19
-    img = BASE.copy()
-    paste(img, TP, TX, TY, rows=y - TY)
-    paste(img, WM, WX, WY, rows=y - WY)
-    for x in range(cx - 60, cx + 60):
-        if 0 <= y < H:
-            img.putpixel((x, y), GOLD[4] if abs(x - cx) < 45 else GOLD[2])
-    finish(img)
-# 3. The torch lights: halo grows in, sparks start
-for i in range(18):
-    img = BASE.copy(); px = img.load()
-    halo(px, f, 48, (i + 1) / 18); f += 1
-    if i > 8:
-        sparks(px, f, 48)
-    paste(img, TP, TX, TY); paste(img, WM, WX, WY)
-    finish(img)
-# 4. Password box, then 8 typed characters (a tiny spark jumps from each new bullet)
+def box(bw=64):
+    img = Image.new("RGBA", (bw, 7), BOXBG + (255,))
+    for x in range(bw):
+        img.putpixel((x, 0), LINE + (255,)); img.putpixel((x, 6), LINE + (255,))
+    for y in range(7):
+        img.putpixel((0, y), LINE + (255,)); img.putpixel((bw - 1, y), LINE + (255,))
+    for x, y in ((0, 0), (1, 0), (0, 1), (bw - 1, 6), (bw - 2, 6), (bw - 1, 5)):
+        img.putpixel((x, y), GOLD[2] + (255,))
+    return img
 
 
-def scene(bullets=0, box_on=True, flash=0, ring=None, progress=None, fade=1.0, bar=0):
-    global f
-    img = BASE.copy(); px = img.load()
-    halo(px, f, 48, 1.0); sparks(px, f, 48); f += 1
-    paste(img, TP, TX, TY)
-    if fade > 0:
-        wm = WM.copy()
-        if fade < 1:
-            a = wm.getchannel("A").point(lambda v: int(v * fade))
-            wm.putalpha(a)
-        paste(img, wm, WX, WY)
-    if box_on:
-        b = box.copy()
-        if flash:
-            b = Image.new("RGBA", box.size, GOLD[3] + (255,))
-        paste(img, lk, BX - 10, BY)
-        paste(img, b, BX, BY)
-        for k in range(bullets):
-            px[BX + 3 + k * 2, BY + 3] = GOLD[3] if not flash else BG
-    if ring is not None:
-        for a in range(0, 360, 6):
-            x = round(cx + ring * math.cos(math.radians(a)))
-            y = round(cy - 4 + ring * 0.7 * math.sin(math.radians(a)))
-            if 0 <= x < W and 0 <= y < H:
-                px[x, y] = GOLD[4] if ring < 30 else GOLD[2]
-    if progress is not None:
-        paste(img, pb, BX, BY + 2)
-        for x in range(round((BW - 2) * progress)):
-            px[BX + 1 + x, BY + 3] = GOLD[3]
-    if bar:
-        for y in range(min(bar, 9)):
-            for x in range(W):
-                px[x, y] = (10, 10, 14)
-        if bar >= 9:
-            for x in range(W):
-                px[x, 8] = LINE
-    finish(img)
+def progress(bw=64):
+    frame = Image.new("RGBA", (bw, 5), BOXBG + (255,))
+    for x in range(bw):
+        frame.putpixel((x, 0), LINE + (255,)); frame.putpixel((x, 4), LINE + (255,))
+    for y in range(5):
+        frame.putpixel((0, y), LINE + (255,)); frame.putpixel((bw - 1, y), LINE + (255,))
+    fill = Image.new("RGBA", (bw - 2, 3), (0, 0, 0, 0))
+    for x in range(bw - 2):
+        for y, c in enumerate((GOLD[4], GOLD[3], GOLD[2])):
+            fill.putpixel((x, y), c + (255,))
+    return frame, fill
 
 
-for i in range(6):
-    scene(bullets=0, box_on=i > 2)
-for k in range(1, 9):
-    for _ in range(3):
-        scene(bullets=k)
-# 5. Unlock: the box flashes gold, a ring of pixels runs out from the temple
-for i in range(4):
-    scene(bullets=8, flash=i < 2, ring=8 + i * 10)
-for i in range(6):
-    scene(box_on=False, ring=48 + i * 12)
-# 6. Progress bar under the wordmark, like Omarchy (eases toward the end while the system starts)
-for i in range(30):
-    p = 1 - (1 - i / 29) ** 2
-    scene(box_on=False, progress=p)
-# 7. Desktop: the wordmark fades, the bar slides down; the temple and its torch stay put
-for i in range(14):
-    scene(box_on=False, fade=max(0, 1 - i / 7), bar=min(9, i))
-for i in range(12):
-    scene(box_on=False, fade=0, bar=9)
-frames[0].save(out / "boot-preview.gif", save_all=True, append_images=frames[1:], duration=83, loop=0, optimize=True)
-print("ok", len(frames), "bilder i forhåndsvisningen, kunst-piksel", S)
+def up(img, s):
+    return img.resize((img.width * s, img.height * s), Image.NEAREST)
+
+
+T, TF, WM = temple(), temple(GOLD[4]), wordmark(3)
+HL = halo_layers()
+SP = spread()
+PB, PF = progress()
+for S in (4, 6, 8, 12):
+    for p in range(S, 2 * S + 1):               # every whole pixel size between the big and the wallpaper temple
+        up(T, p).save(out / f"s{S}-temple-{p}.png", optimize=True)
+    up(TF, 2 * S).save(out / f"s{S}-temple-flash.png", optimize=True)
+    up(WM, S).save(out / f"s{S}-wordmark.png", optimize=True)
+    for k, layer in enumerate(HL):
+        up(layer, S).save(out / f"s{S}-halo-{k}.png", optimize=True)
+    up(SP, S).save(out / f"s{S}-spread.png", optimize=True)
+    up(pattern(LOCK_C, GOLD[3]), S).save(out / f"s{S}-lock.png", optimize=True)
+    up(pattern(LOCK_O, GOLD[4]), S).save(out / f"s{S}-lock-open.png", optimize=True)
+    up(pattern(LOCK_C, (224, 96, 94)), S).save(out / f"s{S}-lock-error.png", optimize=True)
+    up(box(), S).save(out / f"s{S}-box.png", optimize=True)
+    up(Image.new("RGBA", (64, 7), GOLD[4] + (255,)), S).save(out / f"s{S}-box-flash.png", optimize=True)
+    up(PB, S).save(out / f"s{S}-progress-box.png", optimize=True)
+    up(PF, S).save(out / f"s{S}-progress-fill.png", optimize=True)
+    for k, c in enumerate((GOLD[4], GOLD[3], GOLD[1])):
+        up(Image.new("RGBA", (1, 1), c + (255,)), S).save(out / f"s{S}-spark-{k}.png", optimize=True)
+    up(Image.new("RGBA", (1, 1), GOLD[3] + (255,)), S).save(out / f"s{S}-bullet.png", optimize=True)
+    up(Image.new("RGBA", (3, 5), GOLD[4] + (255,)), S).save(out / f"s{S}-shimmer.png", optimize=True)
+    up(Image.new("RGBA", (220, 1), GOLD[4] + (255,)), S).save(out / f"s{S}-scanline.png", optimize=True)
+    up(Image.new("RGBA", (220, 1), BG + (255,)), S).save(out / f"s{S}-cover.png", optimize=True)
+    # Limine wallpaper: big temple above the screen centre, wordmark below; Limine draws its menu in the middle.
+    lw, lh = 220, 140
+    lim = Image.new("RGB", (lw, lh), BG)
+    t2 = up(T, 2)
+    lim.paste(t2, (lw // 2 - t2.width // 2, lh // 2 - 70), t2)
+    lim.paste(WM, (lw // 2 - WM.width // 2, lh // 2 + 30), WM)
+    up(lim, S).save(out / f"limine-s{S}.png", optimize=True)
+# The Plymouth script, with the image loading written out for every pixel size (no file names built at runtime)
+names = ["temple_flash:temple-flash", "wordmark", "spread", "lock", "lock_open:lock-open", "lock_error:lock-error",
+         "box", "box_flash:box-flash", "progress_box:progress-box", "progress_fill:progress-fill", "bullet",
+         "shimmer", "scanline", "cover"]
+loader = []
+for S in (4, 6, 8, 12):
+    lines = [f'if (S == {S}) {{']
+    for k, p in enumerate(range(S, 2 * S + 1)):
+        lines.append(f'    A.temple[{k}] = Image("s{S}-temple-{p}.png");')
+    for k in range(3):
+        lines.append(f'    A.halo[{k}] = Image("s{S}-halo-{k}.png");')
+        lines.append(f'    A.spark[{k}] = Image("s{S}-spark-{k}.png");')
+    for n in names:
+        key, _, file = n.partition(":")
+        lines.append(f'    A.{key} = Image("s{S}-{file or key}.png");')
+    lines.append("}")
+    loader.append("\n".join(lines))
+src = (Path(__file__).resolve().parent.parent / "default/plymouth/olymparch.script").read_text()
+marker = next(l for l in src.splitlines() if l.startswith("// @ASSETS@"))
+(out / "olymparch.script").write_text(src.replace(marker, "\n".join(loader)))
+print("ok", out)

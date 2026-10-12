@@ -1,51 +1,287 @@
-// Olymparch Plymouth theme: the gold temple on black, and a box with a lock and one gold bullet per typed
-// character when the disk password is asked for. Images only, no text.
+// Olymparch boot screen (Plymouth script plugin, 50 refreshes a second).
+// One scene from boot to desktop: a gold scanline draws the temple and the OLYMPARCH wordmark, the torch lights,
+// the password box takes the disk password (one bullet per character), a shimmer runs while the disk is being
+// unlocked, then the lock opens, the temple flashes and its light spreads over the screen, a progress bar fills,
+// and at the hand-off the wordmark fades while the temple shrinks to exactly where the desktop wallpaper has it.
+// Status from systemd units: "unlocked" (initrd, after cryptsetup) and "handoff" (just before Plymouth quits).
+
+// ---- size: one art pixel is S screen pixels, the same rule as the desktop wallpaper ----
+global.W = Window.GetWidth();
+global.H = Window.GetHeight();
+global.X0 = Window.GetX();
+global.Y0 = Window.GetY();
+fun pick_s(h) {
+    s = Math.Int(h / 180 + 0.5);
+    if (s <= 5) { return 4; }
+    if (s <= 7) { return 6; }
+    if (s <= 10) { return 8; }
+    return 12;
+}
+global.S = pick_s(global.H);
+fun mod(a, n) { return a - Math.Int(a / n) * n; }
+
+// @ASSETS@  (bootart.py puts the image loading for each pixel size here: the script never builds file names)
 
 Window.SetBackgroundTopColor(0.031, 0.031, 0.047);
 Window.SetBackgroundBottomColor(0.031, 0.031, 0.047);
 
-temple.image = Image("temple.png");
-temple.sprite = Sprite(temple.image);
-temple.sprite.SetX(Window.GetX() + Window.GetWidth() / 2 - temple.image.GetWidth() / 2);
-temple.sprite.SetY(Window.GetY() + Window.GetHeight() * 0.42 - temple.image.GetHeight() / 2);
+// ---- layout in screen pixels ----
+global.CX = X0 + W / 2;
+global.TOP_BIG = Y0 + H / 2 - 60 * S;                      // big temple top
+Ha = Math.Int((H + S - 1) / S);
+global.TOP_SMALL = Y0 + (Math.Int(Ha * 0.56) - 16) * S;    // the wallpaper's temple top
+global.WM_Y = TOP_BIG + 59 * S;
+global.BOX_X = CX - 32 * S + 5 * S;
+global.BOX_Y = WM_Y + 33 * S + 10 * S;
 
-box.image = Image("box.png");
-lock.image = Image("lock.png");
-bullet.image = Image("bullet.png");
+// ---- sprites ----
+temple.sprite = Sprite(A.temple[S]);
+temple.flash = Sprite(A.temple_flash);
+temple.flash.SetOpacity(0);
+fun place_temple(p, top) {
+    temple.sprite.SetImage(A.temple[p - S]);
+    temple.sprite.SetPosition(CX - 17 * p, top, 20);
+}
+place_temple(2 * S, TOP_BIG);
+temple.flash.SetPosition(CX - 34 * S, TOP_BIG, 21);
 
-box.x = Window.GetX() + Window.GetWidth() / 2 - box.image.GetWidth() / 2;
-box.y = Window.GetY() + Window.GetHeight() * 0.42 + temple.image.GetHeight() / 2 + 60;
-box.sprite = Sprite(box.image);
-box.sprite.SetPosition(box.x, box.y, 10);
-box.sprite.SetOpacity(0);
-lock.sprite = Sprite(lock.image);
-lock.sprite.SetPosition(box.x - lock.image.GetWidth() - 18, box.y + box.image.GetHeight() / 2 - lock.image.GetHeight() / 2, 10);
+wm.image = A.wordmark;
+wm.sprite = Sprite(wm.image);
+wm.sprite.SetPosition(CX - wm.image.GetWidth() / 2, WM_Y, 20);
+
+halo.sprites = [];
+for (k = 0; k < 3; k++) {
+    halo.sprites[k] = Sprite(A.halo[k]);
+    halo.sprites[k].SetPosition(CX - 150 * S, TOP_BIG + 16 * S - 120 * S, 10 - k);
+    halo.sprites[k].SetOpacity(0);
+}
+spread.sprite = Sprite(A.spread);
+spread.sprite.SetPosition(CX - 160 * S, TOP_BIG + 16 * S - 72 * S, 5);
+spread.sprite.SetOpacity(0);
+
+lock.closed = A.lock;
+lock.open = A.lock_open;
+lock.error = A.lock_error;
+lock.sprite = Sprite(lock.closed);
+lock.sprite.SetPosition(BOX_X - 10 * S, BOX_Y, 30);
 lock.sprite.SetOpacity(0);
-
+box.sprite = Sprite(A.box);
+box.sprite.SetPosition(BOX_X, BOX_Y, 30);
+box.sprite.SetOpacity(0);
+box.flash = Sprite(A.box_flash);
+box.flash.SetPosition(BOX_X, BOX_Y, 31);
+box.flash.SetOpacity(0);
+box.shimmer = Sprite(A.shimmer);
+box.shimmer.SetOpacity(0);
 bullets = [];
-max_bullets = 18;
-for (i = 0; i < max_bullets; i++) {
-    bullets[i] = Sprite(bullet.image);
-    bullets[i].SetPosition(box.x + 18 + i * (bullet.image.GetWidth() * 2), box.y + box.image.GetHeight() / 2 - bullet.image.GetHeight() / 2, 11);
+global.MAXB = 18;
+for (i = 0; i < MAXB; i++) {
+    bullets[i] = Sprite(A.bullet);
+    bullets[i].SetPosition(BOX_X + (4 + i * 3) * S, BOX_Y + 3 * S, 32);
     bullets[i].SetOpacity(0);
 }
+prog.box = Sprite(A.progress_box);
+prog.box.SetPosition(BOX_X, BOX_Y + S, 30);
+prog.box.SetOpacity(0);
+prog.fill_image = A.progress_fill;
+prog.fill = Sprite(prog.fill_image);
+prog.fill.SetPosition(BOX_X + S, BOX_Y + 2 * S, 31);
+prog.fill.SetOpacity(0);
 
-fun show_prompt(visible, count) {
-    box.sprite.SetOpacity(visible);
-    lock.sprite.SetOpacity(visible);
-    for (i = 0; i < max_bullets; i++) {
-        if (visible && i < count) bullets[i].SetOpacity(1);
-        else bullets[i].SetOpacity(0);
+// scanline reveal: a background-coloured cover over the group that slides down, with a gold line on its edge
+cover.image = A.cover.Scale(220 * S, 130 * S);
+cover.sprite = Sprite(cover.image);
+cover.sprite.SetPosition(CX - 110 * S, TOP_BIG - S, 50);
+scan.sprite = Sprite(A.scanline);
+scan.sprite.SetPosition(CX - 110 * S, TOP_BIG - S, 51);
+
+sparks = [];
+spark_x[0] = -5; spark_x[1] = 6; spark_x[2] = -1; spark_x[3] = 9; spark_x[4] = -9; spark_x[5] = 2;
+spark_phase[0] = 0.0; spark_phase[1] = 0.17; spark_phase[2] = 0.34; spark_phase[3] = 0.5; spark_phase[4] = 0.67; spark_phase[5] = 0.84;
+for (i = 0; i < 6; i++) { sparks[i] = Sprite(A.spark[0]); sparks[i].SetOpacity(0); }
+burst = [];
+for (i = 0; i < 12; i++) { burst[i] = Sprite(A.spark[0]); burst[i].SetOpacity(0); }
+
+// ---- state ----
+global.tick = 0;
+global.phase = "reveal";          // reveal → torch → (password ↔ checking) → unlocked → handoff
+global.phase_tick = 0;
+global.torch = 0.0;               // 0..1, the halo fades in after the reveal
+global.typed = 0;
+global.shake = 0;
+global.error_ticks = 0;
+global.progress_shown = 0.0;
+global.progress_base = -1;
+global.burst_life = 0;
+global.handoff_from = 0;
+
+fun set_phase(p) { global.phase = p; global.phase_tick = 0; }
+
+fun show_box(v) {
+    lock.sprite.SetOpacity(v);
+    box.sprite.SetOpacity(v);
+}
+
+fun refresh_callback() {
+    global.tick++;
+    global.phase_tick++;
+    t = global.tick / 300.0;      // the torch loop: 6 s, like the wallpaper
+
+    // reveal: about 1 s
+    if (global.phase == "reveal") {
+        y = TOP_BIG - S + Math.Int(global.phase_tick * 130 * S / 50);
+        cover.sprite.SetY(y);
+        scan.sprite.SetY(y);
+        if (global.phase_tick >= 50) {
+            cover.sprite.SetOpacity(0);
+            scan.sprite.SetOpacity(0);
+            set_phase("torch");
+        }
+    }
+    if (global.phase != "reveal" && global.phase != "handoff" && global.torch < 1) { global.torch = Math.Min(1, global.torch + 0.02); }
+
+    // torch: three halo layers whose brightness and height flicker
+    a = 2 * Math.Pi * t;
+    s = 0.35 * Math.Sin(a * 2 + 0.3) + 0.30 * Math.Sin(a * 7 + 1.7) + 0.20 * Math.Sin(a * 13 + 4.0) + 0.15 * Math.Sin(a * 19 + 2.9);
+    lift = Math.Int(0.8 * Math.Sin(a * 3 + 0.4) + 0.5 * Math.Sin(a * 11 + 1.1));
+    tw = global.torch;
+    halo.sprites[0].SetOpacity(Math.Clamp((0.80 + 0.30 * s) * tw, 0, 1));
+    halo.sprites[1].SetOpacity(Math.Clamp((0.70 + 0.40 * s) * tw, 0, 1));
+    halo.sprites[2].SetOpacity(Math.Clamp((0.55 + 0.45 * s) * tw, 0, 1));
+    for (k = 0; k < 3; k++) halo.sprites[k].SetY(TOP_BIG + 16 * S - 120 * S - lift * S);
+
+    // sparks rise from the roof
+    for (i = 0; i < 6; i++) {
+        st = t + spark_phase[i];
+        st = st - Math.Int(st);
+        if (st > 0.65 || tw < 0.5) {
+            sparks[i].SetOpacity(0);
+        } else {
+            sway = 1;
+            if (mod(i, 2) == 1) { sway = -1; }
+            sparks[i].SetImage(A.spark[Math.Min(2, Math.Int(st / 0.22))]);
+            sparks[i].SetPosition(CX + (spark_x[i] * 2 + Math.Int(sway * 3 * Math.Sin(2 * Math.Pi * st * 2))) * S,
+                                  TOP_BIG - Math.Int(st * 28) * S, 25);
+            sparks[i].SetOpacity(tw);
+        }
+    }
+
+    // wrong password: shake and a red lock
+    if (global.shake > 0) {
+        global.shake--;
+        off = 0;
+        if (mod(global.shake, 4) == 0) { off = 2 * S; }
+        if (mod(global.shake, 4) == 2) { off = -2 * S; }
+        box.sprite.SetX(BOX_X + off);
+    }
+    if (global.error_ticks > 0) {
+        global.error_ticks--;
+        if (global.error_ticks == 0) { lock.sprite.SetImage(lock.closed); }
+    }
+
+    // checking: a shimmer runs over the box while the disk is unlocked
+    if (global.phase == "checking") {
+        x = mod(global.phase_tick * 2, 70) - 3;
+        box.shimmer.SetPosition(BOX_X + Math.Clamp(x, 1, 60) * S, BOX_Y + S, 33);
+        box.shimmer.SetOpacity(1);
+    } else {
+        box.shimmer.SetOpacity(0);
+    }
+
+    // unlocked: flash, the light spreads and settles, a burst of sparks, then the progress bar
+    if (global.phase == "unlocked") {
+        pt = global.phase_tick;
+        temple.flash.SetOpacity(Math.Clamp(1 - pt / 8, 0, 1));
+        box.flash.SetOpacity(Math.Clamp(1 - pt / 10, 0, 1));
+        k = Math.Min(1, pt / 50);
+        spread.sprite.SetOpacity(Math.Clamp(1.1 * (1 - k), 0, 1));
+        if (pt == 10) {
+            show_box(0);
+            lock.sprite.SetOpacity(1);
+            prog.box.SetOpacity(1);
+            prog.fill.SetOpacity(1);
+        }
+        if (global.burst_life > 0) {
+            global.burst_life--;
+            for (i = 0; i < 12; i++) {
+                ang = (200 + i * 12) * Math.Pi / 180;
+                d = 40 - global.burst_life;
+                burst[i].SetPosition(CX + Math.Int(Math.Cos(ang) * 1.6 * d) * S,
+                                     TOP_BIG - Math.Int((0.8 + mod(i * 5, 7) * 0.22) * d) * S, 26);
+                burst[i].SetImage(A.spark[Math.Min(2, Math.Int(d / 14))]);
+                burst[i].SetOpacity(Math.Clamp(global.burst_life / 20, 0, 1));
+            }
+        }
+        // progress, eased so it never jumps backwards
+        global.progress_shown = global.progress_shown + (global.progress_target - global.progress_shown) * 0.06;
+        w = Math.Int(62 * global.progress_shown);
+        if (w < 1) { w = 1; }
+        prog.fill.SetImage(prog.fill_image.Crop(0, 0, w * S, 3 * S));
+    }
+
+    // hand-off: everything but the temple fades, the temple shrinks to the wallpaper's place
+    if (global.phase == "handoff") {
+        pt = global.phase_tick;
+        f = Math.Clamp(1 - pt / 18, 0, 1);
+        wm.sprite.SetOpacity(f);
+        lock.sprite.SetOpacity(f);
+        prog.box.SetOpacity(f);
+        prog.fill.SetOpacity(f);
+        global.torch = f;
+        e = Math.Clamp(pt / 35, 0, 1);
+        e = (1 - Math.Cos(Math.Pi * e)) / 2;
+        p = Math.Int(2 * S + (S - 2 * S) * e + 0.5);
+        top = Math.Int(TOP_BIG + (TOP_SMALL - TOP_BIG) * e + 0.5);
+        place_temple(p, top);
     }
 }
+Plymouth.SetRefreshFunction(refresh_callback);
+
+global.progress_target = 0;
+fun progress_callback(duration, progress) {
+    if (global.phase != "unlocked") { return; }
+    if (global.progress_base < 0) { global.progress_base = progress; }
+    v = (progress - global.progress_base) / Math.Max(0.01, 1 - global.progress_base);
+    if (v > global.progress_target) { global.progress_target = Math.Clamp(v, 0, 1); }
+}
+Plymouth.SetBootProgressFunction(progress_callback);
 
 fun password_callback(prompt, count) {
-    show_prompt(1, count);
+    if (global.phase == "checking") {          // asked again: the password was wrong
+        global.shake = 16;
+        global.error_ticks = 60;
+        lock.sprite.SetImage(lock.error);
+    }
+    if (global.phase == "reveal") {            // never make anyone wait for the animation
+        cover.sprite.SetOpacity(0);
+        scan.sprite.SetOpacity(0);
+    }
+    set_phase("password");
+    show_box(1);
+    global.typed = count;
+    for (i = 0; i < MAXB; i++) {
+        if (i < count) { bullets[i].SetOpacity(1); } else { bullets[i].SetOpacity(0); }
+    }
 }
+Plymouth.SetDisplayPasswordFunction(password_callback);
 
 fun normal_callback() {
-    show_prompt(0, 0);
+    if (global.phase == "password") {          // Enter was pressed
+        for (i = 0; i < MAXB; i++) bullets[i].SetOpacity(0);
+        set_phase("checking");
+    }
 }
-
-Plymouth.SetDisplayPasswordFunction(password_callback);
 Plymouth.SetDisplayNormalFunction(normal_callback);
+
+fun status_callback(status) {
+    if (status == "unlocked" && global.phase != "unlocked" && global.phase != "handoff") {
+        set_phase("unlocked");
+        lock.sprite.SetImage(lock.open);
+        global.burst_life = 40;
+    }
+    if (status == "handoff") {
+        if (global.phase != "unlocked") { show_box(0); }
+        set_phase("handoff");
+    }
+}
+Plymouth.SetUpdateStatusFunction(status_callback);

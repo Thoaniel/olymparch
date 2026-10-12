@@ -1,0 +1,14 @@
+# initrd: tell the boot screen the disk is unlocked (the celebration starts only now, never on a wrong password)
+[Unit]
+Description=Olymparch: disk unlocked (boot screen)
+DefaultDependencies=no
+After=cryptsetup.target plymouth-start.service
+Before=initrd-root-fs.target
+ConditionPathExists=/usr/bin/plymouth
+
+[Service]
+Type=oneshot
+ExecStart=-/usr/bin/plymouth update --status=unlocked
+
+[Install]
+WantedBy=initrd.target

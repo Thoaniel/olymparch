@@ -1,0 +1,13 @@
+# Just before the boot screen quits: play the hand-off (the temple shrinks to the wallpaper's place)
+[Unit]
+Description=Olymparch: boot screen hand-off
+After=systemd-user-sessions.service
+Before=plymouth-quit.service plymouth-quit-wait.service getty@tty1.service
+ConditionPathExists=/usr/bin/plymouth
+
+[Service]
+Type=oneshot
+ExecStart=-/bin/sh -c 'plymouth --ping && plymouth update --status=handoff && sleep 0.8'
+
+[Install]
+WantedBy=multi-user.target

@@ -13,11 +13,13 @@ install -Dm755 -t profile/airootfs/usr/local/bin bin/olymparch-*
 share=profile/airootfs/usr/share/olymparch
 mkdir -p "$share"
 cp -r default/hypr default/shell default/lock default/idle default/branding default/foot default/i18n system "$share/"
-# Plymouth theme: script + images (made from art/plymouth.py)
-mkdir -p "$share/plymouth"
-cp default/plymouth/olymparch.plymouth default/plymouth/olymparch.script "$share/plymouth/"
-[ -s build/plymouth/temple.png ] || uv run -q --no-project --with pillow python art/plymouth.py build/plymouth 6 >/dev/null
-cp build/plymouth/*.png "$share/plymouth/"
+# Boot screen (Plymouth theme for every pixel size) and the Limine wallpapers, made by art/bootart.py
+rm -rf -- build/plymouth
+uv run -q --no-project --with pillow python art/bootart.py build/plymouth >/dev/null
+mkdir -p "$share/plymouth" "$share/limine"
+cp default/plymouth/olymparch.plymouth build/plymouth/olymparch.script build/plymouth/s*.png "$share/plymouth/"
+cp -r default/plymouth/units default/plymouth/olymparch-mkinitcpio-install "$share/plymouth/"
+cp build/plymouth/limine-s*.png "$share/limine/"
 # The live environment calls itself Olymparch too
 install -m644 default/branding/os-release profile/airootfs/etc/os-release
 install -m644 default/branding/motd profile/airootfs/etc/motd

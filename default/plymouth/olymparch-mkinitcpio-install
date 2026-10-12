@@ -1,0 +1,7 @@
+#!/bin/bash
+# mkinitcpio hook "olymparch": the initrd unit that tells the boot screen the disk is unlocked.
+build() {
+    add_systemd_unit olymparch-unlocked.service
+    add_symlink /usr/lib/systemd/system/initrd.target.wants/olymparch-unlocked.service ../olymparch-unlocked.service
+}
+help() { echo "Olymparch boot screen: tells Plymouth when the disk is unlocked."; }
