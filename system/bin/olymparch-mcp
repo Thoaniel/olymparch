@@ -324,6 +324,9 @@ def public_schema(sch):
     return sch
 
 
+# openWorldHint: true when a tool returns text someone else wrote (files, clipboard, the screen, reminder and
+# notification text, the web): clients treat that as untrusted. Local state the system keeps (settings, themes,
+# windows, packages) is false.
 def tool(name, risk, title_en, title_nb, description, props=None, required=(), summary=None, **hints):
     assert risk in ("read", "change", "sensitive") and re.fullmatch(r"[a-z][a-z0-9_]{0,47}", name)
 
@@ -503,7 +506,7 @@ def _window(address):
 
 
 @tool("windows_list", "read", "List windows", "Vis vinduer",
-      "Open windows: address, app class, title, workspace, monitor, floating, fullscreen, focused.", open_world=True)
+      "Open windows: address, app class, title, workspace, monitor, floating, fullscreen, focused.")
 def t_windows(a, s):
     out = []
     for c in hypr_json("clients"):
@@ -715,8 +718,7 @@ def t_clipboard(a, s):
 WEBAPP_NAME = r"[A-Za-z0-9 ._-]{1,40}"
 
 
-@tool("webapps_list", "read", "List web apps", "Vis webapper", "ID, name and address of every web app (olymparch-webapp list).",
-      open_world=True)
+@tool("webapps_list", "read", "List web apps", "Vis webapper", "ID, name and address of every web app (olymparch-webapp list).")
 def t_webapps(a, s):
     return ran(run([cmd("olymparch-webapp"), "list"]))
 
@@ -748,7 +750,7 @@ def catalog():
 
 
 @tool("packages_search", "read", "Search packages", "Søk etter pakker", "Search the Arch repositories (pacman -Ss).",
-      {"query": S(64, PKG)}, ("query",), open_world=True)
+      {"query": S(64, PKG)}, ("query",))
 def t_pkg_search(a, s):
     rc, out, err = run(["pacman", "-Ss", "--", a["query"]], timeout=60, limit=65536)
     if rc not in (0, 1):
@@ -793,8 +795,7 @@ def t_pkg_remove(a, s):
 
 
 @tool("updates_check", "read", "Check for updates", "Se etter oppdateringer",
-      "Which packages can be updated (checkupdates with its own database copy: nothing on the system changes).",
-      open_world=True)
+      "Which packages can be updated (checkupdates with its own database copy: nothing on the system changes).")
 def t_updates(a, s):
     if not have("checkupdates"):
         raise ToolError("checkupdates (pacman-contrib) is missing")
@@ -842,7 +843,8 @@ def t_game_add(a, s):
 
 
 # ── reminders
-@tool("reminders_list", "read", "List reminders", "Vis påminnelser", "Reminders waiting: id, when, text.")
+@tool("reminders_list", "read", "List reminders", "Vis påminnelser", "Reminders waiting: id, when, text.",
+      open_world=True)
 def t_reminders(a, s):
     return ran(run([cmd("olymparch-remind"), "list"]))
 

@@ -192,8 +192,11 @@ try:
     names = {t["name"]: t for t in tools}
     for n in ("clipboard_read", "files_read", "screenshot", "package_install"):
         ok(names.get(n, {}).get("risk") == "sensitive", f"{n} must be sensitive")
-    for n in ("clipboard_read", "files_read", "windows_list", "notification_send", "webapp_add"):
-        ok(names.get(n, {}).get("annotations", {}).get("openWorldHint") is True or n == "notification_send", f"{n}: openWorldHint")
+    for n in ("clipboard_read", "files_read", "files_list", "screenshot", "ocr_screen", "reminders_list", "webapp_add"):
+        ok(names.get(n, {}).get("annotations", {}).get("openWorldHint") is True, f"{n}: openWorldHint must be true")
+    for n in ("settings_get", "settings_list", "themes_list", "backgrounds_list", "system_info", "windows_list",
+              "workspaces_list", "packages_search", "packages_catalog", "volume_get"):
+        ok(names.get(n, {}).get("annotations", {}).get("openWorldHint") is False, f"{n}: openWorldHint must be false")
     ok(s.req("ping").get("result") == {}, "ping")
     s.send(b"{not json")
     ok(err_code(s.read()) == -32700, "parse error")
