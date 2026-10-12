@@ -23,6 +23,7 @@ trap 'kill "$QPID" 2>/dev/null; python3 -I tests/vm/report.py tests/vm/out/repor
 t0=$SECONDS
 fails=()
 check() {  # check NAME 'condition': runs in the VM terminal (it needs the keyboard), answers on the serial console
+    press ctrl+c   # a stray Esc (after closing the menu) would make readline eat the next key
     keys " c $1 '$2'\n" 0.3
     wait_for "CHK-$1-(OK|NO)" 30
     seen "CHK-$1-OK" || fails+=("$1")
