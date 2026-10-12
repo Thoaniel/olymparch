@@ -944,7 +944,7 @@ elseif cmd == "list" then
                 shown = { s.key }
             end
             for _, k in ipairs(shown) do
-                local v = s.type ~= "action" and value_of(values, k)
+                local v; if s.type ~= "action" then v = value_of(values, k) end
                 print(("%-40s %-24s %-14s %s%s"):format(k, v == nil and "" or (v == false and "false" or tostring(v or "")),
                     s.page, label(s), s.ready and "" or "  (coming)"))
             end
