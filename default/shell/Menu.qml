@@ -70,8 +70,12 @@ Scope {
 
     onOpenChanged: {
         if (!open) return;
-        if (!busy) { view = null; path = []; }
-        query = ""; current = 0; pkgResults = []; pkgError = ""; mouseX = -1; mouseY = -1;
+        mouseX = -1; mouseY = -1;
+        if (busy) {   // back after the password prompt, or reopened while it works: where it was
+            current = view && view.focus !== undefined ? view.focus : firstSelectable();
+        } else {
+            view = null; path = []; query = ""; pkgResults = []; pkgError = ""; current = 0;
+        }
         probe.running = true;
     }
 

@@ -89,9 +89,8 @@ press esc
 keys "blue" 1
 shot sok-blue "Søk «blue»: Oppsett › Bluetooth"
 press esc
-keys "slaa" 0.6
-keys "\b\bå av" 1
-shot sok-sla-av "Søk «slå av»: System › Slå av"
+keys "shut down" 1
+shot sok-shut-down "Søk på engelsk, «shut down»: System › Slå av (begge språk søkes)"
 press esc; press esc
 sleep 1
 shot lukket "Esc på øverste nivå lukker menyen"
