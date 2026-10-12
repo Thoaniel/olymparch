@@ -1,5 +1,27 @@
 {
   "launcher.search": "Søk etter apper …",
   "osd.muted": "dempet",
-  "lock.wrong": "Feil passord"
+  "lock.wrong": "Feil passord",
+  "settings.search": "⌕ Søk i alt · Ctrl+F",
+  "settings.results": "Søk: %1 (%2)",
+  "settings.advanced": "Avansert visning",
+  "settings.on": "På",
+  "settings.off": "Av",
+  "settings.soon": "kommer",
+  "settings.more": "+ %1 avanserte: %2 · vises med «Avansert visning»",
+  "settings.nothing": "Ingenting passer med «%1».",
+  "settings.where": "Lagres i %1",
+  "settings.same": " · samme som %1",
+  "settings.defaults": "Standardverdier",
+  "settings.monitors.hint": "Klikk for å velge · plassering stilles under",
+  "settings.keep.title": "BEHOLDE %1?",
+  "settings.keep.body": "Går tilbake om %1 s hvis du ikke svarer. Esc går tilbake.",
+  "settings.keep.yes": "Behold",
+  "settings.keep.no": "Gå tilbake",
+  "settings.hw.cpu": "CPU",
+  "settings.hw.gpu": "GRAFIKK",
+  "settings.hw.memory": "MINNE",
+  "settings.hw.kernel": "KJERNE",
+  "settings.hw.disk": "DISK",
+  "settings.hw.monitors": "SKJERMER"
 }

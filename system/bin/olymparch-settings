@@ -1,0 +1,586 @@
+#!/usr/bin/lua
+-- olymparch-settings: read, change and apply Olymparch settings. The Settings window, Zeus and you use the same
+-- command. Values live in ~/.config/olymparch/settings.json; what each key does is in the schema
+-- (/usr/share/olymparch/settings/schema.json). Lua because Hyprland already needs it: no extra packages.
+--
+--   olymparch-settings get KEY                 value (yours, or the default)
+--   olymparch-settings set KEY VALUE [--try S] store and apply; --try applies live and reverts after S seconds
+--   olymparch-settings keep | revert           answer a --try
+--   olymparch-settings reset KEY               back to the default
+--   olymparch-settings list [PAGE]             key, value, page, (coming) for every setting
+--   olymparch-settings apply [KEY]             write every file again (or the files for KEY) and apply live
+--   olymparch-settings run KEY                 run an action (Update now, doctor …)
+--   olymparch-settings open [PAGE]             open the Settings window
+--   olymparch-settings about | files | check | pending
+-- Per-monitor keys take the output after @, such as display.scale@DP-1.
+
+local HOME = os.getenv("HOME") or "."
+local CONFIG = os.getenv("XDG_CONFIG_HOME") or (HOME .. "/.config")
+local RUNTIME = os.getenv("XDG_RUNTIME_DIR") or "/tmp"
+local SELF = arg[0]
+
+local function script_dir() return (SELF:match("^(.*)/[^/]*$") or ".") end
+local SCHEMA = os.getenv("OLYMPARCH_SETTINGS_SCHEMA") or "/usr/share/olymparch/settings/schema.json"
+do -- running from the repo (tests): use the schema next to it
+    local f = io.open(SCHEMA)
+    if f then f:close() else SCHEMA = script_dir() .. "/../../default/settings/schema.json" end
+end
+local FILES = {
+    settings = CONFIG .. "/olymparch/settings.json",
+    hypr = CONFIG .. "/olymparch/hypr.lua",
+    monitors = CONFIG .. "/olymparch/monitors.lua",
+    idle = CONFIG .. "/hypr/hypridle.conf",
+    hyprland = CONFIG .. "/hypr/hyprland.lua",
+    pending = RUNTIME .. "/olymparch-settings-pending.json",
+}
+
+local function die(msg, code) io.stderr:write("olymparch-settings: " .. msg .. "\n"); os.exit(code or 1) end
+
+---------------------------------------------------------------------------------------------------- JSON
+local json = {}
+do
+    local esc = { ['"'] = '\\"', ["\\"] = "\\\\", ["\b"] = "\\b", ["\f"] = "\\f", ["\n"] = "\\n", ["\r"] = "\\r", ["\t"] = "\\t" }
+    local function str(s) return '"' .. s:gsub('[%c"\\]', function(c) return esc[c] or string.format("\\u%04x", c:byte()) end) .. '"' end
+    function json.value(v)
+        local t = type(v)
+        if t == "string" then return str(v)
+        elseif t == "boolean" then return tostring(v)
+        elseif t == "number" then
+            if math.type(v) == "integer" or (v == math.floor(v) and math.abs(v) < 1e15) then return string.format("%d", v) end
+            return string.format("%.14g", v)
+        elseif v == nil then return "null" end
+        die("cannot write " .. t .. " as JSON")
+    end
+    -- settings.json is one flat object: one key per line, sorted, so it diffs well
+    function json.flat(obj)
+        local keys = {}
+        for k in pairs(obj) do keys[#keys + 1] = k end
+        table.sort(keys)
+        local out = {}
+        for i, k in ipairs(keys) do out[i] = "  " .. str(k) .. ": " .. json.value(obj[k]) end
+        return #out > 0 and ("{\n" .. table.concat(out, ",\n") .. "\n}\n") or "{}\n"
+    end
+    function json.decode(s)
+        local pos = 1
+        local function ws() pos = s:find("[^ \t\r\n]", pos) or #s + 1 end
+        local value
+        local function err(what) error(("JSON: %s at byte %d"):format(what, pos), 0) end
+        local function string_()
+            local out, i = {}, pos + 1
+            while true do
+                local c = s:sub(i, i)
+                if c == "" then err("unterminated string") end
+                if c == '"' then pos = i + 1; return table.concat(out) end
+                if c == "\\" then
+                    local n = s:sub(i + 1, i + 1)
+                    local map = { b = "\b", f = "\f", n = "\n", r = "\r", t = "\t", ['"'] = '"', ["\\"] = "\\", ["/"] = "/" }
+                    if map[n] then out[#out + 1] = map[n]; i = i + 2
+                    elseif n == "u" then
+                        local cp = tonumber(s:sub(i + 2, i + 5), 16) or err("bad \\u")
+                        i = i + 6
+                        if cp >= 0xD800 and cp <= 0xDBFF and s:sub(i, i + 1) == "\\u" then
+                            local lo = tonumber(s:sub(i + 2, i + 5), 16)
+                            cp = 0x10000 + (cp - 0xD800) * 0x400 + (lo - 0xDC00)
+                            i = i + 6
+                        end
+                        out[#out + 1] = utf8.char(cp)
+                    else err("bad escape") end
+                else
+                    local j = s:find('["\\]', i) or #s + 1
+                    out[#out + 1] = s:sub(i, j - 1); i = j
+                end
+            end
+        end
+        function value()
+            ws()
+            local c = s:sub(pos, pos)
+            if c == "{" then
+                local obj = {}
+                pos = pos + 1; ws()
+                if s:sub(pos, pos) == "}" then pos = pos + 1; return obj end
+                while true do
+                    ws()
+                    if s:sub(pos, pos) ~= '"' then err("expected key") end
+                    local k = string_()
+                    ws()
+                    if s:sub(pos, pos) ~= ":" then err("expected :") end
+                    pos = pos + 1
+                    obj[k] = value()
+                    ws()
+                    local d = s:sub(pos, pos); pos = pos + 1
+                    if d == "}" then return obj end
+                    if d ~= "," then err("expected , or }") end
+                end
+            elseif c == "[" then
+                local arr = {}
+                pos = pos + 1; ws()
+                if s:sub(pos, pos) == "]" then pos = pos + 1; return arr end
+                while true do
+                    arr[#arr + 1] = value()
+                    ws()
+                    local d = s:sub(pos, pos); pos = pos + 1
+                    if d == "]" then return arr end
+                    if d ~= "," then err("expected , or ]") end
+                end
+            elseif c == '"' then return string_()
+            elseif s:sub(pos, pos + 3) == "true" then pos = pos + 4; return true
+            elseif s:sub(pos, pos + 4) == "false" then pos = pos + 5; return false
+            elseif s:sub(pos, pos + 3) == "null" then pos = pos + 4; return nil
+            else
+                local num = s:match("^-?%d+%.?%d*[eE]?[-+]?%d*", pos)
+                if not num or num == "" then err("unexpected " .. (c ~= "" and c or "end")) end
+                pos = pos + #num
+                return math.tointeger(tonumber(num)) or tonumber(num)
+            end
+        end
+        local v = value()
+        ws()
+        if pos <= #s then err("trailing data") end
+        return v
+    end
+end
+
+---------------------------------------------------------------------------------------------------- files
+local function read(path)
+    local f = io.open(path, "rb")
+    if not f then return nil end
+    local s = f:read("a"); f:close()
+    return s
+end
+local function sh_quote(s) return "'" .. tostring(s):gsub("'", "'\\''") .. "'" end
+local function write(path, text)  -- atomic: a crash never leaves half a file
+    os.execute("mkdir -p " .. sh_quote(path:match("^(.*)/") or "."))
+    local tmp = path .. ".tmp"
+    local f = assert(io.open(tmp, "wb"))
+    f:write(text); f:close()
+    assert(os.rename(tmp, path))
+end
+local function capture(cmd)
+    local p = io.popen(cmd .. " 2>/dev/null")
+    if not p then return "" end
+    local s = p:read("a") or ""; p:close()
+    return s
+end
+local function have(cmd) return os.execute("command -v " .. cmd .. " >/dev/null 2>&1") == true end
+
+local schema
+do
+    local text = read(SCHEMA) or die("schema not found: " .. SCHEMA)
+    local ok, v = pcall(json.decode, text)
+    if not ok then die(SCHEMA .. ": " .. v) end
+    schema = v
+end
+local byKey = {}
+for _, s in ipairs(schema.settings) do byKey[s.key] = s end
+
+local function load_values()
+    local text = read(FILES.settings)
+    if not text or text:match("^%s*$") then return {} end
+    local ok, v = pcall(json.decode, text)
+    if not ok or type(v) ~= "table" then die(FILES.settings .. " is not valid JSON (" .. tostring(v) .. "); fix or delete it") end
+    return v
+end
+local SHELL = "/usr/share/olymparch/shell"
+local function shell_call(...)  -- the running shell's IpcHandler "settings"
+    if not os.getenv("WAYLAND_DISPLAY") then return end
+    local args = {}
+    for i, a in ipairs({ ... }) do args[i] = sh_quote(a) end
+    os.execute("qs ipc -p " .. SHELL .. " call settings " .. table.concat(args, " ") .. " >/dev/null 2>&1")
+end
+local function save_values(v)
+    write(FILES.settings, json.flat(v))
+    shell_call("reload")   -- the shell also watches the file; this makes it immediate
+end
+
+-- KEY or KEY@OUTPUT → schema entry, output
+local function entry(key)
+    local base, out = key:match("^([^@]+)@(.+)$")
+    base = base or key
+    local s = byKey[base] or die("unknown setting: " .. base .. " (olymparch-settings list shows them all)", 2)
+    if s.per == "monitor" and not out then die(base .. " is per monitor: use " .. base .. "@OUTPUT (hyprctl monitors)", 2) end
+    if s.per ~= "monitor" and out then die(base .. " is not per monitor", 2) end
+    return s, out
+end
+
+local function value_of(values, key)
+    local v = values[key]
+    if v ~= nil then return v end
+    return byKey[key:match("^[^@]+")].default
+end
+
+-- text from the command line → typed value, checked against the schema
+local function parse(s, text)
+    if s.readonly or s.type == "action" then die(s.key .. " cannot be set", 2) end
+    if s.type == "bool" then
+        local t = ({ ["true"] = true, on = true, ["1"] = true, yes = true, ["false"] = false, off = false, ["0"] = false, no = false })[text:lower()]
+        if t == nil then die(s.key .. ": expected on or off", 2) end
+        return t
+    elseif s.type == "number" then
+        local n = tonumber(text) or die(s.key .. ": expected a number", 2)
+        if (s.min and n < s.min) or (s.max and n > s.max) then die(("%s: %s is outside %s–%s"):format(s.key, text, s.min, s.max), 2) end
+        return math.tointeger(n) or n
+    elseif s.type == "choice" then
+        if s.options_from then return text end   -- options come from the hardware (modes, audio devices)
+        for _, o in ipairs(s.options or {}) do if o.value == text then return text end end
+        local list = {}
+        for _, o in ipairs(s.options or {}) do list[#list + 1] = o.value end
+        die(s.key .. ": expected one of " .. table.concat(list, ", "), 2)
+    end
+    return text
+end
+
+---------------------------------------------------------------------------------------------------- Hyprland
+local function lua_value(v)
+    if type(v) == "string" then
+        if v:match("^-?%d+%.?%d*$") then return v end   -- numeric choices (follow_mouse "1") are numbers to Hyprland
+        return string.format("%q", v)
+    end
+    return json.value(v)
+end
+local function lua_table(path, v)  -- "decoration.blur.enabled", false → { decoration = { blur = { enabled = false } } }
+    local parts = {}
+    for p in path:gmatch("[^.]+") do parts[#parts + 1] = p end
+    local s = lua_value(v)
+    for i = #parts, 1, -1 do s = "{ " .. parts[i] .. " = " .. s .. " }" end
+    return s
+end
+local function hyprctl_eval(code)
+    if os.getenv("HYPRLAND_INSTANCE_SIGNATURE") then os.execute("hyprctl eval " .. sh_quote(code) .. " >/dev/null 2>&1") end
+end
+
+local function hypr_lines(values)  -- the user's hypr and cursor settings, as Lua
+    local lines = {}
+    for _, s in ipairs(schema.settings) do
+        local v = values[s.key]
+        if v ~= nil and s.apply.via == "hypr" and s.apply.key ~= "bind" then
+            lines[#lines + 1] = "hl.config(" .. lua_table(s.apply.key, v) .. ")   -- " .. s.key
+        elseif v ~= nil and s.apply.via == "cursor" then
+            lines[#lines + 1] = ('hl.env("XCURSOR_SIZE", "%s")   -- %s'):format(v, s.key)
+            lines[#lines + 1] = ('hl.env("HYPRCURSOR_SIZE", "%s")'):format(v)
+        end
+    end
+    return lines
+end
+
+local function monitors_now()
+    if not os.getenv("HYPRLAND_INSTANCE_SIGNATURE") then return {} end
+    local ok, v = pcall(json.decode, capture("hyprctl monitors -j"))
+    return ok and v or {}
+end
+local function monitor_spec(values, out, override)
+    local function get(k)
+        local key = "display." .. k .. "@" .. out
+        if override and override.key == key then return override.value end
+        return value_of(values, key)
+    end
+    local res, rate = get("resolution"), get("refresh")
+    local mode = "preferred"
+    if res ~= "preferred" then
+        mode = res .. (rate ~= "preferred" and ("@" .. rate) or "")
+    elseif rate ~= "preferred" then   -- a rate alone needs the resolution in use
+        for _, m in ipairs(monitors_now()) do
+            if m.name == out then mode = ("%dx%d@%s"):format(m.width, m.height, rate) end
+        end
+    end
+    local vrr = ({ off = 0, always = 1, fullscreen = 2 })[get("vrr")] or 2
+    local parts = { ("output = %q"):format(out), ("mode = %q"):format(mode), ("position = %q"):format(get("position")),
+        "scale = " .. get("scale"), "vrr = " .. vrr }
+    if get("bitdepth") == "10" then parts[#parts + 1] = "bitdepth = 10" end
+    return "hl.monitor({ " .. table.concat(parts, ", ") .. " })"
+end
+local function configured_outputs(values)
+    local seen, list = {}, {}
+    for k in pairs(values) do
+        local base, out = k:match("^(display%.[%w_]+)@(.+)$")
+        if base and not seen[out] then seen[out] = true; list[#list + 1] = out end
+    end
+    table.sort(list)
+    return list
+end
+
+local HEADER = "-- Written by olymparch-settings (Settings, Super+comma). Change it there or with `olymparch settings`;\n" ..
+    "-- edits here are overwritten. Your own lines belong in ~/.config/hypr/hyprland.lua.\n"
+local LOADER_MARK = "olymparch/monitors.lua and hypr.lua"
+local LOADER = "-- Settings (Super+comma) writes " .. LOADER_MARK .. "; lines further down still win\n" ..
+    "for _, f in ipairs({ \"monitors\", \"hypr\" }) do\n" ..
+    "    local ok, err = pcall(dofile, (os.getenv(\"XDG_CONFIG_HOME\") or os.getenv(\"HOME\") .. \"/.config\") .. \"/olymparch/\" .. f .. \".lua\")\n" ..
+    "    if not ok and not tostring(err):find(\"No such file\") then error(err) end\n" ..
+    "end\n"
+
+-- hyprland.lua must load our files right after the defaults. Older installs wrote the layout there; move it here.
+local function ensure_loader(values)
+    local text = read(FILES.hyprland)
+    if not text then
+        text = 'package.path = "/usr/share/olymparch/hypr/?.lua;" .. package.path\nrequire("olymparch")\n'
+    end
+    local changed = false
+    local layout = text:match('\nhl%.config%(%{ input = %{ kb_layout = "([^"]*)" %} %}%)\n?')
+    if layout then
+        text = text:gsub('\nhl%.config%(%{ input = %{ kb_layout = "[^"]*" %} %}%)\n?', "\n", 1)
+        if values["keyboard.layout"] == nil and layout ~= byKey["keyboard.layout"].default then
+            values["keyboard.layout"] = layout
+            save_values(values)
+        end
+        changed = true
+    end
+    if not text:find(LOADER_MARK, 1, true) then
+        local a, b = text:find('require%("olymparch"%)[^\n]*\n?')
+        if b then text = text:sub(1, b) .. (text:sub(b, b) == "\n" and "" or "\n") .. LOADER .. text:sub(b + 1)
+        else text = text .. "\n" .. LOADER end
+        changed = true
+    end
+    if changed then write(FILES.hyprland, text) end
+    return layout ~= nil
+end
+
+local function write_hypr(values)
+    local lines = hypr_lines(values)
+    write(FILES.hypr, HEADER .. (#lines > 0 and table.concat(lines, "\n") .. "\n" or ""))
+end
+local function write_monitors(values)
+    local lines = {}
+    for _, out in ipairs(configured_outputs(values)) do lines[#lines + 1] = monitor_spec(values, out) end
+    write(FILES.monitors, HEADER .. (#lines > 0 and table.concat(lines, "\n") .. "\n" or ""))
+end
+
+local function write_idle(values)
+    local lock = tonumber(value_of(values, "account.lock_minutes")) or 0
+    local off = tonumber(value_of(values, "power.screen_off_minutes")) or 0
+    local t = { "# Written by olymparch-settings (Settings → Account and lock, Power). Delete it to use",
+        "# /usr/share/olymparch/idle/hypridle.conf again. Apps, video and games that inhibit idle stop these timers.",
+        "general {",
+        "    lock_cmd = olymparch-lock",
+        "    before_sleep_cmd = loginctl lock-session",
+        "    after_sleep_cmd = hyprctl dispatch 'hl.dsp.dpms({ action = \"enable\" })'",
+        "}" }
+    if lock > 0 then
+        t[#t + 1] = ""
+        t[#t + 1] = "listener {"
+        t[#t + 1] = ("    timeout = %d                      # %d min: lock"):format(lock * 60, lock)
+        t[#t + 1] = "    on-timeout = loginctl lock-session"
+        t[#t + 1] = "}"
+    end
+    if off > 0 then
+        t[#t + 1] = ""
+        t[#t + 1] = "listener {"
+        t[#t + 1] = ("    timeout = %d                      # %d min: screens off"):format(off * 60, off)
+        t[#t + 1] = "    on-timeout = hyprctl dispatch 'hl.dsp.dpms({ action = \"disable\" })'"
+        t[#t + 1] = "    on-resume = hyprctl dispatch 'hl.dsp.dpms({ action = \"enable\" })'"
+        t[#t + 1] = "}"
+    end
+    write(FILES.idle, table.concat(t, "\n") .. "\n")
+    if have("hypridle") and os.getenv("WAYLAND_DISPLAY") then
+        os.execute("pkill -x hypridle; setsid -f hypridle -c " .. sh_quote(FILES.idle) .. " >/dev/null 2>&1")
+    end
+end
+
+local function audio_node(name)  -- node.name → PipeWire id
+    local ok, dump = pcall(json.decode, capture("pw-dump"))
+    if not ok then return nil end
+    for _, o in ipairs(dump or {}) do
+        local p = o.info and o.info.props
+        if p and p["node.name"] == name then return o.id end
+    end
+end
+
+---------------------------------------------------------------------------------------------------- apply
+-- Every applier handles one apply.via. The coverage test checks these against the schema.
+local appliers = {}
+appliers["shell"] = function() end    -- the shell watches settings.json itself
+appliers["stored"] = function() end   -- read by the tool that needs it
+appliers["info"] = function() end
+appliers["hypr"] = function(s, values, key)
+    ensure_loader(values)
+    write_hypr(values)
+    if s.apply.key ~= "bind" then hyprctl_eval("hl.config(" .. lua_table(s.apply.key, value_of(values, key)) .. ")") end
+end
+appliers["cursor"] = function(s, values, key)
+    ensure_loader(values)
+    write_hypr(values)
+    if os.getenv("HYPRLAND_INSTANCE_SIGNATURE") then
+        os.execute("hyprctl setcursor Adwaita " .. sh_quote(value_of(values, key)) .. " >/dev/null 2>&1")
+    end
+end
+appliers["monitor"] = function(s, values, key, override)
+    ensure_loader(values)
+    if not override then write_monitors(values) end
+    local out = key:match("@(.+)$")
+    hyprctl_eval(monitor_spec(values, out, override))
+end
+appliers["idle"] = function(s, values) write_idle(values) end
+appliers["audio"] = function(s, values, key)
+    local name = value_of(values, key)
+    if name == "" then return end
+    local id = audio_node(name) or die("no audio device called " .. name .. " (wpctl status -n)")
+    os.execute("wpctl set-default " .. id)
+end
+appliers["action"] = function(s)
+    os.execute("setsid -f sh -c " .. sh_quote(s.apply.command) .. " >/dev/null 2>&1")
+end
+
+local function apply(key, values, override)
+    local s = entry(key)
+    local fn = appliers[s.apply.via] or die("no way to apply " .. s.apply.via)
+    fn(s, values, key, override)
+end
+
+---------------------------------------------------------------------------------------------------- try / keep / revert
+local function load_pending()
+    local text = read(FILES.pending)
+    if not text then return nil end
+    local ok, v = pcall(json.decode, text)
+    return ok and v or nil
+end
+
+local function revert(token)
+    local p = load_pending()
+    if not p or (token and p.token ~= token) then return false end
+    os.remove(FILES.pending)
+    apply(p.key, load_values())   -- settings.json never changed: apply what it says
+    return true
+end
+
+---------------------------------------------------------------------------------------------------- commands
+local cmd = arg[1]
+local function label(s)
+    local lang = (os.getenv("LANG") or ""):match("^n[bno]") and "nb" or "en"
+    return s.label[lang] or s.label.en
+end
+
+if cmd == "get" then
+    local key = arg[2] or die("usage: get KEY", 2)
+    entry(key)
+    local v = value_of(load_values(), key)
+    print(type(v) == "string" and v or json.value(v))
+
+elseif cmd == "set" then
+    local key, text = arg[2], arg[3]
+    if not key or not text then die("usage: set KEY VALUE [--try SECONDS]", 2) end
+    local s = entry(key)
+    local v = parse(s, text)
+    local try = arg[4] == "--try" and (tonumber(arg[5]) or 15) or nil
+    local values = load_values()
+    if try then
+        revert()   -- one question at a time
+        local token = tostring(os.time()) .. tostring(math.random(100000, 999999))
+        write(FILES.pending, json.flat({ key = key, value = v, token = token, deadline = os.time() + try }))
+        apply(key, values, { key = key, value = v })
+        os.execute(("setsid -f sh -c %s >/dev/null 2>&1"):format(sh_quote(("sleep %d; exec %s revert --token %s"):format(try, sh_quote(SELF), token))))
+        print("pending " .. token)
+    else
+        values[key] = v
+        save_values(values)
+        apply(key, values)
+    end
+
+elseif cmd == "keep" then
+    local p = load_pending() or die("nothing to keep")
+    os.remove(FILES.pending)
+    local values = load_values()
+    values[p.key] = p.value
+    save_values(values)
+    apply(p.key, values)
+    print("kept " .. p.key)
+
+elseif cmd == "revert" then
+    local token = arg[2] == "--token" and arg[3] or nil
+    print(revert(token) and "reverted" or "nothing to revert")
+
+elseif cmd == "pending" then
+    local p = load_pending()
+    if p then io.write(json.flat(p)) end
+
+elseif cmd == "reset" then
+    local key = arg[2] or die("usage: reset KEY", 2)
+    entry(key)
+    local values = load_values()
+    values[key] = nil
+    save_values(values)
+    apply(key, values)
+
+elseif cmd == "list" then
+    local page = arg[2]
+    local values = load_values()
+    for _, s in ipairs(schema.settings) do
+        if not page or s.page == page then
+            local shown = {}
+            if s.per == "monitor" then
+                for k in pairs(values) do if k:match("^[^@]+") == s.key then shown[#shown + 1] = k end end
+                table.sort(shown)
+                if #shown == 0 then shown = { s.key } end
+            else
+                shown = { s.key }
+            end
+            for _, k in ipairs(shown) do
+                local v = s.type ~= "action" and value_of(values, k)
+                print(("%-40s %-24s %-14s %s%s"):format(k, v == nil and "" or (v == false and "false" or tostring(v or "")),
+                    s.page, label(s), s.ready and "" or "  (coming)"))
+            end
+        end
+    end
+
+elseif cmd == "apply" then
+    local values = load_values()
+    ensure_loader(values)
+    if arg[2] then apply(arg[2], values) else
+        save_values(values)
+        write_hypr(values)
+        write_monitors(values)
+        if values["account.lock_minutes"] ~= nil or values["power.screen_off_minutes"] ~= nil then write_idle(values) end
+        if os.getenv("HYPRLAND_INSTANCE_SIGNATURE") then os.execute("hyprctl reload >/dev/null 2>&1") end
+    end
+
+elseif cmd == "run" then
+    local s = entry(arg[2] or die("usage: run KEY", 2))
+    if s.type ~= "action" then die(s.key .. " is not an action", 2) end
+    if not s.ready then die(s.key .. " is not ready yet", 3) end
+    if s.output then os.exit(os.execute(s.apply.command:gsub("^olymparch%-settings ", sh_quote(SELF) .. " ")) and 0 or 1) end
+    apply(s.key, {})
+
+elseif cmd == "about" then
+    local os_release = read("/usr/lib/os-release") or read("/etc/os-release") or ""
+    local function field(k) return os_release:match("\n" .. k .. '="?([^"\n]*)') or os_release:match("^" .. k .. '="?([^"\n]*)') end
+    print("version=" .. (field("PRETTY_NAME") or "Olymparch") .. " " .. (field("VERSION_ID") or field("BUILD_ID") or ""))
+    print("cpu=" .. ((read("/proc/cpuinfo") or ""):match("model name%s*:%s*([^\n]+)") or "?"))
+    local gpus = {}
+    for l in capture("lspci"):gmatch("[^\n]+") do
+        local g = l:match("VGA compatible controller: (.+)") or l:match("3D controller: (.+)") or l:match("Display controller: (.+)")
+        if g then gpus[#gpus + 1] = g end
+    end
+    print("gpu=" .. (#gpus > 0 and table.concat(gpus, "; ") or "?"))
+    local kb = tonumber((read("/proc/meminfo") or ""):match("MemTotal:%s*(%d+)")) or 0
+    print(("memory=%.1f GB"):format(kb / 1024 / 1024))
+    print("kernel=" .. capture("uname -r"):gsub("%s+$", ""))
+    print("disk=" .. capture("df -h --output=avail,size / | tail -n 1"):gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " free of "))
+    local mons = {}
+    for _, m in ipairs(monitors_now()) do mons[#mons + 1] = ("%s %dx%d@%.0f ×%s"):format(m.name, m.width, m.height, m.refreshRate, m.scale) end
+    print("monitors=" .. table.concat(mons, ", "))
+    print("hyprland=" .. (capture("hyprctl version -j"):match('"tag":%s*"([^"]+)"') or "?"))
+
+elseif cmd == "open" then
+    if arg[2] then shell_call("show", arg[2]) else shell_call("open") end
+
+elseif cmd == "files" then
+    for _, k in ipairs({ "settings", "hypr", "monitors", "idle", "hyprland" }) do
+        local f = io.open(FILES[k])
+        print(("%s %s"):format(f and "✓" or "·", FILES[k]))
+        if f then f:close() end
+    end
+
+elseif cmd == "check" then
+    local values = load_values()
+    local bad = 0
+    for k, v in pairs(values) do
+        local base = k:match("^[^@]+")
+        local s = byKey[base]
+        if not s then print("unknown key: " .. k); bad = bad + 1
+        elseif s.type == "bool" and type(v) ~= "boolean" then print(k .. ": not on/off"); bad = bad + 1
+        elseif s.type == "number" and type(v) ~= "number" then print(k .. ": not a number"); bad = bad + 1 end
+    end
+    if bad > 0 then os.exit(1) end
+    print("settings ok (" .. FILES.settings .. ")")
+
+else
+    io.write((read(SELF) or ""):match("^#![^\n]*\n(.-)\n\n"):gsub("%-%- ?", ""), "\n")
+    os.exit(cmd and cmd ~= "help" and cmd ~= "--help" and 2 or 0)
+end

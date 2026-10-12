@@ -1,5 +1,6 @@
 // The notification server: the shell is the only one (no mako, dunst or swaync). Toasts top right under the
-// bar, at most 3 at a time, 6 s each (critical ones stay until dismissed).
+// bar, at most 3 at a time, 6 s each (critical ones stay until dismissed); all of it is in Settings → Notifications.
+// Do not disturb hides everything but critical toasts.
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
@@ -8,6 +9,13 @@ import Quickshell.Services.Notifications
 Scope {
     id: notes
     required property var theme
+    readonly property bool dnd: Settings.get("notifications.dnd") === true
+    readonly property string position: Settings.get("notifications.position")
+    readonly property bool top: position.startsWith("top")
+    readonly property bool left: position.endsWith("left")
+    readonly property var shown: server.trackedNotifications.values
+        .filter(n => !dnd || n.urgency === NotificationUrgency.Critical)
+        .slice(-Settings.get("notifications.max_visible")).reverse()
 
     NotificationServer {
         id: server
@@ -17,7 +25,7 @@ Scope {
         onNotification: n => {
             n.tracked = true;
             if (n.urgency !== NotificationUrgency.Critical) {
-                const t = Qt.createQmlObject("import QtQuick; Timer { interval: 6000; running: true }", notes);
+                const t = Qt.createQmlObject(`import QtQuick; Timer { interval: ${Settings.get("notifications.duration") * 1000}; running: true }`, notes);
                 t.triggered.connect(() => { if (n) n.expire(); t.destroy(); });
             }
         }
@@ -25,12 +33,12 @@ Scope {
 
     PanelWindow {
         screen: Quickshell.screens[0]
-        visible: server.trackedNotifications.values.length > 0
+        visible: notes.shown.length > 0
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "olymparch-notifications"
         exclusionMode: ExclusionMode.Ignore
-        anchors { top: true; right: true }
-        margins { top: 42; right: 10 }
+        anchors { top: notes.top; bottom: !notes.top; left: notes.left; right: !notes.left }
+        margins { top: 42; bottom: 10; left: 10; right: 10 }
         implicitWidth: 360
         implicitHeight: column.implicitHeight
         color: "transparent"
@@ -40,7 +48,7 @@ Scope {
             width: parent.width
             spacing: 8
             Repeater {
-                model: server.trackedNotifications.values.slice(-3).reverse()
+                model: notes.shown
                 delegate: Rectangle {
                     required property var modelData
                     readonly property bool critical: modelData.urgency === NotificationUrgency.Critical

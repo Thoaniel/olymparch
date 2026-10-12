@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Settings
+Name[nb]=Innstillinger
+Comment=Everything in Olymparch (Super+comma)
+Comment[nb]=Alt i Olymparch (Super+komma)
+Exec=olymparch-settings open
+Icon=preferences-system
+Categories=Settings;System;
+Keywords=settings;preferences;display;sound;keyboard;wallpaper;innstillinger;skjerm;lyd;tastatur;bakgrunn;

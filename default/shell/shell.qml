@@ -1,5 +1,6 @@
 //@ pragma ShellId olymparch
-// Olymparch shell: the animated temple wallpaper, the bar, the menu (Super+Space), notifications and the volume OSD.
+// Olymparch shell: the animated temple wallpaper, the bar, the menu (Super+Space), notifications, the volume OSD
+// and Settings (Super+comma). What can be changed is read from Settings (settings.json) and follows it live.
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
@@ -20,16 +21,19 @@ ShellRoot {
     readonly property string art: "/usr/share/olymparch/wallpaper"
     readonly property int frames: 48
 
-    // One frame counter for every monitor. 8 fps, and it stops while every workspace in view has windows.
+    // One frame counter for every monitor. Torch 8 fps, Calm 4 fps, Off (or reduced motion) stays on frame 00.
+    // It stops while every workspace in view has windows.
+    readonly property string wallpaper: Settings.get("accessibility.reduced_motion") === true ? "off" : Settings.get("appearance.wallpaper")
+    onWallpaperChanged: if (wallpaper === "off") frame = 0
     property int frame: 0
     readonly property bool templeVisible: {
         const ws = Hyprland.focusedWorkspace;
         return !ws || !ws.toplevels || ws.toplevels.values.length === 0;
     }
     Timer {
-        interval: 125
+        interval: root.wallpaper === "calm" ? 250 : 125
         repeat: true
-        running: root.templeVisible
+        running: root.templeVisible && root.wallpaper !== "off"
         onTriggered: root.frame = (root.frame + 1) % root.frames
     }
 
@@ -63,6 +67,7 @@ ShellRoot {
         PanelWindow {
             required property var modelData
             screen: modelData
+            visible: Settings.get("appearance.bar") !== false
             WlrLayershell.namespace: "olymparch-bar"
             anchors { top: true; left: true; right: true }
             implicitHeight: 34
@@ -104,7 +109,7 @@ ShellRoot {
             SystemClock { id: clock; precision: SystemClock.Minutes }
             Text {
                 anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
-                text: Qt.formatDateTime(clock.date, "ddd d. MMM  HH:mm")
+                text: Qt.formatDateTime(clock.date, Settings.get("appearance.clock_format") === "12h" ? "ddd d. MMM  h:mm AP" : "ddd d. MMM  HH:mm")
                 font { family: root.mono; pixelSize: 13 }
                 color: root.text
             }
@@ -114,4 +119,5 @@ ShellRoot {
     Launcher { theme: root }
     Notifications { theme: root }
     Osd { theme: root }
+    SettingsWindow { theme: root }
 }
