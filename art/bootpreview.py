@@ -1,4 +1,4 @@
-"""Draft 5 of the Olymparch boot sequence as an animated preview (12 fps).
+"""Draft 6 of the Olymparch boot sequence as an animated preview (12 fps).
 
 Limine (big temple + OLYMPARCH wordmark as its wallpaper, gold menu) → a gold scanline draws temple and
 wordmark → the torch lights → password (a spark per character) → checking shimmer → unlock (lock opens, temple
@@ -14,7 +14,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 OUT = sys.argv[1]
 OW, OH = (int(sys.argv[2]), int(sys.argv[3])) if len(sys.argv) > 3 else (1280, 720)
-S = max(2, round(OH / 180))
+S = max(2, min(round(OH / 180), OW // 240))   # the 215 art px wordmark always fits
 W, H = math.ceil(OW / S), math.ceil(OH / S)
 cx, cy = W // 2, int(H * 0.56)            # the desktop wallpaper's temple position
 BG_TOP, BG_BOT = (13, 13, 18), (8, 8, 12)
@@ -84,7 +84,7 @@ def make_temple():
 
 
 TP, WM = make_temple(), make_wordmark(WM_SCALE)
-BIG_TOP = 30                                   # temple top when big; then wordmark, then box
+BIG_TOP = H // 2 - 60                          # temple top when big; then wordmark, then box (centred)
 WX, WY = cx - WM.width // 2, BIG_TOP + 25 * TEMPLE_BIG + 9
 BW = 64
 BX, BY = cx - BW // 2 + 5, WY + WM.height + 10
@@ -155,6 +155,7 @@ def spread(px, k, strength):
 
 SPK = ((-5, 0.0, 1), (6, 0.17, -1), (-1, 0.34, 1), (9, 0.5, -1), (-9, 0.67, 1), (2, 0.84, -1))
 frames, tick = [], 0
+temple_screen = None   # (pixels per art px, top in screen px) while the hand-off scales the temple
 extra_sparks = []
 
 
@@ -243,13 +244,17 @@ def finish(img, overlay=None):
         for x in range(OW):
             r, g, b = d[x, y]
             d[x, y] = (r * 3 // 4, g * 3 // 4, b * 3 // 4)
+    if temple_screen:
+        pp, top_px = temple_screen
+        t = TP.resize((34 * pp, 25 * pp), Image.NEAREST)
+        big.paste(t, (OW // 2 - 17 * pp, top_px), t)
     if overlay:
         overlay(ImageDraw.Draw(big))
     frames.append(big)
     tick += 1
 
 
-def scene(halo_s=1.0, wm=1.0, temple_flash=False, after=None, bar=0, light=None):
+def scene(halo_s=1.0, wm=1.0, temple_flash=False, after=None, bar=None, light=None, keep=1.0):
     img, px = canvas()
     if light:
         spread(px, *light)
@@ -258,34 +263,53 @@ def scene(halo_s=1.0, wm=1.0, temple_flash=False, after=None, bar=0, light=None)
         sparks(px)
     sp = temple_sprite()
     tx, ty = temple_xy()
-    blit(img, sp, tx, ty)
+    if temple_screen is None:
+        blit(img, sp, tx, ty)
     if temple_flash:
         for y in range(ty, ty + sp.height):
             for x in range(tx, tx + sp.width):
                 if px[x, y][0] > 120:
                     px[x, y] = GOLD[4]
+    base = img.copy() if keep < 1 else None
     if wm > 0:
-        blit(img, WM, WX - 1, WY - 1, alpha=wm)
+        blit(img, WM, WX - 1, WY - 1)
     if after:
         after(px)
-    if bar:
-        for y in range(min(bar, 9)):
+    if base is not None:   # dissolve the UI layer with the same Bayer pattern as the halo
+        bp = base.load()
+        for y in range(H):
             for x in range(W):
-                px[x, y] = BARBG if y < 8 else LINE
+                if px[x, y] != bp[x, y] and BAYER[y % 4][x % 4] >= 16 * keep:
+                    px[x, y] = bp[x, y]
+    if bar is not None:    # the shell's bar: 8 rows + a line, sliding down from above
+        for row in range(9):
+            y = bar + row
+            if 0 <= y < H:
+                for x in range(W):
+                    px[x, y] = BARBG if row < 8 else LINE
     return img
 
 
-# 1. Limine: big temple and wordmark are its wallpaper; the menu in gold under them, no help text (1 s)
+# 1. Limine: its own wallpaper (temple above, wordmark below the centre), Limine draws the menu in the middle (1 s)
+LTOP, LWY = H // 2 - 70, H // 2 + 30
+try:
+    VGA = ImageFont.truetype("/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Regular.ttf", 2 * 14)
+except OSError:
+    VGA = FONT
 for i in range(12):
     img, px = canvas()
-    blit(img, temple_sprite(), *temple_xy())
-    blit(img, WM, WX - 1, WY - 1)
+    big_t = TP.resize((68, 50), Image.NEAREST)
+    blit(img, big_t, cx - 34, LTOP)
+    blit(img, WM, WX - 1, LWY)
     def menu(dr, i=i):
-        y0 = (BY + 2) * S
-        dr.rectangle((OW // 2 - OW * 0.075, y0 - OH * 0.022, OW // 2 + OW * 0.075, y0 + OH * 0.022), fill=GOLD[3])
-        dr.text((OW // 2, y0), "Olymparch", fill=(10, 10, 14), font=FONT, anchor="mm")
-        dr.text((OW // 2, y0 + OH * 0.055), "Snapshots  ›", fill=(154, 150, 163), font=FONT, anchor="mm")
-        dr.text((OW // 2, OH * 0.94), f"{3 - i // 4}", fill=GOLD[2], font=FONT, anchor="mm")
+        cw = 2 * 8                                   # Limine's 8x16 font at 2x
+        y0 = OH // 2 - 16
+        sel = "Olymparch"
+        w = (len(sel) + 2) * cw
+        dr.rectangle((OW // 2 - w // 2, y0, OW // 2 + w // 2, y0 + 32), fill=GOLD[3])
+        dr.text((OW // 2, y0 + 16), sel, fill=(8, 8, 12), font=VGA, anchor="mm")
+        dr.text((OW // 2, y0 + 48), "[+] Snapshots", fill=GOLD[3], font=VGA, anchor="mm")
+        dr.text((OW // 2, OH - 18), f"Booting automatically in {3 - i // 4}...", fill=GOLD[3], font=VGA, anchor="mm")
     finish(img, menu)
 # 2. Scanline: draws temple and wordmark from the top (1 s)
 top, bot = BIG_TOP, WY + WM.height
@@ -336,15 +360,20 @@ for i in range(12):
 for i in range(30):
     p = 1 - (1 - i / 29) ** 2
     finish(scene(after=lambda px, p=p: (draw_lock(px, opened=True), draw_progress(px, p))))
-# 8. Hand-off: wordmark, lock and bar fade, then the temple shrinks to its place on the wallpaper; the bar slides in
+# 8. Hand-off: wordmark, lock and bar dissolve; the temple shrinks in whole screen pixels; the bar slides in
 for i in range(6):
-    finish(scene(wm=1 - (i + 1) / 6))
-for i in range(12):
-    e = 1 - (1 - (i + 1) / 12) ** 3
+    finish(scene(keep=1 - (i + 1) / 6, after=lambda px: (draw_lock(px, opened=True), draw_progress(px, 1.0))))
+for i in range(14):
+    t = (i + 1) / 14
+    e = (1 - math.cos(math.pi * t)) / 2
     pose[0] = TEMPLE_BIG + (1 - TEMPLE_BIG) * e
     pose[1] = BIG_TOP + (SMALL_TOP - BIG_TOP) * e
-    finish(scene(wm=0, bar=min(9, i)))
+    temple_screen = (round(S * pose[0]), round(pose[1] * S))
+    u = min(1.0, max(0.0, (i - 6) / 8))
+    finish(scene(wm=0, bar=None if i < 6 else -9 + round(9 * (1 - (1 - u) ** 3))))
+temple_screen = None
+pose[:] = [1.0, float(SMALL_TOP)]
 for i in range(12):
-    finish(scene(wm=0, bar=9))
+    finish(scene(wm=0, bar=0))
 frames[0].save(OUT, save_all=True, append_images=frames[1:], duration=83, loop=0, optimize=True)
 print("ok", len(frames), "bilder,", round(len(frames) / 12, 1), "s")
