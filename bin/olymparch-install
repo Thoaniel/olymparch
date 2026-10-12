@@ -260,7 +260,7 @@ cat >/mnt/usr/lib/olymparch/autologin-getty <<GETTY
 #!/bin/sh
 if [ ! -e /run/olymparch/autologin-used ]; then
     mkdir -p /run/olymparch && touch /run/olymparch/autologin-used
-    exec /sbin/agetty -o '-p -f -- \\u' --noclear --autologin $USERNAME "\$1" linux
+    exec /sbin/agetty -o '-p -f -- \\u' --noclear --skip-login --noissue --nohostname --nonewline --autologin $USERNAME "\$1" linux
 fi
 exec /sbin/agetty -o '-p -- \\u' --noclear "\$1" linux
 GETTY
@@ -271,7 +271,13 @@ cat >/mnt/etc/systemd/system/getty@tty1.service.d/olymparch-autologin.conf <<'UN
 ExecStart=
 ExecStart=-/usr/lib/olymparch/autologin-getty %I
 Environment=XDG_SESSION_TYPE=wayland
+# The boot screen's last frame stays until Hyprland draws: the tty is not reset, cleared or hung up
+TTYReset=no
+TTYVTDisallocate=no
+TTYVHangup=no
 UNIT
+# no motd or «Last login» printed over it either
+arch-chroot /mnt sudo -u "$USERNAME" touch "/home/$USERNAME/.hushlogin"
 cat >/mnt/etc/profile.d/zz-olymparch-session.sh <<'SESSION'
 # Olymparch: a login on tty1 starts the desktop
 if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ "$(id -u)" != 0 ]; then
