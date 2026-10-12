@@ -191,7 +191,7 @@ clip_watch() {
     [[ $max =~ ^[0-9]+$ ]] || max=200
     export OLYMPARCH_CLIP_MAX=$max
     echo $$ >"$CLIPWATCH"
-    exec wl-paste --watch "$0" clip-store   # text and images
+    exec wl-paste --watch "$0" clip-store 2>"$RUN/clipwatch.log"   # text and images
 }
 clip_store() {
     # a password manager marks what it copies (KeePassXC, Bitwarden …): wl-paste says so in CLIPBOARD_STATE, and

@@ -29,8 +29,8 @@ python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/size.ppm"
 read -r W H < <(head -c 20 "$O/size.ppm" | tr -s '\n' ' ' | awk '{print $2, $3}')
 drag() { python3 -I tests/vm/qmp.py "$QMP" drag "$1" "$2" "$3" "$4" "$W" "$H"; sleep "${5:-1}"; }
 click() { python3 -I tests/vm/qmp.py "$QMP" click "$1" "$2" "$W" "$H"; sleep "${3:-1}"; }
-# the work terminal (left) gets the keyboard: the pointer there, and Super+Left
-work() { python3 -I tests/vm/qmp.py "$QMP" move $((W / 4)) $((H / 2)) "$W" "$H"; sleep 0.3; press meta_l+left; sleep 0.3; }
+# the work terminal (left) gets the keyboard: a click into it
+work() { click $((W / 4)) $((H * 3 / 4)) 0.5; }
 ok=()
 fail=()
 check() {  # check NAME MARKER SECONDS: the VM echoed MARKER to the serial console
@@ -96,7 +96,7 @@ check ocr 'OCR-OK' 10
 shot ocr-tekst "Det OCR fant, limt ut i terminalen"
 
 # ── 4. Clipboard history: text and an image, picker, search, Enter pastes into the terminal
-keys "clear; printf 'hemmelig-test' | CLIPBOARD_STATE=sensitive olymparch-tool clip-store; printf 'Ferietekst fra testen' | wl-copy; sleep 1; wl-copy < \"\$(ls -t ~/Pictures/Screenshots/*.png | head -1)\"; sleep 1; printf 'Siste kopi' | wl-copy; sleep 1; cliphist list | cut -c1-60\n" 4
+keys "clear; echo \"<2>WATCHER: \$(pgrep -af wl-paste | tr '\\\\n' ' ') LOG: \$(tr '\\\\n' ' ' < \$XDG_RUNTIME_DIR/olymparch-tool/clipwatch.log)\" > /dev/kmsg; printf 'hemmelig-test' | CLIPBOARD_STATE=sensitive olymparch-tool clip-store; printf 'Ferietekst fra testen' | wl-copy; sleep 1; wl-copy < \"\$(ls -t ~/Pictures/Screenshots/*.png | head -1)\"; sleep 1; printf 'Siste kopi' | wl-copy; sleep 1; cliphist list | cut -c1-60\n" 4
 press meta_l+ctrl+v; sleep 2
 shot utklipp "Super+Ctrl+V: historikken med tekst og bilde (miniatyr)"
 keys "ferie" 1

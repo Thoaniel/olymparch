@@ -119,7 +119,8 @@ Scope {
                             textFormat: Text.PlainText
                         }
                         Image {   // an image the sender attached (a screenshot, a colour swatch)
-                            readonly property string src: parent.parent.modelData.image || ""
+                            // a file path comes as image://icon/PATH, which the icon provider loads at 2×2: load the file itself
+                            readonly property string src: (parent.parent.modelData.image || "").replace(/^image:\/\/icon\/(?=\/)/, "")
                             visible: src.length > 0 && status === Image.Ready
                             source: src.length === 0 ? "" : src.startsWith("/") ? "file://" + src : src
                             width: Math.min(parent.width, implicitWidth * Math.min(1, 140 / Math.max(1, implicitHeight)))

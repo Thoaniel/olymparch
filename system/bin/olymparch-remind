@@ -50,7 +50,7 @@ case $cmd in
         [ -f "$f" ] || exit 0
         IFS=$'\t' read -r _ text <"$f"
         rm -f -- "$f"
-        notify-send -a "$(L Reminder Påminnelse)" -i alarm-symbolic -A ok=OK --wait -- "$text" "" >/dev/null
+        notify-send -a "$(L Reminder Påminnelse)" -A ok=OK --wait -- "$text" "" >/dev/null
         ;;
     *)
         when=$cmd
