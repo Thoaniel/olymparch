@@ -1,0 +1,36 @@
+#!/bin/bash
+# Heat warning (run every minute by olymparch-heat-check.timer, a few file reads). A notification when a CPU,
+# GPU or NVMe sensor is within 5 °C of its own critical limit (the limit the hardware reports; a fixed one when
+# it reports none). At most one warning per sensor every 30 minutes.
+#   OLYMPARCH_HWMON=DIR   read sensors from a fake /sys/class/hwmon (tests)
+set -uo pipefail
+root=${OLYMPARCH_HWMON:-/sys/class/hwmon}
+state=${XDG_STATE_HOME:-$HOME/.local/state}/olymparch/heat
+mkdir -p "$state"
+case ${LANG:-} in nb*|nn*|no*) nb=1 ;; *) nb=0 ;; esac
+t() { if [ $nb = 1 ]; then printf '%s' "$2"; else printf '%s' "$1"; fi; }
+
+for h in "$root"/hwmon*; do
+    name=$(cat "$h/name" 2>/dev/null) || continue
+    case $name in
+        k10temp|coretemp|zenpower) what=$(t "The processor" "Prosessoren"); fallback=95 ;;
+        amdgpu|nouveau|i915|xe) what=$(t "The graphics card" "Skjermkortet"); fallback=100 ;;
+        nvme) what=$(t "The SSD" "SSD-en"); fallback=80 ;;
+        *) continue ;;
+    esac
+    for input in "$h"/temp*_input; do
+        [ -r "$input" ] || continue
+        base=${input%_input}
+        now=$(( $(cat "$input") / 1000 ))
+        limit=$(( $(cat "${base}_crit" 2>/dev/null || echo 0) / 1000 ))
+        (( limit >= 50 && limit <= 150 )) || limit=$fallback
+        (( now >= limit - 5 )) || continue
+        mark=$state/${name}-${base##*/}
+        [ -n "$(find "$mark" -mmin -30 2>/dev/null)" ] && continue
+        touch "$mark"
+        notify-send -u critical -a Olymparch "$(t "$what is very hot: $now °C" "$what er veldig varm: $now °C")" \
+            "$(t "The limit is $limit °C. Check that the fans run and the air vents are free; close heavy programs." \
+                 "Grensen er $limit °C. Sjekk at viftene går og at luftehullene er frie; lukk tunge programmer.")"
+    done
+done
+exit 0

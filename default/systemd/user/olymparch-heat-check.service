@@ -1,0 +1,6 @@
+[Unit]
+Description=Olymparch: is something too hot?
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/olymparch-heat-check
