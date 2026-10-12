@@ -1,0 +1,10 @@
+#!/bin/bash
+# What the last update brought: the packages pacman upgraded, installed or removed in its last run
+# (from /var/log/pacman.log, read-only). Shown by Settings → Updates → «Siste endringer».
+set -uo pipefail
+log=${OLYMPARCH_PACMAN_LOG:-/var/log/pacman.log}
+[ -r "$log" ] || { echo "Ingen pacman-logg ($log)."; exit 0; }
+# the last transaction: from its last "transaction started" to the end
+start=$(grep -n '\[ALPM\] transaction started' "$log" | tail -n 1 | cut -d: -f1)
+[ -n "$start" ] || { echo "Ingen oppdateringer i loggen ennå."; exit 0; }
+tail -n "+$start" "$log" | sed -nE 's/^\[([0-9T:-]+)[^]]*\] \[ALPM\] (upgraded|installed|removed|downgraded) (.*)$/\1  \2 \3/p'
