@@ -240,7 +240,7 @@ check mangohud 'olymparch-settings set games.mangohud shown && olymparch-setting
 check mangohud-hidden 'olymparch-settings set games.mangohud hidden && grep -q "^no_display" ~/.config/olymparch/MangoHud.conf && grep -q "^fps_limit=141" ~/.config/olymparch/MangoHud.conf'
 check shader-cache 'olymparch-settings set games.shader_cache 20 && grep -q "^MESA_SHADER_CACHE_MAX_SIZE=20G" ~/.config/environment.d/olymparch-games.conf'
 keys "clear; olymparch-settings set settings.advanced on; olymparch-settings open games\n" 2.5
-shot spill "Spill (avansert): MangoHud vist, FPS-tak 141, shader-cache 20 GB"
+shot spill "Spill (avansert): MangoHud klar og skjult, FPS-tak 141, shader-cache 20 GB"
 close_settings
 # the shell's font follows Settings → Appearance → Font
 keys "clear; olymparch-settings set appearance.font 'DejaVu Serif'; sleep 1.5\n" 2
