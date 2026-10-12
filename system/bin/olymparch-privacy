@@ -6,4 +6,7 @@ echo "Olymparch selv: pakkespeil (pacman), GitHub (oppdateringer/backup hvis sl�
 echo "Ingen telemetri."
 echo
 echo "Åpne tilkoblinger nå (dine programmer):"
-ss -Htnp state established 2>/dev/null | awk '{ p = $NF; sub(/^users:\(\("/, "", p); sub(/".*/, "", p); printf "  %-18s %s\n", p, $4 }' | sort -u
+# columns with a state filter: Recv-Q Send-Q Local Peer [Process]
+ss -Htnp state established 2>/dev/null | awk '{
+    p = "?"; if (match($0, /users:\(\("[^"]+"/)) p = substr($0, RSTART + 9, RLENGTH - 10)
+    printf "  %-18s %s\n", p, $4 }' | sort -u
