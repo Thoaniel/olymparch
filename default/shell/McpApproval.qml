@@ -44,10 +44,12 @@ Scope {
             // nothing that changes how text looks: control characters (C0, C1), bidi overrides, zero-width, line breaks
             const bad = /[\u0000-\u001f\u007f-\u009f\u061c\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff\ufff9-\ufffb]/g;
             const clean = (s, n) => String(s).replace(bad, " ").replace(/ {2,}/g, " ").trim().slice(0, n);
+            const titles = String(title).split("\u001f");   // «English␟norsk», both fixed strings in olymparch-mcp
+            const shownTitle = I18n.lang === "nb" && titles.length > 1 ? titles[1] : titles[0];
             const lines = String(summary).split("\n").slice(0, 6).map(l => clean(l, 90)).filter(l => l.length > 0);
             mcp.requests = mcp.requests.filter(r => r.id !== id).concat([{
                 id: id, client: clean(client, 40), transport: transport === "http" ? "http" : "stdio",
-                tool: clean(tool, 48), title: clean(title, 60), risk: risk === "sensitive" ? "sensitive" : "change",
+                tool: clean(tool, 48), title: clean(shownTitle, 60), risk: risk === "sensitive" ? "sensitive" : "change",
                 summary: lines.join("\n"), started: Date.now()
             }]);
             return "shown";
@@ -191,8 +193,8 @@ Scope {
                             Repeater {
                                 model: [
                                     { how: "once", text: I18n.t("mcp.once", "Allow once"), main: true },
-                                    { how: "always", text: I18n.t("mcp.always", "Always for %1").arg(card.modelData.client + "/" + card.modelData.tool), main: false },
-                                    { how: "deny", text: I18n.t("mcp.deny", "Deny"), main: false }
+                                    { how: "deny", text: I18n.t("mcp.deny", "Deny"), main: false },
+                                    { how: "always", text: I18n.t("mcp.always", "Always for %1").arg(card.modelData.client + "/" + card.modelData.tool), main: false }
                                 ]
                                 delegate: Rectangle {
                                     id: btn

@@ -1066,7 +1066,7 @@ def ask_user(session, t, summary, req=None):
         answer = os.path.join(ANSWERS, rid)
         session.pending.add(rid)
         rc, out, err = run([qs(), "ipc", "-p", SHELL_DIR, "call", "mcp", "ask", rid, session.client_name,
-                            session.transport, t.name, t.title[1 if NB else 0], t.risk, summary[:300]], timeout=10)
+                            session.transport, t.name, t.title[0] + "\x1f" + t.title[1], t.risk, summary[:600]], timeout=10)
         state = out.strip()
         if rc != 0 or state not in ("shown", "game", "off"):
             return "deny", "no approval card (is the desktop running?)"

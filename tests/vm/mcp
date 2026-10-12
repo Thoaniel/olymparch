@@ -34,7 +34,7 @@ need() {  # need NAME MARKER SECONDS
     if wait_for "$2" "$3"; then ok+=("$1"); else fail+=("$1"); fi
 }
 g='python3 /mnt/tests/vm/mcp-guest.py'
-# click button N (0 Tillat én gang, 1 Alltid, 2 Avvis) on the card on screen; after the buttons are armed
+# click button N (0 Tillat én gang, 1 Avvis, 2 Alltid for …) on the card on screen; after the buttons are armed
 card_click() {
     local xy
     sleep 1.5
@@ -71,7 +71,7 @@ shot tillatt "Tillatt: større mellomrom mellom vinduene, og resultatet i termin
 # ── 3. denied with «Avvis»
 keys "clear; $g deny\n" 1
 if wait_for 'MCP-deny-CARD' 20; then
-    card_click 2 kort-avvis "Pekeren på «Avvis» (appearance.rounding = 12)" || fail+=(fant-ikke-avvis)
+    card_click 1 kort-avvis "Pekeren på «Avvis» (appearance.rounding = 12)" || fail+=(fant-ikke-avvis)
 fi
 need avvist 'MCP-deny-DONE denied card=1' 20
 shot avvist "Avvist: ingen avrunding, agenten får «denied»"
@@ -85,7 +85,7 @@ shot tidsavbrudd "60 s uten svar: avvist, kortet er borte, arbeidsflate 1 er for
 # ── 5. «Alltid for vm-test/notification_send», then a call without a card
 keys "clear; $g always\n" 1
 if wait_for 'MCP-always-CARD' 20; then
-    card_click 1 kort-alltid "Pekeren på «Alltid for vm-test/notification_send»" || fail+=(fant-ikke-alltid)
+    card_click 2 kort-alltid "Pekeren på «Alltid for vm-test/notification_send»" || fail+=(fant-ikke-alltid)
 fi
 need alltid 'MCP-always-DONE ok card=1' 20
 shot alltid-varsel "«Alltid»: varselet fra «AI · vm-test» vises"
@@ -115,7 +115,7 @@ seen 'MCP: GRANT-STILL' && keys "olymparch-settings pick ai.grants 'vm-test@stdi
 keys "clear; $g revoked\n" 1
 if wait_for 'MCP-revoked-CARD' 20; then
     shot kort-igjen "Etter tilbaketrekking: kortet er tilbake"
-    card_click 2 kort-igjen-avvis "Avvis" || true
+    card_click 1 kort-igjen-avvis "Avvis" || true
 fi
 need kort-igjen 'MCP-revoked-DONE denied card=1' 20
 

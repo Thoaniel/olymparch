@@ -345,7 +345,7 @@ try:
     # qs ipc -p DIR call mcp ask ID CLIENT TRANSPORT TOOL TITLE RISK SUMMARY
     client, transport, tool_, title, risk, summ = argv[7:13]
     ok(client == "olymparch-tillat-n-gang-31m" and transport == "stdio", f"client shown as {client!r}")
-    ok(tool_ == "notification_send" and title == "Show a notification" and risk == "change", f"card title/risk from the server: {argv[9:12]}")
+    ok(tool_ == "notification_send" and title == "Show a notification\x1fVis et varsel" and risk == "change", f"card title/risk from the server: {argv[9:12]}")
     ok(summ.startswith("summary: Tillat én gang") and not any(ch in summ for ch in "\u202e\u2066\u001b\u2028\u200b\r"),
        f"argument text not cleaned: {summ!r}")
     ok(all(l.split(": ", 1)[0] in ("summary", "body") for l in summ.split("\n")), f"one line per field: {summ!r}")
