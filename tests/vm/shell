@@ -1,0 +1,56 @@
+#!/bin/bash
+# VM test: the shell. Copies default/shell and default/hypr from this repo into a copy of the installed disk
+# (no rebuild needed), restarts the shell, then tries the menu, notifications and the volume OSD.
+set -uo pipefail
+cd "$(dirname "$0")/../.."
+. dev/env
+SRC=tests/vm/out/install-disk
+[ -f "$SRC/disk.qcow2" ] || { echo "kjør tests/vm/install-disk først" >&2; exit 2; }
+O=tests/vm/out/shell
+rm -rf -- tests/vm/out/shell
+mkdir -p "$O"
+cp "$SRC/vars.fd" "$O/vars.fd"
+qemu-img create -q -f qcow2 -b "$PWD/$SRC/disk.qcow2" -F qcow2 "$O/disk.qcow2"
+QMP=$O/qmp.sock
+. tests/vm/lib.sh
+PW='olymp-test-123'
+trap 'kill "$QPID" 2>/dev/null' EXIT
+t0=$SECONDS
+vm boot.log -virtfs local,path="$PWD/default",mount_tag=olysrc,security_model=none,readonly=on,id=src \
+    -audiodev none,id=snd0 -device ich9-intel-hda -device hda-output,audiodev=snd0
+unlock_and_desktop "$PW"
+
+# Put the shell from the repo in place and restart it
+press meta_l+ret; sleep 2
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/shell/. /usr/share/olymparch/shell/ && sudo cp /mnt/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -Dm644 /mnt/foot/foot.ini /etc/xdg/foot/foot.ini && hyprctl reload >/dev/null; pkill -x quickshell; echo '<2>SHELL-UPDATED' | sudo tee /dev/kmsg; exit\n" 1
+keys "$PW\n" 1
+wait_for 'SHELL-UPDATED' 30 || finish "FAIL · fikk ikke kopiert skallet inn"
+sleep 5
+shot skrivebord "Skrivebordet med det nye skallet"
+
+# The menu
+press meta_l+spc; sleep 1
+shot meny "Super+Space åpner menyen med alle apper"
+keys "foo" 1
+shot meny-sok "Søk: «foo» finner terminalen"
+press ret; sleep 2
+shot meny-start "Enter starter terminalen"
+
+# Notifications (from that terminal)
+keys "notify-send 'Steam' 'Hades II er oppdatert'; sleep 1; notify-send -u critical 'Disk' 'Disken er 95 % full'\n" 2
+shot varsler "Varsler: et vanlig og et kritisk (rød kant)"
+
+# Volume OSD
+keys "wpctl set-volume @DEFAULT_AUDIO_SINK@ 65%\n" 0.6
+shot volum "Volumvisningen: 65 %"
+keys "wpctl set-mute @DEFAULT_AUDIO_SINK@ 1\n" 0.6
+shot dempet "Dempet"
+
+# The shell's own log on the serial console, for debugging
+keys "sudo sh -c 'tail -n 40 /home/zeus/.local/state/olymparch/shell.log | while IFS= read -r l; do echo \"<2>QS: \$l\" > /dev/kmsg; done; echo \"<2>LOG-DONE\" > /dev/kmsg'\n" 1
+keys "$PW\n" 1
+wait_for 'LOG-DONE' 20
+grep -aoE 'QS: .*' "$O/$LOG" | sed 's/\x1b\[[0-9;]*m//g' >"$O/shell-log.txt"
+# only what happened after the shell's last start counts
+errors=$(awk '/Launching config/ {n = 0} /ERROR|TypeError|ReferenceError/ {n++} END {print n + 0}' "$O/shell-log.txt")
+finish "$([ "$errors" = 0 ] && echo PASS || echo FAIL) · skallet: meny, varsler og volum ($errors feil i skall-loggen) på $((SECONDS - t0)) s"

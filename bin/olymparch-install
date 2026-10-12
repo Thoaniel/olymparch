@@ -93,6 +93,7 @@ arch-chroot /mnt systemctl enable NetworkManager >/dev/null 2>&1
 step "Skrivebordet (Hyprland og skallet)"
 cp -r /usr/share/olymparch /mnt/usr/share/
 install -Dm755 /usr/lib/olymparch/launch-shell /mnt/usr/lib/olymparch/launch-shell
+install -Dm644 /usr/share/olymparch/foot/foot.ini /mnt/etc/xdg/foot/foot.ini
 xkb=$KEYMAP
 case $KEYMAP in no-latin1) xkb=no ;; sv-latin1) xkb=se ;; dk-latin1) xkb=dk ;; de-latin1) xkb=de ;; fr-latin1) xkb=fr ;; uk) xkb=gb ;; esac
 home=/mnt/home/$USERNAME

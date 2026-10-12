@@ -55,6 +55,7 @@ hl.animation({ leaf = "workspaces", enabled = true, speed = 4, bezier = "olymp",
 -- Keys
 local mod = "SUPER"
 hl.bind(mod .. " + RETURN", hl.dsp.exec_cmd("foot"))
+hl.bind(mod .. " + SPACE", hl.dsp.global("olymparch:launcher"))
 hl.bind(mod .. " + Q", hl.dsp.window.close())
 hl.bind(mod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mod .. " + SHIFT + M", hl.dsp.exit())

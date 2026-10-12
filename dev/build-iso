@@ -12,7 +12,7 @@ install -Dm755 -t profile/airootfs/usr/local/bin bin/olymparch-*
 # Olymparch defaults (Hyprland config, shell, wallpaper) for the installer to copy onto the new system
 share=profile/airootfs/usr/share/olymparch
 mkdir -p "$share"
-cp -r default/hypr default/shell default/branding system "$share/"
+cp -r default/hypr default/shell default/branding default/foot system "$share/"
 # Plymouth theme: script + images (made from art/plymouth.py)
 mkdir -p "$share/plymouth"
 cp default/plymouth/olymparch.plymouth default/plymouth/olymparch.script "$share/plymouth/"

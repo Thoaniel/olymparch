@@ -1,5 +1,5 @@
 //@ pragma ShellId olymparch
-// Olymparch shell, piece 3: the animated temple wallpaper and the bar (workspaces, clock) on every monitor.
+// Olymparch shell: the animated temple wallpaper, the bar, the menu (Super+Space), notifications and the volume OSD.
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
@@ -13,6 +13,9 @@ ShellRoot {
     readonly property color muted: "#9a96a3"
     readonly property color gold: "#d4a73a"
     readonly property color goldHi: "#f4d35e"
+    readonly property color surface: "#15151c"
+    readonly property color raised: "#1c1c25"
+    readonly property color red: "#e0605e"
     readonly property string mono: "JetBrains Mono"
     readonly property string art: "/usr/share/olymparch/wallpaper"
     readonly property int frames: 48
@@ -107,4 +110,8 @@ ShellRoot {
             }
         }
     }
+
+    Launcher { theme: root }
+    Notifications { theme: root }
+    Osd { theme: root }
 }
