@@ -11,7 +11,9 @@
 --   olymparch-settings apply [KEY]             write every file again (or the files for KEY) and apply live
 --   olymparch-settings run KEY                 run an action (Update now, doctor …)
 --   olymparch-settings open [PAGE]             open the Settings window
---   olymparch-settings about | files | check | pending
+--   olymparch-settings items KEY [--scan]      Wi-Fi networks, Bluetooth devices; pick KEY ID connects
+--   olymparch-settings choices KEY | missing   what a choice can be here; settings this machine can't use
+--   olymparch-settings about | files | check | pending | wired
 -- Per-monitor keys take the output after @, such as display.scale@DP-1.
 
 local HOME = os.getenv("HOME") or "."
@@ -227,6 +229,9 @@ local function valid(s, v, out)
         return true
     end
     if type(v) ~= "string" then return false, "expected text" end
+    if s.options_from == "desktop" then   -- default apps: a desktop file name, or "" for the system's choice
+        return v == "" or (#v <= 120 and v:match("^[%w_.%-]+%.desktop$") ~= nil), "expected a .desktop file name"
+    end
     for _, o in ipairs(s.options or {}) do if o.value == v then return true end end
     if s.type == "choice" and not s.options_from then
         local list = {}
@@ -535,6 +540,78 @@ appliers["action"] = function(s)
     os.execute("setsid -f sh -c " .. sh_quote(s.apply.command) .. " >/dev/null 2>&1")
 end
 
+-- ── devices, apps and events (every value below was checked by valid() before it gets here)
+appliers["bluetooth"] = function(s, values, key)   -- bluetooth.enabled
+    local on = value_of(values, key) == true
+    if on then os.execute("rfkill unblock bluetooth >/dev/null 2>&1") end
+    if have("bluetoothctl") then os.execute("timeout 5 bluetoothctl power " .. (on and "on" or "off") .. " >/dev/null 2>&1") end
+end
+appliers["power"] = function(s, values, key)       -- power.profile (power-profiles-daemon)
+    if have("powerprofilesctl") then os.execute("powerprofilesctl set " .. sh_quote(value_of(values, key)) .. " >/dev/null 2>&1") end
+end
+-- default apps: our lines in [Default Applications] of ~/.config/mimeapps.list ("" = the system's choice again)
+appliers["mime"] = function(s, values, key)
+    local path = CONFIG .. "/mimeapps.list"
+    local app, types = value_of(values, key), {}
+    for _, t in ipairs(s.apply.types) do types[t] = true end
+    local out, section, done = {}, nil, false
+    local function add_ours()
+        if app ~= "" then for _, t in ipairs(s.apply.types) do out[#out + 1] = t .. "=" .. app end end
+        done = true
+    end
+    for line in ((read(path) or "") .. "\n"):gmatch("([^\n]*)\n") do
+        local sec = line:match("^%[(.+)%]%s*$")
+        if sec then
+            section = sec
+            out[#out + 1] = line
+            if sec == "Default Applications" and not done then add_ours() end
+        else
+            local t = line:match("^([^=]+)=")
+            if not (section == "Default Applications" and t and types[t]) then out[#out + 1] = line end
+        end
+    end
+    if not done and app ~= "" then
+        if #out > 0 and out[#out] ~= "" then out[#out + 1] = "" end
+        out[#out + 1] = "[Default Applications]"
+        add_ours()
+    end
+    while #out > 0 and out[#out] == "" do out[#out] = nil end
+    write(path, table.concat(out, "\n") .. "\n")
+end
+appliers["terminal"] = function(s, values)         -- apps.terminal: the terminal shortcut starts $OLYMPARCH_TERMINAL
+    ensure_loader(values)
+    write_hypr(values)
+    if os.getenv("HYPRLAND_INSTANCE_SIGNATURE") then os.execute("hyprctl reload >/dev/null 2>&1") end
+end
+-- a user unit on or off: masked in ~/.config/systemd/user, which also wins over the global enable
+appliers["unit"] = function(s, values, key)
+    local on = value_of(values, key) == true
+    for _, u in ipairs(s.apply.units) do
+        if on then os.execute(("systemctl --user unmask %s >/dev/null 2>&1; systemctl --user start %s >/dev/null 2>&1"):format(sh_quote(u), sh_quote(u)))
+        else os.execute(("systemctl --user mask --now %s >/dev/null 2>&1"):format(sh_quote(u))) end
+    end
+end
+-- a number for a user unit, as Environment= in a drop-in next to it
+appliers["dropin"] = function(s, values, key)
+    local n = math.tointeger(value_of(values, key)) or die("expected a whole number")
+    local dir = CONFIG .. "/systemd/user/" .. s.apply.unit .. ".d"
+    write(dir .. "/olymparch-settings.conf", ("# Written by olymparch-settings (%s)\n[Service]\nEnvironment=%s=%d\n"):format(s.key, s.apply.key, n))
+    os.execute("systemctl --user daemon-reload >/dev/null 2>&1")
+end
+-- headset switch: /etc/pipewire/pipewire-pulse.conf.d/50-olymparch-switch-on-connect.conf loads the module unless
+-- olymparch.switch-on-connect is false; this drop-in says so. pactl changes the running server too.
+appliers["headset"] = function(s, values, key)
+    local on = value_of(values, key) == true
+    local path = CONFIG .. "/pipewire/pipewire-pulse.conf.d/90-olymparch-settings.conf"
+    if on then os.remove(path)
+    else write(path, "# Written by olymparch-settings (audio.headset_switch)\npulse.properties = { olymparch.switch-on-connect = false }\n") end
+    if have("pactl") then
+        local loaded = capture("pactl list modules short"):find("module%-switch%-on%-connect") ~= nil
+        if on and not loaded then os.execute("pactl load-module module-switch-on-connect >/dev/null 2>&1")
+        elseif not on and loaded then os.execute("pactl unload-module module-switch-on-connect >/dev/null 2>&1") end
+    end
+end
+
 local function apply(key, values, override)
     local s = entry(key)
     local fn = appliers[s.apply.via] or die("no way to apply " .. s.apply.via)
@@ -681,6 +758,137 @@ elseif cmd == "about" then
     for _, m in ipairs(monitors_now()) do mons[#mons + 1] = ("%s %dx%d@%.0f ×%s"):format(m.name, m.width, m.height, m.refreshRate, m.scale) end
     print("monitors=" .. table.concat(mons, ", "))
     print("hyprland=" .. (capture("hyprctl version -j"):match('"tag":%s*"([^"]+)"') or "?"))
+
+-- ── lists the window shows as rows you click: Wi-Fi networks, Bluetooth devices.
+--   items KEY [--scan]   one per line: ID <tab> STATE (on, saved, new) <tab> NAME <tab> DETAIL; or "! MESSAGE"
+--   pick KEY ID          connect / disconnect what was clicked
+elseif cmd == "items" or cmd == "pick" then
+    local key = arg[2] or die("usage: " .. cmd .. " KEY …", 2)
+    local function clean(t) return ((t or ""):gsub("%c", " ")) end
+    if key == "network.wifi" then
+        if not have("nmcli") then print("! NetworkManager (nmcli) is not installed"); os.exit(0) end
+        local function wifi_list()
+            local list = {}
+            for l in capture("nmcli -t -f IN-USE,SIGNAL,SECURITY,SSID device wifi list --rescan no"):gmatch("[^\n]+") do
+                local inuse, signal, sec, ssid = l:match("^([^:]*):(%d*):([^:]*):(.*)$")
+                ssid = ssid and ssid:gsub("\\:", ":"):gsub("\\\\", "\\")
+                if ssid and ssid ~= "" and #ssid <= 32 and not ssid:find("%c") then
+                    list[#list + 1] = { ssid = ssid, on = inuse == "*", signal = tonumber(signal) or 0, secure = sec ~= "" and sec ~= "--" }
+                end
+            end
+            return list
+        end
+        local saved = {}
+        for l in capture("nmcli -t -f NAME,TYPE connection show"):gmatch("[^\n]+") do
+            local name = l:match("^(.*):802%-11%-wireless$")
+            if name then saved[name:gsub("\\:", ":")] = true end
+        end
+        if cmd == "items" then
+            if capture("nmcli -t -f TYPE device"):find("wifi") == nil then print("! no Wi-Fi adapter"); os.exit(0) end
+            if arg[3] == "--scan" then os.execute("nmcli device wifi rescan >/dev/null 2>&1; sleep 3") end
+            local seen = {}
+            for _, n in ipairs(wifi_list()) do
+                if not seen[n.ssid] then
+                    seen[n.ssid] = true
+                    print(table.concat({ n.ssid, n.on and "on" or saved[n.ssid] and "saved" or "new", n.ssid,
+                        n.signal .. "%" .. (n.secure and " · 🔒" or "") }, "\t"))
+                end
+            end
+        else
+            local ssid = arg[3] or die("usage: pick network.wifi SSID", 2)
+            if #ssid > 32 or ssid:find("%c") then die("not a network name", 2) end
+            local net
+            for _, n in ipairs(wifi_list()) do if n.ssid == ssid then net = n end end
+            if net and net.on then os.exit(os.execute("nmcli connection down id " .. sh_quote(ssid) .. " >/dev/null 2>&1") and 0 or 1) end
+            if saved[ssid] then os.exit(os.execute("nmcli connection up id " .. sh_quote(ssid) .. " >/dev/null 2>&1") and 0 or 1) end
+            if net and not net.secure then os.exit(os.execute("nmcli device wifi connect " .. sh_quote(ssid) .. " >/dev/null 2>&1") and 0 or 1) end
+            -- a password is needed: nmtui asks for it in a terminal, so it never passes through a command line
+            os.execute("setsid -f foot -e nmtui connect " .. sh_quote(ssid) .. " >/dev/null 2>&1")
+        end
+    elseif key == "bluetooth.devices" then
+        local function bt(args) return capture("timeout 5 bluetoothctl " .. args) end
+        if not have("bluetoothctl") then print("! Bluetooth (bluez) is not installed: no adapter was found"); os.exit(0) end
+        local show = bt("show")
+        if not show:find("Controller") then print("! no Bluetooth adapter"); os.exit(0) end
+        local function set_of(args)
+            local t = {}
+            for mac in bt(args):gmatch("Device (%x%x:%x%x:%x%x:%x%x:%x%x:%x%x)") do t[mac] = true end
+            return t
+        end
+        if cmd == "items" then
+            if not show:find("Powered: yes") then print("! Bluetooth is off"); os.exit(0) end
+            if arg[3] == "--scan" then os.execute("timeout 12 bluetoothctl --timeout 10 scan on >/dev/null 2>&1") end
+            local paired, connected = set_of("devices Paired"), set_of("devices Connected")
+            for mac, name in bt("devices"):gmatch("Device (%x%x:%x%x:%x%x:%x%x:%x%x:%x%x) ([^\n]*)") do
+                print(table.concat({ mac, connected[mac] and "on" or paired[mac] and "saved" or "new", clean(name), mac }, "\t"))
+            end
+        else
+            local mac = arg[3] or die("usage: pick bluetooth.devices MAC", 2)
+            if not mac:match("^%x%x:%x%x:%x%x:%x%x:%x%x:%x%x$") then die("not a device address", 2) end
+            local q = sh_quote(mac)
+            if set_of("devices Connected")[mac] then os.exit(os.execute("timeout 10 bluetoothctl disconnect " .. q .. " >/dev/null 2>&1") and 0 or 1) end
+            if not set_of("devices Paired")[mac] then
+                os.execute("timeout 25 bluetoothctl --timeout 20 pair " .. q .. " >/dev/null 2>&1")
+                os.execute("timeout 5 bluetoothctl trust " .. q .. " >/dev/null 2>&1")
+            end
+            os.exit(os.execute("timeout 15 bluetoothctl connect " .. q .. " >/dev/null 2>&1") and 0 or 1)
+        end
+    else
+        die(key .. " has no list", 2)
+    end
+
+-- wired network: what NetworkManager says (Settings → Network → Wired)
+elseif cmd == "wired" then
+    if not have("nmcli") then print("NetworkManager (nmcli) is not installed"); os.exit(0) end
+    local any = false
+    for l in capture("nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device"):gmatch("[^\n]+") do
+        local dev, typ, state, conn = l:match("^([^:]*):([^:]*):([^:]*):(.*)$")
+        if typ == "ethernet" then
+            any = true
+            local ip = capture("nmcli -g IP4.ADDRESS device show " .. sh_quote(dev)):match("[^\n|]+") or ""
+            local speed = (read("/sys/class/net/" .. dev .. "/speed") or ""):match("%d+")
+            print(("%s  %s%s%s%s"):format(dev, state, conn ~= "" and ("  " .. conn) or "", ip ~= "" and ("  " .. ip) or "",
+                speed and tonumber(speed) > 0 and ("  " .. speed .. " Mb/s") or ""))
+        end
+    end
+    if not any then print("no wired adapter") end
+
+-- settings that need a program this machine doesn't have (the window hides them): one key per line
+elseif cmd == "missing" then
+    for _, s in ipairs(schema.settings) do
+        if s.needs and not have(s.needs) then print(s.key) end
+    end
+
+-- what a choice can be on this machine: VALUE <tab> LABEL per line (default apps, terminals)
+elseif cmd == "choices" then
+    local s = entry(arg[2] or die("usage: choices KEY", 2))
+    local function clean_name(t) return (t:gsub("%c", " ")) end
+    if s.options_from == "desktop" then
+        local want = {}
+        for _, t in ipairs(s.apply.types or {}) do want[t] = true end
+        local seen = {}
+        local dirs = { (os.getenv("XDG_DATA_HOME") or (HOME .. "/.local/share")) .. "/applications" }
+        for d in (os.getenv("XDG_DATA_DIRS") or "/usr/local/share:/usr/share"):gmatch("[^:]+") do dirs[#dirs + 1] = d .. "/applications" end
+        for _, dir in ipairs(dirs) do
+            for f in capture("ls -1 " .. sh_quote(dir)):gmatch("[^\n]+") do
+                if f:match("^[%w_.%-]+%.desktop$") and not seen[f] then
+                    seen[f] = true
+                    local text = read(dir .. "/" .. f) or ""
+                    local entry_ = text:match("%[Desktop Entry%](.-)\n%[") or text:match("%[Desktop Entry%](.*)") or ""
+                    local mimes = entry_:match("\nMimeType=([^\n]*)") or ""
+                    local hit = false
+                    for m in mimes:gmatch("[^;]+") do if want[m] then hit = true end end
+                    if hit and not entry_:find("\nNoDisplay=true") then
+                        print(f .. "\t" .. clean_name(entry_:match("\nName=([^\n]*)") or f))
+                    end
+                end
+            end
+        end
+    else
+        for _, o in ipairs(s.options or {}) do
+            if o.value == "" or not s.installed or have(o.value) then print(o.value .. "\t" .. label(o)) end
+        end
+    end
 
 elseif cmd == "open" then
     if arg[2] then shell_call("page", arg[2]) else shell_call("open") end

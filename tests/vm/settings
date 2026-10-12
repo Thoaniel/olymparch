@@ -130,6 +130,46 @@ keys "olymparch-settings set notifications.dnd off; notify-send Steam 'Varselet 
 wait_for 'CHK-dnd-off-shows-(OK|NO)' 30; seen 'CHK-dnd-off-shows-OK' || fails+=(dnd-off-shows)
 shot dnd-av "Ikke forstyrr av (fra kommandolinja): varselet vises"
 
+# ── Shortcuts: the terminal moves to Super+T (pressed in the window), the old Super+Enter does nothing,
+#    a taken combination is refused with the reason, and the workspace keys get another modifier
+keys "clear\n" 0.5
+press meta_l+comma; sleep 1.5
+search keys.term
+press ret; sleep 0.5
+shot hurtigtast-lytter "Hurtigtast: terminal: «Trykk tastene» (Enter begynner å lytte)"
+press meta_l+t; sleep 2.5
+shot hurtigtast-satt "Hurtigtast: terminal = SUPER + T"
+search keys.menu
+press ret; sleep 0.5
+press meta_l+t; sleep 2
+shot hurtigtast-konflikt "Super+T til menyen: avvist, «er allerede keys.terminal» i rødt"
+close_settings
+check keys-saved 'grep -q "keys.terminal.: .SUPER + T" ~/.config/olymparch/settings.json && ! grep -q keys.menu ~/.config/olymparch/settings.json && grep -q "olymparch_keys" ~/.config/olymparch/hypr.lua && [ -z "$(hyprctl configerrors | tr -d "[:space:]")" ]'
+keys "sleep 4; c keys-new-works '[ \$(hyprctl clients | grep -c \"class: foot\") -ge 2 ]'\n" 0.3
+press meta_l+t; sleep 5
+shot hurtigtast-ny-terminal "Super+T åpner en terminal"
+press meta_l+q; sleep 1.5
+wait_for 'CHK-keys-new-works-(OK|NO)' 20; seen 'CHK-keys-new-works-OK' || fails+=(keys-new-works)
+keys "sleep 4; c keys-old-gone '[ \$(hyprctl clients | grep -c \"class: foot\") -eq 1 ]'\n" 0.3
+press meta_l+ret; sleep 5
+wait_for 'CHK-keys-old-gone-(OK|NO)' 20; seen 'CHK-keys-old-gone-OK' || fails+=(keys-old-gone)
+check keys-conflict-cli '! olymparch-settings set keys.workspace "SUPER + SHIFT" && olymparch-settings set keys.workspace "SUPER + ALT"'
+keys "clear; sleep 3; c keys-workspace 'hyprctl activeworkspace | grep -q \"ID 4 \"'\n" 0.3
+press meta_l+alt+4; sleep 4
+wait_for 'CHK-keys-workspace-(OK|NO)' 20; seen 'CHK-keys-workspace-OK' || fails+=(keys-workspace)
+shot hurtigtast-arbeidsflate "Super+Alt+4 går til arbeidsflate 4 (arbeidsflate-tastene fikk Alt)"
+press meta_l+alt+1; sleep 1.5
+keys "clear; sleep 3; c keys-old-workspace-gone 'hyprctl activeworkspace | grep -q \"ID 1 \"'\n" 0.3
+press meta_l+4; sleep 4
+wait_for 'CHK-keys-old-workspace-gone-(OK|NO)' 20; seen 'CHK-keys-old-workspace-gone-OK' || fails+=(keys-old-workspace-gone)
+press meta_l+1; sleep 1
+press meta_l+comma; sleep 1.5
+search hurtigtast
+shot hurtigtaster "Alle hurtigtastene (søk «hurtigtast»): terminal flyttet, arbeidsflate med Super + Alt"
+close_settings
+keys "clear; olymparch-settings reset keys.terminal; olymparch-settings reset keys.workspace; sleep 1; c keys-reset '! grep -q olymparch_keys ~/.config/olymparch/hypr.lua'\n" 1
+wait_for 'CHK-keys-reset-(OK|NO)' 30; seen 'CHK-keys-reset-OK' || fails+=(keys-reset)
+
 # ── The rest through the same command Zeus will use
 check keyboard 'olymparch-settings set keyboard.layout no && hyprctl getoption input.kb_layout | grep -q "str: no" && grep -q "kb_layout = .no." ~/.config/olymparch/hypr.lua; olymparch-settings set keyboard.layout us'
 check idle 'olymparch-settings set account.lock_minutes 5 && grep -q "timeout = 300" ~/.config/hypr/hypridle.conf'

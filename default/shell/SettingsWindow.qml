@@ -25,6 +25,48 @@ Scope {
     property string outputKey: ""        // the last action with output (doctor …) and what it printed
     property string output: ""
     property bool outputError: false     // output is why a change was refused
+    // ── what this machine has, asked on open: settings it can't use (hidden), choices (default apps,
+    //    terminals) and lists (Wi-Fi, Bluetooth). Keyed by setting.
+    property var missing: []
+    property var choices: ({})           // KEY → [{ value, text }]
+    property var items: ({})             // KEY → { lines: [{ id, state, name, detail }], message, busy }
+    function loadMissing() { Settings.run(["missing"], out => { win.missing = out.split("\n").filter(l => l); }); }
+    function loadChoices(s) {
+        Settings.run(["choices", s.key], out => {
+            const c = Object.assign({}, win.choices);
+            c[s.key] = out.split("\n").filter(l => l).map(l => { const t = l.split("\t"); return { value: t[0], text: t[1] || t[0] }; });
+            win.choices = c;
+        });
+    }
+    function setItems(key, patch) {
+        const all = Object.assign({}, win.items);
+        all[key] = Object.assign({ lines: [], message: "", busy: "" }, all[key] || {}, patch);
+        win.items = all;
+    }
+    function loadItems(key, scan) {
+        setItems(key, { busy: scan ? I18n.t("settings.items.searching", "Searching …") : "" });
+        Settings.run(["items", key].concat(scan ? ["--scan"] : []), out => {
+            const lines = [], msgs = [];
+            for (const l of out.split("\n").filter(l => l)) {
+                if (l.startsWith("! ")) { msgs.push(l.slice(2)); continue; }
+                const t = l.split("\t");
+                lines.push({ id: t[0], state: t[1], name: t[2] || t[0], detail: t[3] || "" });
+            }
+            win.setItems(key, { lines: lines, message: msgs.join("\n"), busy: "" });
+        });
+    }
+    function pickItem(key, it) {
+        setItems(key, { busy: (it.state === "on" ? I18n.t("settings.items.disconnecting", "Disconnecting %1 …") : I18n.t("settings.items.connecting", "Connecting %1 …")).arg(it.name) });
+        Settings.run(["pick", key, it.id], () => win.loadItems(key, false));
+    }
+    // the rows on screen need their choices and lists
+    function loadFor(rows) {
+        for (const s of rows) {
+            if ((s.options_from === "desktop" || s.installed) && !choices[s.key]) loadChoices(s);
+            if (s.widget === "items" && !items[s.key]) loadItems(s.key, false);
+        }
+    }
+    onRowsChanged: if (open) loadFor(rows)
     property var pending: null           // a --try waiting for «Keep»: { key, value, text, token }
     property int countdown: 0
 
@@ -59,6 +101,10 @@ Scope {
             for (const x of modes) if (x[1] === res && !seen.has(x[2])) { seen.add(x[2]); out.push({ value: x[2], text: Math.round(parseFloat(x[2])) + " Hz" }); }
         } else if (s.options_from === "monitors") {
             for (const x of monitors) out.push({ value: x.name, text: x.model ? x.model + " (" + x.name + ")" : x.name });
+        } else if (s.options_from === "desktop" || s.installed) {   // default apps, terminals: what is installed
+            const c = choices[s.key];
+            if (c && s.installed) return c;
+            for (const x of c || []) if (!out.find(o => o.value === x.value)) out.push(x);
         } else if (s.options_from === "audio.sinks" || s.options_from === "audio.sources") {
             const sink = s.options_from === "audio.sinks";
             for (const n of Pipewire.nodes.values)
@@ -80,6 +126,7 @@ Scope {
                                          tr(pageOf(s.page) ? pageOf(s.page).label : null)].join(" ").toLowerCase().includes(q));
         return all.filter(s => s.page === page && (advanced || s.level === "simple"));
     }
+    readonly property var shownRows: rows.filter(s => !missing.includes(s.key))
     readonly property var hiddenAdvanced: query ? [] : Settings.schema.settings.filter(s => s.page === page && s.level === "advanced" && s.key !== "settings.advanced" && !advanced)
 
     function change(s, value) {
@@ -167,7 +214,7 @@ Scope {
         function page(id: string): void { win.step(0); win.page = id; win.open = true; }  // not "show": qs ipc has a subcommand by that name
         function reload(): void { Settings.reload(); }
     }
-    onOpenChanged: if (open) { refreshMonitors(); aboutProc.running = true; }
+    onOpenChanged: if (open) { refreshMonitors(); aboutProc.running = true; choices = {}; items = {}; loadMissing(); loadFor(rows); }
 
     Timer {
         running: win.pending !== null
@@ -412,7 +459,7 @@ Scope {
                         }
 
                         Repeater {
-                            model: win.rows
+                            model: win.shownRows
                             delegate: Item {
                                 id: row
                                 required property var modelData
@@ -459,7 +506,8 @@ Scope {
                                     y: 7
                                     width: row.width - 316
                                     height: Math.max(26, sw.visible ? sw.height : seg.visible ? seg.height : sel.visible ? sel.height
-                                                           : sld.visible ? sld.height : fld.visible ? fld.height : btn.visible ? btn.height : kc.visible ? kc.height : info2.height)
+                                                           : sld.visible ? sld.height : fld.visible ? fld.height : btn.visible ? btn.height : kc.visible ? kc.height
+                                                           : itm.visible ? itm.implicitHeight : info2.height)
                                     opacity: row.ready ? 1 : 0.45
                                     enabled: row.ready
 
@@ -723,6 +771,78 @@ Scope {
                                             color: kc.listening ? win.theme.goldHi : row.value === "" ? win.theme.muted : (kc.activeFocus ? win.theme.goldHi : win.theme.text)
                                         }
                                         MouseArea { anchors.fill: parent; onClicked: { kc.forceActiveFocus(); kc.listening = !kc.listening; } }
+                                    }
+
+                                    // ── a list you click (Wi-Fi networks, Bluetooth devices): olymparch-settings items / pick
+                                    Column {
+                                        id: itm
+                                        visible: row.w === "items"
+                                        width: Math.min(parent.width, 520)
+                                        spacing: 4
+                                        readonly property var d: win.items[row.s.key] || { lines: [], message: "", busy: "" }
+                                        Row {
+                                            spacing: 8
+                                            Rectangle {
+                                                id: scanBtn
+                                                width: scanText.implicitWidth + 24; height: 26
+                                                color: win.theme.raised
+                                                border.color: activeFocus ? win.theme.gold : win.theme.line
+                                                activeFocusOnTab: itm.visible && row.ready
+                                                onActiveFocusChanged: if (activeFocus) list.show(row)
+                                                Keys.onReturnPressed: win.loadItems(row.s.key, true)
+                                                Keys.onSpacePressed: win.loadItems(row.s.key, true)
+                                                Text { id: scanText; anchors.centerIn: parent; text: I18n.t("settings.items.scan", "Search again"); font { family: win.theme.mono; pixelSize: 12; bold: true } color: scanBtn.activeFocus ? win.theme.goldHi : win.theme.text }
+                                                MouseArea { anchors.fill: parent; onClicked: win.loadItems(row.s.key, true) }
+                                            }
+                                            Text {
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                visible: itm.d.busy !== ""
+                                                text: itm.d.busy
+                                                font { family: win.theme.mono; pixelSize: 12 }
+                                                color: win.theme.goldHi
+                                            }
+                                        }
+                                        Text {
+                                            visible: itm.d.message !== ""
+                                            width: itm.width
+                                            wrapMode: Text.Wrap
+                                            text: itm.d.message
+                                            font { family: win.theme.mono; pixelSize: 12 }
+                                            color: win.theme.muted
+                                        }
+                                        Repeater {
+                                            model: itm.d.lines
+                                            delegate: Rectangle {
+                                                id: it
+                                                required property var modelData
+                                                readonly property bool on: modelData.state === "on"
+                                                width: itm.width; height: 28
+                                                color: activeFocus ? win.theme.raised : "#0d0d12"
+                                                border.color: activeFocus ? win.theme.gold : win.theme.line
+                                                activeFocusOnTab: itm.visible && row.ready
+                                                onActiveFocusChanged: if (activeFocus) list.show(row)
+                                                Keys.onReturnPressed: win.pickItem(row.s.key, modelData)
+                                                Keys.onSpacePressed: win.pickItem(row.s.key, modelData)
+                                                Rectangle { visible: it.on; width: 2; height: parent.height; color: win.theme.gold }
+                                                Text {
+                                                    anchors { left: parent.left; leftMargin: 10; right: itAct.left; rightMargin: 8; verticalCenter: parent.verticalCenter }
+                                                    text: it.modelData.name + (it.modelData.detail ? "  ·  " + it.modelData.detail : "")
+                                                    elide: Text.ElideRight
+                                                    font { family: win.theme.mono; pixelSize: 12; bold: it.on }
+                                                    color: it.on ? win.theme.goldHi : win.theme.text
+                                                }
+                                                Text {
+                                                    id: itAct
+                                                    anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
+                                                    text: it.on ? I18n.t("settings.items.disconnect", "Disconnect ›")
+                                                        : it.modelData.state === "saved" ? I18n.t("settings.items.connect", "Connect ›")
+                                                        : row.s.key === "bluetooth.devices" ? I18n.t("settings.items.pair", "Pair ›") : I18n.t("settings.items.connect", "Connect ›")
+                                                    font { family: win.theme.mono; pixelSize: 11 }
+                                                    color: it.activeFocus ? win.theme.goldHi : win.theme.muted
+                                                }
+                                                MouseArea { anchors.fill: parent; onClicked: win.pickItem(row.s.key, it.modelData) }
+                                            }
+                                        }
                                     }
 
                                     // shown, not set (About)

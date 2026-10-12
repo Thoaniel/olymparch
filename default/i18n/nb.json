@@ -43,5 +43,12 @@
   "settings.hw.disk": "DISK",
   "settings.hw.monitors": "SKJERMER",
   "settings.keys.press": "Trykk tastene · Esc avbryter · ⌫ ingen",
-  "settings.keys.none": "Ingen hurtigtast"
+  "settings.keys.none": "Ingen hurtigtast",
+  "settings.items.scan": "Søk på nytt",
+  "settings.items.searching": "Søker …",
+  "settings.items.connecting": "Kobler til %1 …",
+  "settings.items.disconnecting": "Kobler fra %1 …",
+  "settings.items.connect": "Koble til ›",
+  "settings.items.disconnect": "Koble fra ›",
+  "settings.items.pair": "Par ›"
 }

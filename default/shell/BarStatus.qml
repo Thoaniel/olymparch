@@ -112,8 +112,10 @@ Row {
         clickable: status.player && status.player.canTogglePlaying
         onClicked: status.player.togglePlaying()
     }
-    Cell { visible: status.micInUse; icon: "\u{F036C}"; alert: true }
-    Cell { visible: status.camInUse; icon: "\u{F0100}"; alert: true }
+    // Settings → Privacy → «Camera and microphone indicator» can hide these two
+    readonly property bool privacyIndicator: Settings.get("privacy.indicator") !== false
+    Cell { visible: status.micInUse && status.privacyIndicator; icon: "\u{F036C}"; alert: true }
+    Cell { visible: status.camInUse && status.privacyIndicator; icon: "\u{F0100}"; alert: true }
     Cell {
         visible: zeusCheck.installed
         icon: ""
