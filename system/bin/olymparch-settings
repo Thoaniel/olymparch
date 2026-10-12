@@ -557,6 +557,13 @@ appliers["audio"] = function(s, values, key)
     local id = audio_node(name) or die("no audio device called " .. name .. " (wpctl status -n)")
     os.execute(("wpctl set-default %d"):format(math.tointeger(id) or die("bad PipeWire id")))
 end
+appliers["pwclock"] = function(s, values)   -- audio.samplerate / audio.latency: PipeWire's clock, from the next login
+    local rate = math.tointeger(tonumber(value_of(values, "audio.samplerate"))) or 48000
+    local quantum = math.tointeger(tonumber(value_of(values, "audio.latency"))) or 1024
+    write(CONFIG .. "/pipewire/pipewire.conf.d/olymparch.conf",
+        "# Written by olymparch-settings (Settings → Sound). Used from the next login.\n" ..
+        ("context.properties = {\n    default.clock.rate = %d\n    default.clock.quantum = %d\n}\n"):format(rate, quantum))
+end
 appliers["action"] = function(s)
     os.execute("setsid -f sh -c " .. sh_quote(s.apply.command) .. " >/dev/null 2>&1")
 end

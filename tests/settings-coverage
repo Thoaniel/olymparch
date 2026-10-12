@@ -48,7 +48,7 @@ for g in schema["groups"]:
     if not any(p["group"] == g["id"] for p in schema["pages"]):
         bad(f"group {g['id']}: no pages")
 
-VIAS = {"shell", "hypr", "monitor", "idle", "audio", "cursor", "stored", "action", "info", "bluetooth", "power", "mime", "terminal", "unit", "dropin", "headset", "mangohud", "envd", "brightness", "system"}
+VIAS = {"shell", "hypr", "monitor", "idle", "audio", "cursor", "stored", "action", "info", "bluetooth", "power", "mime", "terminal", "unit", "dropin", "headset", "mangohud", "envd", "brightness", "system", "pwclock"}
 seen = set()
 for s in settings:
     k = s.get("key", "?")
