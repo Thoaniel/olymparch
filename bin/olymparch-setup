@@ -43,6 +43,8 @@ declare -A EN=(
     [summary]="Ready to install:\n\n  Disk:      %s (%s)\n  User:      %s\n  Keyboard:  %s\n  Time zone: %s\n  Options:   %s\n\nThe disk is erased when you press Install."
     [install]="Install"
     [cancel]="Cancel"
+    [rk]="Your recovery key:\n\n  %s\n  %s\n\nIt unlocks the disk if you forget your password. Write it down or take a photo of it, and keep it somewhere safe: it is not stored anywhere else.\n\nRemove the installation medium and press OK to restart."
+    [failed]="The installation failed. The messages above say where."
     [cancelled]="Installation cancelled. Nothing was written."
 )
 declare -A NB=(
@@ -76,6 +78,8 @@ declare -A NB=(
     [summary]="Klar til å installere:\n\n  Disk:       %s (%s)\n  Bruker:     %s\n  Tastatur:   %s\n  Tidssone:   %s\n  Valg:       %s\n\nDisken slettes når du trykker Installer."
     [install]="Installer"
     [cancel]="Avbryt"
+    [rk]="Gjenopprettingsnøkkelen din:\n\n  %s\n  %s\n\nDen låser opp disken hvis du glemmer passordet. Skriv den ned eller ta bilde av den, og ta vare på den: den lagres ingen andre steder.\n\nTa ut installasjonsmediet og trykk OK for å starte på nytt."
+    [failed]="Installasjonen feilet. Meldingene over viser hvor."
     [cancelled]="Installasjonen er avbrutt. Ingenting er skrevet."
 )
 L=EN
@@ -160,4 +164,10 @@ umask 077
     printf 'DISK=%q\nDISK_SERIAL=%q\nUSERNAME=%q\nPASSWORD=%q\n' "$DISK" "$DISK_SERIAL" "$USERNAME" "$PASSWORD"
     printf 'KEYMAP=%q\nLOCALE=%q\nTIMEZONE=%q\nOPTIONS=%q\nLANGUAGE=%q\n' "$KEYMAP" "$LOCALE" "$TIMEZONE" "$OPTIONS" "$lang"
 } >"$ANSWERS"
-exec olymparch-install --answers "$ANSWERS"
+KEYFILE=/run/olymparch-recovery-key
+olymparch-install --answers "$ANSWERS" --recovery-key-file "$KEYFILE" || { printf '\n%s\n' "$(t failed)"; exit 1; }
+key=$(cat "$KEYFILE")
+[ "${OLYMPARCH_TEST:-0}" = 1 ] && echo '<2>RECOVERY-KEY-SHOWN' >/dev/kmsg
+whiptail --backtitle "$BT" --title Olymparch --msgbox "$(printf "$(t rk)" "${key:0:35}" "${key:36}")" 18 $W
+rm -f -- "$KEYFILE"
+[ "${OLYMPARCH_TEST:-0}" = 1 ] || systemctl reboot

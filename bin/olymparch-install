@@ -2,7 +2,10 @@
 # Olymparch installer, piece 2: unattended install from an answers file. The interactive wizard comes later
 # and will write the same answers file.
 #
-#   olymparch-install --answers FILE
+#   olymparch-install --answers FILE [--recovery-key-file FILE]
+#
+# The disk also gets a recovery key (systemd-cryptenroll). It is written to the --recovery-key-file (mode 0600,
+# for the wizard to show), or printed at the end when there is none. It is never stored on the installed system.
 #
 # Answers (bash syntax): DISK, DISK_SERIAL, HOSTNAME, USERNAME, PASSWORD, KEYMAP, LOCALE, TIMEZONE, KERNEL
 # Safety: DISK_SERIAL must match the disk's serial number, or nothing is touched.
@@ -14,7 +17,9 @@ step() {  # progress line on screen; in tests also on the serial console via the
 }
 die() { step "FEIL: $*"; exit 1; }
 
-[ "${1:-}" = --answers ] && [ -f "${2:-}" ] || die "bruk: olymparch-install --answers FIL"
+[ "${1:-}" = --answers ] && [ -f "${2:-}" ] || die "bruk: olymparch-install --answers FIL [--recovery-key-file FIL]"
+KEYFILE=''
+[ "${3:-}" = --recovery-key-file ] && KEYFILE=${4:?}
 CMDLINE_EXTRA='' KERNEL=linux KEYMAP=us LOCALE=en_US.UTF-8 TIMEZONE=UTC HOSTNAME=olymparch
 # shellcheck disable=SC1090
 . "$2"
@@ -41,6 +46,12 @@ udevadm settle
 step "Kryptering (LUKS2)"
 printf '%s' "$PASSWORD" | cryptsetup luksFormat --batch-mode --type luks2 --pbkdf argon2id --label OLYMPARCH --key-file=- "$ROOT"
 printf '%s' "$PASSWORD" | cryptsetup open --allow-discards --key-file=- "$ROOT" root
+step "Gjenopprettingsnøkkel"
+# 8 groups of 8 letters; unlocks the disk at the same prompt as the password
+RECOVERY_KEY=$(PASSWORD=$PASSWORD systemd-cryptenroll --recovery-key "$ROOT" 2>/dev/null \
+    | grep -oE '[a-z]{8}(-[a-z]{8}){7}' | head -n 1) || true
+[ -n "$RECOVERY_KEY" ] || die "fikk ikke laget gjenopprettingsnøkkelen"
+if [ -n "$KEYFILE" ]; then (umask 077; printf '%s\n' "$RECOVERY_KEY" >"$KEYFILE"); fi
 
 step "Filsystemer (btrfs med volumer)"
 mkfs.fat -F 32 -n ESP "$ESP" >/dev/null
@@ -197,6 +208,9 @@ arch-chroot /mnt snapper --no-dbus -c root create --type single --description "i
 arch-chroot /mnt olymparch-boot sync
 
 rm -f -- "$2"   # the answers file holds the password in plain text
+if [ -z "$KEYFILE" ]; then
+    printf '\n  Gjenopprettingsnøkkel (låser opp disken hvis du glemmer passordet; skriv den ned):\n\n    %s\n' "$RECOVERY_KEY"
+fi
 step "Ferdig. Ta ut installasjonsmediet og start på nytt."
 umount -R /mnt
 cryptsetup close root

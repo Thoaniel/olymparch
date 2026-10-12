@@ -74,7 +74,13 @@ shot oppsummering "Oppsummeringen før noe skrives"
 press ret
 sleep 5
 shot installerer "Installasjonen har startet"
-for ((i = 0; i < 1500; i++)); do seen 'INSTALL-EXIT=' && break; kill -0 "$QPID" 2>/dev/null || break; sleep 1; done
+for ((i = 0; i < 1500; i++)); do seen 'RECOVERY-KEY-SHOWN' && break; seen 'INSTALL-EXIT=' && break; kill -0 "$QPID" 2>/dev/null || break; sleep 1; done
+if seen 'RECOVERY-KEY-SHOWN'; then
+    sleep 2
+    shot gjenopprettingsnokkel "Gjenopprettingsnøkkelen vises (skrives ikke til den installerte disken)"
+    press ret
+    wait_for 'INSTALL-EXIT=' 30
+fi
 sleep 2
 shot ferdig "Installasjonen er ferdig"
 code=$(grep -aoE 'INSTALL-EXIT=[0-9]+' "$O/$LOG" | tail -n 1 | cut -d= -f2)
