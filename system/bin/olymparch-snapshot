@@ -1,0 +1,6 @@
+#!/bin/bash
+# pacman PreTransaction: one snapper snapshot before every package change (listed in the boot menu).
+desc="before: $(tr '\n' ' ' | cut -c1-60)"   # pacman passes the package names on stdin
+snapper -c root create --type single --cleanup-algorithm number --description "$desc" >/dev/null 2>&1 || \
+    echo "olymparch: fikk ikke tatt øyeblikksbilde" >&2
+exit 0

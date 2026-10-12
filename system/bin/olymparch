@@ -1,0 +1,10 @@
+#!/bin/bash
+# Command router: olymparch update → olymparch-update, olymparch rollback 3 → olymparch-rollback 3, …
+cmd=${1:-help}
+shift || true
+if [ "$cmd" = help ] || [ "$cmd" = --help ]; then
+    echo "Olymparch-kommandoer:"
+    for f in /usr/bin/olymparch-*; do printf '  olymparch %s\n' "${f##*/olymparch-}"; done
+    exit 0
+fi
+exec "olymparch-$cmd" "$@"

@@ -62,7 +62,7 @@ mkdir -p /mnt/etc
 printf 'KEYMAP=%s\n' "$KEYMAP" >/mnt/etc/vconsole.conf   # before mkinitcpio runs, so the LUKS prompt has the layout
 pacstrap_opts=(-K)
 [ "${OLYMPARCH_HOST_CACHE:-0}" = 1 ] && pacstrap_opts+=(-c)   # tests: reuse the package cache mounted from the host
-pacstrap "${pacstrap_opts[@]}" /mnt base "$KERNEL" mkinitcpio btrfs-progs cryptsetup limine sudo networkmanager \
+pacstrap "${pacstrap_opts[@]}" /mnt base "$KERNEL" mkinitcpio btrfs-progs cryptsetup limine sudo networkmanager snapper \
     hyprland quickshell foot adwaita-cursors ttf-jetbrains-mono ttf-nerd-fonts-symbols-mono libnotify polkit \
     pipewire pipewire-pulse wireplumber xdg-desktop-portal-hyprland plymouth
 
@@ -74,7 +74,7 @@ sed -i "s/^#\\($LOCALE\\)/\\1/" /mnt/etc/locale.gen
 echo "LANG=$LOCALE" >/mnt/etc/locale.conf
 arch-chroot /mnt locale-gen >/dev/null
 cat >/mnt/etc/mkinitcpio.conf.d/10-olymparch.conf <<'EOF'
-HOOKS=(base systemd autodetect microcode modconf kms keyboard sd-vconsole plymouth block sd-encrypt filesystems fsck)
+HOOKS=(base systemd sd-volatile autodetect microcode modconf kms keyboard sd-vconsole plymouth block sd-encrypt filesystems fsck)
 EOF
 # Olymparch name and the pixel password screen (before mkinitcpio, so the theme is in the initramfs)
 install -Dm644 /usr/share/olymparch/branding/os-release /mnt/usr/lib/os-release
@@ -130,24 +130,39 @@ if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ "$(id -u)" != 0 ];
 fi
 SESSION
 
-step "Oppstartsmeny (Limine)"
+step "Oppstartsmeny (Limine) og øyeblikksbilder"
 uuid=$(blkid -s UUID -o value "$ROOT")
-mkdir -p /mnt/boot/EFI/BOOT
+mkdir -p /mnt/boot/EFI/BOOT /mnt/etc/olymparch
 cp /mnt/usr/share/limine/BOOTX64.EFI /mnt/boot/EFI/BOOT/BOOTX64.EFI
-cat >/mnt/boot/limine.conf <<EOF
+install -m755 /usr/share/olymparch/system/bin/* /mnt/usr/bin/
+mkdir -p /mnt/etc/pacman.d/hooks
+install -m644 /usr/share/olymparch/system/hooks/*.hook /mnt/etc/pacman.d/hooks/
+cat >/mnt/etc/olymparch/boot.conf <<EOF
+# Read by olymparch-boot. Written by the installer.
+KERNEL=$KERNEL
+ROOTARGS="rd.luks.name=$uuid=root root=/dev/mapper/root"
+CMDLINE="quiet splash loglevel=3 rd.udev.log_level=3 vt.global_cursor_default=0 $CMDLINE_EXTRA"
+EOF
+cat >/mnt/etc/olymparch/limine-header.conf <<'EOF'
 timeout: 3
 interface_branding: Olymparch
 interface_branding_colour: d4a73a
-term_palette: 08080c;e0605e;9cc98f;d4a73a;3a3644;b08ad0;6fb3c0;e8e6df
+term_palette: 08080c;e0605e;d4a73a;d4a73a;3a3644;b08ad0;6fb3c0;e8e6df
 term_background: 08080c
 term_foreground: e8e6df
-
-/Olymparch
-    protocol: linux
-    path: boot():/vmlinuz-$KERNEL
-    cmdline: rd.luks.name=$uuid=root root=/dev/mapper/root rootflags=subvol=@ rw quiet splash loglevel=3 rd.udev.log_level=3 vt.global_cursor_default=0 $CMDLINE_EXTRA
-    module_path: boot():/initramfs-$KERNEL.img
 EOF
+# snapper wants to create /.snapshots itself; we keep our own @snapshots subvolume mounted there instead
+umount /mnt/.snapshots
+rmdir /mnt/.snapshots
+arch-chroot /mnt snapper --no-dbus -c root create-config /
+btrfs -q subvolume delete /mnt/.snapshots
+mkdir /mnt/.snapshots
+mount -o "$opts,subvol=@snapshots" /dev/mapper/root /mnt/.snapshots
+chmod 750 /mnt/.snapshots
+arch-chroot /mnt snapper --no-dbus -c root set-config TIMELINE_CREATE=no NUMBER_LIMIT=10 NUMBER_LIMIT_IMPORTANT=5 NUMBER_MIN_AGE=0
+arch-chroot /mnt systemctl enable snapper-cleanup.timer >/dev/null 2>&1
+arch-chroot /mnt snapper --no-dbus -c root create --type single --description "installert" --cleanup-algorithm number
+arch-chroot /mnt olymparch-boot sync
 
 rm -f -- "$2"   # the answers file holds the password in plain text
 step "Ferdig. Ta ut installasjonsmediet og start på nytt."

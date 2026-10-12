@@ -1,0 +1,12 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+Description = Olymparch: sjekker at oppdateringen er trygg
+When = PreTransaction
+Exec = /usr/bin/olymparch-guard
+AbortOnFail

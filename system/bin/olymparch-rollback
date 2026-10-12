@@ -1,0 +1,17 @@
+#!/bin/bash
+# Make snapshot N the system. The current system is kept as @.broken-<date>, never deleted.
+#   olymparch rollback N      (then reboot)
+set -euo pipefail
+n=${1:-}
+[[ $n =~ ^[0-9]+$ ]] || { echo "bruk: olymparch rollback N   (se: snapper list)" >&2; exit 2; }
+[ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
+dev=$(findmnt -no SOURCE /.snapshots | sed 's/\[.*//')   # / is an overlay when booted from a snapshot
+top=$(mktemp -d)
+trap 'umount "$top" 2>/dev/null; rmdir "$top"' EXIT
+mount -o subvolid=5 "$dev" "$top"
+[ -d "$top/@snapshots/$n/snapshot" ] || { echo "fant ikke øyeblikksbilde $n" >&2; exit 1; }
+stamp=$(date +%Y%m%d-%H%M%S)
+mv "$top/@" "$top/@.broken-$stamp"
+btrfs -q subvolume snapshot "$top/@snapshots/$n/snapshot" "$top/@"
+echo "Øyeblikksbilde $n er nå systemet. Det gamle ligger som @.broken-$stamp."
+echo "Start maskinen på nytt for å bruke det."

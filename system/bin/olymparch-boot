@@ -1,0 +1,57 @@
+#!/bin/bash
+# Keep the Limine menu in step with the kernels and the snapper snapshots.
+#   olymparch-boot sync     run by the pacman hook after every transaction, and by olymparch-rollback
+# Each snapshot boots with the kernel it was taken with: kernels are kept per version in /boot/olymparch/k/<ver>.
+# Snapshot entries boot read-only with a writable overlay in RAM (systemd.volatile=overlay).
+set -euo pipefail
+[ "${1:-}" = sync ] || { echo "bruk: olymparch-boot sync" >&2; exit 2; }
+[ "$(id -u)" = 0 ] || { echo "olymparch-boot må kjøres som root" >&2; exit 1; }
+mountpoint -q /boot || { echo "/boot er ikke montert" >&2; exit 1; }
+
+K=/boot/olymparch/k
+CONF=/etc/olymparch/boot.conf      # written by the installer: UUID, CMDLINE, KERNEL
+# shellcheck disable=SC1090
+. "$CONF"
+
+kver_of() {  # kernel version in a root tree: the module directory that has a vmlinuz
+    local d
+    for d in "$1"/usr/lib/modules/*/; do [ -f "$d/vmlinuz" ] && basename "$d" && return; done
+}
+
+# 1. Keep a copy of the running system's kernel and initramfs, once per version
+cur=$(kver_of /)
+if [ -n "$cur" ] && [ ! -f "$K/$cur/vmlinuz" ]; then
+    mkdir -p "$K/$cur"
+    cp "/boot/vmlinuz-$KERNEL" "$K/$cur/vmlinuz.new" && mv "$K/$cur/vmlinuz.new" "$K/$cur/vmlinuz"
+    cp "/boot/initramfs-$KERNEL.img" "$K/$cur/initramfs.img.new" && mv "$K/$cur/initramfs.img.new" "$K/$cur/initramfs.img"
+fi
+
+# 2. The menu: the system first, then one entry per snapshot that has its kernel
+{
+    cat /etc/olymparch/limine-header.conf
+    printf '\n/Olymparch\n    protocol: linux\n    path: boot():/vmlinuz-%s\n    cmdline: %s rootflags=subvol=@ rw %s\n    module_path: boot():/initramfs-%s.img\n' \
+        "$KERNEL" "$ROOTARGS" "$CMDLINE" "$KERNEL"
+    entries=0
+    while read -r num date time desc; do
+        snap=/.snapshots/$num/snapshot
+        [ -d "$snap" ] || continue
+        v=$(kver_of "$snap")
+        [ -n "$v" ] && [ -f "$K/$v/vmlinuz" ] || continue
+        if ((entries == 0)); then printf '\n/Snapshots\n'; fi
+        entries=$((entries + 1))
+        # rootflags is replaced, not appended: systemd merges repeated rootflags into one mount
+        printf '\n//%s %s %s · %s\n    protocol: linux\n    path: boot():/olymparch/k/%s/vmlinuz\n    cmdline: %s rootflags=subvol=@snapshots/%s/snapshot ro systemd.volatile=overlay %s\n    module_path: boot():/olymparch/k/%s/initramfs.img\n' \
+            "$num" "$date" "${time%:*}" "${desc:-}" "$v" "$ROOTARGS" "$num" "$CMDLINE" "$v"
+    done < <(snapper --no-dbus -c root --iso --csvout list --columns number,date,description 2>/dev/null | tail -n +2 | sort -t, -k1,1nr |
+             awk -F, '$1 != 0 { split($2, d, " "); print $1, d[1], d[2], $3 }' | head -n 10)
+} >/boot/limine.conf.new
+mv /boot/limine.conf.new /boot/limine.conf
+
+# 3. Drop kernel copies that no snapshot and not the running system uses
+keep=" $cur "
+for s in /.snapshots/*/snapshot; do [ -d "$s" ] && keep+=" $(kver_of "$s") "; done
+for d in "$K"/*/; do
+    [ -d "$d" ] || continue
+    v=$(basename "$d")
+    [[ $keep == *" $v "* ]] || rm -rf -- "${K:?}/$v"
+done

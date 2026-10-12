@@ -1,0 +1,10 @@
+#!/bin/bash
+# pacman PreTransaction guard (AbortOnFail): stop before anything changes if the update could break booting.
+# Override with OLYMPARCH_FORCE=1.
+[ "${OLYMPARCH_FORCE:-0}" = 1 ] && exit 0
+fail() { echo "olymparch: $*" >&2; exit 1; }
+mountpoint -q /boot || fail "/boot er ikke montert. Oppdateringen stoppes, så kjernen ikke havner feil sted."
+free=$(df --output=avail -k /boot | tail -n 1)
+(( free > 512 * 1024 )) || fail "under 512 MiB ledig på /boot."
+grep -q 'subvol=@snapshots/' /proc/cmdline && fail "du har startet fra et øyeblikksbilde. Rull tilbake først: olymparch rollback N"
+exit 0

@@ -1,0 +1,10 @@
+#!/bin/bash
+# Update the whole system the Olymparch way: check space, take a snapshot (pacman hook), update the keyring
+# first, then everything else, then refresh the boot menu (pacman hook). Never answers yes on your behalf.
+set -euo pipefail
+[ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
+free=$(df --output=avail -k / | tail -n 1)
+(( free > 3 * 1024 * 1024 )) || { echo "Under 3 GB ledig på /. Rydd først (Innstillinger → Disker)." >&2; exit 1; }
+pacman -Sy --needed archlinux-keyring
+pacman -Su
+echo "Ferdig. Går noe galt, velg forrige øyeblikksbilde i oppstartsmenyen."

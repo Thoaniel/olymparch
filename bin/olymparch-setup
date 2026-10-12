@@ -4,6 +4,12 @@
 set -uo pipefail
 ANSWERS=/tmp/olymparch-answers.env
 BT=Olymparch
+# Black and gold instead of newt's blue (whiptail colour names: the console's 8 colours)
+export NEWT_COLORS='root=yellow,black border=yellow,black window=white,black shadow=black,black
+title=yellow,black button=black,yellow actbutton=black,yellow compactbutton=yellow,black
+checkbox=white,black actcheckbox=black,yellow entry=white,black disentry=gray,black label=white,black
+listbox=white,black actlistbox=black,yellow sellistbox=black,yellow actsellistbox=black,yellow
+textbox=white,black acttextbox=black,yellow helpline=yellow,black roottext=yellow,black'
 W=72
 
 declare -A EN=(
@@ -85,8 +91,8 @@ LOCALE=en_US.UTF-8; [ "$lang" = nb ] && LOCALE=nb_NO.UTF-8
 # 2. Keyboard, with a test of the characters that differ between layouts
 while true; do
     # Tags are console keymap names; olymparch-install maps them to the desktop (xkb) layout
-    KEYMAP=$(wt --title "$(t kbd)" --default-item "$([ "$lang" = nb ] && echo no-latin1 || echo us)" --menu "" 18 $W 10 \
-        us "English (US)" no-latin1 "Norsk" sv-latin1 "Svenska" dk-latin1 "Dansk" fi "Suomi" de-latin1 "Deutsch" \
+    KEYMAP=$(wt --title "$(t kbd)" --default-item "$([ "$lang" = nb ] && echo no || echo us)" --menu "" 18 $W 10 \
+        us "English (US)" no "Norsk" sv-latin1 "Svenska" dk-latin1 "Dansk" fi "Suomi" de-latin1 "Deutsch" \
         fr-latin1 "Français" uk "English (UK)" es "Español" it "Italiano") || bail
     loadkeys "$KEYMAP" 2>/dev/null
     typed=$(wt --title "$(t kbd)" --inputbox "$(printf "$(t kbd_test)")" 14 $W) || bail

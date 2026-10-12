@@ -1,0 +1,12 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+Description = Olymparch: tar øyeblikksbilde
+When = PreTransaction
+Exec = /usr/bin/olymparch-snapshot
+NeedsTargets
