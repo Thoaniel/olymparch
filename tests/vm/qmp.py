@@ -48,7 +48,7 @@ if __name__ == "__main__":
     q = QMP(sys.argv[1])
     op = sys.argv[2]
     if op == "screendump":
-        q.cmd("screendump", filename=sys.argv[3], format="png")
+        q.cmd("screendump", filename=sys.argv[3], format="ppm" if sys.argv[3].endswith(".ppm") else "png")
     elif op == "keys":
         for ch in sys.argv[3].encode().decode("unicode_escape"):
             q.key(ch)

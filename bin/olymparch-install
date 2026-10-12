@@ -15,7 +15,7 @@ step() {  # progress line on screen; in tests also on the serial console via the
 die() { step "FEIL: $*"; exit 1; }
 
 [ "${1:-}" = --answers ] && [ -f "${2:-}" ] || die "bruk: olymparch-install --answers FIL"
-KERNEL=linux KEYMAP=us LOCALE=en_US.UTF-8 TIMEZONE=UTC HOSTNAME=olymparch
+CMDLINE_EXTRA='' KERNEL=linux KEYMAP=us LOCALE=en_US.UTF-8 TIMEZONE=UTC HOSTNAME=olymparch
 # shellcheck disable=SC1090
 . "$2"
 for v in DISK DISK_SERIAL USERNAME PASSWORD; do [ -n "${!v:-}" ] || die "$v mangler i svarfila"; done
@@ -62,7 +62,9 @@ mkdir -p /mnt/etc
 printf 'KEYMAP=%s\n' "$KEYMAP" >/mnt/etc/vconsole.conf   # before mkinitcpio runs, so the LUKS prompt has the layout
 pacstrap_opts=(-K)
 [ "${OLYMPARCH_HOST_CACHE:-0}" = 1 ] && pacstrap_opts+=(-c)   # tests: reuse the package cache mounted from the host
-pacstrap "${pacstrap_opts[@]}" /mnt base "$KERNEL" mkinitcpio btrfs-progs cryptsetup limine sudo networkmanager
+pacstrap "${pacstrap_opts[@]}" /mnt base "$KERNEL" mkinitcpio btrfs-progs cryptsetup limine sudo networkmanager \
+    hyprland quickshell foot adwaita-cursors ttf-jetbrains-mono ttf-nerd-fonts-symbols-mono libnotify polkit \
+    pipewire pipewire-pulse wireplumber xdg-desktop-portal-hyprland plymouth
 
 step "Oppsett"
 genfstab -U /mnt | sed -E 's/,subvolid=[0-9]+//' >/mnt/etc/fstab
@@ -72,8 +74,15 @@ sed -i "s/^#\\($LOCALE\\)/\\1/" /mnt/etc/locale.gen
 echo "LANG=$LOCALE" >/mnt/etc/locale.conf
 arch-chroot /mnt locale-gen >/dev/null
 cat >/mnt/etc/mkinitcpio.conf.d/10-olymparch.conf <<'EOF'
-HOOKS=(base systemd autodetect microcode modconf kms keyboard sd-vconsole block sd-encrypt filesystems fsck)
+HOOKS=(base systemd autodetect microcode modconf kms keyboard sd-vconsole plymouth block sd-encrypt filesystems fsck)
 EOF
+# Olymparch name and the pixel password screen (before mkinitcpio, so the theme is in the initramfs)
+install -Dm644 /usr/share/olymparch/branding/os-release /mnt/usr/lib/os-release
+install -Dm644 /usr/share/olymparch/branding/olymparch-os-release.hook /mnt/etc/pacman.d/hooks/olymparch-os-release.hook
+install -Dm644 /usr/share/olymparch/branding/issue /mnt/etc/issue
+mkdir -p /mnt/usr/share/plymouth/themes
+cp -r /usr/share/olymparch/plymouth /mnt/usr/share/plymouth/themes/olymparch
+printf '[Daemon]\nTheme=olymparch\nShowDelay=0\nDeviceScale=1\n' >/mnt/etc/plymouth/plymouthd.conf
 arch-chroot /mnt mkinitcpio -P
 arch-chroot /mnt useradd -m -G wheel "$USERNAME"
 printf '%s:%s\n' "$USERNAME" "$PASSWORD" | arch-chroot /mnt chpasswd
@@ -81,17 +90,62 @@ echo '%wheel ALL=(ALL:ALL) ALL' >/mnt/etc/sudoers.d/10-wheel
 chmod 440 /mnt/etc/sudoers.d/10-wheel
 arch-chroot /mnt systemctl enable NetworkManager >/dev/null 2>&1
 
+step "Skrivebordet (Hyprland og skallet)"
+cp -r /usr/share/olymparch /mnt/usr/share/
+install -Dm755 /usr/lib/olymparch/launch-shell /mnt/usr/lib/olymparch/launch-shell
+xkb=$KEYMAP
+case $KEYMAP in no-latin1) xkb=no ;; esac
+home=/mnt/home/$USERNAME
+mkdir -p "$home/.config/hypr"
+cat >"$home/.config/hypr/hyprland.lua" <<LUA
+-- Olymparch: the defaults load first. Your own settings go below this line and win.
+package.path = "/usr/share/olymparch/hypr/?.lua;" .. package.path
+require("olymparch")
+
+hl.config({ input = { kb_layout = "$xkb" } })
+LUA
+arch-chroot /mnt chown -R "$USERNAME:$USERNAME" "/home/$USERNAME"
+
+# Log in automatically once per boot. After a logout you get a normal login prompt.
+cat >/mnt/usr/lib/olymparch/autologin-getty <<GETTY
+#!/bin/sh
+if [ ! -e /run/olymparch/autologin-used ]; then
+    mkdir -p /run/olymparch && touch /run/olymparch/autologin-used
+    exec /sbin/agetty -o '-p -f -- \\u' --noclear --autologin $USERNAME "\$1" linux
+fi
+exec /sbin/agetty -o '-p -- \\u' --noclear "\$1" linux
+GETTY
+chmod 755 /mnt/usr/lib/olymparch/autologin-getty
+mkdir -p /mnt/etc/systemd/system/getty@tty1.service.d
+cat >/mnt/etc/systemd/system/getty@tty1.service.d/olymparch-autologin.conf <<'UNIT'
+[Service]
+ExecStart=
+ExecStart=-/usr/lib/olymparch/autologin-getty %I
+Environment=XDG_SESSION_TYPE=wayland
+UNIT
+cat >/mnt/etc/profile.d/zz-olymparch-session.sh <<'SESSION'
+# Olymparch: a login on tty1 starts the desktop
+if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ "$(id -u)" != 0 ]; then
+    if command -v start-hyprland >/dev/null 2>&1; then exec start-hyprland; else exec Hyprland; fi
+fi
+SESSION
+
 step "Oppstartsmeny (Limine)"
 uuid=$(blkid -s UUID -o value "$ROOT")
 mkdir -p /mnt/boot/EFI/BOOT
 cp /mnt/usr/share/limine/BOOTX64.EFI /mnt/boot/EFI/BOOT/BOOTX64.EFI
 cat >/mnt/boot/limine.conf <<EOF
 timeout: 3
+interface_branding: Olymparch
+interface_branding_colour: d4a73a
+term_palette: 08080c;e0605e;9cc98f;d4a73a;3a3644;b08ad0;6fb3c0;e8e6df
+term_background: 08080c
+term_foreground: e8e6df
 
 /Olymparch
     protocol: linux
     path: boot():/vmlinuz-$KERNEL
-    cmdline: rd.luks.name=$uuid=root root=/dev/mapper/root rootflags=subvol=@ rw console=ttyS0,115200 console=tty0
+    cmdline: rd.luks.name=$uuid=root root=/dev/mapper/root rootflags=subvol=@ rw quiet splash loglevel=3 rd.udev.log_level=3 vt.global_cursor_default=0 $CMDLINE_EXTRA
     module_path: boot():/initramfs-$KERNEL.img
 EOF
 

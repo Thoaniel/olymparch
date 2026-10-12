@@ -9,6 +9,20 @@ rm -rf -- work profile
 # Build from a staged copy of the profile, so the olymparch-* commands come from bin/ without being copied into git
 cp -r iso profile
 install -Dm755 -t profile/airootfs/usr/local/bin bin/olymparch-*
+# Olymparch defaults (Hyprland config, shell, wallpaper) for the installer to copy onto the new system
+share=profile/airootfs/usr/share/olymparch
+mkdir -p "$share"
+cp -r default/hypr default/shell "$share/"
+install -Dm755 default/launch-shell profile/airootfs/usr/lib/olymparch/launch-shell
+printf 'file_permissions+=(["/usr/lib/olymparch/launch-shell"]="0:0:755")\n' >>profile/profiledef.sh
+for size in 1920x1080 2560x1440; do
+    w=${size%x*} h=${size#*x}
+    if [ -s "build/wallpaper/$h/frame-47.png" ]; then :; else
+        uv run -q --no-project --with pillow python art/torch.py "build/wallpaper/$h" "$w" "$h" 48 >/dev/null
+    fi
+    mkdir -p "$share/wallpaper/$h"
+    cp build/wallpaper/"$h"/frame-*.png "$share/wallpaper/$h/"
+done
 # archiso gives every file mode 644 unless it is listed in file_permissions
 for f in bin/olymparch-*; do
     printf 'file_permissions+=(["/usr/local/bin/%s"]="0:0:755")\n' "${f##*/}" >>profile/profiledef.sh

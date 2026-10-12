@@ -5,6 +5,7 @@
 set -euo pipefail
 PREFIX=${OLYMPARCH_TOOLS:-$HOME/.local/opt/olymparch-tools}
 PKGS=(qemu-system-x86 qemu-img qemu-hw-display-virtio-gpu qemu-hw-display-virtio-vga edk2-ovmf
+      qemu-hw-display-virtio-gpu-gl qemu-hw-display-virtio-vga-gl qemu-ui-egl-headless qemu-ui-opengl
       archiso arch-install-scripts squashfs-tools libisoburn mtools dosfstools erofs-utils socat)
 mkdir -p "$PREFIX/pkgs" "$PREFIX/root"
 T=$(mktemp -d -p "${XDG_RUNTIME_DIR:-/tmp}")

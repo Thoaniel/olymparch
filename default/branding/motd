@@ -1,0 +1,7 @@
+
+  Olymparch installer
+
+  Install Olymparch:   olymparch-install --answers FILE   (the wizard comes in the next version)
+  Wi-Fi:               nmtui or iwctl
+  Keyboard layout:     loadkeys no
+

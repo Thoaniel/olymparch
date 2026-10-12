@@ -5,3 +5,4 @@ cache/
 *.iso
 tests/vm/out/
 profile/
+build/

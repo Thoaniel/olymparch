@@ -43,7 +43,7 @@ qemu() {  # qemu LOG [extra args]: start the VM with the test disk
         -drive if=pflash,format=raw,readonly=on,file="$OLYMPARCH_OVMF_CODE" \
         -drive if=pflash,format=raw,file="$O/vars.fd" \
         -drive id=d0,if=none,format=qcow2,file="$O/disk.qcow2" -device nvme,serial=OLYTEST1,drive=d0 \
-        -nic user,model=virtio-net-pci -vga std -display none \
+        -nic user,model=virtio-net-pci -device virtio-vga -display none \
         -serial file:"$O/$LOG" -qmp unix:"$QMP",server=on,wait=off -no-reboot "$@" &
     QPID=$!
     sleep 2
@@ -99,10 +99,19 @@ shot luks "Systemet ber om diskpassordet"
 keys "$PW\n"
 sleep 2
 shot luks-skrevet "Passordet er skrevet"
-if wait_for 'olymparch login:' 120; then
-    sleep 2
-    shot innlogging "Det installerte Olymparch er oppe (innlogging)"
-    finish "PASS · installert og startet på $((SECONDS - t0)) s"
-fi
-shot innlogging-feil "Fikk ingen innlogging"
-finish "FAIL · ingen innlogging etter passordet"
+wait_for 'olymparch login:' 120 || { shot innlogging-feil "Systemet kom ikke opp"; finish "FAIL · systemet kom ikke opp etter passordet"; }
+# Autologin starts Hyprland and the shell. Wait until the screen shows the gold bar and temple.
+for ((i = 0; i < 90; i += 3)); do
+    sleep 3
+    python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/probe.ppm" 2>/dev/null || continue
+    gold=$(python3 -I tests/vm/pixels.py "$O/probe.ppm" | sed -E 's/gold=([0-9]+).*/\1/')
+    (( gold > 300 )) && break
+done
+sleep 3
+shot skrivebord "Olymparch-skrivebordet: baren og den levende tempelbakgrunnen (gullpiksler: $gold)"
+(( gold > 300 )) || finish "FAIL · skrivebordet kom ikke opp (gullpiksler: $gold)"
+# The wallpaper animates: two shots 0.5 s apart must differ
+python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/a.ppm"; sleep 0.5
+python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/b.ppm"
+if cmp -s "$O/a.ppm" "$O/b.ppm"; then anim=nei; else anim=ja; fi
+finish "PASS · installert, startet og skrivebordet er oppe på $((SECONDS - t0)) s (animasjon: $anim)"

@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Olymparch
+Description=The gold temple, and a pixel password box with no text
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/olymparch
+ScriptFile=/usr/share/plymouth/themes/olymparch/olymparch.script

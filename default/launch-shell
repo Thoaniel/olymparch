@@ -1,0 +1,23 @@
+#!/bin/bash
+# Start the Olymparch shell and restart it if it crashes (at most 5 times a minute, then a pause and a
+# notification). Started once from Hyprland's start event.
+shell=/usr/share/olymparch/shell
+log=${XDG_STATE_HOME:-$HOME/.local/state}/olymparch/shell.log
+mkdir -p "${log%/*}"
+starts=()
+while true; do
+    QS_NO_RELOAD_POPUP=1 quickshell -p "$shell" >>"$log" 2>&1
+    code=$?
+    [ "$code" = 0 ] && exit 0
+    now=$(date +%s)
+    starts=("${starts[@]}" "$now")
+    recent=0
+    for t in "${starts[@]}"; do (( now - t < 60 )) && recent=$((recent + 1)); done
+    if (( recent >= 5 )); then
+        notify-send -u critical "Skallet krasjer" "Prøver igjen om ett minutt. Se $log" 2>/dev/null
+        sleep 60
+        starts=()
+    else
+        sleep 1
+    fi
+done

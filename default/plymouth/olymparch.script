@@ -1,0 +1,51 @@
+// Olymparch Plymouth theme: the gold temple on black, and a box with a lock and one gold bullet per typed
+// character when the disk password is asked for. Images only, no text.
+
+Window.SetBackgroundTopColor(0.031, 0.031, 0.047);
+Window.SetBackgroundBottomColor(0.031, 0.031, 0.047);
+
+temple.image = Image("temple.png");
+temple.sprite = Sprite(temple.image);
+temple.sprite.SetX(Window.GetX() + Window.GetWidth() / 2 - temple.image.GetWidth() / 2);
+temple.sprite.SetY(Window.GetY() + Window.GetHeight() * 0.42 - temple.image.GetHeight() / 2);
+
+box.image = Image("box.png");
+lock.image = Image("lock.png");
+bullet.image = Image("bullet.png");
+
+box.x = Window.GetX() + Window.GetWidth() / 2 - box.image.GetWidth() / 2;
+box.y = Window.GetY() + Window.GetHeight() * 0.42 + temple.image.GetHeight() / 2 + 60;
+box.sprite = Sprite(box.image);
+box.sprite.SetPosition(box.x, box.y, 10);
+box.sprite.SetOpacity(0);
+lock.sprite = Sprite(lock.image);
+lock.sprite.SetPosition(box.x - lock.image.GetWidth() - 18, box.y + box.image.GetHeight() / 2 - lock.image.GetHeight() / 2, 10);
+lock.sprite.SetOpacity(0);
+
+bullets = [];
+max_bullets = 18;
+for (i = 0; i < max_bullets; i++) {
+    bullets[i] = Sprite(bullet.image);
+    bullets[i].SetPosition(box.x + 18 + i * (bullet.image.GetWidth() * 2), box.y + box.image.GetHeight() / 2 - bullet.image.GetHeight() / 2, 11);
+    bullets[i].SetOpacity(0);
+}
+
+fun show_prompt(visible, count) {
+    box.sprite.SetOpacity(visible);
+    lock.sprite.SetOpacity(visible);
+    for (i = 0; i < max_bullets; i++) {
+        if (visible && i < count) bullets[i].SetOpacity(1);
+        else bullets[i].SetOpacity(0);
+    }
+}
+
+fun password_callback(prompt, count) {
+    show_prompt(1, count);
+}
+
+fun normal_callback() {
+    show_prompt(0, 0);
+}
+
+Plymouth.SetDisplayPasswordFunction(password_callback);
+Plymouth.SetDisplayNormalFunction(normal_callback);

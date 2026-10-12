@@ -1,0 +1,11 @@
+NAME="Olymparch"
+PRETTY_NAME="Olymparch"
+ID=olymparch
+ID_LIKE=arch
+BUILD_ID=rolling
+ANSI_COLOR="38;2;212;167;58"
+HOME_URL="https://github.com/olymparch/olymparch"
+DOCUMENTATION_URL="https://github.com/olymparch/olymparch"
+SUPPORT_URL="https://github.com/olymparch/olymparch/issues"
+BUG_REPORT_URL="https://github.com/olymparch/olymparch/issues"
+LOGO=olymparch
