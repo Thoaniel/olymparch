@@ -39,10 +39,5 @@
     "#c8aee3",
     "#9acad6",
     "#ffffff"
-  ],
-  "backgrounds": [
-    { "id": "moonforest", "name": { "en": "Moon over the forest", "nb": "Måne over skogen" } },
-    { "id": "hind", "name": { "en": "The golden hind", "nb": "Den gylne hinden" } },
-    { "id": "sign", "name": { "en": "Sign in the stars", "nb": "Tegn på himmelen" } }
   ]
 }

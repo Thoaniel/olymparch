@@ -39,10 +39,5 @@
     "#c9a9e3",
     "#93cad4",
     "#ffffff"
-  ],
-  "backgrounds": [
-    { "id": "storm", "name": { "en": "Storm over Olympus", "nb": "Uvær over Olympen" } },
-    { "id": "summit", "name": { "en": "Above the clouds", "nb": "Over skyene" } },
-    { "id": "sign", "name": { "en": "Sign in the stars", "nb": "Tegn på himmelen" } }
   ]
 }

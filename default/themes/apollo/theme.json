@@ -39,10 +39,5 @@
     "#8e4bb8",
     "#127b86",
     "#2a2113"
-  ],
-  "backgrounds": [
-    { "id": "sunrise", "name": { "en": "The sun chariot at dawn", "nb": "Solvognen ved daggry" } },
-    { "id": "lyre", "name": { "en": "The golden lyre", "nb": "Den gylne lyren" } },
-    { "id": "sign", "name": { "en": "Sign in the stars", "nb": "Tegn på himmelen" } }
   ]
 }
