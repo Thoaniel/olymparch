@@ -173,8 +173,11 @@ pacstrap "${pacstrap_opts[@]}" /mnt base "$KERNEL" mkinitcpio btrfs-progs crypts
 step "$(L "Hardware (olymparch-hw)" "Maskinvare (olymparch-hw)")"
 # 32-bit drivers (lib32-vulkan-*) are in [multilib]: on for every install, so the plan can be applied in full
 sed -i '/^#\[multilib\]$/,/^#Include/ s/^#//' /mnt/etc/pacman.conf
+arch-chroot /mnt pacman -Sy --noconfirm >/dev/null
 hw=/usr/share/olymparch/system/bin/olymparch-hw
-if [ -x "$hw" ]; then
+if [ ! -x "$hw" ]; then
+    step "$(L "Warning: olymparch-hw is missing from the ISO; drivers are offered after boot" "Advarsel: olymparch-hw mangler på ISO-en; drivere tilbys etter oppstart")"
+else
     mkdir -p /mnt/var/log
     "$hw" plan --root /mnt | tee /mnt/var/log/olymparch-hw-install.txt
     "$hw" apply --root /mnt --when install 2>&1 | tee -a /mnt/var/log/olymparch-hw-install.txt ||

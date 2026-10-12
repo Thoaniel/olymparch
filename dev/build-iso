@@ -42,6 +42,10 @@ done
 for f in bin/olymparch-*; do
     printf 'file_permissions+=(["/usr/local/bin/%s"]="0:0:755")\n' "${f##*/}" >>profile/profiledef.sh
 done
+# the system commands the installer runs from the ISO itself (olymparch-hw), and their helpers
+for f in system/bin/* system/lib/*; do
+    printf 'file_permissions+=(["/usr/share/olymparch/%s"]="0:0:755")\n' "$f" >>profile/profiledef.sh
+done
 mkarchiso -v -r -w work -o out profile
 rm -rf -- profile
 ls -lh out/*.iso | tail -1
