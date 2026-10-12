@@ -1,8 +1,9 @@
 #!/bin/bash
 # VM test: Settings. Copies the shell, the Hyprland defaults, the settings schema and olymparch-settings from this
 # repo into a copy of the installed disk (no rebuild), opens Settings with Super+comma, takes a picture of every
-# page, then changes the live wallpaper, the scale (once left to revert by itself, once kept) and do not disturb
-# through the window, and checks each effect: frames on screen, hyprctl, the files written, the layers shown.
+# page, then changes the live wallpaper, the scale (once left to revert by itself, once kept), do not disturb,
+# shortcuts, network, Bluetooth, power, default apps, privacy, events and the headset switch, and checks each
+# effect: frames on screen, hyprctl, the files written, the layers shown, units, PipeWire modules.
 # The shell runs with LANG=nb_NO so the pictures show the Norwegian text.
 set -uo pipefail
 cd "$(dirname "$0")/../.."
@@ -20,6 +21,7 @@ PW='olymp-test-123'
 trap 'kill "$QPID" 2>/dev/null; python3 -I tests/vm/report.py tests/vm/out/report.html "$O" >/dev/null 2>&1' EXIT
 t0=$SECONDS
 fails=()
+quick=${OLYMPARCH_TEST_QUICK:-0}   # 1: skip the pages, wallpaper, scale and do-not-disturb parts
 
 # check NAME 'condition': runs in the VM terminal (needs focus there), the answer comes back on the serial console
 check() {
@@ -56,13 +58,14 @@ unlock_and_desktop "$PW"
 # Put this repo's files in place, restart the shell in Norwegian, and define the check helper in the terminal.
 # /dev/kmsg is opened up so checks can report without sudo (this VM is thrown away).
 press meta_l+ret; sleep 2
-keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /mnt/default/settings /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -m755 /mnt/system/bin/olymparch-settings /mnt/system/bin/olymparch-doctor /usr/bin/ && sudo install -Dm644 /mnt/default/settings/olymparch-settings.desktop /usr/share/applications/olymparch-settings.desktop && sudo chmod 666 /dev/kmsg && hyprctl reload >/dev/null; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=nb_NO.UTF-8 setsid -f /usr/lib/olymparch/launch-shell; echo '<2>SETTINGS-UPDATED' > /dev/kmsg\n" 1
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /mnt/default/settings /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -m755 /mnt/system/bin/olymparch-settings /mnt/system/bin/olymparch-doctor /usr/bin/ && sudo install -Dm644 /mnt/default/settings/olymparch-settings.desktop /usr/share/applications/olymparch-settings.desktop && sudo install -Dm644 /mnt/default/audio/olymparch-switch-on-connect.conf /etc/pipewire/pipewire-pulse.conf.d/50-olymparch-switch-on-connect.conf && systemctl --user restart pipewire-pulse && sudo chmod 666 /dev/kmsg && hyprctl reload >/dev/null; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=nb_NO.UTF-8 setsid -f /usr/lib/olymparch/launch-shell; echo '<2>SETTINGS-UPDATED' > /dev/kmsg\n" 1
 keys "$PW\n" 1
 wait_for 'SETTINGS-UPDATED' 40 || finish "FAIL · fikk ikke kopiert filene inn"
 keys "c() { if eval \"\$2\" >/dev/null 2>&1; then echo \"<2>CHK-\$1-OK\"; else echo \"<2>CHK-\$1-NO\"; fi > /dev/kmsg; }; clear\n" 0.5
 sleep 4
 shot skrivebord "Skrivebordet med det nye skallet (norsk)"
 
+if ((!quick)); then
 # Every page, in the order of the sidebar (↓ in the search field goes to the next page)
 press meta_l+comma; sleep 2
 shot skjermer "Super+komma åpner Innstillinger: Skjermer (skjermene som de står, oppløsning, Hz, VRR, skala)"
@@ -130,6 +133,8 @@ keys "olymparch-settings set notifications.dnd off; notify-send Steam 'Varselet 
 wait_for 'CHK-dnd-off-shows-(OK|NO)' 30; seen 'CHK-dnd-off-shows-OK' || fails+=(dnd-off-shows)
 shot dnd-av "Ikke forstyrr av (fra kommandolinja): varselet vises"
 
+fi
+
 # ── Shortcuts: the terminal moves to Super+T (pressed in the window), the old Super+Enter does nothing,
 #    a taken combination is refused with the reason, and the workspace keys get another modifier
 keys "clear\n" 0.5
@@ -169,6 +174,75 @@ shot hurtigtaster "Alle hurtigtastene (søk «hurtigtast»): terminal flyttet, a
 close_settings
 keys "clear; olymparch-settings reset keys.terminal; olymparch-settings reset keys.workspace; sleep 1; c keys-reset '! grep -q olymparch_keys ~/.config/olymparch/hypr.lua'\n" 1
 wait_for 'CHK-keys-reset-(OK|NO)' 30; seen 'CHK-keys-reset-OK' || fails+=(keys-reset)
+
+# ── Network: Wi-Fi list (the VM has no Wi-Fi: the list says so), the cable's state in the window, VPN opens nmtui
+keys "clear; olymparch-settings open network\n" 2.5
+shot nett "Nett og VPN: Wi-Fi-listen (ingen Wi-Fi-adapter i VM-en), kabel og VPN"
+search network.wired
+press ret; sleep 2
+shot nett-kabel "Kabel: tilstand, adresse og hastighet fra NetworkManager"
+close_settings
+check wired 'olymparch-settings wired | grep -q "connected"'
+check wifi-none 'olymparch-settings items network.wifi | grep -q "^! no Wi-Fi"'
+check wifi-refuses 'olymparch-settings pick network.wifi "$(printf "a\nb")"; [ $? = 2 ]'
+keys "clear; olymparch-settings run network.vpn; sleep 2.5; c vpn 'pgrep -x nmtui || pgrep -x nm-connection-editor'\n" 3
+wait_for 'CHK-vpn-(OK|NO)' 30; seen 'CHK-vpn-OK' || fails+=(vpn)
+shot vpn "VPN: nmtui (rediger tilkoblinger) i en terminal, eller nm-connection-editor når den finnes"
+press meta_l+q; sleep 1.5
+
+# ── Bluetooth (no adapter in the VM) and power profile (only with power-profiles-daemon)
+keys "clear; olymparch-settings open bluetooth\n" 2.5
+shot bluetooth "Bluetooth: uten adapter sier lista det, og av/på-bryteren er skjult når bluez mangler"
+close_settings
+check bt-no-adapter 'olymparch-settings items bluetooth.devices | grep -q "^! "'
+check bt-refuses 'olymparch-settings pick bluetooth.devices "x;id"; [ $? = 2 ]'
+check power-profile 'if command -v powerprofilesctl; then olymparch-settings set power.profile performance && powerprofilesctl get | grep -q performance; else olymparch-settings missing | grep -q power.profile; fi'
+keys "clear; olymparch-settings open power\n" 2.5
+shot strom "Strøm: profilen vises bare når power-profiles-daemon finnes"
+close_settings
+
+# ── Default apps: picked from what is installed, written to ~/.config/mimeapps.list; the terminal shortcut follows
+keys "clear; olymparch-settings open apps\n" 2.5
+shot standardapper "Standardapper: valgt blant appene som er installert"
+search apps.video
+press spc; sleep 1
+shot standardapper-video "Video: lista viser installerte videospillere"
+press down; press ret; sleep 1.5
+shot standardapper-valgt "Video satt til første installerte app"
+close_settings
+check mime-video 'a=$(olymparch-settings get apps.video); [ -n "$a" ] && [ "$(xdg-mime query default video/mp4)" = "$a" ]'
+check mime-reset 'olymparch-settings set apps.video "" && ! grep -q "^video/mp4=" ~/.config/mimeapps.list'
+check terminal-installed 'command -v kitty || ! olymparch-settings set apps.terminal kitty'
+check terminal-env 'olymparch-settings set apps.terminal foot && grep -q "OLYMPARCH_TERMINAL.*foot" ~/.config/olymparch/hypr.lua'
+
+# ── Privacy: the microphone marker in the bar, and Settings turning it off
+keys "clear; pw-record ~/rec.wav & r=\$!; sleep 3; clear\n" 4
+shot mikrofon-pa "Mikrofonen er i bruk: rød markør i baren"
+check privacy-off 'olymparch-settings set privacy.indicator off && grep -q "privacy.indicator.: false" ~/.config/olymparch/settings.json'
+sleep 1.5
+shot mikrofon-skjult "Personvern → indikator av: ingen markør, selv om mikrofonen er i bruk"
+keys "clear; olymparch-settings set privacy.indicator on; kill \$r; rm -f ~/rec.wav; clear\n" 1
+
+# ── Events: virus check and heat warning off/on (masked user units), the disk warning limit as a drop-in
+check virus-off 'olymparch-settings set events.on_download off && [ "$(systemctl --user is-enabled olymparch-downloads.path)" = masked ] && ! systemctl --user is-active -q olymparch-downloads.path'
+check virus-on 'olymparch-settings set events.on_download on && systemctl --user is-active -q olymparch-downloads.path'
+check heat-off 'olymparch-settings set events.heat off && [ "$(systemctl --user is-enabled olymparch-heat-check.timer)" = masked ]'
+check heat-on 'olymparch-settings set events.heat on && systemctl --user is-active -q olymparch-heat-check.timer'
+check disk-limit 'olymparch-settings set events.on_full 75 && systemctl --user show olymparch-disk-check.service -p Environment | grep -q OLYMPARCH_DISK_LIMIT=75'
+keys "clear; olymparch-settings open events\n" 2.5
+shot hendelser "Hendelser: viruskontroll, diskgrense 75 %, varmevarsel"
+close_settings
+
+# ── Headset switch: module-switch-on-connect loaded by default, gone when off (also after a restart), back when on
+check headset-default 'pactl list modules short | grep -q switch-on-connect'
+check headset-off 'olymparch-settings set audio.headset_switch off && ! pactl list modules short | grep -q switch-on-connect && systemctl --user restart pipewire-pulse && sleep 2 && ! pactl list modules short | grep -q switch-on-connect'
+check headset-on 'olymparch-settings set audio.headset_switch on && pactl list modules short | grep -q switch-on-connect && [ ! -e ~/.config/pipewire/pipewire-pulse.conf.d/90-olymparch-settings.conf ]'
+keys "clear; olymparch-settings open audio\n" 2.5
+shot lyd-headset "Lyd: «Bytt til headset når det kobles til» virker"
+close_settings
+keys "clear; olymparch-settings open keyboard\n" 2.5
+shot tastatur "Tastatur og språk: hurtigtastene kan endres"
+close_settings
 
 # ── The rest through the same command Zeus will use
 check keyboard 'olymparch-settings set keyboard.layout no && hyprctl getoption input.kb_layout | grep -q "str: no" && grep -q "kb_layout = .no." ~/.config/olymparch/hypr.lua; olymparch-settings set keyboard.layout us'

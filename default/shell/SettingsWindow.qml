@@ -719,6 +719,10 @@ Scope {
                                         id: kc
                                         visible: row.w === "keys"
                                         property bool listening: false
+                                        // Hyprland's shortcuts pause while listening (olymparch.lua: submap olymparch-record)
+                                        onListeningChanged: Hyprland.dispatch(listening ? 'hl.dsp.submap("olymparch-record")' : 'hl.dsp.submap("reset")')
+                                        Component.onDestruction: if (listening) Hyprland.dispatch('hl.dsp.submap("reset")')
+                                        Timer { running: kc.listening; interval: 15000; onTriggered: kc.listening = false }
                                         width: Math.max(200, kcText.implicitWidth + 24); height: 26
                                         color: listening ? "#17130b" : "#0d0d12"
                                         border.color: listening || activeFocus ? win.theme.gold : win.theme.line

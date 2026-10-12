@@ -583,10 +583,18 @@ appliers["terminal"] = function(s, values)         -- apps.terminal: the termina
     write_hypr(values)
     if os.getenv("HYPRLAND_INSTANCE_SIGNATURE") then os.execute("hyprctl reload >/dev/null 2>&1") end
 end
+-- The only units Settings may switch or configure. The schema names them; anything else is refused, so no
+-- value, file or schema edit can make this run systemctl on another unit. All of it is --user: no root.
+local USER_UNITS = { ["olymparch-downloads.path"] = true, ["olymparch-heat-check.timer"] = true, ["olymparch-disk-check.service"] = true }
+local function allowed_unit(u)
+    if not USER_UNITS[u] then die("unit not allowed: " .. tostring(u), 5) end
+    return u
+end
 -- a user unit on or off: masked in ~/.config/systemd/user, which also wins over the global enable
 appliers["unit"] = function(s, values, key)
     local on = value_of(values, key) == true
     for _, u in ipairs(s.apply.units) do
+        allowed_unit(u)
         if on then os.execute(("systemctl --user unmask %s >/dev/null 2>&1; systemctl --user start %s >/dev/null 2>&1"):format(sh_quote(u), sh_quote(u)))
         else os.execute(("systemctl --user mask --now %s >/dev/null 2>&1"):format(sh_quote(u))) end
     end
@@ -594,7 +602,8 @@ end
 -- a number for a user unit, as Environment= in a drop-in next to it
 appliers["dropin"] = function(s, values, key)
     local n = math.tointeger(value_of(values, key)) or die("expected a whole number")
-    local dir = CONFIG .. "/systemd/user/" .. s.apply.unit .. ".d"
+    if not (s.apply.key or ""):match("^OLYMPARCH_[A-Z_]+$") then die("bad variable: " .. tostring(s.apply.key), 5) end
+    local dir = CONFIG .. "/systemd/user/" .. allowed_unit(s.apply.unit) .. ".d"
     write(dir .. "/olymparch-settings.conf", ("# Written by olymparch-settings (%s)\n[Service]\nEnvironment=%s=%d\n"):format(s.key, s.apply.key, n))
     os.execute("systemctl --user daemon-reload >/dev/null 2>&1")
 end
@@ -658,6 +667,7 @@ elseif cmd == "set" then
     local v = checked(s, out, text)
     local try = arg[4] == "--try" and (tonumber(arg[5]) or 15) or nil
     local values = load_values()
+    if s.installed and v ~= "" and not have(v) then die(("%s: %s is not installed"):format(s.key, v), 2) end
     if s.apply.key == "bind" then
         local o, c = shortcut_conflict(s, v, values)
         if o then die(("%s: %s is already %s (%s)"):format(s.key, c:upper(), o.key, label(o)), 4) end
@@ -767,21 +777,42 @@ elseif cmd == "items" or cmd == "pick" then
     local function clean(t) return ((t or ""):gsub("%c", " ")) end
     if key == "network.wifi" then
         if not have("nmcli") then print("! NetworkManager (nmcli) is not installed"); os.exit(0) end
+        -- security as a class: open, wep or wpa (WPA2/WPA3/OWE/802.1X). A saved network is only joined through its
+        -- own connection (by UUID), and only when an access point with that name offers the same class: an open
+        -- or WEP twin of a WPA network is never joined in its place.
+        local function class_of_scan(sec)
+            if sec == "" or sec == "--" then return "open" end
+            if sec:find("WEP") and not sec:find("WPA") then return "wep" end
+            return "wpa"
+        end
+        local function class_of_keymgmt(km)
+            if km == "" then return "open" end
+            if km == "none" or km == "ieee8021x" then return "wep" end
+            return "wpa"   -- wpa-psk, sae, wpa-eap, owe …
+        end
         local function wifi_list()
             local list = {}
             for l in capture("nmcli -t -f IN-USE,SIGNAL,SECURITY,SSID device wifi list --rescan no"):gmatch("[^\n]+") do
                 local inuse, signal, sec, ssid = l:match("^([^:]*):(%d*):([^:]*):(.*)$")
                 ssid = ssid and ssid:gsub("\\:", ":"):gsub("\\\\", "\\")
                 if ssid and ssid ~= "" and #ssid <= 32 and not ssid:find("%c") then
-                    list[#list + 1] = { ssid = ssid, on = inuse == "*", signal = tonumber(signal) or 0, secure = sec ~= "" and sec ~= "--" }
+                    list[#list + 1] = { ssid = ssid, on = inuse == "*", signal = tonumber(signal) or 0, class = class_of_scan(sec) }
                 end
             end
             return list
         end
-        local saved = {}
-        for l in capture("nmcli -t -f NAME,TYPE connection show"):gmatch("[^\n]+") do
-            local name = l:match("^(.*):802%-11%-wireless$")
-            if name then saved[name:gsub("\\:", ":")] = true end
+        local saved = {}   -- SSID → { uuid, class }
+        for l in capture("nmcli -t -f UUID,TYPE connection show"):gmatch("[^\n]+") do
+            local uuid = l:match("^([%x-]+):802%-11%-wireless$")
+            if uuid then
+                local g = capture("nmcli -t -g 802-11-wireless.ssid,802-11-wireless-security.key-mgmt connection show uuid " .. sh_quote(uuid))
+                local ssid, km = g:match("^([^\n]*)\n([^\n]*)")
+                if ssid and ssid ~= "" then saved[ssid] = { uuid = uuid, class = class_of_keymgmt(km or "") } end
+            end
+        end
+        local function offers(ssid, class)
+            for _, n in ipairs(wifi_list()) do if n.ssid == ssid and n.class == class then return true end end
+            return false
         end
         if cmd == "items" then
             if capture("nmcli -t -f TYPE device"):find("wifi") == nil then print("! no Wi-Fi adapter"); os.exit(0) end
@@ -790,18 +821,29 @@ elseif cmd == "items" or cmd == "pick" then
             for _, n in ipairs(wifi_list()) do
                 if not seen[n.ssid] then
                     seen[n.ssid] = true
-                    print(table.concat({ n.ssid, n.on and "on" or saved[n.ssid] and "saved" or "new", n.ssid,
-                        n.signal .. "%" .. (n.secure and " · 🔒" or "") }, "\t"))
+                    local sv = saved[n.ssid]
+                    local twin = sv and not offers(n.ssid, sv.class)
+                    print(table.concat({ n.ssid, n.on and "on" or (sv and not twin) and "saved" or "new", n.ssid,
+                        n.signal .. "%" .. (n.class ~= "open" and " · 🔒" or "") .. (twin and " · ⚠ not the saved network's security" or "") }, "\t"))
                 end
             end
         else
             local ssid = arg[3] or die("usage: pick network.wifi SSID", 2)
             if #ssid > 32 or ssid:find("%c") then die("not a network name", 2) end
             local net
-            for _, n in ipairs(wifi_list()) do if n.ssid == ssid then net = n end end
-            if net and net.on then os.exit(os.execute("nmcli connection down id " .. sh_quote(ssid) .. " >/dev/null 2>&1") and 0 or 1) end
-            if saved[ssid] then os.exit(os.execute("nmcli connection up id " .. sh_quote(ssid) .. " >/dev/null 2>&1") and 0 or 1) end
-            if net and not net.secure then os.exit(os.execute("nmcli device wifi connect " .. sh_quote(ssid) .. " >/dev/null 2>&1") and 0 or 1) end
+            for _, n in ipairs(wifi_list()) do if n.ssid == ssid and (not net or n.on) then net = n end end
+            if net and net.on then
+                local sv = saved[ssid]
+                os.exit(os.execute("nmcli connection down " .. (sv and ("uuid " .. sh_quote(sv.uuid)) or ("id " .. sh_quote(ssid))) .. " >/dev/null 2>&1") and 0 or 1)
+            end
+            local sv = saved[ssid]
+            if sv then
+                if not offers(ssid, sv.class) then
+                    die(("%s: the saved network uses %s, but %s nearby does not; not connecting (forget it in nmtui if it really changed)"):format(ssid, sv.class, ssid), 3)
+                end
+                os.exit(os.execute("nmcli connection up uuid " .. sh_quote(sv.uuid) .. " >/dev/null 2>&1") and 0 or 1)
+            end
+            if net and net.class == "open" then os.exit(os.execute("nmcli device wifi connect " .. sh_quote(ssid) .. " >/dev/null 2>&1") and 0 or 1) end
             -- a password is needed: nmtui asks for it in a terminal, so it never passes through a command line
             os.execute("setsid -f foot -e nmtui connect " .. sh_quote(ssid) .. " >/dev/null 2>&1")
         end

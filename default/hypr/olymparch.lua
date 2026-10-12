@@ -85,6 +85,9 @@ function olymparch_keys(moved)
         if shortcuts[name] and type(combo) == "string" and combo ~= "" then shortcuts[name].bind(combo) end
     end
 end
+-- While Settings records a new shortcut, Hyprland's own are paused (this submap has no others), so the window
+-- gets every key. Settings leaves it again by itself; Super+Escape does too.
+hl.define_submap("olymparch-record", function() hl.bind("SUPER + ESCAPE", hl.dsp.submap("reset")) end)
 local digits, arrows = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "0" }, { "left", "right", "up", "down" }
 shortcut("keys.terminal", mod .. " + RETURN", nil, function(k) hl.bind(k, hl.dsp.exec_cmd("sh -c 'exec \"${OLYMPARCH_TERMINAL:-foot}\"'")) end)
 shortcut("keys.menu", mod .. " + SPACE", nil, function(k) hl.bind(k, hl.dsp.global("olymparch:launcher")) end)

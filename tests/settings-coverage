@@ -213,6 +213,50 @@ with tempfile.TemporaryDirectory() as home:
     if list(Path(home).rglob("PWNED")) or list(Path(home).rglob(".*.??????")):
         bad("olymparch-settings left PWNED or temp files behind")
 
+# ── system state: olymparch-settings never escalates (no pkexec/sudo), and only switches units from its allow-list
+allowed_units = set(re.findall(r'\["(olymparch-[\w.-]+\.(?:path|timer|service))"\] = true', cli))
+for s in settings:
+    a = s["apply"]
+    for u in a.get("units", []) + ([a["unit"]] if a.get("unit") else []):
+        if u not in allowed_units:
+            bad(f"{s['key']}: unit {u} is not in olymparch-settings' USER_UNITS allow-list")
+if re.search(r'\b(pkexec|sudo|pacman)\b', re.sub(r'--[^\n]*', '', cli)):
+    bad("olymparch-settings runs pkexec, sudo or pacman; system changes belong in a narrow pkexec helper")
+
+# ── Wi-Fi: a saved WPA network is never joined through an open twin with the same name; a saved one is joined by
+#    UUID; no password ever reaches a command line. A stand-in nmcli logs every call.
+with tempfile.TemporaryDirectory() as home:
+    fake = Path(home, "bin")
+    fake.mkdir()
+    log = Path(home, "nmcli.log")
+    (fake / "nmcli").write_text(f'''#!/bin/sh
+echo "$*" >> {str(log)!r}
+case "$*" in
+  *"device wifi list"*) printf '%s\\n' "$NM_SCAN" ;;
+  *"-f UUID,TYPE connection show"*) printf '11111111-2222-3333-4444-555555555555:802-11-wireless\\n' ;;
+  *"connection show uuid"*) printf 'Home\\nwpa-psk\\n' ;;
+  *"-f TYPE device"*) printf 'wifi\\nethernet\\n' ;;
+esac
+exit 0
+''')
+    (fake / "nmcli").chmod(0o755)
+    env2 = dict(env, HOME=home, XDG_RUNTIME_DIR=home, PATH=f"{fake}:{os.environ['PATH']}")
+    def pick(scan):
+        log.write_text("")
+        r = subprocess.run([cli_path, "pick", "network.wifi", "Home"], env=dict(env2, NM_SCAN=scan), capture_output=True, text=True)
+        return r.returncode, log.read_text()
+    rc, calls = pick(":70::Home")   # only an open «Home» nearby
+    if rc != 3 or "connection up" in calls or "wifi connect" in calls:
+        bad(f"Wi-Fi: joined (or tried) an open twin of the saved WPA network «Home» (rc {rc}):\n{calls}")
+    rc, calls = pick(":70:WPA2:Home")
+    if rc != 0 or "connection up uuid 11111111-2222-3333-4444-555555555555" not in calls:
+        bad(f"Wi-Fi: the saved WPA network «Home» was not joined by its UUID (rc {rc}):\n{calls}")
+    r = subprocess.run([cli_path, "items", "network.wifi"], env=dict(env2, NM_SCAN=":70::Home"), capture_output=True, text=True)
+    if "\tsaved\t" in r.stdout or "⚠" not in r.stdout:
+        bad(f"Wi-Fi: the list shows an open twin of a saved WPA network as saved:\n{r.stdout}")
+    if re.search(r'password|psk|wifi-sec', log.read_text()):
+        bad("Wi-Fi: a password went through nmcli's command line")
+
 # ── Norwegian for every string the shell shows
 nb = json.loads((root / "default/i18n/nb.json").read_text())
 for f in (root / "default/shell").glob("*.qml"):
