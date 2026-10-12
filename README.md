@@ -18,7 +18,7 @@ hardware tests on real machines are done.
   not disturb, clock), an app launcher (Super+Space), notifications with action buttons, a volume display, its own
   lock screen (Super+L, and after 10 minutes idle) and an animated wallpaper that pauses when windows cover it
   or a game runs.
-- **Settings** (Super+comma) – one window for everything (130 of 187 settings work today; the rest are marked
+- **Settings** (Super+comma) – one window for everything (183 of 184 settings work today; the firewall is marked
   «coming»), with a simple and an advanced view. Every setting is
   remembered. The same settings are available on the command line: `olymparch-settings`.
 - **Snapshots** – btrfs + snapper. Every package change makes a snapshot, and the boot menu lists them, so a

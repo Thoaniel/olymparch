@@ -19,7 +19,7 @@ for d in dirs:
         f, _, desc = line.partition("\t")
         if (d / f).exists():
             b64 = base64.b64encode((d / f).read_bytes()).decode()
-            rows.append(f'<figure><img src="data:image/png;base64,{b64}" alt="{html.escape(desc)}">'
+            rows.append(f'<figure><img src="data:image/{'webp' if f.endswith('.webp') else 'png'};base64,{b64}" alt="{html.escape(desc)}">'
                         f'<figcaption><b>{html.escape(f.split("-", 1)[0])}</b> {html.escape(desc)}</figcaption></figure>')
     parts.append(f'<section><h2><span class="{"ok" if ok else "bad"}">{"✓" if ok else "✕"}</span> {html.escape(d.name)}'
                  f' <small>{html.escape(res)}</small></h2><div class="grid">{"".join(rows) or "<p>Ingen skjermbilder.</p>"}</div></section>')
