@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Olymparch · Artemis: a hind with golden antlers stands in a moonlit forest clearing by a still pool; the crescent
+     moon is the key light, its rays fall through the pines; the huntress' bow and quiver lean on the old oak in front.
+     Light: the crescent (silver), upper left. 2560×1440, everything that matters inside x 140…2420.
+     Drawn by hand for Olymparch; MIT. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2560" height="1440" viewBox="0 0 2560 1440">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#04060d"/>
+      <stop offset="0.3" stop-color="#0a1022"/>
+      <stop offset="0.6" stop-color="#18223e"/>
+      <stop offset="0.8" stop-color="#2a3656"/>
+      <stop offset="1" stop-color="#3a4868"/>
+    </linearGradient>
+    <radialGradient id="moonHalo" cx="760" cy="440" r="1000" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f3f6fc" stop-opacity="0.35"/>
+      <stop offset="0.12" stop-color="#c2cde0" stop-opacity="0.18"/>
+      <stop offset="0.45" stop-color="#5a6a90" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#101728" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ray" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e6ebf5" stop-opacity="0.22"/>
+      <stop offset="0.6" stop-color="#c2cde0" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#c2cde0" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="meadow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a4a66"/>
+      <stop offset="0.4" stop-color="#22304a"/>
+      <stop offset="1" stop-color="#0a0f1c"/>
+    </linearGradient>
+    <radialGradient id="clearing" cx="1300" cy="1120" r="700" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#9aa6c0" stop-opacity="0.45"/>
+      <stop offset="0.5" stop-color="#5a6a8a" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#2a3656" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="pool" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1a2440"/>
+      <stop offset="1" stop-color="#0c1224"/>
+    </linearGradient>
+    <linearGradient id="deer" x1="0" y1="0" x2="1" y2="0.3">
+      <stop offset="0" stop-color="#8a8a9a"/>
+      <stop offset="0.35" stop-color="#4a4a5c"/>
+      <stop offset="1" stop-color="#1c1e2c"/>
+    </linearGradient>
+    <linearGradient id="bark" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3a4258"/>
+      <stop offset="0.25" stop-color="#1c2232"/>
+      <stop offset="1" stop-color="#06080e"/>
+    </linearGradient>
+    <linearGradient id="bowWood" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f3f6fc"/>
+      <stop offset="0.5" stop-color="#9aa6c0"/>
+      <stop offset="1" stop-color="#3a4462"/>
+    </linearGradient>
+    <linearGradient id="quiver" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6a5a54"/>
+      <stop offset="0.4" stop-color="#3a2e2c"/>
+      <stop offset="1" stop-color="#140f10"/>
+    </linearGradient>
+    <linearGradient id="topShade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#03040a" stop-opacity="0.9"/>
+      <stop offset="0.5" stop-color="#03040a" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#03040a" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="cornerShade" cx="2560" cy="0" r="1150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#020308" stop-opacity="0.8"/>
+      <stop offset="0.6" stop-color="#020308" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#020308" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vignette" cx="0.5" cy="0.55" r="0.78">
+      <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.6"/>
+    </radialGradient>
+
+    <filter id="cloud" x="-15%" y="-30%" width="130%" height="160%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.0035 0.012" numOctaves="5" seed="24" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="120" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.6 0 0 0 -0.6" result="m"/>
+      <feComposite in="d" in2="m" operator="in" result="c"/>
+      <feGaussianBlur in="c" stdDeviation="3"/>
+    </filter>
+    <filter id="mist" x="-15%" y="-60%" width="130%" height="220%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.003 0.02" numOctaves="4" seed="6" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="80" xChannelSelector="R" yChannelSelector="G"/>
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+    <filter id="foliage" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" seed="12" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="26" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="reliefBark" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.06 0.008" numOctaves="4" seed="8" result="h"/>
+      <feDiffuseLighting in="h" surfaceScale="12" diffuseConstant="1" lighting-color="#fff" result="l">
+        <feDistantLight azimuth="220" elevation="38"/>
+      </feDiffuseLighting>
+      <feComponentTransfer in="l" result="lt">
+        <feFuncR type="linear" slope="1.2" intercept="0.12"/><feFuncG type="linear" slope="1.2" intercept="0.12"/>
+        <feFuncB type="linear" slope="1.2" intercept="0.12"/>
+      </feComponentTransfer>
+      <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.1" k2="0" k3="0" k4="0"/>
+    </filter>
+    <filter id="reliefGround" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.05 0.012" numOctaves="5" seed="19" result="h"/>
+      <feDiffuseLighting in="h" surfaceScale="5" diffuseConstant="1" lighting-color="#fff" result="l">
+        <feDistantLight azimuth="220" elevation="40"/>
+      </feDiffuseLighting>
+      <feComponentTransfer in="l" result="lt">
+        <feFuncR type="linear" slope="0.6" intercept="0.5"/><feFuncG type="linear" slope="0.6" intercept="0.5"/>
+        <feFuncB type="linear" slope="0.6" intercept="0.5"/>
+      </feComponentTransfer>
+      <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.1" k2="0" k3="0" k4="0"/>
+    </filter>
+    <filter id="fur" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.05 0.1" numOctaves="3" seed="3" result="h"/>
+      <feDiffuseLighting in="h" surfaceScale="3" diffuseConstant="1" lighting-color="#fff" result="l">
+        <feDistantLight azimuth="210" elevation="45"/>
+      </feDiffuseLighting>
+      <feComponentTransfer in="l" result="lt">
+        <feFuncR type="linear" slope="0.7" intercept="0.42"/><feFuncG type="linear" slope="0.7" intercept="0.42"/>
+        <feFuncB type="linear" slope="0.7" intercept="0.42"/>
+      </feComponentTransfer>
+      <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.1" k2="0" k3="0" k4="0"/>
+    </filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"/></filter>
+    <filter id="glowS" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter>
+    <filter id="haze" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="28"/></filter>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3"/></filter>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="1" seed="2"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0.05 0"/>
+    </filter>
+
+    <!-- a fir, tiered, 400 tall, base at 0 -->
+    <path id="fir" d="M0 -400 L16 -350 L8 -348 L36 -290 L20 -288 L56 -214 L34 -212 L76 -130 L50 -128 L96 -36 L60 -34 L70 0
+      L-70 0 L-60 -34 L-96 -36 L-50 -128 L-76 -130 L-34 -212 L-56 -214 L-20 -288 L-36 -290 L-8 -348 L-16 -350 Z"/>
+    <!-- the hind, facing left (toward the moon), hooves at y 0 -->
+    <path id="hind" d="M-90 -300 C-40 -290 20 -284 70 -290 C110 -296 140 -302 162 -290 C184 -278 194 -262 188 -244 L200 -254 L198 -240 L188 -236
+      C186 -210 182 -190 176 -170 C172 -150 176 -128 168 -108 L160 -60 L162 -18 L168 0 L150 0 L148 -18 L146 -60 L148 -104
+      C140 -124 134 -140 126 -152 C100 -160 60 -158 20 -152 C-20 -146 -46 -146 -58 -146 L-66 -110 L-72 -60 L-70 -18 L-64 0 L-82 0 L-84 -18 L-86 -60
+      L-90 -112 L-108 -148 C-142 -164 -158 -206 -152 -240 C-160 -280 -176 -320 -196 -352 L-222 -360 L-262 -356 L-276 -362
+      L-280 -374 C-262 -386 -240 -400 -220 -412 L-214 -436 L-196 -462 L-198 -428 L-186 -456 L-182 -420
+      C-160 -380 -130 -330 -90 -300 Z"/>
+    <path id="hindFar" d="M-40 -160 L-30 -110 L-36 -60 L-34 -18 L-28 0 L-44 0 L-48 -18 L-50 -60 L-54 -120 Z
+      M100 -160 C110 -140 118 -120 112 -100 L104 -60 L106 -18 L112 0 L96 0 L92 -18 L90 -60 L92 -104 C88 -130 84 -150 80 -170 Z"/>
+    <!-- a fern frond -->
+    <g id="frond">
+      <path d="M0 0 C60 -40 140 -70 240 -80" fill="none" stroke="#0a0f1a" stroke-width="5"/>
+      <g fill="#0a0f1a">
+        <ellipse cx="41" cy="0" rx="41" ry="12" transform="translate(8 -5) rotate(-95)"/>
+        <ellipse cx="41" cy="0" rx="41" ry="12" transform="translate(8 -5) rotate(29)"/>
+        <ellipse cx="39" cy="0" rx="39" ry="11" transform="translate(22 -14) rotate(-93)"/>
+        <ellipse cx="39" cy="0" rx="39" ry="11" transform="translate(22 -14) rotate(31)"/>
+        <ellipse cx="37" cy="0" rx="37" ry="10" transform="translate(38 -23) rotate(-91)"/>
+        <ellipse cx="37" cy="0" rx="37" ry="10" transform="translate(38 -23) rotate(33)"/>
+        <ellipse cx="34" cy="0" rx="34" ry="10" transform="translate(52 -31) rotate(-90)"/>
+        <ellipse cx="34" cy="0" rx="34" ry="10" transform="translate(52 -31) rotate(34)"/>
+        <ellipse cx="32" cy="0" rx="32" ry="9" transform="translate(68 -39) rotate(-88)"/>
+        <ellipse cx="32" cy="0" rx="32" ry="9" transform="translate(68 -39) rotate(36)"/>
+        <ellipse cx="30" cy="0" rx="30" ry="9" transform="translate(82 -46) rotate(-86)"/>
+        <ellipse cx="30" cy="0" rx="30" ry="9" transform="translate(82 -46) rotate(38)"/>
+        <ellipse cx="28" cy="0" rx="28" ry="8" transform="translate(98 -52) rotate(-84)"/>
+        <ellipse cx="28" cy="0" rx="28" ry="8" transform="translate(98 -52) rotate(40)"/>
+        <ellipse cx="26" cy="0" rx="26" ry="7" transform="translate(112 -57) rotate(-82)"/>
+        <ellipse cx="26" cy="0" rx="26" ry="7" transform="translate(112 -57) rotate(42)"/>
+        <ellipse cx="23" cy="0" rx="23" ry="7" transform="translate(128 -62) rotate(-79)"/>
+        <ellipse cx="23" cy="0" rx="23" ry="7" transform="translate(128 -62) rotate(45)"/>
+        <ellipse cx="21" cy="0" rx="21" ry="6" transform="translate(142 -67) rotate(-77)"/>
+        <ellipse cx="21" cy="0" rx="21" ry="6" transform="translate(142 -67) rotate(47)"/>
+        <ellipse cx="19" cy="0" rx="19" ry="5" transform="translate(158 -71) rotate(-75)"/>
+        <ellipse cx="19" cy="0" rx="19" ry="5" transform="translate(158 -71) rotate(49)"/>
+        <ellipse cx="17" cy="0" rx="17" ry="5" transform="translate(172 -74) rotate(-73)"/>
+        <ellipse cx="17" cy="0" rx="17" ry="5" transform="translate(172 -74) rotate(51)"/>
+        <ellipse cx="15" cy="0" rx="15" ry="4" transform="translate(188 -76) rotate(-70)"/>
+        <ellipse cx="15" cy="0" rx="15" ry="4" transform="translate(188 -76) rotate(54)"/>
+        <ellipse cx="12" cy="0" rx="12" ry="4" transform="translate(202 -78) rotate(-68)"/>
+        <ellipse cx="12" cy="0" rx="12" ry="4" transform="translate(202 -78) rotate(56)"/>
+        <ellipse cx="10" cy="0" rx="10" ry="4" transform="translate(218 -79) rotate(-66)"/>
+        <ellipse cx="10" cy="0" rx="10" ry="4" transform="translate(218 -79) rotate(58)"/>
+        <ellipse cx="8" cy="0" rx="8" ry="4" transform="translate(232 -80) rotate(-63)"/>
+        <ellipse cx="8" cy="0" rx="8" ry="4" transform="translate(232 -80) rotate(61)"/>
+      </g>
+    </g>
+  </defs>
+
+  <!-- ── sky, the crescent and its halo -->
+  <rect width="2560" height="1440" fill="url(#sky)"/>
+  <rect width="2560" height="1440" fill="url(#moonHalo)"/>
+  <g fill="#e6ebf5">
+    <circle cx="300" cy="360" r="1.6" opacity="0.7"/><circle cx="1050" cy="330" r="1.4" opacity="0.6"/>
+    <circle cx="1240" cy="470" r="1.8" opacity="0.7"/><circle cx="1460" cy="380" r="1.3" opacity="0.5"/>
+    <circle cx="1620" cy="520" r="1.6" opacity="0.6"/><circle cx="1800" cy="430" r="1.2" opacity="0.4"/>
+    <circle cx="420" cy="560" r="1.2" opacity="0.5"/><circle cx="980" cy="560" r="1.1" opacity="0.4"/>
+    <circle cx="1360" cy="600" r="1.5" opacity="0.6"/><circle cx="560" cy="330" r="1.3" opacity="0.5"/>
+    <circle cx="1140" cy="380" r="2.2" opacity="0.8"/><circle cx="1150" cy="380" r="5" opacity="0.15"/>
+  </g>
+  <circle cx="725" cy="445" r="130" fill="#c2cde0" opacity="0.16" filter="url(#glow)"/>
+  <!-- crescent: a full disc minus an offset one -->
+  <path d="M760 360 A80 80 0 1 0 760 520 A64 80 0 1 1 760 360 Z" fill="#f3f6fc" transform="rotate(-25 760 440)"/>
+  <path d="M760 360 A80 80 0 1 0 760 520 A64 80 0 1 1 760 360 Z" fill="#f3f6fc" opacity="0.5" filter="url(#glowS)" transform="rotate(-25 760 440)"/>
+  <g filter="url(#cloud)" opacity="0.8">
+    <path d="M300 560 C460 540 620 548 780 560 C900 568 1000 575 1100 590 C960 606 800 600 640 600 C500 600 380 590 300 560 Z" fill="#3a4868"/>
+  </g>
+
+  <!-- ── far forest: rows of firs, each nearer row darker and less hazed -->
+  <g fill="#2e3b5c" opacity="0.9" filter="url(#foliage)">
+    <use xlink:href="#fir" transform="translate(140 880) scale(0.55)"/><use xlink:href="#fir" transform="translate(220 870) scale(0.7)"/>
+    <use xlink:href="#fir" transform="translate(300 885) scale(0.5)"/><use xlink:href="#fir" transform="translate(380 875) scale(0.65)"/>
+    <use xlink:href="#fir" transform="translate(470 880) scale(0.55)"/><use xlink:href="#fir" transform="translate(1720 880) scale(0.6)"/>
+    <use xlink:href="#fir" transform="translate(1800 870) scale(0.75)"/><use xlink:href="#fir" transform="translate(1890 880) scale(0.55)"/>
+    <use xlink:href="#fir" transform="translate(1970 875) scale(0.7)"/><use xlink:href="#fir" transform="translate(2060 880) scale(0.6)"/>
+    <use xlink:href="#fir" transform="translate(2140 872) scale(0.8)"/><use xlink:href="#fir" transform="translate(2240 880) scale(0.65)"/>
+    <use xlink:href="#fir" transform="translate(2330 874) scale(0.75)"/><use xlink:href="#fir" transform="translate(2430 880) scale(0.6)"/>
+    <use xlink:href="#fir" transform="translate(560 885) scale(0.45)"/><use xlink:href="#fir" transform="translate(1640 885) scale(0.5)"/>
+  </g>
+  <g fill="#34426a" opacity="0.75" filter="url(#foliage)">
+    <use xlink:href="#fir" transform="translate(620 990) scale(0.35)"/><use xlink:href="#fir" transform="translate(680 992) scale(0.42)"/>
+    <use xlink:href="#fir" transform="translate(740 990) scale(0.32)"/><use xlink:href="#fir" transform="translate(800 994) scale(0.4)"/>
+    <use xlink:href="#fir" transform="translate(870 992) scale(0.3)"/><use xlink:href="#fir" transform="translate(940 994) scale(0.36)"/>
+    <use xlink:href="#fir" transform="translate(1010 990) scale(0.28)"/><use xlink:href="#fir" transform="translate(1080 994) scale(0.34)"/>
+    <use xlink:href="#fir" transform="translate(1150 992) scale(0.3)"/><use xlink:href="#fir" transform="translate(1230 994) scale(0.38)"/>
+    <use xlink:href="#fir" transform="translate(1300 992) scale(0.32)"/><use xlink:href="#fir" transform="translate(1370 994) scale(0.4)"/>
+    <use xlink:href="#fir" transform="translate(1450 992) scale(0.34)"/><use xlink:href="#fir" transform="translate(1530 994) scale(0.42)"/>
+    <use xlink:href="#fir" transform="translate(1600 990) scale(0.36)"/>
+    <path d="M580 1000 C900 980 1300 985 1660 1000 L1660 1020 L580 1020 Z"/>
+  </g>
+  <rect x="-60" y="820" width="2700" height="140" fill="#5a6a8a" opacity="0.22" filter="url(#haze)"/>
+  <g fill="#1c2744" filter="url(#foliage)">
+    <use xlink:href="#fir" transform="translate(60 960) scale(0.95)"/><use xlink:href="#fir" transform="translate(180 950) scale(1.1)"/>
+    <use xlink:href="#fir" transform="translate(300 965) scale(0.85)"/><use xlink:href="#fir" transform="translate(420 958) scale(0.9)"/>
+    <use xlink:href="#fir" transform="translate(530 970) scale(0.7)"/><use xlink:href="#fir" transform="translate(1860 965) scale(0.85)"/>
+    <use xlink:href="#fir" transform="translate(1960 955) scale(1.05)"/><use xlink:href="#fir" transform="translate(2080 962) scale(0.9)"/>
+    <use xlink:href="#fir" transform="translate(2200 950) scale(1.15)"/><use xlink:href="#fir" transform="translate(2320 960) scale(1)"/>
+    <use xlink:href="#fir" transform="translate(2450 950) scale(1.2)"/><use xlink:href="#fir" transform="translate(1760 972) scale(0.7)"/>
+  </g>
+  <!-- moonlit tips on the near firs, left flanks -->
+  <g fill="none" stroke="#9aa6c0" stroke-width="3" opacity="0.35">
+    <path d="M180 510 L164 560 M1960 535 L1944 590 M2200 490 L2184 540 M2450 470 L2434 520"/>
+  </g>
+
+  <!-- ── light shafts from the crescent into the clearing -->
+  <g filter="url(#haze)">
+    <path d="M700 420 L860 420 L1700 1180 L1300 1200 Z" fill="url(#ray)"/>
+    <path d="M760 440 L820 440 L1280 1180 L1120 1190 Z" fill="url(#ray)" opacity="0.8"/>
+  </g>
+
+  <!-- ── the clearing: meadow, mist, the pool with the moon in it -->
+  <g filter="url(#reliefGround)">
+    <path d="M-60 1440 L-60 1000 C300 990 600 1010 900 1020 C1200 1030 1500 1020 1800 1010 C2100 1000 2400 1005 2620 1000
+      L2620 1440 Z" fill="url(#meadow)"/>
+  </g>
+  <rect width="2560" height="1440" fill="url(#clearing)"/>
+  <g filter="url(#mist)" opacity="0.55">
+    <path d="M300 1010 C600 990 900 1000 1200 1004 C1500 1008 1800 996 2200 1004 L2200 1050 C1800 1046 1500 1056 1200 1052
+      C900 1048 600 1060 300 1050 Z" fill="#9aa6c0"/>
+  </g>
+  <ellipse cx="1060" cy="1190" rx="420" ry="52" fill="url(#pool)" filter="url(#soft)"/>
+  <ellipse cx="1060" cy="1188" rx="414" ry="50" fill="none" stroke="#9aa6c0" stroke-width="4" opacity="0.18" filter="url(#soft)"/>
+  <path d="M700 1172 C820 1160 980 1158 1120 1164" fill="none" stroke="#c2cde0" stroke-width="3" opacity="0.35"/>
+  <g stroke="#0a0f1c" stroke-width="4" stroke-linecap="round" fill="none">
+    <path d="M660 1196 L650 1120 M676 1198 L672 1110 M690 1200 L700 1130 M1440 1186 L1452 1116 M1456 1188 L1458 1100 M1470 1186 L1484 1126"/>
+  </g>
+  <g stroke="#9aa6c0" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.5">
+    <path d="M650 1120 L656 1160 M672 1110 L674 1150 M1458 1100 L1457 1140"/>
+  </g>
+  <!-- the crescent and the hind mirrored in the pool -->
+  <path d="M1000 1182 A20 12 0 1 0 1000 1206 A16 12 0 1 1 1000 1182 Z" fill="#f3f6fc" opacity="0.7" transform="rotate(25 1000 1194)"/>
+  <g stroke="#c2cde0" stroke-width="2" opacity="0.3">
+    <path d="M940 1196 L1060 1196 M960 1206 L1040 1206 M1150 1186 L1290 1186 M1180 1200 L1260 1200"/>
+  </g>
+
+  <!-- ── the hind, alert, golden antlers catching the moon -->
+  <g transform="translate(1560 1120) scale(1.05)">
+    <ellipse cx="20" cy="4" rx="200" ry="14" fill="#04060c" opacity="0.6" filter="url(#glowS)"/>
+    <use xlink:href="#hindFar" fill="#262b3e"/>
+    <g filter="url(#fur)">
+      <use xlink:href="#hind" fill="url(#deer)"/>
+      <!-- pale throat, chest and belly; darker saddle; shaded haunch -->
+      <path d="M-196 -352 C-176 -320 -160 -280 -148 -240 C-150 -200 -136 -164 -108 -148 C-136 -190 -150 -260 -176 -330 Z" fill="#dfe5f0" opacity="0.55"/>
+      <path d="M-58 -146 C-46 -146 -20 -146 20 -152 C60 -158 100 -160 126 -152 C90 -176 40 -180 0 -174 C-30 -170 -50 -160 -58 -146 Z" fill="#c2cde0" opacity="0.12"/>
+      <path d="M-90 -300 C-40 -290 20 -284 70 -290 C110 -296 140 -302 162 -290 C120 -280 40 -272 -70 -284 Z" fill="#0e1018" opacity="0.5"/>
+      <path d="M150 -292 C178 -286 192 -268 188 -244 C186 -210 182 -190 176 -170 C150 -190 130 -230 120 -280 Z" fill="#0e1018" opacity="0.45"/>
+      <path d="M-262 -356 L-276 -362 L-280 -374 C-270 -380 -262 -384 -254 -388 Z" fill="#0a0c14" opacity="0.7"/>
+    </g>
+    <!-- antlers (the Ceryneian hind's are gold) -->
+    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <g stroke="#4a3a14" stroke-width="12">
+        <path d="M-204 -440 C-210 -490 -196 -530 -168 -560 M-200 -500 L-164 -508 M-186 -536 L-200 -574 M-172 -552 L-140 -578
+          M-188 -432 C-180 -480 -170 -514 -140 -540 M-176 -490 L-144 -486"/>
+      </g>
+      <g stroke="#d8b860" stroke-width="6">
+        <path d="M-204 -440 C-210 -490 -196 -530 -168 -560 M-200 -500 L-164 -508 M-186 -536 L-200 -574 M-172 -552 L-140 -578
+          M-188 -432 C-180 -480 -170 -514 -140 -540 M-176 -490 L-144 -486"/>
+      </g>
+      <path d="M-206 -470 C-208 -500 -196 -528 -172 -554" stroke="#fff4c8" stroke-width="2" opacity="0.9"/>
+    </g>
+    <g fill="#e8c870" opacity="0.18" filter="url(#glow)"><circle cx="-180" cy="-520" r="44"/></g>
+    <!-- ear inner, eye, nose, rim light from the moon (left) -->
+    <path d="M-196 -462 L-198 -428 L-206 -440 Z" fill="#c2a8a8" opacity="0.6"/>
+    <circle cx="-234" cy="-392" r="6" fill="#05060a"/>
+    <circle cx="-236" cy="-394" r="2" fill="#f3f6fc"/>
+    <circle cx="-276" cy="-370" r="4" fill="#05060a"/>
+    <path d="M-280 -374 C-262 -386 -240 -400 -220 -412 L-214 -436" fill="none" stroke="#f3f6fc" stroke-width="3" opacity="0.85"/>
+    <path d="M-196 -352 C-176 -320 -160 -280 -148 -240 C-150 -200 -136 -164 -108 -148" fill="none" stroke="#f3f6fc" stroke-width="3" opacity="0.7"/>
+    <path d="M-182 -420 C-160 -380 -130 -330 -90 -300 C-40 -290 20 -284 70 -290 C110 -296 140 -302 162 -290" fill="none" stroke="#c2cde0" stroke-width="2.5" opacity="0.6"/>
+    <path d="M-108 -148 L-90 -112 L-86 -60 L-84 -18" fill="none" stroke="#c2cde0" stroke-width="2.5" opacity="0.55"/>
+  </g>
+  <!-- grass in front of the hind's hooves -->
+  <g stroke="#2a3656" stroke-width="3" fill="none" stroke-linecap="round">
+    <path d="M1380 1124 L1374 1094 M1392 1124 L1400 1090 M1410 1126 L1424 1098 M1600 1126 L1594 1096 M1612 1126 L1622 1092
+      M1730 1124 L1724 1098 M1742 1124 L1752 1094 M1450 1128 L1444 1100"/>
+  </g>
+  <g stroke="#9aa6c0" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5">
+    <path d="M1374 1094 L1380 1124 M1594 1096 L1600 1126 M1724 1098 L1730 1124"/>
+  </g>
+
+  <!-- ── fireflies: a few warm points in the cool night -->
+  <g fill="#ffd8a0">
+    <circle cx="1820" cy="1040" r="3" opacity="0.8"/><circle cx="1900" cy="990" r="2.5" opacity="0.6"/>
+    <circle cx="900" cy="1060" r="2.5" opacity="0.7"/><circle cx="2040" cy="1080" r="2" opacity="0.5"/>
+  </g>
+  <g fill="#ffb880" opacity="0.4" filter="url(#glowS)">
+    <circle cx="1820" cy="1040" r="10"/><circle cx="900" cy="1060" r="9"/>
+  </g>
+
+  <!-- ── the old oak on the left, the bow and quiver leaning on it -->
+  <g filter="url(#reliefBark)">
+    <path d="M-60 1440 L-60 -40 L320 -40 C300 120 290 300 300 480 C310 640 290 800 300 960 C306 1080 330 1200 380 1300
+      C420 1360 470 1400 520 1440 Z" fill="url(#bark)"/>
+    <path d="M300 960 C340 1000 400 1020 460 1060 C420 1060 360 1040 304 1010 Z" fill="#141a28"/>
+  </g>
+  <path d="M320 -40 C300 120 290 300 300 480 C310 640 290 800 300 960 C306 1080 330 1200 380 1300" fill="none"
+        stroke="#9aa6c0" stroke-width="5" opacity="0.4"/>
+  <!-- a dark bough overhead frames the top-left -->
+  <g fill="#05070e" filter="url(#foliage)">
+    <path d="M200 60 C380 90 560 130 760 170 C860 190 940 200 1010 196 C960 220 900 230 840 226 C700 220 560 196 420 180
+      C340 172 260 160 200 150 Z"/>
+    <circle cx="460" cy="170" r="54"/><circle cx="560" cy="190" r="44"/><circle cx="660" cy="200" r="50"/>
+    <circle cx="760" cy="206" r="40"/><circle cx="860" cy="218" r="34"/><circle cx="940" cy="214" r="26"/>
+    <circle cx="380" cy="160" r="60"/><circle cx="600" cy="230" r="28"/><circle cx="720" cy="240" r="24"/>
+  </g>
+  <!-- quiver -->
+  <g transform="translate(460 1360) rotate(-14)">
+    <path d="M-40 0 L-34 -300 L34 -300 L40 0 Z" fill="url(#quiver)"/>
+    <path d="M-40 -60 L40 -60 M-38 -230 L38 -230" stroke="#c2cde0" stroke-width="5" opacity="0.6"/>
+    <g stroke="#9aa6c0" stroke-width="5">
+      <path d="M-20 -300 L-26 -400 M0 -300 L2 -410 M20 -300 L28 -396"/>
+    </g>
+    <g fill="#e6ebf5">
+      <path d="M-26 -400 L-40 -440 L-20 -412 Z M-26 -400 L-12 -444 L-28 -408 Z M2 -410 L-10 -454 L6 -420 Z M2 -410 L18 -452 L-2 -416 Z
+        M28 -396 L18 -440 L32 -406 Z M28 -396 L46 -436 L24 -402 Z"/>
+    </g>
+    <path d="M-40 0 L-34 -300" stroke="#f3f6fc" stroke-width="3" opacity="0.6"/>
+  </g>
+  <!-- the bow, unstrung tension on the string, leaning on the trunk -->
+  <g transform="translate(360 1300) rotate(-8)">
+    <path d="M0 0 C-30 -40 -40 -100 -20 -160 C10 -240 70 -300 80 -400 C90 -500 40 -600 -20 -660 C-30 -670 -40 -690 -30 -700"
+          fill="none" stroke="#0a0d16" stroke-width="16" stroke-linecap="round"/>
+    <path d="M0 0 C-30 -40 -40 -100 -20 -160 C10 -240 70 -300 80 -400 C90 -500 40 -600 -20 -660 C-30 -670 -40 -690 -30 -700"
+          fill="none" stroke="url(#bowWood)" stroke-width="10" stroke-linecap="round"/>
+    <path d="M-20 -160 C10 -240 70 -300 80 -400" fill="none" stroke="#fff" stroke-width="3" opacity="0.6"/>
+    <path d="M-6 -16 L-24 -684" stroke="#e6ebf5" stroke-width="2" opacity="0.8"/>
+    <rect x="66" y="-430" width="22" height="60" rx="6" fill="#3a2e2c"/>
+    <path d="M66 -420 L88 -420 M66 -404 L88 -404 M66 -388 L88 -388" stroke="#c2cde0" stroke-width="2" opacity="0.5"/>
+  </g>
+
+  <!-- ── foreground ferns, bottom right -->
+  <g filter="url(#soft)">
+    <use xlink:href="#frond" transform="translate(2620 1440) rotate(-160) scale(2.6)"/>
+    <use xlink:href="#frond" transform="translate(2480 1460) rotate(-115) scale(2.4)"/>
+    <use xlink:href="#frond" transform="translate(2380 1460) rotate(-75) scale(2.2)"/>
+    <use xlink:href="#frond" transform="translate(2600 1460) rotate(-130) scale(2)"/>
+    <use xlink:href="#frond" transform="translate(2300 1470) rotate(-60) scale(1.6)"/>
+    <use xlink:href="#frond" transform="translate(2200 1480) rotate(-100) scale(1.8)"/>
+  </g>
+  <path d="M-60 1440 L-60 1360 C300 1340 700 1370 1100 1380 C1500 1390 1900 1370 2620 1390 L2620 1440 Z" fill="#05070d" opacity="0.8"/>
+
+  <!-- ── finish -->
+  <rect width="2560" height="300" fill="url(#topShade)"/>
+  <rect width="2560" height="1440" fill="url(#cornerShade)"/>
+  <rect width="2560" height="1440" fill="url(#vignette)"/>
+  <rect width="2560" height="1440" filter="url(#grain)"/>
+</svg>

@@ -39,5 +39,8 @@
     "#cfa5dc",
     "#a2c1d0",
     "#ffffff"
+  ],
+  "backgrounds": [
+    { "id": "foam", "name": { "en": "Born of the sea foam", "nb": "Født av havskummet" } }
   ]
 }

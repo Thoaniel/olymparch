@@ -90,7 +90,7 @@ ShellRoot {
                 anchors.fill: parent
                 source: root.picture ? "file://" + encodeURI(root.picture) : `file://${root.art}/${parent.height >= 1300 && root.has1440 ? "1440" : "1080"}/frame-00.png`
                 fillMode: Image.PreserveAspectCrop
-                smooth: root.picture !== ""
+                smooth: root.picture !== "" || root.themeData.frames === 1   // pictures and still illustrations; pixel-art frames stay sharp
             }
 
             SystemClock { id: clock; precision: SystemClock.Minutes }

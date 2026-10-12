@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Olymparch · Poseidon: the sea in storm. The trident rises out of a swirl in the swell, glowing sea-foam teal; the
+     breaking surf on the left takes the shape of galloping horses. Key light: the trident (teal-white), right of
+     centre, low. 2560×1440, everything that matters inside x 140…2420. Drawn by hand for Olymparch; MIT. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2560" height="1440" viewBox="0 0 2560 1440">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#010507"/>
+      <stop offset="0.3" stop-color="#03111a"/>
+      <stop offset="0.5" stop-color="#0a2430"/>
+      <stop offset="0.58" stop-color="#14404a"/>
+      <stop offset="1" stop-color="#03121a"/>
+    </linearGradient>
+    <radialGradient id="aura" cx="1640" cy="760" r="900" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#86f2e3" stop-opacity="0.45"/>
+      <stop offset="0.2" stop-color="#2ec4b6" stop-opacity="0.22"/>
+      <stop offset="0.55" stop-color="#145a64" stop-opacity="0.1"/>
+      <stop offset="1" stop-color="#03121a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="storm" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#010406"/>
+      <stop offset="0.6" stop-color="#06161e"/>
+      <stop offset="0.9" stop-color="#0f2c36"/>
+      <stop offset="1" stop-color="#1e4a5a"/>
+    </linearGradient>
+    <radialGradient id="belly" cx="1620" cy="430" r="700" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5ab8b0"/>
+      <stop offset="0.3" stop-color="#1e5a62"/>
+      <stop offset="0.7" stop-color="#0c2630"/>
+      <stop offset="1" stop-color="#06141b"/>
+    </radialGradient>
+    <linearGradient id="farSea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1c4e5a"/>
+      <stop offset="1" stop-color="#0a2430"/>
+    </linearGradient>
+    <linearGradient id="swell" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a7a80"/>
+      <stop offset="0.25" stop-color="#0f3a46"/>
+      <stop offset="1" stop-color="#05161e"/>
+    </linearGradient>
+    <linearGradient id="swellDark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1a5660"/>
+      <stop offset="0.3" stop-color="#0a2630"/>
+      <stop offset="1" stop-color="#020a0e"/>
+    </linearGradient>
+    <linearGradient id="foam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e8fffb"/>
+      <stop offset="0.4" stop-color="#9eeee2"/>
+      <stop offset="1" stop-color="#2ec4b6" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="horse" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d8fbf5"/>
+      <stop offset="0.45" stop-color="#7ad8cc"/>
+      <stop offset="1" stop-color="#1a6a70"/>
+    </linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f2fffd"/>
+      <stop offset="0.3" stop-color="#86f2e3"/>
+      <stop offset="0.65" stop-color="#2a8a86"/>
+      <stop offset="1" stop-color="#0c3236"/>
+    </linearGradient>
+    <linearGradient id="topShade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#010406" stop-opacity="0.9"/>
+      <stop offset="0.5" stop-color="#010406" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#010406" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="cornerShade" cx="2560" cy="0" r="1150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#010305" stop-opacity="0.8"/>
+      <stop offset="0.6" stop-color="#010305" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#010305" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vignette" cx="0.5" cy="0.55" r="0.78">
+      <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.6"/>
+    </radialGradient>
+
+    <filter id="cloud" x="-15%" y="-30%" width="130%" height="160%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.0035 0.008" numOctaves="5" seed="14" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="120" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.6 0 0 0 -0.55" result="m"/>
+      <feComposite in="d" in2="m" operator="in" result="c"/>
+      <feGaussianBlur in="c" stdDeviation="2"/>
+    </filter>
+    <filter id="cloudSoft" x="-15%" y="-40%" width="130%" height="180%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.003 0.007" numOctaves="4" seed="19" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="140" xChannelSelector="R" yChannelSelector="G"/>
+      <feGaussianBlur stdDeviation="9"/>
+    </filter>
+    <!-- water: a stretched height-field lit by a point light at the trident -->
+    <filter id="reliefSea" x="-5%" y="-10%" width="110%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.0045 0.03" numOctaves="5" seed="6" result="h"/>
+      <feDiffuseLighting in="h" surfaceScale="14" diffuseConstant="1" lighting-color="#fff" result="l">
+        <fePointLight x="1640" y="700" z="380"/>
+      </feDiffuseLighting>
+      <feComponentTransfer in="l" result="lt">
+        <feFuncR type="linear" slope="1.3" intercept="0.05"/><feFuncG type="linear" slope="1.3" intercept="0.05"/>
+        <feFuncB type="linear" slope="1.3" intercept="0.05"/>
+      </feComponentTransfer>
+      <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.2" k2="0" k3="0" k4="0"/>
+    </filter>
+    <!-- spray: shapes that tear into droplets at the edge -->
+    <filter id="spray" x="-20%" y="-30%" width="140%" height="160%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02 0.03" numOctaves="4" seed="3" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="40" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="5" result="n2"/>
+      <feColorMatrix in="n2" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  3 0 0 0 -0.9" result="m"/>
+      <feComposite in="d" in2="m" operator="in" result="c"/>
+      <feGaussianBlur in="c" stdDeviation="1.2"/>
+    </filter>
+    <filter id="surf" x="-20%" y="-30%" width="140%" height="160%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.02" numOctaves="5" seed="13" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="60" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1.6 0 0 0 -0.1" result="m"/>
+      <feComposite in="d" in2="m" operator="in" result="c"/>
+      <feGaussianBlur in="c" stdDeviation="2.5"/>
+    </filter>
+    <filter id="foamy" x="-20%" y="-30%" width="140%" height="160%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.02" numOctaves="4" seed="27" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="22" xChannelSelector="R" yChannelSelector="G"/>
+      <feGaussianBlur stdDeviation="1"/>
+    </filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"/></filter>
+    <filter id="glowM" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9"/></filter>
+    <filter id="glowS" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4"/></filter>
+    <filter id="haze" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="30"/></filter>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="1" seed="2"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0.05 0"/>
+    </filter>
+
+    <!-- a horse of the surf: head, arched neck and a raised foreleg, facing left; origin at the chest -->
+    <path id="seaHorse" d="M0 0 C-6 -20 -12 -40 -20 -70 C-30 -100 -36 -130 -40 -150 C-46 -140 -56 -130 -70 -118 L-92 -110
+      C-104 -110 -112 -118 -110 -130 L-100 -150 C-80 -176 -60 -200 -40 -214 L-30 -246 L-24 -222 L-14 -250 L-4 -222
+      C40 -200 80 -140 90 -60 C95 -50 100 -40 110 -20 L120 30 Z
+      M-10 -10 C-50 -20 -90 -30 -130 -30 L-150 -14 L-146 -2 L-126 -12 C-90 -10 -50 0 -10 14 Z
+      M10 0 C-20 10 -50 20 -70 40 L-60 70 L-48 66 L-54 46 C-30 30 0 24 20 18 Z"/>
+    <path id="horseShade" d="M0 0 C-6 -20 -12 -40 -20 -70 C-30 -100 -36 -130 -40 -150 C-46 -140 -56 -130 -70 -118 L-92 -110
+      C-104 -110 -112 -118 -110 -130 C-96 -124 -80 -126 -64 -138 C-50 -120 -40 -80 -24 0 Z"/>
+    <linearGradient id="fadeDown" gradientUnits="userSpaceOnUse" x1="0" y1="-90" x2="0" y2="40">
+      <stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#000"/>
+    </linearGradient>
+    <mask id="horseFade" maskUnits="userSpaceOnUse" x="-260" y="-320" width="520" height="420">
+      <rect x="-260" y="-320" width="520" height="420" fill="url(#fadeDown)"/>
+    </mask>
+    <!-- light along the crest of the neck and the face (the trident is to the right) -->
+    <path id="horseLight" d="M-40 -214 L-4 -222 C40 -200 80 -140 90 -60 C70 -110 40 -170 -10 -200 C-20 -204 -30 -208 -40 -214 Z"/>
+    <path id="horseMuscle" d="M-4 -150 C20 -120 36 -80 40 -30 M-24 -110 C-4 -90 8 -60 10 -20" fill="none"/>
+    <path id="strand" d="M0 0 C40 -16 100 -14 170 16 C120 4 60 4 0 12 Z"/>
+    <path id="strand2" d="M0 0 C30 -20 70 -6 100 -16 C130 -26 150 -8 170 4 C140 -6 120 -10 96 0 C64 12 30 4 0 10 Z"/>
+    <g id="mane">
+      <use xlink:href="#strand2" transform="translate(-8 -222) rotate(-4) scale(0.8)"/>
+      <use xlink:href="#strand" transform="translate(4 -216) rotate(6) scale(0.62)"/>
+      <use xlink:href="#strand2" transform="translate(18 -208) rotate(12) scale(0.9)"/>
+      <use xlink:href="#strand" transform="translate(30 -198) rotate(18) scale(0.55)"/>
+      <use xlink:href="#strand2" transform="translate(42 -184) rotate(22) scale(0.75)"/>
+      <use xlink:href="#strand" transform="translate(56 -164) rotate(30) scale(0.6)"/>
+      <use xlink:href="#strand2" transform="translate(66 -144) rotate(36) scale(0.62)"/>
+      <use xlink:href="#strand" transform="translate(76 -120) rotate(44) scale(0.45)"/>
+    </g>
+    <g id="horseEye"><ellipse cx="-54" cy="-184" rx="6" ry="4" fill="#05222a" transform="rotate(-30 -54 -184)"/>
+      <circle cx="-104" cy="-136" r="3" fill="#05222a" opacity="0.6"/></g>
+    <!-- trident, origin at the base of the shaft, head up -->
+    <g id="trident">
+      <path d="M-13 0 L-10 -560 L10 -560 L13 0 Z" fill="url(#metal)"/>
+      <path d="M-74 -560 C-78 -580 -76 -600 -66 -620 L-72 -680 L-58 -720 L-46 -680 L-52 -630 C-58 -612 -58 -596 -54 -584
+        L54 -584 C58 -596 58 -612 52 -630 L46 -680 L58 -720 L72 -680 L66 -620 C76 -600 78 -580 74 -560 C40 -548 -40 -548 -74 -560 Z"
+            fill="url(#metal)"/>
+      <path d="M-10 -584 L-10 -720 L-20 -728 L0 -800 L20 -728 L10 -720 L10 -584 Z" fill="url(#metal)"/>
+      <!-- barbs -->
+      <path d="M-20 -728 L-30 -706 L-10 -716 Z M20 -728 L30 -706 L10 -716 Z M-72 -680 L-84 -660 L-66 -668 Z M72 -680 L84 -660 L66 -668 Z"
+            fill="#86f2e3"/>
+      <!-- collar rings on the shaft -->
+      <rect x="-14" y="-560" width="28" height="12" rx="3" fill="#bff8f0"/>
+      <rect x="-12" y="-520" width="24" height="8" rx="3" fill="#2a8a86"/>
+      <rect x="-12" y="-300" width="24" height="10" rx="3" fill="#2a8a86"/>
+    </g>
+  </defs>
+
+  <!-- ── sky and the trident's light -->
+  <rect width="2560" height="1440" fill="url(#sky)"/>
+  <rect width="2560" height="1440" fill="url(#aura)"/>
+
+  <!-- ── the storm -->
+  <g filter="url(#cloudSoft)">
+    <path d="M-120 -60 L2700 -60 L2700 380 C2560 400 2400 380 2260 420 C2120 450 1980 430 1840 460 C1720 480 1600 450 1480 470
+      C1340 490 1220 460 1080 470 C940 480 800 440 640 450 C480 460 320 420 160 430 C40 436 -40 420 -120 410 Z" fill="url(#storm)"/>
+  </g>
+  <g filter="url(#cloud)">
+    <path d="M1060 520 C1160 470 1300 450 1420 470 C1520 430 1660 430 1780 460 C1880 450 1980 480 2040 520 C1940 550 1820 540 1720 556
+      C1600 572 1480 552 1360 566 C1240 578 1140 560 1060 520 Z" fill="url(#belly)"/>
+    <path d="M200 500 C340 470 500 480 640 510 C740 520 800 550 840 580 C720 600 580 580 460 580 C360 578 260 550 200 500 Z" fill="#0c2630"/>
+  </g>
+  <!-- rain sheets, slanting -->
+  <g filter="url(#glowM)" opacity="0.35" stroke="#1e4a5a" stroke-width="12">
+    <path d="M300 520 L200 860 M420 530 L320 880 M560 540 L470 860 M2080 520 L1990 840 M2200 530 L2110 860 M2330 520 L2250 830"/>
+  </g>
+
+  <!-- ── the far sea, a band of light under the storm -->
+  <path d="M-60 800 L2620 800 L2620 1000 L-60 1000 Z" fill="url(#farSea)"/>
+  <ellipse cx="1640" cy="806" rx="700" ry="20" fill="#86f2e3" opacity="0.35" filter="url(#glowM)"/>
+
+  <!-- ── far swells breaking the horizon -->
+  <g filter="url(#reliefSea)">
+    <path d="M-60 830 C60 820 140 790 220 794 C300 798 340 826 420 828 C520 830 600 800 700 784 C780 772 830 800 900 818
+      C980 836 1100 830 1180 812 C1260 796 1320 780 1400 790 C1480 800 1540 822 1620 820 C1720 818 1800 790 1900 776
+      C1980 766 2040 790 2100 808 C2180 830 2280 826 2360 808 C2440 792 2520 800 2620 812 L2620 1500 L-60 1500 Z" fill="url(#swell)"/>
+  </g>
+  <g filter="url(#glowS)" fill="none" stroke="#bff8f0" stroke-linecap="round" opacity="0.35">
+    <path d="M640 796 C680 786 700 780 730 780" stroke-width="4"/><path d="M1340 784 C1370 782 1390 784 1420 792" stroke-width="5"/>
+    <path d="M1860 782 C1890 772 1920 768 1950 772" stroke-width="5"/><path d="M180 798 C210 792 230 792 250 796" stroke-width="3"/>
+  </g>
+
+  <!-- ── the trident rising out of a swirl -->
+  <g>
+    <ellipse cx="1640" cy="1040" rx="320" ry="60" fill="#86f2e3" opacity="0.32" filter="url(#glow)"/>
+    <g transform="translate(1650 1060) rotate(5) scale(0.92)">
+      <path d="M0 -800 L0 0" stroke="#86f2e3" stroke-width="90" opacity="0.16" filter="url(#glow)"/>
+      <g filter="url(#glowM)" opacity="0.65"><use xlink:href="#trident"/></g>
+      <use xlink:href="#trident"/>
+      <path d="M-9 -40 L-7 -556" stroke="#ffffff" stroke-width="3" opacity="0.8"/>
+      <path d="M-4 -590 L-4 -716 M-60 -630 L-64 -706 M60 -630 L56 -700" stroke="#ffffff" stroke-width="2" opacity="0.7"/>
+    </g>
+  </g>
+
+  <!-- ── mid swell around the trident, its crest lit through from behind -->
+  <g filter="url(#reliefSea)">
+    <path d="M-60 980 C100 950 220 940 360 956 C500 972 600 1000 760 990 C920 980 1040 940 1200 950 C1340 958 1420 1000 1500 1030
+      C1580 1056 1700 1060 1800 1040 C1920 1016 2000 960 2120 930 C2240 900 2360 920 2460 950 C2540 974 2580 990 2620 996
+      L2620 1500 L-60 1500 Z" fill="url(#swellDark)"/>
+  </g>
+  <!-- the splash where the shaft leaves the water, and soft foam on the swell -->
+  <g filter="url(#surf)">
+    <path d="M1500 1046 C1560 1030 1620 1026 1680 1030 C1740 1034 1790 1046 1820 1060 C1760 1074 1680 1080 1600 1076
+      C1560 1072 1520 1062 1500 1046 Z" fill="#d8fbf5" opacity="0.8"/>
+    <path d="M1380 1010 C1460 1030 1540 1060 1640 1070 C1740 1076 1820 1060 1900 1030 L1900 1060 C1800 1100 1680 1104 1580 1094
+      C1500 1086 1440 1060 1380 1030 Z" fill="#86f2e3" opacity="0.35"/>
+    <path d="M2020 950 C2100 920 2200 904 2300 908 L2300 930 C2200 930 2100 946 2020 970 Z" fill="#bff8f0" opacity="0.4"/>
+    <path d="M1080 952 C1160 944 1240 950 1300 970 L1290 986 C1220 972 1150 968 1080 972 Z" fill="#bff8f0" opacity="0.3"/>
+  </g>
+  <g fill="#e8fffb">
+    <circle cx="1588" cy="980" r="4" opacity="0.8"/><circle cx="1720" cy="984" r="3.5" opacity="0.8"/>
+    <circle cx="1556" cy="1004" r="3" opacity="0.7"/><circle cx="1772" cy="1006" r="3" opacity="0.7"/>
+    <circle cx="1616" cy="954" r="2.5" opacity="0.7"/><circle cx="1690" cy="946" r="2.4" opacity="0.6"/>
+    <circle cx="1640" cy="1010" r="2.6" opacity="0.7"/><circle cx="1530" cy="1030" r="2.2" opacity="0.6"/>
+  </g>
+
+  <!-- ── the great wave on the left: it rears up and breaks into horses -->
+  <linearGradient id="waveFace" x1="0" y1="0" x2="0.3" y2="1">
+    <stop offset="0" stop-color="#4ab8b0"/>
+    <stop offset="0.25" stop-color="#1a6a70"/>
+    <stop offset="0.6" stop-color="#0a2c36"/>
+    <stop offset="1" stop-color="#03121a"/>
+  </linearGradient>
+  <g filter="url(#reliefSea)">
+    <path d="M-60 1200 L-60 760 C40 720 120 680 200 646 C240 616 290 596 350 594 C450 594 550 626 650 690 C770 760 880 860 1000 960
+      C1100 1040 1240 1120 1460 1160 C1700 1200 1900 1190 2100 1170 C2300 1150 2460 1160 2620 1170 L2620 1500 L-60 1500 Z" fill="url(#waveFace)"/>
+  </g>
+  <!-- light shining through the thin crest -->
+  <path d="M200 646 C240 616 290 596 350 594 C450 594 550 626 650 690 C770 760 880 860 1000 960 C880 900 760 820 640 760
+    C540 710 440 690 340 690 C280 690 240 680 200 646 Z" fill="#86f2e3" opacity="0.28" filter="url(#glowM)"/>
+  <!-- the horses, galloping left out of the crest -->
+  <g filter="url(#foamy)">
+    <g transform="translate(820 820) scale(0.95)" opacity="0.85">
+      <g mask="url(#horseFade)"><use xlink:href="#seaHorse" fill="url(#horse)"/><use xlink:href="#horseShade" fill="#1a6a70" opacity="0.5"/><use xlink:href="#horseLight" fill="#f2fffd" opacity="0.6"/><use xlink:href="#horseMuscle" stroke="#2a8a86" stroke-width="7" opacity="0.25" filter="url(#glowS)"/></g>
+    </g>
+    <g transform="translate(260 700) scale(1.05)" opacity="0.92">
+      <g mask="url(#horseFade)"><use xlink:href="#seaHorse" fill="url(#horse)"/><use xlink:href="#horseShade" fill="#1a6a70" opacity="0.5"/><use xlink:href="#horseLight" fill="#f2fffd" opacity="0.6"/><use xlink:href="#horseMuscle" stroke="#2a8a86" stroke-width="7" opacity="0.25" filter="url(#glowS)"/></g>
+    </g>
+    <g transform="translate(540 720) scale(1.35)">
+      <g mask="url(#horseFade)"><use xlink:href="#seaHorse" fill="url(#horse)"/><use xlink:href="#horseShade" fill="#1a6a70" opacity="0.55"/><use xlink:href="#horseLight" fill="#f2fffd" opacity="0.6"/><use xlink:href="#horseMuscle" stroke="#2a8a86" stroke-width="7" opacity="0.25" filter="url(#glowS)"/></g>
+    </g>
+  </g>
+  <use xlink:href="#horseEye" transform="translate(820 820) scale(0.95)"/>
+  <use xlink:href="#horseEye" transform="translate(260 700) scale(1.05)"/>
+  <use xlink:href="#horseEye" transform="translate(540 720) scale(1.35)"/>
+  <!-- manes of water, streaming back to the right -->
+  <linearGradient id="maneG" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="180" y2="0">
+    <stop offset="0" stop-color="#e8fffb"/><stop offset="0.6" stop-color="#86f2e3" stop-opacity="0.8"/>
+    <stop offset="1" stop-color="#2ec4b6" stop-opacity="0"/>
+  </linearGradient>
+  <g filter="url(#surf)" fill="url(#maneG)" opacity="0.85">
+    <use xlink:href="#mane" transform="translate(820 820) scale(0.95)" opacity="0.75"/>
+    <use xlink:href="#mane" transform="translate(260 700) scale(1.05)" opacity="0.85"/>
+    <use xlink:href="#mane" transform="translate(540 720) scale(1.35)" opacity="0.9"/>
+  </g>
+  <!-- the surf at their chests: broken crest foam -->
+  <g filter="url(#surf)">
+    <path d="M60 730 C140 690 220 680 300 700 C380 720 440 700 520 710 C620 722 700 760 780 800 C860 840 920 880 980 930
+      C1020 964 1060 990 1100 1010 C1000 1000 900 960 800 920 C700 880 600 850 500 830 C400 812 300 800 200 790 C140 784 100 760 60 730 Z"
+          fill="url(#foam)"/>
+  </g>
+  <g filter="url(#glowS)" fill="none" stroke="#bff8f0" stroke-linecap="round" opacity="0.25">
+    <path d="M120 800 C260 820 420 840 560 870 C700 900 820 950 940 1010" stroke-width="6"/>
+    <path d="M180 860 C320 880 460 910 600 940 C720 966 840 1010 960 1060" stroke-width="4"/>
+  </g>
+  <!-- the trident's light rimming the horses' necks -->
+  <g fill="none" stroke="#e8fffb" stroke-linecap="round" stroke-width="3.5" opacity="0.6" filter="url(#glowS)">
+    <path d="M556 444 C600 470 644 520 660 610"/><path d="M820 632 C850 650 892 690 900 760"/><path d="M262 494 C296 512 332 556 350 630"/>
+  </g>
+
+  <!-- ── foreground: a dark trough across the bottom with lace foam -->
+  <g filter="url(#reliefSea)">
+    <path d="M-60 1280 C120 1240 300 1220 500 1236 C700 1252 860 1300 1060 1292 C1260 1284 1400 1240 1600 1250 C1800 1260 1960 1320
+      2160 1310 C2340 1302 2480 1270 2620 1260 L2620 1500 L-60 1500 Z" fill="#031016"/>
+  </g>
+  <g filter="url(#cloudSoft)" fill="none" stroke-linecap="round">
+    <path d="M-60 1282 C120 1240 300 1220 500 1236 C700 1252 860 1300 1060 1292" stroke="#86f2e3" stroke-width="16" opacity="0.25"/>
+    <path d="M1400 1244 C1500 1244 1560 1246 1600 1250 C1800 1260 1960 1320 2160 1310" stroke="#86f2e3" stroke-width="16" opacity="0.25"/>
+  </g>
+
+  <!-- ── spray drifting in the light -->
+  <g fill="#bff8f0">
+    <circle cx="1500" cy="980" r="3" opacity="0.7"/><circle cx="1560" cy="940" r="2.5" opacity="0.6"/>
+    <circle cx="1780" cy="960" r="3" opacity="0.6"/><circle cx="1820" cy="900" r="2" opacity="0.5"/>
+    <circle cx="1720" cy="880" r="2.2" opacity="0.5"/><circle cx="900" cy="560" r="3" opacity="0.5"/>
+    <circle cx="960" cy="600" r="2" opacity="0.45"/><circle cx="1040" cy="660" r="2.5" opacity="0.5"/>
+    <circle cx="1460" cy="900" r="2" opacity="0.45"/><circle cx="1880" cy="1000" r="2.6" opacity="0.5"/>
+  </g>
+
+  <!-- ── finish -->
+  <rect width="2560" height="300" fill="url(#topShade)"/>
+  <rect width="2560" height="1440" fill="url(#cornerShade)"/>
+  <rect width="2560" height="1440" fill="url(#vignette)"/>
+  <rect width="2560" height="1440" filter="url(#grain)"/>
+</svg>

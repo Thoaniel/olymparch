@@ -11,7 +11,8 @@ Fails if
 - olymparch-theme takes a theme with a bad colour, an unknown field, a symlink, a wrong id or unreadable text, an
   install URL that is not https://github.com/OWNER/REPO, or removes a built-in theme;
 - olymparch-settings takes an appearance.theme that is no theme;
-- olymparch-theme lists a picture that is no picture (wrong first
+- a theme does not have the temple and its god's illustration (art/illustrations/<id>.svg, self-contained: no
+  pictures, text, fonts, scripts or links out), or olymparch-theme lists a picture that is no picture (wrong first
   bytes, over 20 MiB, a symlink), forgets a theme's background across a switch or takes a bad background id.
 """
 import json
@@ -21,6 +22,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import xml.etree.ElementTree as ET   # our own SVGs only (DOCTYPE and ENTITY are refused first)
 from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
@@ -73,6 +75,43 @@ for d in themes:
     rows.append((d.name, ratios))
 if not light:
     bad("no light theme")
+SVG = "{http://www.w3.org/2000/svg}"
+ART = root / "art/illustrations"
+for d in themes:   # the temple and the god's illustration: theme.json names one background, art/illustrations/<id>.svg draws it
+    t = json.loads((d / "theme.json").read_text())
+    named = [b["id"] for b in t.get("backgrounds", [])]
+    svg = ART / f"{d.name}.svg"
+    if len(named) != 1:
+        bad(f"{d.name}: {len(named) + 1} backgrounds; 2 expected (the temple and the god's illustration)")
+    if named and not svg.exists():
+        bad(f"{d.name}: theme.json names the background {named[0]}, but {svg.relative_to(root)} is missing")
+    if svg.exists() and not named:
+        bad(f"{d.name}: {svg.relative_to(root)} exists, but theme.json names no background for it")
+for svg in sorted(ART.glob("*.svg")):   # drawn here, self-contained: no pictures, fonts, text, scripts or links out
+    if not (root / "default/themes" / svg.stem / "theme.json").exists():
+        bad(f"{svg.relative_to(root)}: no theme called {svg.stem}")
+    if re.search(r"<!(DOCTYPE|ENTITY)", svg.read_text()):
+        bad(f"{svg.relative_to(root)}: no DOCTYPE or ENTITY")
+        continue
+    try:
+        top = ET.parse(svg).getroot()
+    except ET.ParseError as e:
+        bad(f"{svg.relative_to(root)}: not valid XML ({e})")
+        continue
+    if top.tag != SVG + "svg" or top.get("viewBox") != "0 0 2560 1440":
+        bad(f"{svg.relative_to(root)}: must be <svg viewBox=\"0 0 2560 1440\">")
+    for el in top.iter():
+        tag = el.tag.split("}")[-1]
+        if tag in ("image", "text", "tspan", "textPath", "font", "font-face", "script", "foreignObject", "style", "a"):
+            bad(f"{svg.relative_to(root)}: <{tag}> is not allowed (everything is drawn in the SVG itself)")
+        for k, v in el.attrib.items():
+            if k.split("}")[-1] == "href" and not v.startswith("#"):
+                bad(f"{svg.relative_to(root)}: a link out ({v[:40]})")
+            if "url(" in v and not all(u.startswith("#") for u in re.findall(r"url\(\s*([^)]*)\)", v)):
+                bad(f"{svg.relative_to(root)}: url() that is not #local ({v[:40]})")
+    if svg.stat().st_size > 400_000:
+        bad(f"{svg.relative_to(root)}: {svg.stat().st_size // 1000} kB; keep an illustration under 400 kB")
+
 # ── olymparch-theme refuses bad themes, URLs and removals
 GOOD = json.loads((root / "default/themes/zeus/theme.json").read_text())
 with tempfile.TemporaryDirectory() as home:

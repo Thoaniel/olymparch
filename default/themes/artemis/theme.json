@@ -39,5 +39,8 @@
     "#c8aee3",
     "#9acad6",
     "#ffffff"
+  ],
+  "backgrounds": [
+    { "id": "hind", "name": { "en": "The hind by moonlight", "nb": "Hinden i måneskinn" } }
   ]
 }

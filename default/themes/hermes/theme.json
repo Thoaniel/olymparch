@@ -39,5 +39,8 @@
     "#b9aee7",
     "#8bcada",
     "#ffffff"
+  ],
+  "backgrounds": [
+    { "id": "road", "name": { "en": "The messenger's road", "nb": "Budbringerens vei" } }
   ]
 }

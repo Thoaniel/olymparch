@@ -39,5 +39,8 @@
     "#bfa4e7",
     "#91c0da",
     "#ffffff"
+  ],
+  "backgrounds": [
+    { "id": "peacock", "name": { "en": "The queen's peacock", "nb": "Dronningens påfugl" } }
   ]
 }

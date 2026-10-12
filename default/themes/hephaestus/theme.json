@@ -39,5 +39,8 @@
     "#d1a2c5",
     "#a3beb8",
     "#ffffff"
+  ],
+  "backgrounds": [
+    { "id": "forge", "name": { "en": "The forge in the volcano", "nb": "Smia i vulkanen" } }
   ]
 }

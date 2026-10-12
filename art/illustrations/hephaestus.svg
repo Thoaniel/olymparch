@@ -1,0 +1,385 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Olymparch · Hephaestus: the forge inside the volcano. The furnace mouth on the left is the key light; the anvil
+     with a glowing blade, the hammer and tongs stand right of centre on a basalt step above a river of lava that
+     winds out of the deep cavern. Sparks rise. 2560×1440, everything that matters inside x 140…2420.
+     Drawn by hand for Olymparch; MIT. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2560" height="1440" viewBox="0 0 2560 1440">
+  <defs>
+    <linearGradient id="cave" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#050404"/>
+      <stop offset="0.4" stop-color="#0f0b09"/>
+      <stop offset="0.7" stop-color="#2a140b"/>
+      <stop offset="1" stop-color="#3a1a0c"/>
+    </linearGradient>
+    <radialGradient id="furnaceLight" cx="560" cy="930" r="1300" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffb547" stop-opacity="0.55"/>
+      <stop offset="0.2" stop-color="#ff7b1c" stop-opacity="0.32"/>
+      <stop offset="0.5" stop-color="#8a2a10" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#1a0a06" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="deepGlow" cx="1320" cy="820" r="700" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff9a3a" stop-opacity="0.6"/>
+      <stop offset="0.35" stop-color="#c2481a" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#3a1208" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="mouth" cx="560" cy="900" r="230" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff3d6"/>
+      <stop offset="0.25" stop-color="#ffd27a"/>
+      <stop offset="0.55" stop-color="#ffb547"/>
+      <stop offset="0.85" stop-color="#ff7b1c"/>
+      <stop offset="1" stop-color="#b8400f"/>
+    </radialGradient>
+    <linearGradient id="farWall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#140d0a"/>
+      <stop offset="0.7" stop-color="#3a1c10"/>
+      <stop offset="1" stop-color="#5a2812"/>
+    </linearGradient>
+    <linearGradient id="basaltL" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#1a1513"/>
+      <stop offset="0.7" stop-color="#2e2018"/>
+      <stop offset="1" stop-color="#4a2a18"/>
+    </linearGradient>
+    <linearGradient id="basaltR" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4a2a18"/>
+      <stop offset="0.25" stop-color="#2a1c16"/>
+      <stop offset="1" stop-color="#0e0b0a"/>
+    </linearGradient>
+    <linearGradient id="step" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5a3420"/>
+      <stop offset="0.12" stop-color="#2c1d16"/>
+      <stop offset="1" stop-color="#120d0b"/>
+    </linearGradient>
+    <linearGradient id="forgeStone" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#1c1512"/>
+      <stop offset="0.6" stop-color="#3a2418"/>
+      <stop offset="1" stop-color="#6a3a1e"/>
+    </linearGradient>
+    <linearGradient id="iron" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5a5048"/>
+      <stop offset="0.15" stop-color="#2c2622"/>
+      <stop offset="1" stop-color="#120f0e"/>
+    </linearGradient>
+    <linearGradient id="ironSide" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#c0602a" stop-opacity="0.85"/>
+      <stop offset="0.25" stop-color="#5a3020" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="blade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff7b1c"/>
+      <stop offset="0.35" stop-color="#ffb547"/>
+      <stop offset="0.7" stop-color="#fff0c8"/>
+      <stop offset="1" stop-color="#ffd27a"/>
+    </linearGradient>
+    <linearGradient id="lavaBase" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff9a2e"/>
+      <stop offset="0.5" stop-color="#ff7b1c"/>
+      <stop offset="1" stop-color="#d2400f"/>
+    </linearGradient>
+    <linearGradient id="topShade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#030202" stop-opacity="0.92"/>
+      <stop offset="0.5" stop-color="#030202" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#030202" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="cornerShade" cx="2560" cy="0" r="1150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#020202" stop-opacity="0.8"/>
+      <stop offset="0.6" stop-color="#020202" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#020202" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vignette" cx="0.5" cy="0.55" r="0.78">
+      <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.62"/>
+    </radialGradient>
+
+    <!-- lava: a crust of cooled rock broken by bright cracks, coloured from a noise field -->
+    <filter id="lava" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="turbulence" baseFrequency="0.006 0.02" numOctaves="4" seed="8" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0 0 0 0 1" result="g"/>
+      <feComponentTransfer in="g" result="c">
+        <feFuncR type="table" tableValues="1 1 0.95 0.55 0.22 0.12 0.1"/>
+        <feFuncG type="table" tableValues="0.92 0.7 0.42 0.16 0.07 0.05 0.05"/>
+        <feFuncB type="table" tableValues="0.6 0.28 0.1 0.04 0.03 0.03 0.03"/>
+      </feComponentTransfer>
+      <feComposite in="c" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <filter id="lavaFar" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="turbulence" baseFrequency="0.012 0.05" numOctaves="3" seed="3" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0 0 0 0 1" result="g"/>
+      <feComponentTransfer in="g" result="c">
+        <feFuncR type="table" tableValues="1 1 0.9 0.5 0.3"/>
+        <feFuncG type="table" tableValues="0.85 0.6 0.32 0.14 0.08"/>
+        <feFuncB type="table" tableValues="0.5 0.2 0.08 0.04 0.03"/>
+      </feComponentTransfer>
+      <feComposite in="c" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <!-- relief for basalt, lit from the furnace on the left -->
+    <filter id="reliefRock" x="-5%" y="-10%" width="110%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02 0.006" numOctaves="6" seed="41" result="h"/>
+      <feDiffuseLighting in="h" surfaceScale="14" diffuseConstant="1" lighting-color="#fff" result="l">
+        <feDistantLight azimuth="185" elevation="32"/>
+      </feDiffuseLighting>
+      <feComponentTransfer in="l" result="lt">
+        <feFuncR type="linear" slope="1.25" intercept="0.08"/><feFuncG type="linear" slope="1.25" intercept="0.08"/>
+        <feFuncB type="linear" slope="1.25" intercept="0.08"/>
+      </feComponentTransfer>
+      <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.15" k2="0" k3="0" k4="0"/>
+    </filter>
+    <filter id="reliefFine" x="-5%" y="-10%" width="110%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035 0.03" numOctaves="5" seed="12" result="h"/>
+      <feDiffuseLighting in="h" surfaceScale="6" diffuseConstant="1" lighting-color="#fff" result="l">
+        <feDistantLight azimuth="190" elevation="40"/>
+      </feDiffuseLighting>
+      <feComponentTransfer in="l" result="lt">
+        <feFuncR type="linear" slope="1" intercept="0.2"/><feFuncG type="linear" slope="1" intercept="0.2"/>
+        <feFuncB type="linear" slope="1" intercept="0.2"/>
+      </feComponentTransfer>
+      <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.1" k2="0" k3="0" k4="0"/>
+    </filter>
+    <filter id="rock" x="-5%" y="-8%" width="110%" height="116%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.01 0.02" numOctaves="4" seed="23" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="26" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="smoke" x="-20%" y="-30%" width="140%" height="160%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.004 0.008" numOctaves="4" seed="6" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="160" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.4 0 0 0 -0.5" result="m"/>
+      <feComposite in="d" in2="m" operator="in" result="c"/>
+      <feGaussianBlur in="c" stdDeviation="10"/>
+    </filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"/></filter>
+    <filter id="glowL" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="40"/></filter>
+    <filter id="glowS" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter>
+    <filter id="glowXS" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2"/></filter>
+    <filter id="haze" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="28"/></filter>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="1" seed="2"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0.05 0"/>
+    </filter>
+
+  </defs>
+
+  <!-- ── the cavern -->
+  <rect width="2560" height="1440" fill="url(#cave)"/>
+  <!-- the lava lake far away, lighting the deep cavern -->
+  <rect width="2560" height="1440" fill="url(#deepGlow)"/>
+  <ellipse cx="1360" cy="830" rx="900" ry="260" fill="#ff7b1c" opacity="0.22" filter="url(#glowL)"/>
+
+  <!-- ── far spires in the heat haze (lightest, warmest) -->
+  <g filter="url(#reliefRock)">
+    <g filter="url(#rock)">
+      <path d="M760 880 L800 700 L830 690 L860 620 L885 640 L910 560 L940 600 L980 640 L1010 610 L1040 680 L1090 700
+        L1120 660 L1150 690 L1190 720 L1230 700 L1520 700 L1560 650 L1590 600 L1620 640 L1650 580 L1690 640 L1720 690
+        L1760 670 L1800 720 L1850 760 L1880 880 Z" fill="#6a3018" opacity="0.8"/>
+      <path d="M760 900 L820 770 L870 760 L920 720 L960 760 L1010 750 L1060 790 L1100 780 L1560 780 L1610 740 L1660 760
+        L1700 730 L1740 770 L1790 790 L1840 800 L1880 900 Z" fill="#4a2012"/>
+    </g>
+  </g>
+  <!-- the lava fall from a crack in the far spire, the source of the river -->
+  <g>
+    <path d="M1226 690 C1232 720 1228 760 1236 790 C1242 815 1240 835 1246 852 L1290 852 C1284 835 1286 815 1280 790
+      C1274 760 1276 720 1266 690 Z" fill="#ffb547" filter="url(#lavaFar)"/>
+    <path d="M1226 690 C1232 720 1228 760 1236 790 C1242 815 1240 835 1246 852 L1290 852 C1284 835 1286 815 1280 790
+      C1274 760 1276 720 1266 690 Z" fill="#ff9a2e" filter="url(#glow)" opacity="0.6"/>
+  </g>
+  <!-- the lava lake at the foot of the spires -->
+  <path d="M760 896 C900 862 1100 852 1300 856 C1500 852 1720 858 1980 892 C1800 912 1500 918 1300 916 C1100 918 900 914 760 896 Z" fill="#fff" filter="url(#lavaFar)"/>
+  <path d="M800 886 C900 860 1100 852 1300 856 C1500 852 1700 858 1940 888" fill="none" stroke="#ffd27a" stroke-width="20" opacity="0.6" filter="url(#glow)"/>
+  <!-- smoke drifting over the lake -->
+  <g filter="url(#smoke)" opacity="0.5">
+    <path d="M860 760 C1000 700 1150 690 1300 720 C1450 750 1560 700 1720 740 C1660 820 1480 820 1320 800 C1160 790 1000 830
+      860 760 Z" fill="#7a3418"/>
+  </g>
+
+  <!-- the far bank between the river and the right wall -->
+  <g filter="url(#reliefFine)">
+    <g filter="url(#rock)">
+      <path d="M1540 918 C1600 950 1560 985 1610 1015 C1680 1055 1800 1060 1900 1110 C2000 1160 2080 1230 2220 1280
+        L2400 1250 L2100 1100 L1960 940 L1920 900 C1800 905 1660 910 1540 918 Z" fill="#2a1810"/>
+    </g>
+  </g>
+  <path d="M1560 925 C1600 950 1560 985 1610 1015 C1680 1055 1800 1060 1900 1110 C2000 1160 2080 1230 2220 1280" fill="none"
+        stroke="#ffb547" stroke-width="5" opacity="0.7" filter="url(#glowXS)"/>
+
+  <!-- ── the river: out of the lake, winding forward past the anvil to the bottom right -->
+  <g>
+    <path id="river" d="M1380 900 C1450 900 1520 905 1560 925 C1600 950 1560 985 1610 1015 C1680 1055 1800 1060 1900 1110
+      C2000 1160 2080 1230 2220 1280 C2330 1320 2460 1340 2640 1350 L2640 1460 L1960 1460 C1900 1380 1800 1310 1680 1260
+      C1560 1210 1470 1180 1420 1120 C1380 1070 1430 1020 1400 980 C1370 950 1300 930 1300 905 C1320 900 1350 900 1380 900 Z"
+      fill="url(#lavaBase)"/>
+    <use xlink:href="#river" fill="#fff" filter="url(#lava)"/>
+  </g>
+  <g filter="url(#glowL)" opacity="0.55">
+    <path d="M1360 910 C1500 940 1560 1000 1700 1080 C1900 1190 2100 1290 2560 1380" stroke="#ff7b1c" stroke-width="140" fill="none"/>
+  </g>
+
+  <!-- ── right wall: columnar basalt, a ragged edge facing the lava -->
+  <g filter="url(#reliefRock)">
+    <g filter="url(#rock)">
+      <path d="M2640 1460 L2640 200 L2200 220 C2120 300 2060 380 2020 460 C1990 520 1990 580 1960 640 C1930 700 1900 760 1910 840
+        C1918 900 1960 950 1980 1010 C2000 1060 2050 1100 2120 1140 C2200 1180 2300 1230 2420 1260 C2500 1280 2580 1290 2640 1290 Z"
+        fill="url(#basaltR)"/>
+    </g>
+  </g>
+  <!-- columns' edges catching the lava light -->
+  <g fill="none" stroke-linecap="round" filter="url(#glowXS)">
+    <path d="M1960 650 L1950 760 M2010 520 L2000 700 L2010 900 M2070 420 L2060 600 L2070 860 L2090 1060 M2140 330 L2130 560
+      L2140 800 L2160 1120" stroke="#c0602a" stroke-width="5" opacity="0.5"/>
+    <path d="M2200 260 L2190 520 L2200 760 L2220 1150 M2270 240 L2262 480 L2272 760 L2290 1180" stroke="#7a3a1e" stroke-width="4" opacity="0.4"/>
+  </g>
+  <path d="M1910 840 C1918 900 1960 950 1980 1010 C2000 1060 2050 1100 2120 1140 C2200 1180 2300 1230 2420 1260"
+        fill="none" stroke="#ff9a3a" stroke-width="10" opacity="0.6" filter="url(#glowS)"/>
+
+  <!-- ── the cavern roof: a dark mass with hanging rock, the bar's quiet zone -->
+  <g filter="url(#reliefRock)">
+    <g filter="url(#rock)">
+      <path d="M-60 -60 L2640 -60 L2640 240 C2500 260 2380 250 2280 290 L2250 380 L2220 300 C2140 320 2060 340 1980 360
+        L1950 460 L1925 370 C1840 390 1760 400 1680 410 L1660 480 L1640 415 C1560 425 1480 420 1400 430 L1380 520 L1360 432
+        C1280 440 1200 430 1120 440 L1100 500 L1082 444 C1000 450 920 440 840 430 L815 520 L795 428 C720 420 640 400 560 390
+        L540 470 L522 385 C440 370 360 360 280 360 L260 420 L245 360 C160 360 60 370 -60 380 Z" fill="#120d0b"/>
+    </g>
+  </g>
+  <path d="M840 430 C920 440 1000 450 1082 444 C1200 430 1280 440 1360 432 C1480 420 1560 425 1640 415 C1760 400 1840 390 1925 370"
+        fill="none" stroke="#c0501a" stroke-width="8" opacity="0.22" filter="url(#glowS)"/>
+
+  <!-- ── left: the cavern wall with the forge built into it -->
+  <rect width="2560" height="1440" fill="url(#furnaceLight)"/>
+  <g filter="url(#reliefRock)">
+    <g filter="url(#rock)">
+      <path d="M-60 1460 L-60 340 C60 380 150 420 230 470 C300 520 330 560 380 600 C450 620 560 610 680 620 C780 630 860 680
+        900 760 C930 820 920 900 940 980 C950 1040 900 1100 880 1140 L860 1460 Z" fill="url(#basaltL)"/>
+    </g>
+  </g>
+  <g>
+    <path d="M300 1160 L320 760 C360 700 420 660 470 650 L660 650 C720 660 780 700 810 760 L830 1160 Z" fill="url(#forgeStone)"/>
+    <path d="M300 1160 L320 760 C360 700 420 660 470 650 L660 650 C720 660 780 700 810 760 L830 1160 Z" fill="#000" opacity="0.15" filter="url(#reliefFine)"/>
+    <g stroke="#0e0a08" stroke-width="5" fill="none" opacity="0.7">
+      <path d="M316 840 L816 840 M312 930 L822 930 M308 1020 L826 1020 M304 1100 L828 1100"/>
+      <path d="M420 760 L420 840 M560 660 L560 760 M700 760 L700 840 M360 840 L360 930 M500 930 L500 1020 M760 930 L760 1020
+        M420 1020 L420 1100 M650 1100 L650 1160"/>
+    </g>
+    <g stroke="#ff9a3a" stroke-width="2" fill="none" opacity="0.35">
+      <path d="M316 838 L440 838 M690 838 L816 838 M312 928 L440 928 M690 928 L822 928"/>
+    </g>
+    <path d="M440 1040 L440 900 C440 830 500 790 565 790 C630 790 690 830 690 900 L690 1040 Z" fill="url(#mouth)"/>
+    <path d="M440 1040 L440 900 C440 830 500 790 565 790 C630 790 690 830 690 900 L690 1040 Z" fill="#ffd27a" filter="url(#glow)" opacity="0.85"/>
+    <path d="M420 1040 L420 900 C420 815 490 770 565 770 C640 770 710 815 710 900 L710 1040 L690 1040 L690 900 C690 830 630 790
+      565 790 C500 790 440 830 440 900 L440 1040 Z" fill="#5a3420"/>
+    <path d="M440 900 C440 830 500 790 565 790 C630 790 690 830 690 900" fill="none" stroke="#ffd27a" stroke-width="4" opacity="0.8"/>
+    <g fill="#c2400f" opacity="0.85">
+      <ellipse cx="480" cy="1030" rx="34" ry="12"/><ellipse cx="540" cy="1036" rx="40" ry="14"/>
+      <ellipse cx="610" cy="1032" rx="38" ry="12"/><ellipse cx="660" cy="1036" rx="28" ry="10"/>
+    </g>
+    <g fill="#fff3d6" opacity="0.8">
+      <ellipse cx="520" cy="1026" rx="14" ry="5"/><ellipse cx="600" cy="1024" rx="12" ry="4"/>
+    </g>
+    <path d="M400 1040 L730 1040 L750 1072 L380 1072 Z" fill="#4a2a18"/>
+    <path d="M400 1040 L730 1040 L734 1047 L396 1047 Z" fill="#ffb547" opacity="0.85"/>
+    <path d="M470 650 C490 560 510 470 520 380 L610 380 C620 470 640 560 660 650 Z" fill="#1e1612"/>
+    <path d="M470 650 C490 560 510 470 520 380 L532 380 C524 470 504 560 488 650 Z" fill="#8a4a24" opacity="0.5"/>
+  </g>
+  <g filter="url(#smoke)" opacity="0.35">
+    <path d="M500 420 C520 340 600 300 640 250 C700 200 760 230 720 290 C680 350 600 380 560 430 Z" fill="#5a3a2a"/>
+  </g>
+  <g filter="url(#glowL)">
+    <ellipse cx="640" cy="1110" rx="440" ry="70" fill="#ffb547" opacity="0.5"/>
+    <ellipse cx="565" cy="920" rx="200" ry="170" fill="#ff9a2e" opacity="0.42"/>
+  </g>
+
+  <!-- ── the floor step the anvil stands on -->
+  <g filter="url(#reliefFine)">
+    <g filter="url(#rock)">
+      <path d="M-60 1460 L-60 1120 C200 1110 500 1100 800 1108 C960 1110 1100 1090 1190 1040 C1250 1000 1270 950 1290 905
+        C1310 935 1370 950 1396 982 C1424 1020 1376 1070 1414 1122 C1462 1182 1556 1214 1676 1264 C1796 1314 1896 1384 1956 1460 Z"
+        fill="url(#step)"/>
+    </g>
+  </g>
+  <path d="M-60 1120 C200 1110 500 1100 800 1108 C960 1110 1100 1090 1190 1040" fill="none"
+        stroke="#ff9a3a" stroke-width="6" opacity="0.55" filter="url(#glowXS)"/>
+  <path d="M1290 905 C1310 935 1370 950 1396 982 C1424 1020 1376 1070 1414 1122 C1462 1182 1556 1214 1676 1264 C1796 1314 1896 1384 1956 1460"
+        fill="none" stroke="#ffb547" stroke-width="6" opacity="0.7" filter="url(#glowXS)"/>
+
+  <!-- ── a stack of bronze ingots by the forge, catching its light -->
+  <g transform="translate(240 1210)">
+    <g fill="#5a3218"><path d="M0 0 L90 0 L100 22 L-10 22 Z"/><path d="M104 0 L194 0 L204 22 L94 22 Z"/><path d="M52 -24 L142 -24 L152 -2 L42 -2 Z"/></g>
+    <g fill="#ffb547" opacity="0.75"><path d="M0 0 L90 0 L88 4 L2 4 Z"/><path d="M104 0 L194 0 L192 4 L106 4 Z"/><path d="M52 -24 L142 -24 L140 -20 L54 -20 Z"/></g>
+    <g fill="#ff7b1c" opacity="0.5"><path d="M-10 22 L0 0 L6 0 L-2 22 Z"/><path d="M94 22 L104 0 L110 0 L102 22 Z"/><path d="M42 -2 L52 -24 L58 -24 L50 -2 Z"/></g>
+  </g>
+
+  <!-- ── the anvil on its block: the hero -->
+  <g transform="translate(1110 1150) scale(1.22)">
+    <ellipse cx="0" cy="40" rx="330" ry="34" fill="#000" opacity="0.5" filter="url(#glowS)"/>
+    <path d="M-140 40 L-130 -60 L130 -60 L140 40 Z" fill="#2a1a12"/>
+    <path d="M-140 40 L-130 -60 L-90 -60 L-96 40 Z" fill="#8a4a24" opacity="0.6"/>
+    <g stroke="#120c09" stroke-width="3" opacity="0.6"><path d="M-60 -60 L-62 40 M10 -60 L12 40 M80 -60 L84 40"/></g>
+    <path d="M-132 -60 L130 -60 L126 -52 L-130 -52 Z" fill="#5a3420"/>
+    <g filter="url(#reliefFine)">
+      <path d="M-300 -232 C-250 -238 -200 -240 -170 -240 L190 -240 L196 -196 L120 -190 C90 -170 70 -150 66 -120 L70 -86
+        L150 -76 L160 -60 L-150 -60 L-140 -76 L-62 -86 L-58 -120 C-62 -150 -86 -172 -120 -186 L-180 -196
+        C-220 -204 -260 -214 -300 -232 Z" fill="url(#iron)"/>
+      <path d="M-300 -232 C-250 -238 -200 -240 -170 -240 L190 -240 L190 -232 L-170 -232 C-210 -232 -250 -230 -300 -232 Z" fill="#ffb547" opacity="0.85"/>
+      <path d="M-300 -232 C-260 -214 -220 -204 -180 -196 L-120 -186 C-86 -172 -62 -150 -58 -120 L-62 -86 L-140 -76 L-150 -60
+        L-128 -60 L-110 -78 L-84 -90 L-86 -122 C-92 -150 -118 -168 -160 -180 C-210 -190 -260 -208 -300 -232 Z"
+        fill="url(#ironSide)"/>
+      <path d="M196 -196 L120 -190 C90 -170 70 -150 66 -120 L70 -86 L150 -76 L160 -60" fill="none" stroke="#ff7b1c" stroke-width="3" opacity="0.55"/>
+      <path d="M-170 -240 L-170 -196 M120 -240 L120 -190" stroke="#0b0908" stroke-width="3" opacity="0.6"/>
+      <rect x="140" y="-238" width="16" height="10" fill="#0b0908"/>
+    </g>
+    <g>
+      <path d="M-150 -262 L80 -268 L170 -252 L80 -242 L-150 -246 Z" fill="url(#blade)"/>
+      <path d="M-150 -262 L80 -268 L170 -252 L80 -242 L-150 -246 Z" fill="#ffd27a" filter="url(#glow)"/>
+      <ellipse cx="40" cy="-236" rx="200" ry="14" fill="#ff9a3a" filter="url(#glowS)" opacity="0.7"/>
+      <path d="M-150 -262 L80 -268 L170 -252" fill="none" stroke="#fffaf0" stroke-width="2.5"/>
+      <path d="M-150 -258 L-250 -256 L-250 -250 L-150 -250 Z" fill="#a84a1c"/>
+    </g>
+    <!-- hammer: head on the floor, handle leaning on the block -->
+    <g transform="translate(232 30)">
+      <path d="M-14 -26 L-150 -128 L-138 -142 L0 -40 Z" fill="#3a2418"/>
+      <path d="M-14 -26 L-150 -128 L-146 -134 L-8 -32 Z" fill="#b0642c" opacity="0.6"/>
+      <path d="M-46 -54 C-36 -66 -4 -66 34 -60 C58 -56 62 -6 40 6 C10 12 -30 10 -46 2 C-56 -12 -56 -40 -46 -54 Z" fill="url(#iron)"/>
+      <path d="M-46 -54 C-36 -66 -4 -66 34 -60 L30 -54 C-2 -58 -30 -58 -40 -48 C-48 -36 -48 -12 -42 0 L-46 2 C-56 -12 -56 -40 -46 -54 Z"
+            fill="#ff9a3a" opacity="0.65"/>
+    </g>
+    <g transform="translate(-60 32) rotate(-3)" stroke-linecap="round" fill="none">
+      <path d="M-280 0 L40 -12 L100 -30" stroke="#1a1412" stroke-width="10"/>
+      <path d="M-280 12 L40 -2 L104 8" stroke="#1a1412" stroke-width="10"/>
+      <path d="M-280 -3 L40 -15" stroke="#ff9a3a" stroke-width="2.5" opacity="0.6"/>
+    </g>
+  </g>
+  <g filter="url(#glowL)">
+    <ellipse cx="1110" cy="830" rx="300" ry="80" fill="#ffb547" opacity="0.32"/>
+  </g>
+
+  <!-- ── sparks rising off the blade, drifting toward the dark -->
+  <g fill="#ffd27a">
+    <circle cx="1160" cy="790" r="3"/><circle cx="1200" cy="740" r="2.5"/><circle cx="1130" cy="710" r="2"/>
+    <circle cx="1240" cy="680" r="2.5"/><circle cx="1180" cy="640" r="2"/><circle cx="1280" cy="620" r="1.8"/>
+    <circle cx="1100" cy="660" r="1.8"/><circle cx="1220" cy="570" r="1.6"/><circle cx="1310" cy="540" r="1.5"/>
+    <circle cx="1150" cy="560" r="1.4"/><circle cx="1260" cy="490" r="1.3"/>
+    <circle cx="1060" cy="740" r="2.2"/><circle cx="1020" cy="700" r="1.6"/><circle cx="1300" cy="730" r="2"/>
+  </g>
+  <g stroke="#ffb547" stroke-width="2.5" stroke-linecap="round" opacity="0.9">
+    <path d="M1180 810 L1192 782 M1220 770 L1236 742 M1140 760 L1130 732 M1260 710 L1280 686 M1110 700 L1098 674"/>
+  </g>
+  <g fill="#ffb547" filter="url(#glowS)" opacity="0.8">
+    <circle cx="1160" cy="790" r="8"/><circle cx="1200" cy="740" r="7"/><circle cx="1240" cy="680" r="6"/>
+    <circle cx="1060" cy="740" r="6"/><circle cx="1300" cy="730" r="6"/>
+  </g>
+  <g fill="#ff9a3a" opacity="0.8">
+    <circle cx="1640" cy="1020" r="2"/><circle cx="1720" cy="980" r="1.6"/><circle cx="1900" cy="1040" r="1.8"/>
+    <circle cx="2060" cy="1120" r="2"/><circle cx="1580" cy="950" r="1.4"/>
+  </g>
+
+  <!-- ── foreground: dark rock at the bottom corners, a glint of lava light on the right one -->
+  <g filter="url(#reliefFine)">
+    <g filter="url(#rock)">
+      <path d="M2180 1460 L2220 1390 C2280 1350 2360 1336 2440 1346 C2520 1356 2580 1340 2640 1320 L2640 1460 Z" fill="#120d0b"/>
+      <path d="M-60 1460 L-60 1290 C30 1280 110 1300 180 1336 C250 1372 300 1410 330 1460 Z" fill="#0d0a09"/>
+    </g>
+  </g>
+  <path d="M2220 1390 C2280 1350 2360 1336 2440 1346" fill="none" stroke="#ff7b1c" stroke-width="4" opacity="0.5" filter="url(#glowXS)"/>
+
+  <!-- ── finish: quiet top for the bar, darker top-right for notifications, vignette, grain -->
+  <rect width="2560" height="320" fill="url(#topShade)"/>
+  <rect width="2560" height="1440" fill="url(#cornerShade)"/>
+  <rect width="2560" height="1440" fill="url(#vignette)"/>
+  <rect width="2560" height="1440" filter="url(#grain)"/>
+</svg>

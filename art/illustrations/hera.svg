@@ -1,0 +1,457 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Olymparch · Hera: the queen's peacock on the marble terrace of Olympus at night, its train fanned under the Milky
+     Way; a crescent moon like a diadem, a pomegranate bough and lilies at the left. Key light: the moon (cool
+     silver-violet), upper left; the eyes of the train catch it. 2560×1440, everything that matters inside x 140…2420.
+     Drawn by hand for Olymparch (the train's feathers are placed by a small script, then kept as plain SVG); MIT. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2560" height="1440" viewBox="0 0 2560 1440">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#04040f"/>
+      <stop offset="0.35" stop-color="#0b0b20"/>
+      <stop offset="0.6" stop-color="#16184a"/>
+      <stop offset="0.7" stop-color="#2a2c6a"/>
+      <stop offset="0.78" stop-color="#1b1d48"/>
+      <stop offset="1" stop-color="#0b0b20"/>
+    </linearGradient>
+    <radialGradient id="moonHalo" cx="860" cy="500" r="620" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d8d8ff" stop-opacity="0.35"/>
+      <stop offset="0.2" stop-color="#8587ff" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#141538" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="milky" gradientUnits="userSpaceOnUse" x1="-100" y1="1100" x2="1400" y2="200">
+      <stop offset="0" stop-color="#9aa0ff" stop-opacity="0.0"/>
+      <stop offset="0.25" stop-color="#9aa0ff" stop-opacity="0.35"/>
+      <stop offset="0.6" stop-color="#b8b0ff" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#b8b0ff" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="fanBack" cx="1720" cy="1010" r="600" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0e2a4a"/>
+      <stop offset="0.5" stop-color="#103a4a"/>
+      <stop offset="0.85" stop-color="#16304a"/>
+      <stop offset="1" stop-color="#141538" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="vaneG" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="-560">
+      <stop offset="0" stop-color="#0a1838"/>
+      <stop offset="0.45" stop-color="#103a48"/>
+      <stop offset="0.8" stop-color="#245448"/>
+      <stop offset="1" stop-color="#4a6a48" stop-opacity="0.5"/>
+    </linearGradient>
+    <linearGradient id="breast" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6a7cff"/>
+      <stop offset="0.35" stop-color="#2a3cc0"/>
+      <stop offset="0.75" stop-color="#18208a"/>
+      <stop offset="1" stop-color="#0c1050"/>
+    </linearGradient>
+    <linearGradient id="neckG" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7ae8d8"/>
+      <stop offset="0.3" stop-color="#2a6ad0"/>
+      <stop offset="1" stop-color="#121a70"/>
+    </linearGradient>
+    <linearGradient id="wingG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b09060"/>
+      <stop offset="1" stop-color="#4a3a28"/>
+    </linearGradient>
+    <linearGradient id="marble" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5a5c90"/>
+      <stop offset="0.3" stop-color="#2c2e66"/>
+      <stop offset="1" stop-color="#141538"/>
+    </linearGradient>
+    <linearGradient id="baluster" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6a6ca8"/>
+      <stop offset="0.4" stop-color="#2e3070"/>
+      <stop offset="1" stop-color="#121338"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b1d48"/>
+      <stop offset="1" stop-color="#07071a"/>
+    </linearGradient>
+    <radialGradient id="fruit" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#f4a0b4"/>
+      <stop offset="0.2" stop-color="#e05676"/>
+      <stop offset="0.6" stop-color="#a8204a"/>
+      <stop offset="1" stop-color="#3a0618"/>
+    </radialGradient>
+    <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4a6a8a"/>
+      <stop offset="0.5" stop-color="#1e3a48"/>
+      <stop offset="1" stop-color="#0c1a24"/>
+    </linearGradient>
+    <linearGradient id="petal" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="-90">
+      <stop offset="0" stop-color="#8587ff"/>
+      <stop offset="0.4" stop-color="#d6d4ff"/>
+      <stop offset="1" stop-color="#f4f2ff"/>
+    </linearGradient>
+    <linearGradient id="far" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a2c66"/>
+      <stop offset="1" stop-color="#16184a"/>
+    </linearGradient>
+    <linearGradient id="topShade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#03030c" stop-opacity="0.9"/>
+      <stop offset="0.5" stop-color="#03030c" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#03030c" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="cornerShade" cx="2560" cy="0" r="1150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#02020a" stop-opacity="0.8"/>
+      <stop offset="0.6" stop-color="#02020a" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#02020a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vignette" cx="0.5" cy="0.55" r="0.78">
+      <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.6"/>
+    </radialGradient>
+
+    <!-- star dust: sparse bright points out of noise, inside whatever shape uses the filter -->
+    <filter id="dust" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="70" result="soft"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="1" seed="12" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.92  0 0 0 0 0.92  0 0 0 0 1  14 0 0 0 -9.2" result="d"/>
+      <feComposite in="d" in2="soft" operator="in"/>
+    </filter>
+    <filter id="dustSky" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="1" seed="31" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.9  0 0 0 0 0.9  0 0 0 0 1  16 0 0 0 -11.4"/>
+    </filter>
+    <filter id="nebula" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.004 0.006" numOctaves="5" seed="23" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="160" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.2 0 0 0 -0.5" result="m"/>
+      <feComposite in="d" in2="m" operator="in" result="c"/>
+      <feGaussianBlur in="c" stdDeviation="10"/>
+    </filter>
+    <filter id="feather" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.06 0.012" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="18" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="cloudSoft" x="-15%" y="-40%" width="130%" height="180%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.003 0.012" numOctaves="4" seed="9" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="120" xChannelSelector="R" yChannelSelector="G"/>
+      <feGaussianBlur stdDeviation="12"/>
+    </filter>
+    <filter id="reliefMarble" x="-5%" y="-10%" width="110%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.02" numOctaves="5" seed="31" result="h"/>
+      <feDiffuseLighting in="h" surfaceScale="5" diffuseConstant="1" lighting-color="#fff" result="l">
+        <feDistantLight azimuth="225" elevation="45"/>
+      </feDiffuseLighting>
+      <feComponentTransfer in="l" result="lt">
+        <feFuncR type="linear" slope="0.9" intercept="0.3"/><feFuncG type="linear" slope="0.9" intercept="0.3"/>
+        <feFuncB type="linear" slope="0.9" intercept="0.3"/>
+      </feComponentTransfer>
+      <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.15" k2="0" k3="0" k4="0"/>
+    </filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"/></filter>
+    <filter id="glowM" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9"/></filter>
+    <filter id="glowS" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>
+    <filter id="haze" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="30"/></filter>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="1" seed="2"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0.05 0"/>
+    </filter>
+
+    <!-- one feather of the train, from the root (0,0) out to the eye (up) -->
+    <path id="vane" d="M0 0 C-5 -200 -22 -420 -34 -520 C-34 -566 34 -566 34 -520 C22 -420 5 -200 0 0 Z" fill="url(#vaneG)"/>
+    <!-- the eye at the tip of a feather: bronze, green, peacock teal, royal blue heart -->
+    <g id="ocellus">
+      <ellipse cx="0" cy="0" rx="26" ry="33" fill="#7a6a3c" opacity="0.85"/>
+      <ellipse cx="0" cy="3" rx="21" ry="26" fill="#1e5a4a"/>
+      <ellipse cx="0" cy="5" rx="15" ry="19" fill="#3cb8a4"/>
+      <ellipse cx="0" cy="7" rx="10.5" ry="13" fill="#23258f"/>
+      <path d="M0 16 C-8 11 -9 3 -4.5 0 C-2 -2 0 -1 0 1 C0 -1 2 -2 4.5 0 C9 3 8 11 0 16 Z" fill="#0b0b30"/>
+      <ellipse cx="-8" cy="-12" rx="6" ry="4" fill="#e8f0ff" opacity="0.35" transform="rotate(-30 -8 -12)"/>
+    </g>
+    <!-- a lily seen from the front: six petals and the stamens -->
+    <path id="petalP" d="M0 0 C14 -20 16 -56 0 -92 C-16 -56 -14 -20 0 0 Z" fill="url(#petal)"/>
+    <g id="lily">
+      <use xlink:href="#petalP" transform="rotate(-150)"/><use xlink:href="#petalP" transform="rotate(150)"/>
+      <use xlink:href="#petalP" transform="rotate(-90)"/><use xlink:href="#petalP" transform="rotate(90)"/>
+      <use xlink:href="#petalP" transform="rotate(-30)"/><use xlink:href="#petalP" transform="rotate(30)"/>
+      <circle r="10" fill="#8587ff" opacity="0.6"/>
+      <g stroke="#e8e0b0" stroke-width="2" fill="#d8a04a">
+        <line x1="0" y1="0" x2="-14" y2="-40"/><line x1="0" y1="0" x2="2" y2="-46"/><line x1="0" y1="0" x2="16" y2="-38"/>
+        <circle cx="-14" cy="-40" r="3.5" stroke="none"/><circle cx="2" cy="-46" r="3.5" stroke="none"/><circle cx="16" cy="-38" r="3.5" stroke="none"/>
+      </g>
+    </g>
+    <path id="leafP" d="M0 0 C20 -10 50 -12 80 0 C50 12 20 10 0 0 Z" fill="url(#leaf)"/>
+    <g id="pome">
+      <circle r="42" fill="url(#fruit)"/>
+      <path d="M-12 -38 L-16 -54 L-8 -46 L-2 -58 L4 -46 L12 -56 L14 -38 Z" fill="#7a1838"/>
+      <path d="M-30 -14 C-28 -26 -18 -34 -6 -36" fill="none" stroke="#ffd0dc" stroke-width="4" opacity="0.6" stroke-linecap="round"/>
+    </g>
+  </defs>
+
+  <!-- ── the queen's sky -->
+  <rect width="2560" height="1440" fill="url(#sky)"/>
+  <rect width="2560" height="1440" fill="url(#moonHalo)"/>
+  <!-- the Milky Way, rising from the lower left -->
+  <g filter="url(#nebula)" opacity="0.8">
+    <path d="M-100 1150 C200 980 500 800 760 640 C980 500 1160 380 1400 230 L1500 330 C1260 470 1060 600 860 740 C600 920 300 1100 -40 1300 Z"
+          fill="url(#milky)"/>
+  </g>
+  <path d="M-100 1150 C200 980 500 800 760 640 C980 500 1160 380 1400 230 L1500 330 C1260 470 1060 600 860 740 C600 920 300 1100 -40 1300 Z"
+        fill="#fff" filter="url(#dust)" opacity="0.8"/>
+  <rect width="2560" height="1000" filter="url(#dustSky)" opacity="0.5"/>
+  <g fill="#f0f0ff">
+    <circle cx="300" cy="380" r="2.4"/><circle cx="1120" cy="620" r="2"/><circle cx="1900" cy="430" r="1.8" opacity="0.6"/>
+    <circle cx="640" cy="760" r="2.2"/><circle cx="1360" cy="380" r="2.6"/><circle cx="2300" cy="560" r="1.8" opacity="0.6"/>
+    <circle cx="180" cy="640" r="2"/><circle cx="980" cy="330" r="1.8" opacity="0.6"/><circle cx="1540" cy="520" r="2"/>
+  </g>
+  <g fill="#c8c8ff" filter="url(#glowS)">
+    <circle cx="1360" cy="380" r="6"/><circle cx="300" cy="380" r="5"/><circle cx="640" cy="760" r="5"/>
+  </g>
+
+  <!-- the crescent moon, worn like a diadem -->
+  <g>
+    <circle cx="860" cy="500" r="120" fill="#c8c8ff" opacity="0.18" filter="url(#glow)"/>
+    <mask id="crescent" maskUnits="userSpaceOnUse" x="700" y="340" width="320" height="320">
+      <circle cx="860" cy="500" r="78" fill="#fff"/><circle cx="894" cy="478" r="70" fill="#000"/>
+    </mask>
+    <g mask="url(#crescent)">
+      <circle cx="860" cy="500" r="78" fill="#f0f0ff"/>
+      <circle cx="846" cy="514" r="70" fill="none" stroke="#b8b8f0" stroke-width="10" opacity="0.4"/>
+    </g>
+  </g>
+
+  <!-- ── far mountains of Olympus in the haze -->
+  <path d="M-60 1010 L120 980 L260 950 L380 966 L520 920 L640 940 L760 900 L880 930 L1000 912 L1120 944 L1260 930 L1400 960
+    L1600 950 L1800 970 L2000 940 L2200 960 L2400 930 L2620 950 L2620 1200 L-60 1200 Z" fill="url(#far)" opacity="0.85"/>
+  <g filter="url(#cloudSoft)" opacity="0.6">
+    <path d="M-60 990 C300 970 700 980 1100 975 C1500 970 1900 990 2620 980 L2620 1040 C1900 1050 1500 1030 1100 1040 C700 1050 300 1030 -60 1040 Z" fill="#3a3c80"/>
+  </g>
+
+  <!-- ── the train, fanned -->
+  <g>
+    <path d="M1720 1010 L1180 1100 A550 550 0 1 1 2260 1100 Z" fill="#0a1a34" opacity="0.85" filter="url(#feather)"/>
+    <g filter="url(#feather)">
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-95.4) scale(1.00 1.013)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-85.8) scale(1.00 1.012)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-82.4) scale(1.00 0.998)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-71.3) scale(1.00 1.021)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-64.2) scale(1.00 0.987)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-55.6) scale(1.00 0.975)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-49.1) scale(1.00 1.022)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-41.7) scale(1.00 1.015)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-31.4) scale(1.00 0.981)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-22.1) scale(1.00 0.985)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-13.6) scale(1.00 1.019)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-5.7) scale(1.00 1.002)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-1.5) scale(1.00 1.023)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(10.3) scale(1.00 1.020)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(15.3) scale(1.00 0.983)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(21.8) scale(1.00 0.990)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(29.5) scale(1.00 1.009)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(39.0) scale(1.00 1.017)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(47.1) scale(1.00 0.999)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(53.8) scale(1.00 1.025)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(65.2) scale(1.00 1.018)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(73.4) scale(1.00 0.993)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(77.5) scale(1.00 0.976)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(90.3) scale(1.00 0.984)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(98.1) scale(1.00 1.023)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-95.5) scale(0.90 0.779)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-86.2) scale(0.90 0.791)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-71.9) scale(0.90 0.754)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-65.2) scale(0.90 0.770)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-50.5) scale(0.90 0.769)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-41.9) scale(0.90 0.768)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-33.2) scale(0.90 0.756)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-20.1) scale(0.90 0.804)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-12.8) scale(0.90 0.803)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-0.5) scale(0.90 0.764)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(12.2) scale(0.90 0.775)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(18.8) scale(0.90 0.799)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(31.5) scale(0.90 0.795)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(43.3) scale(0.90 0.801)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(54.1) scale(0.90 0.757)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(61.4) scale(0.90 0.796)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(73.4) scale(0.90 0.804)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(86.6) scale(0.90 0.775)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(95.9) scale(0.90 0.777)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-92.8) scale(0.78 0.537)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-74.5) scale(0.78 0.579)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-61.5) scale(0.78 0.547)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-47.3) scale(0.78 0.570)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-31.5) scale(0.78 0.570)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-14.4) scale(0.78 0.564)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-0.7) scale(0.78 0.566)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(15.3) scale(0.78 0.570)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(29.7) scale(0.78 0.579)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(46.6) scale(0.78 0.530)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(60.3) scale(0.78 0.564)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(78.5) scale(0.78 0.563)"/>
+      <use xlink:href="#vane" transform="translate(1720 1010) rotate(91.5) scale(0.78 0.563)"/>
+    </g>
+    <g stroke="#9ae0c8" stroke-width="1.2" opacity="0.25" fill="none">
+      <path d="M1720 1010 L1159 1129 M1720 1010 L1173 1097 M1720 1010 L1150 1071 M1720 1010 L1146 1041 M1720 1010 L1152 1012 M1720 1010 L1142 982 M1720 1010 L1145 952 M1720 1010 L1166 925 M1720 1010 L1170 897 M1720 1010 L1191 872 M1720 1010 L1173 837 M1720 1010 L1179 808 M1720 1010 L1207 787 M1720 1010 L1212 757 M1720 1010 L1224 731 M1720 1010 L1239 705 M1720 1010 L1274 694 M1720 1010 L1271 656 M1720 1010 L1296 639 M1720 1010 L1314 615 M1720 1010 L1341 602 M1720 1010 L1358 577 M1720 1010 L1377 554 M1720 1010 L1404 541 M1720 1010 L1427 523 M1720 1010 L1465 533 M1720 1010 L1488 515 M1720 1010 L1510 494 M1720 1010 L1534 476 M1720 1010 L1566 483 M1720 1010 L1589 458 M1720 1010 L1618 454 M1720 1010 L1650 473 M1720 1010 L1677 453 M1720 1010 L1706 461 M1720 1010 L1734 468 M1720 1010 L1762 466 M1720 1010 L1791 462 M1720 1010 L1818 472 M1720 1010 L1846 477 M1720 1010 L1872 490 M1720 1010 L1904 483 M1720 1010 L1930 496 M1720 1010 L1960 499 M1720 1010 L1985 513 M1720 1010 L2003 539 M1720 1010 L2042 532 M1720 1010 L2045 578 M1720 1010 L2077 583 M1720 1010 L2095 606 M1720 1010 L2119 622 M1720 1010 L2130 651 M1720 1010 L2170 655 M1720 1010 L2173 689 M1720 1010 L2177 720 M1720 1010 L2212 733 M1720 1010 L2207 768 M1720 1010 L2235 786 M1720 1010 L2238 816 M1720 1010 L2257 840 M1720 1010 L2280 864 M1720 1010 L2281 894 M1720 1010 L2270 926 M1720 1010 L2290 953 M1720 1010 L2285 983 M1720 1010 L2275 1012 M1720 1010 L2265 1040 M1720 1010 L2281 1070 M1720 1010 L2276 1098 M1720 1010 L2286 1130"/>
+    </g>
+    <g>
+      <use xlink:href="#ocellus" transform="translate(1176 1061) rotate(-95.4) scale(1.03)"/>
+      <use xlink:href="#ocellus" transform="translate(1175 970) rotate(-85.8) scale(1.05)"/>
+      <use xlink:href="#ocellus" transform="translate(1186 938) rotate(-82.4) scale(1.05)"/>
+      <use xlink:href="#ocellus" transform="translate(1198 833) rotate(-71.3) scale(0.94)"/>
+      <use xlink:href="#ocellus" transform="translate(1240 778) rotate(-64.2) scale(1.00)"/>
+      <use xlink:href="#ocellus" transform="translate(1286 713) rotate(-55.6) scale(0.95)"/>
+      <use xlink:href="#ocellus" transform="translate(1303 649) rotate(-49.1) scale(1.03)"/>
+      <use xlink:href="#ocellus" transform="translate(1355 601) rotate(-41.7) scale(0.94)"/>
+      <use xlink:href="#ocellus" transform="translate(1444 558) rotate(-31.4) scale(0.92)"/>
+      <use xlink:href="#ocellus" transform="translate(1520 517) rotate(-22.1) scale(0.95)"/>
+      <use xlink:href="#ocellus" transform="translate(1591 475) rotate(-13.6) scale(0.96)"/>
+      <use xlink:href="#ocellus" transform="translate(1666 472) rotate(-5.7) scale(1.01)"/>
+      <use xlink:href="#ocellus" transform="translate(1706 458) rotate(-1.5) scale(1.02)"/>
+      <use xlink:href="#ocellus" transform="translate(1819 468) rotate(10.3) scale(0.96)"/>
+      <use xlink:href="#ocellus" transform="translate(1860 498) rotate(15.3) scale(0.94)"/>
+      <use xlink:href="#ocellus" transform="translate(1919 514) rotate(21.8) scale(1.00)"/>
+      <use xlink:href="#ocellus" transform="translate(1989 536) rotate(29.5) scale(0.97)"/>
+      <use xlink:href="#ocellus" transform="translate(2066 584) rotate(39.0) scale(0.99)"/>
+      <use xlink:href="#ocellus" transform="translate(2115 643) rotate(47.1) scale(1.02)"/>
+      <use xlink:href="#ocellus" transform="translate(2166 683) rotate(53.8) scale(0.92)"/>
+      <use xlink:href="#ocellus" transform="translate(2219 780) rotate(65.2) scale(0.92)"/>
+      <use xlink:href="#ocellus" transform="translate(2234 857) rotate(73.4) scale(1.00)"/>
+      <use xlink:href="#ocellus" transform="translate(2235 896) rotate(77.5) scale(0.95)"/>
+      <use xlink:href="#ocellus" transform="translate(2251 1013) rotate(90.3) scale(1.03)"/>
+      <use xlink:href="#ocellus" transform="translate(2267 1088) rotate(98.1) scale(0.97)"/>
+      <use xlink:href="#ocellus" transform="translate(1301 1050) rotate(-95.5) scale(0.93)"/>
+      <use xlink:href="#ocellus" transform="translate(1294 981) rotate(-86.2) scale(0.93)"/>
+      <use xlink:href="#ocellus" transform="translate(1333 883) rotate(-71.9) scale(0.95)"/>
+      <use xlink:href="#ocellus" transform="translate(1343 836) rotate(-65.2) scale(0.90)"/>
+      <use xlink:href="#ocellus" transform="translate(1399 746) rotate(-50.5) scale(0.94)"/>
+      <use xlink:href="#ocellus" transform="translate(1443 701) rotate(-41.9) scale(0.87)"/>
+      <use xlink:href="#ocellus" transform="translate(1497 668) rotate(-33.2) scale(0.85)"/>
+      <use xlink:href="#ocellus" transform="translate(1571 603) rotate(-20.1) scale(0.85)"/>
+      <use xlink:href="#ocellus" transform="translate(1624 587) rotate(-12.8) scale(0.90)"/>
+      <use xlink:href="#ocellus" transform="translate(1717 597) rotate(-0.5) scale(0.90)"/>
+      <use xlink:href="#ocellus" transform="translate(1808 601) rotate(12.2) scale(0.88)"/>
+      <use xlink:href="#ocellus" transform="translate(1859 601) rotate(18.8) scale(0.83)"/>
+      <use xlink:href="#ocellus" transform="translate(1945 644) rotate(31.5) scale(0.84)"/>
+      <use xlink:href="#ocellus" transform="translate(2016 695) rotate(43.3) scale(0.91)"/>
+      <use xlink:href="#ocellus" transform="translate(2051 770) rotate(54.1) scale(0.88)"/>
+      <use xlink:href="#ocellus" transform="translate(2097 804) rotate(61.4) scale(0.87)"/>
+      <use xlink:href="#ocellus" transform="translate(2136 886) rotate(73.4) scale(0.94)"/>
+      <use xlink:href="#ocellus" transform="translate(2138 985) rotate(86.6) scale(0.89)"/>
+      <use xlink:href="#ocellus" transform="translate(2137 1053) rotate(95.9) scale(0.86)"/>
+      <use xlink:href="#ocellus" transform="translate(1430 1024) rotate(-92.8) scale(0.76)"/>
+      <use xlink:href="#ocellus" transform="translate(1419 926) rotate(-74.5) scale(0.79)"/>
+      <use xlink:href="#ocellus" transform="translate(1460 869) rotate(-61.5) scale(0.73)"/>
+      <use xlink:href="#ocellus" transform="translate(1494 801) rotate(-47.3) scale(0.81)"/>
+      <use xlink:href="#ocellus" transform="translate(1559 747) rotate(-31.5) scale(0.80)"/>
+      <use xlink:href="#ocellus" transform="translate(1644 715) rotate(-14.4) scale(0.80)"/>
+      <use xlink:href="#ocellus" transform="translate(1716 704) rotate(-0.7) scale(0.75)"/>
+      <use xlink:href="#ocellus" transform="translate(1801 713) rotate(15.3) scale(0.79)"/>
+      <use xlink:href="#ocellus" transform="translate(1875 739) rotate(29.7) scale(0.79)"/>
+      <use xlink:href="#ocellus" transform="translate(1928 813) rotate(46.6) scale(0.78)"/>
+      <use xlink:href="#ocellus" transform="translate(1985 859) rotate(60.3) scale(0.77)"/>
+      <use xlink:href="#ocellus" transform="translate(2018 949) rotate(78.5) scale(0.80)"/>
+      <use xlink:href="#ocellus" transform="translate(2024 1018) rotate(91.5) scale(0.80)"/>
+    </g>
+    <!-- moonlight across the upper-left of the train -->
+    <radialGradient id="fanDepth" cx="1720" cy="1010" r="600" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#05051a" stop-opacity="0.75"/>
+      <stop offset="0.45" stop-color="#05051a" stop-opacity="0.3"/>
+      <stop offset="0.8" stop-color="#05051a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="fanMoon" gradientUnits="userSpaceOnUse" x1="1200" y1="460" x2="2200" y2="1100">
+      <stop offset="0" stop-color="#d8d8ff" stop-opacity="0.16"/>
+      <stop offset="0.5" stop-color="#d8d8ff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#05051a" stop-opacity="0.35"/>
+    </linearGradient>
+    <path d="M1720 1010 L1150 1110 A580 580 0 1 1 2290 1110 Z" fill="url(#fanDepth)"/>
+    <path d="M1720 1010 L1150 1110 A580 580 0 1 1 2290 1110 Z" fill="url(#fanMoon)"/>
+  </g>
+
+  <!-- ── the peacock, facing the moon -->
+  <g>
+    <!-- folded wings, barred bronze -->
+    <path d="M1744 924 C1792 954 1806 1030 1788 1096 L1736 1090 Z" fill="url(#wingG)"/>
+    <path d="M1700 924 C1652 954 1640 1030 1656 1096 L1704 1090 Z" fill="url(#wingG)" opacity="0.85"/>
+    <g stroke="#2a1e14" stroke-width="3" opacity="0.6" fill="none">
+      <path d="M1752 960 L1790 972 M1756 990 L1796 1004 M1758 1020 L1798 1036 M1756 1050 L1794 1064"/>
+      <path d="M1690 960 L1654 972 M1686 990 L1648 1004 M1684 1020 L1646 1036"/>
+    </g>
+    <!-- breast -->
+    <path d="M1692 900 C1662 940 1660 1010 1676 1084 L1770 1084 C1782 1010 1776 940 1746 900 C1730 890 1708 890 1692 900 Z" fill="url(#breast)"/>
+    <g fill="none" stroke="#8a9cff" stroke-width="2" opacity="0.35">
+      <path d="M1690 960 q8 6 16 0 q8 6 16 0 q8 6 16 0 M1684 990 q8 6 16 0 q8 6 16 0 q8 6 16 0 q8 6 16 0 M1682 1020 q8 6 16 0 q8 6 16 0 q8 6 16 0 q8 6 16 0 q8 6 16 0
+        M1684 1050 q8 6 16 0 q8 6 16 0 q8 6 16 0 q8 6 16 0 q8 6 16 0"/>
+    </g>
+    <!-- neck and head -->
+    <path d="M1700 920 C1684 874 1656 836 1650 796 C1648 786 1646 778 1640 772 L1614 768 L1604 762 L1614 756 L1638 752
+      C1644 736 1666 732 1680 746 C1690 770 1690 800 1704 840 C1714 870 1740 890 1752 914 Z" fill="url(#neckG)"/>
+    <!-- face: white stripes about the eye, the eye -->
+    <path d="M1640 750 C1648 744 1660 744 1668 750" fill="none" stroke="#f4f4ff" stroke-width="3" stroke-linecap="round"/>
+    <path d="M1642 762 C1650 768 1662 766 1670 760" fill="none" stroke="#f4f4ff" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="1654" cy="756" r="3.6" fill="#05051a"/><circle cx="1653" cy="755" r="1" fill="#fff"/>
+    <!-- the crest: little crown of plumes -->
+    <g stroke="#2a6ad0" stroke-width="2">
+      <line x1="1664" y1="738" x2="1640" y2="694"/><line x1="1666" y1="738" x2="1652" y2="688"/><line x1="1668" y1="738" x2="1664" y2="686"/>
+      <line x1="1670" y1="738" x2="1676" y2="688"/><line x1="1672" y1="740" x2="1688" y2="694"/>
+    </g>
+    <g fill="#4fd8bf">
+      <ellipse cx="1640" cy="692" rx="4" ry="6" transform="rotate(-28 1640 692)"/><ellipse cx="1652" cy="686" rx="4" ry="6" transform="rotate(-14 1652 686)"/>
+      <ellipse cx="1664" cy="684" rx="4" ry="6"/><ellipse cx="1676" cy="686" rx="4" ry="6" transform="rotate(12 1676 686)"/>
+      <ellipse cx="1688" cy="692" rx="4" ry="6" transform="rotate(24 1688 692)"/>
+    </g>
+    <!-- moonlight on the left edges -->
+    <path d="M1700 920 C1684 874 1656 836 1650 796 C1648 786 1646 778 1640 772" fill="none" stroke="#d8e8ff" stroke-width="3.2" opacity="0.75"/>
+    <path d="M1692 900 C1662 940 1660 1010 1676 1084" fill="none" stroke="#c8d0ff" stroke-width="3" opacity="0.6"/>
+    <path d="M1638 752 C1644 736 1666 732 1680 746" fill="none" stroke="#d8e8ff" stroke-width="2.4" opacity="0.7"/>
+    <!-- beak -->
+    <path d="M1614 756 L1604 762 L1614 768 L1638 766 L1638 754 Z" fill="#c8b8a0"/>
+    <!-- feet on the rail -->
+    <g stroke="#7a6a5a" stroke-width="5" stroke-linecap="round">
+      <path d="M1700 1084 L1698 1104 M1740 1084 L1744 1104"/>
+    </g>
+  </g>
+
+  <!-- ── the terrace: rail and balusters of moonlit marble -->
+  <g filter="url(#reliefMarble)">
+    <rect x="960" y="1100" width="1700" height="34" fill="url(#marble)"/>
+    <rect x="960" y="1134" width="1700" height="12" fill="#121338"/>
+    <g fill="url(#baluster)">
+      <path id="bal" d="M1010 1146 L1050 1146 L1044 1166 C1060 1190 1064 1220 1050 1250 L1056 1280 L1004 1280 L1010 1250 C996 1220 1000 1190 1016 1166 Z"/>
+      <use xlink:href="#bal" x="110"/><use xlink:href="#bal" x="220"/><use xlink:href="#bal" x="330"/><use xlink:href="#bal" x="440"/>
+      <use xlink:href="#bal" x="550"/><use xlink:href="#bal" x="660"/><use xlink:href="#bal" x="770"/><use xlink:href="#bal" x="880"/>
+      <use xlink:href="#bal" x="990"/><use xlink:href="#bal" x="1100"/><use xlink:href="#bal" x="1210"/><use xlink:href="#bal" x="1320"/>
+      <use xlink:href="#bal" x="1430"/><use xlink:href="#bal" x="1540"/>
+    </g>
+    <rect x="960" y="1280" width="1700" height="30" fill="url(#marble)"/>
+    <path d="M-60 1310 L2620 1310 L2620 1500 L-60 1500 Z" fill="url(#floor)"/>
+    <!-- the end post of the rail -->
+    <rect x="930" y="1080" width="70" height="230" fill="url(#baluster)"/>
+    <rect x="920" y="1068" width="90" height="20" fill="url(#marble)"/>
+  </g>
+  <path d="M960 1100 L2620 1100" stroke="#c8ccff" stroke-width="3" opacity="0.5"/>
+  <path d="M920 1068 L1010 1068" stroke="#c8ccff" stroke-width="3" opacity="0.6"/>
+  <!-- ── foreground left: pomegranate bough and lilies -->
+  <g>
+    <path d="M-60 640 C80 660 200 700 320 760 C420 810 500 860 560 930" fill="none" stroke="#1a1418" stroke-width="16" stroke-linecap="round"/>
+    <path d="M200 700 C230 740 250 780 254 830" fill="none" stroke="#1a1418" stroke-width="9" stroke-linecap="round"/>
+    <path d="M420 820 C460 830 500 850 520 880" fill="none" stroke="#1a1418" stroke-width="7" stroke-linecap="round"/>
+    <path d="M-60 640 C80 660 200 700 320 760 C420 810 500 860 560 930" fill="none" stroke="#9a9ad8" stroke-width="3" opacity="0.4"/>
+    <g>
+      <use xlink:href="#leafP" transform="translate(60 652) rotate(-40) scale(1.1)"/><use xlink:href="#leafP" transform="translate(110 664) rotate(20)"/>
+      <use xlink:href="#leafP" transform="translate(150 676) rotate(-70) scale(0.9)"/><use xlink:href="#leafP" transform="translate(240 714) rotate(-30)"/>
+      <use xlink:href="#leafP" transform="translate(290 740) rotate(40) scale(1.1)"/><use xlink:href="#leafP" transform="translate(360 780) rotate(-50)"/>
+      <use xlink:href="#leafP" transform="translate(400 806) rotate(70) scale(0.9)"/><use xlink:href="#leafP" transform="translate(470 846) rotate(-20)"/>
+      <use xlink:href="#leafP" transform="translate(520 890) rotate(60)"/><use xlink:href="#leafP" transform="translate(230 760) rotate(100) scale(0.8)"/>
+      <use xlink:href="#leafP" transform="translate(500 870) rotate(150) scale(0.8)"/><use xlink:href="#leafP" transform="translate(20 646) rotate(160) scale(0.9)"/>
+    </g>
+    <use xlink:href="#pome" transform="translate(254 872)"/>
+    <use xlink:href="#pome" transform="translate(526 922) scale(0.85)"/>
+    <use xlink:href="#pome" transform="translate(96 712) scale(0.75)"/>
+    <g stroke="#3a3c80" stroke-width="5" fill="none" stroke-linecap="round">
+      <path d="M220 1440 C230 1340 250 1260 260 1180"/><path d="M380 1440 C380 1350 400 1280 420 1220"/><path d="M120 1440 C130 1380 150 1320 170 1280"/>
+    </g>
+    <g fill="#1e2a40">
+      <path d="M220 1440 C180 1360 170 1300 160 1240 C190 1300 210 1360 236 1440 Z"/>
+      <path d="M380 1440 C420 1370 450 1320 480 1280 C460 1330 420 1380 396 1440 Z"/>
+      <path d="M300 1440 C290 1380 300 1320 320 1270 C320 1330 316 1390 316 1440 Z"/>
+    </g>
+    <use xlink:href="#lily" transform="translate(260 1170) rotate(-10) scale(0.95)"/>
+    <use xlink:href="#lily" transform="translate(424 1210) rotate(12) scale(0.8)"/>
+    <use xlink:href="#lily" transform="translate(172 1270) rotate(-20) scale(0.7)"/>
+  </g>
+
+  <!-- ── finish -->
+  <rect width="2560" height="300" fill="url(#topShade)"/>
+  <rect width="2560" height="1440" fill="url(#cornerShade)"/>
+  <rect width="2560" height="1440" fill="url(#vignette)"/>
+  <rect width="2560" height="1440" filter="url(#grain)"/>
+</svg>

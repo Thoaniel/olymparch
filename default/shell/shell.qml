@@ -118,11 +118,12 @@ ShellRoot {
                     Image {
                         anchors.fill: parent
                         readonly property string set: parent.height >= 1300 && root.has1440 ? "1440" : "1080"
-                        // a picture of yours fills the screen (cropped, smoothed); pixel-art frames stay sharp
+                        // a picture of yours or a still illustration (one frame) fills the screen cropped and smoothed;
+                        // pixel-art frames (the temple) stay sharp
                         source: root.picture ? "file://" + encodeURI(root.picture)
                                              : `file://${root.art}/${set}/frame-${String(root.frame).padStart(2, "0")}.png`
                         fillMode: Image.PreserveAspectCrop
-                        smooth: root.picture !== ""
+                        smooth: root.picture !== "" || root.frames === 1
                         cache: true
                         asynchronous: false
                     }

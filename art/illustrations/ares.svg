@@ -1,0 +1,376 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Olymparch · Ares: the battlefield at sunset. A bronze Corinthian helmet rests on the trampled ground beside a
+     planted spear; behind, a ridge of broken spears, shields and banners under a blood-red sky, smoke and embers.
+     Light: the setting sun, low on the left. 2560×1440, everything that matters inside x 140…2420.
+     Drawn by hand for Olymparch; MIT. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2560" height="1440" viewBox="0 0 2560 1440">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0c0303"/>
+      <stop offset="0.28" stop-color="#1e0606"/>
+      <stop offset="0.5" stop-color="#4a100c"/>
+      <stop offset="0.66" stop-color="#8e2614"/>
+      <stop offset="0.74" stop-color="#c8502a"/>
+      <stop offset="0.8" stop-color="#7a2012"/>
+      <stop offset="1" stop-color="#2a0a08"/>
+    </linearGradient>
+    <radialGradient id="sunHalo" cx="760" cy="900" r="1100" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffcf8a" stop-opacity="0.75"/>
+      <stop offset="0.12" stop-color="#f3a05a" stop-opacity="0.5"/>
+      <stop offset="0.35" stop-color="#c0401e" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#3a0a08" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="sun" cx="0.45" cy="0.4" r="0.6">
+      <stop offset="0" stop-color="#fff0c8"/>
+      <stop offset="0.5" stop-color="#ffc77a"/>
+      <stop offset="1" stop-color="#f08a48"/>
+    </radialGradient>
+    <linearGradient id="smoke" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#3a1210" stop-opacity="0.95"/>
+      <stop offset="0.6" stop-color="#1e0808" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#0c0303" stop-opacity="0.6"/>
+    </linearGradient>
+    <linearGradient id="far" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9a3a24"/>
+      <stop offset="1" stop-color="#5a1a12"/>
+    </linearGradient>
+    <linearGradient id="ridge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a1210"/>
+      <stop offset="1" stop-color="#1c0707"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a0c0a"/>
+      <stop offset="0.4" stop-color="#180606"/>
+      <stop offset="1" stop-color="#0a0303"/>
+    </linearGradient>
+    <linearGradient id="groundLit" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#c8603a" stop-opacity="0.45"/>
+      <stop offset="0.6" stop-color="#7a2a18" stop-opacity="0.15"/>
+      <stop offset="1" stop-color="#2a0a08" stop-opacity="0"/>
+    </linearGradient>
+    <!-- bronze lit from the left -->
+    <linearGradient id="bronze" x1="0" y1="0" x2="1" y2="0.2">
+      <stop offset="0" stop-color="#fff0c8"/>
+      <stop offset="0.05" stop-color="#f3c995"/>
+      <stop offset="0.14" stop-color="#d0904a"/>
+      <stop offset="0.3" stop-color="#7a4018"/>
+      <stop offset="0.46" stop-color="#3a1a08"/>
+      <stop offset="0.66" stop-color="#6e2a12"/>
+      <stop offset="0.84" stop-color="#3a1608"/>
+      <stop offset="1" stop-color="#1e0a04"/>
+    </linearGradient>
+    <linearGradient id="bronzeV" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.18"/>
+      <stop offset="0.5" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#1a0402" stop-opacity="0.5"/>
+    </linearGradient>
+    <linearGradient id="crest" x1="0" y1="0" x2="1" y2="0.4">
+      <stop offset="0" stop-color="#ff6a4a"/>
+      <stop offset="0.3" stop-color="#c8241e"/>
+      <stop offset="0.75" stop-color="#5a0c0c"/>
+      <stop offset="1" stop-color="#220404"/>
+    </linearGradient>
+    <linearGradient id="shaft" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#d88a52"/>
+      <stop offset="0.35" stop-color="#5a2a16"/>
+      <stop offset="1" stop-color="#1a0806"/>
+    </linearGradient>
+    <linearGradient id="blade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f3c995"/>
+      <stop offset="0.48" stop-color="#dba467"/>
+      <stop offset="0.52" stop-color="#6a4020"/>
+      <stop offset="1" stop-color="#2e1608"/>
+    </linearGradient>
+    <linearGradient id="banner" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e0402e"/>
+      <stop offset="0.5" stop-color="#8e1414"/>
+      <stop offset="1" stop-color="#3a0606"/>
+    </linearGradient>
+    <radialGradient id="shieldFace" cx="0.3" cy="0.35" r="0.8">
+      <stop offset="0" stop-color="#6a3a1c"/>
+      <stop offset="0.4" stop-color="#2e140a"/>
+      <stop offset="1" stop-color="#0c0403"/>
+    </radialGradient>
+    <linearGradient id="topShade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#050101" stop-opacity="0.9"/>
+      <stop offset="0.5" stop-color="#050101" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#050101" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="cornerShade" cx="2560" cy="0" r="1150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#030101" stop-opacity="0.8"/>
+      <stop offset="0.6" stop-color="#030101" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#030101" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vignette" cx="0.5" cy="0.55" r="0.78">
+      <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.6"/>
+    </radialGradient>
+
+    <filter id="cloud" x="-15%" y="-30%" width="130%" height="160%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.0035 0.008" numOctaves="5" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="120" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.6 0 0 0 -0.55" result="m"/>
+      <feComposite in="d" in2="m" operator="in" result="c"/>
+      <feGaussianBlur in="c" stdDeviation="2"/>
+    </filter>
+    <filter id="cloudSoft" x="-15%" y="-40%" width="130%" height="180%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.003 0.007" numOctaves="4" seed="9" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="140" xChannelSelector="R" yChannelSelector="G"/>
+      <feGaussianBlur stdDeviation="9"/>
+    </filter>
+    <!-- smoke: billows rising, displaced on a taller grain -->
+    <filter id="smokeF" x="-30%" y="-20%" width="160%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.004" numOctaves="4" seed="12" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="160" xChannelSelector="R" yChannelSelector="G"/>
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+    <filter id="rock" x="-5%" y="-8%" width="110%" height="116%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.02" numOctaves="4" seed="21" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="30" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="rough" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="8" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <!-- relief lit from the low sun on the left -->
+    <filter id="reliefGround" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.006 0.03" numOctaves="5" seed="31" result="h"/>
+      <feDiffuseLighting in="h" surfaceScale="5" diffuseConstant="1" lighting-color="#fff" result="l">
+        <feDistantLight azimuth="190" elevation="30"/>
+      </feDiffuseLighting>
+      <feComponentTransfer in="l" result="lt">
+        <feFuncR type="linear" slope="0.8" intercept="0.35"/><feFuncG type="linear" slope="0.8" intercept="0.35"/>
+        <feFuncB type="linear" slope="0.8" intercept="0.35"/>
+      </feComponentTransfer>
+      <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.15" k2="0" k3="0" k4="0"/>
+    </filter>
+    <!-- hammered bronze: fine dents lit from the left -->
+    <filter id="hammered" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="2" seed="40" result="h"/>
+      <feDiffuseLighting in="h" surfaceScale="2.2" diffuseConstant="1" lighting-color="#fff" result="l">
+        <feDistantLight azimuth="200" elevation="45"/>
+      </feDiffuseLighting>
+      <feComponentTransfer in="l" result="lt">
+        <feFuncR type="linear" slope="0.5" intercept="0.62"/><feFuncG type="linear" slope="0.5" intercept="0.62"/>
+        <feFuncB type="linear" slope="0.5" intercept="0.62"/>
+      </feComponentTransfer>
+      <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.1" k2="0" k3="0" k4="0"/>
+    </filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"/></filter>
+    <filter id="glowS" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter>
+    <filter id="glowXS" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="2.5"/></filter>
+    <filter id="haze" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="28"/></filter>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="1" seed="2"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0.05 0"/>
+    </filter>
+
+    <!-- the Corinthian helmet in profile, facing left (toward the sun); origin at the rim under the neck guard -->
+    <path id="helm" d="M190 0 C222 -60 218 -170 176 -242 C130 -320 30 -352 -52 -332 C-132 -312 -178 -252 -188 -190
+      L-194 -148 L-198 -70 L-186 -48 L-168 -58 L-164 -28 C-160 2 -148 22 -118 30 C-80 38 -40 32 -14 16 C4 -10 12 -40 30 -64
+      C52 -30 92 -6 142 -2 Z"/>
+    <path id="crestShape" d="M-100 -322 C-96 -420 0 -478 110 -470 C200 -464 270 -410 300 -330 C318 -280 322 -220 316 -160
+      L304 -186 L300 -120 L286 -170 L276 -96 L266 -160 L250 -110 L244 -190 C230 -250 200 -296 150 -322 C80 -352 -10 -346 -100 -322 Z"/>
+    <!-- a broken spear and a small round shield for the ridge -->
+    <g id="spearR"><rect x="-3" y="-260" width="6" height="260"/><path d="M0 -300 L9 -262 L0 -250 L-9 -262 Z"/></g>
+    <g id="shieldR"><ellipse cx="0" cy="0" rx="44" ry="48"/></g>
+  </defs>
+
+  <!-- ── sky, sun and its halo -->
+  <rect width="2560" height="1440" fill="url(#sky)"/>
+  <rect width="2560" height="1440" fill="url(#sunHalo)"/>
+  <circle cx="760" cy="905" r="96" fill="url(#sun)" opacity="0.95"/>
+  <circle cx="760" cy="905" r="150" fill="#ffb070" opacity="0.35" filter="url(#glow)"/>
+
+  <!-- ── long bands of cloud catching the sun's last light -->
+  <g filter="url(#cloud)">
+    <path d="M-100 700 C200 680 420 690 640 676 C820 666 980 690 1180 684 C1340 680 1460 700 1600 694 C1500 724 1300 726 1100 730
+      C860 736 600 728 380 740 C200 748 40 736 -100 740 Z" fill="#c8502a" opacity="0.55"/>
+    <path d="M200 790 C380 770 560 780 720 772 C860 765 960 786 1080 782 C980 806 820 808 660 812 C500 816 340 812 200 790 Z"
+          fill="#ffb070" opacity="0.4"/>
+    <path d="M1200 760 C1400 744 1600 756 1800 748 C1960 742 2100 760 2260 756 C2100 784 1900 786 1700 790 C1500 794 1340 786
+      1200 760 Z" fill="#8e2614" opacity="0.5"/>
+  </g>
+
+  <!-- ── far hills in the red haze -->
+  <g filter="url(#rock)">
+    <path d="M-60 960 L80 935 L200 948 L320 915 L460 930 L600 905 L700 918 L840 900 L960 926 L1100 912 L1240 935 L1380 920
+      L1520 942 L1660 925 L1800 946 L1960 930 L2120 952 L2280 936 L2440 955 L2620 945 L2620 1440 L-60 1440 Z" fill="url(#far)" opacity="0.8"/>
+  </g>
+  <rect x="0" y="880" width="2560" height="140" fill="#c8502a" opacity="0.18" filter="url(#haze)"/>
+
+  <!-- ── the ridge: the field of the battle, its debris against the sun -->
+  <g filter="url(#rock)">
+    <path d="M-60 1050 L120 1020 L260 1010 L420 990 L560 985 L700 972 L860 980 L1000 968 L1180 985 L1340 975 L1500 992
+      L1680 984 L1860 1000 L2040 992 L2220 1010 L2400 1004 L2620 1020 L2620 1440 L-60 1440 Z" fill="url(#ridge)"/>
+  </g>
+  <g fill="#1c0707">
+    <!-- spears at all angles -->
+    <use xlink:href="#spearR" transform="translate(300 1012) rotate(-14)"/>
+    <use xlink:href="#spearR" transform="translate(340 1010) rotate(9) scale(0.8)"/>
+    <use xlink:href="#spearR" transform="translate(520 990) rotate(-4) scale(1.1)"/>
+    <use xlink:href="#spearR" transform="translate(980 970) rotate(18) scale(0.9)"/>
+    <use xlink:href="#spearR" transform="translate(1030 972) rotate(-22) scale(0.75)"/>
+    <use xlink:href="#spearR" transform="translate(1250 980) rotate(6) scale(1.05)"/>
+    <use xlink:href="#spearR" transform="translate(1440 988) rotate(-10) scale(0.85)"/>
+    <use xlink:href="#spearR" transform="translate(1700 986) rotate(14) scale(0.95)"/>
+    <use xlink:href="#spearR" transform="translate(2140 1002) rotate(-6) scale(0.9)"/>
+    <use xlink:href="#spearR" transform="translate(2300 1006) rotate(20) scale(0.7)"/>
+    <!-- shields leaning on the ground -->
+    <g stroke="#5a1e10" stroke-width="7">
+    <use xlink:href="#shieldR" transform="translate(410 1022) rotate(-20) scale(0.7 0.9)"/>
+    <use xlink:href="#shieldR" transform="translate(760 1000) rotate(15) scale(0.6 0.75)"/>
+    <use xlink:href="#shieldR" transform="translate(1120 1004) rotate(-8) scale(0.75)"/>
+    <use xlink:href="#shieldR" transform="translate(1580 1010) rotate(25) scale(0.55 0.7)"/>
+    <use xlink:href="#shieldR" transform="translate(1960 1018) rotate(-15) scale(0.65)"/>
+    </g>
+  </g>
+  <!-- sun-catching rims on the shields that face left -->
+  <g fill="none" stroke="#f3a05a" stroke-width="3" opacity="0.6">
+    <path d="M384 980 A30 40 -20 0 1 400 958"/><path d="M738 966 A26 34 15 0 1 748 948"/>
+    <path d="M1090 970 A32 34 -8 0 1 1100 946"/><path d="M1938 984 A28 30 -15 0 1 1950 964"/>
+  </g>
+  <!-- tattered banners on poles -->
+  <g>
+    <rect x="618" y="770" width="7" height="215" fill="#1c0707"/>
+    <path d="M625 776 C680 770 720 790 770 782 L752 806 L776 826 C730 834 690 818 625 830 Z" fill="url(#banner)" filter="url(#rough)"/>
+    <rect x="1818" y="780" width="7" height="216" fill="#1c0707"/>
+    <path d="M1825 786 C1870 780 1910 798 1950 792 L1934 812 L1956 830 C1916 838 1880 824 1825 834 Z" fill="url(#banner)" opacity="0.85" filter="url(#rough)"/>
+  </g>
+
+  <!-- ── smoke rising from the field: puffs that widen and lean right with the wind, darkening the top -->
+  <g filter="url(#cloudSoft)">
+    <g fill="#1c0706" opacity="0.6"><ellipse cx="1136" cy="960" rx="50" ry="40"/><ellipse cx="1178" cy="903" rx="69" ry="55"/><ellipse cx="1155" cy="842" rx="88" ry="70"/><ellipse cx="1235" cy="777" rx="106" ry="85"/><ellipse cx="1224" cy="708" rx="125" ry="100"/><ellipse cx="1341" cy="635" rx="144" ry="115"/><ellipse cx="1342" cy="558" rx="162" ry="130"/><ellipse cx="1497" cy="477" rx="181" ry="145"/><ellipse cx="1510" cy="392" rx="200" ry="160"/><ellipse cx="1703" cy="303" rx="219" ry="175"/><ellipse cx="1728" cy="210" rx="238" ry="190"/></g>
+    <g fill="#160505" opacity="0.65"><ellipse cx="1886" cy="980" rx="45" ry="36"/><ellipse cx="1931" cy="922" rx="65" ry="52"/><ellipse cx="1912" cy="860" rx="86" ry="68"/><ellipse cx="2005" cy="792" rx="106" ry="85"/><ellipse cx="2002" cy="720" rx="126" ry="101"/><ellipse cx="2144" cy="642" rx="147" ry="117"/><ellipse cx="2158" cy="560" rx="167" ry="134"/><ellipse cx="2348" cy="472" rx="187" ry="150"/><ellipse cx="2378" cy="380" rx="208" ry="166"/></g>
+    <g fill="#2e0e0a" opacity="0.25"><ellipse cx="346" cy="990" rx="32" ry="26"/><ellipse cx="391" cy="932" rx="47" ry="38"/><ellipse cx="366" cy="867" rx="62" ry="49"/><ellipse cx="461" cy="795" rx="76" ry="61"/><ellipse cx="443" cy="717" rx="91" ry="73"/><ellipse cx="589" cy="632" rx="105" ry="84"/><ellipse cx="578" cy="540" rx="120" ry="96"/></g>
+  </g>
+  <!-- the sun-facing sides of the plumes catch a little light -->
+  <g filter="url(#haze)" opacity="0.4">
+    <path d="M1100 920 C1100 840 1130 760 1170 680" stroke="#e07040" stroke-width="40" fill="none"/>
+    <path d="M1860 940 C1860 860 1890 800 1940 740" stroke="#c0502a" stroke-width="34" fill="none"/>
+  </g>
+
+  <!-- ── foreground: trampled earth rolling down to the left, its crests touched by the low sun -->
+  <g filter="url(#reliefGround)">
+    <path d="M-60 1440 L-60 1180 C120 1168 260 1186 420 1182 C600 1178 760 1150 940 1156 C1120 1162 1240 1186 1420 1188
+      C1600 1190 1760 1178 1940 1186 C2140 1194 2340 1176 2620 1190 L2620 1440 Z" fill="url(#ground)"/>
+  </g>
+  <path d="M-60 1180 C120 1168 260 1186 420 1182 C600 1178 760 1150 940 1156 C1120 1162 1240 1186 1420 1188 C1240 1194 1100 1176
+    940 1172 C780 1168 620 1196 420 1200 C260 1204 100 1190 -60 1200 Z" fill="url(#groundLit)"/>
+  <!-- tufts of dry grass and stones along the crest, against the light -->
+  <g fill="#0e0404">
+    <path d="M200 1180 l6 -34 l4 30 l8 -46 l4 44 l10 -30 l2 32 Z"/><path d="M640 1172 l5 -28 l5 26 l7 -40 l3 38 l9 -24 l2 28 Z"/>
+    <path d="M1080 1166 l6 -30 l4 26 l8 -38 l4 36 l9 -26 l2 30 Z"/><path d="M1300 1186 l4 -22 l4 20 l6 -30 l3 30 l7 -20 l2 22 Z"/>
+    <path d="M2080 1190 l6 -32 l4 28 l8 -42 l4 40 l9 -28 l2 30 Z"/><path d="M2300 1182 l5 -26 l4 24 l7 -36 l3 34 l8 -22 l2 26 Z"/>
+    <ellipse cx="880" cy="1160" rx="30" ry="12"/><ellipse cx="1180" cy="1176" rx="22" ry="9"/><ellipse cx="2200" cy="1188" rx="34" ry="13"/>
+  </g>
+  <g fill="none" stroke="#f3a05a" stroke-width="2" opacity="0.5">
+    <path d="M852 1154 C862 1148 876 1147 888 1149"/><path d="M1160 1172 C1168 1168 1176 1167 1184 1168"/>
+    <path d="M2168 1182 C2180 1176 2196 1175 2208 1177"/>
+  </g>
+  <!-- a short sword dropped in the grass -->
+  <g transform="translate(1180 1240) rotate(-6)">
+    <path d="M-170 -4 L60 -8 L80 0 L60 8 L-170 4 Z" fill="#5a3216"/>
+    <path d="M-170 -4 L60 -8 L80 0 Z" fill="#dba467" opacity="0.7"/>
+    <rect x="-200" y="-22" width="14" height="44" rx="4" fill="#3a1a0a"/>
+    <rect x="-262" y="-7" width="64" height="14" rx="6" fill="#2a1006"/>
+  </g>
+
+  <!-- ── a fallen hoplon in the left foreground, half in shadow -->
+  <g transform="translate(260 1390) rotate(-10) scale(1.2)">
+    <ellipse cx="0" cy="0" rx="250" ry="120" fill="url(#shieldFace)" filter="url(#hammered)"/>
+    <ellipse cx="0" cy="0" rx="250" ry="120" fill="none" stroke="#6a3a18" stroke-width="14" opacity="0.9"/>
+    <ellipse cx="0" cy="0" rx="232" ry="108" fill="none" stroke="#2a1408" stroke-width="5" opacity="0.7"/>
+    <path d="M-250 0 A250 120 0 0 1 -60 -118" fill="none" stroke="#f3c995" stroke-width="5" opacity="0.8"/>
+    <!-- the device painted on it: a boar's tusk curve in danger red, worn -->
+    <path d="M-80 10 C-40 -50 40 -60 90 -20 C50 -30 10 -20 -20 20 Z" fill="#8e1a14" opacity="0.55"/>
+  </g>
+
+  <!-- grass and earth in front of the fallen shield -->
+  <g fill="#080202">
+    <path d="M-60 1440 L-60 1400 C60 1380 160 1400 260 1392 C360 1384 440 1410 560 1440 Z"/>
+    <path d="M90 1392 l7 -40 l5 36 l9 -54 l5 52 l11 -36 l3 40 Z"/><path d="M380 1400 l6 -32 l4 30 l8 -44 l4 42 l9 -28 l2 32 Z"/>
+  </g>
+
+  <!-- ── the spear planted in the ground (key motif, right of the helmet) -->
+  <g transform="translate(2000 1240) rotate(5) scale(0.8)">
+    <rect x="-9" y="-720" width="18" height="720" fill="url(#shaft)"/>
+    <rect x="-9" y="-720" width="3" height="720" fill="#ffb070" opacity="0.5"/>
+    <!-- binding where blade meets shaft -->
+    <g fill="#3a1a0a"><rect x="-12" y="-736" width="24" height="10"/><rect x="-12" y="-722" width="24" height="6"/></g>
+    <rect x="-12" y="-736" width="5" height="20" fill="#dba467" opacity="0.7"/>
+    <!-- leaf-shaped bronze blade -->
+    <path d="M0 -1000 C22 -930 34 -860 28 -800 C24 -770 14 -748 10 -738 L-10 -738 C-14 -748 -24 -770 -28 -800 C-34 -860 -22 -930 0 -1000 Z"
+          fill="url(#blade)"/>
+    <path d="M0 -1000 L0 -740" stroke="#2e1608" stroke-width="3" opacity="0.6"/>
+    <path d="M-1 -990 C-20 -920 -30 -860 -26 -800" stroke="#fff0c8" stroke-width="3" fill="none" opacity="0.7"/>
+    <!-- a strip of red cloth tied below the blade, stirring in the wind -->
+    <path d="M10 -716 C60 -706 100 -690 150 -700 C130 -680 160 -660 190 -662 C140 -640 90 -660 40 -680 C30 -684 18 -690 10 -696 Z"
+          fill="url(#banner)" filter="url(#rough)"/>
+  </g>
+
+  <!-- ── the helmet: bronze, lit from the sun on the left; crest of red horsehair -->
+  <g transform="translate(1600 1222) rotate(-8) scale(1.12)">
+    <!-- shadow cast to the right on the ground -->
+    <ellipse cx="120" cy="18" rx="300" ry="34" fill="#050101" opacity="0.6" filter="url(#glowS)"/>
+    <use xlink:href="#crestShape" fill="url(#crest)"/>
+    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M-89.1 -365.9 L-78.8 -385.3 L-65.6 -402.7 L-49.8 -418.1 L-31.7 -431.5 L-11.5 -442.7 L10.6 -451.7 L34.2 -458.3 L59.1 -462.5 L85.1 -464.2 L111.8 -463.3 L133.4 -460.6 L154.2 -456.0 L173.9 -449.7 L192.6 -441.6 L210.3 -431.8 L226.7 -420.5 L242.0 -407.7 L255.9 -393.5 L268.5 -377.8 L279.7 -361.0 L289.3 -342.9 L297.5 -323.6 L303.3 -305.1 L307.9 -285.9 L311.4 -265.9" stroke="#ff6a4a" stroke-width="2" opacity="0.65"/>
+      <path d="M-95.3 -344.0 L-87.5 -364.4 L-76.6 -382.9 L-63.0 -399.7 L-46.9 -414.5 L-28.6 -427.2 L-8.4 -437.9 L13.6 -446.4 L37.0 -452.6 L61.7 -456.4 L87.3 -457.7 L113.6 -456.5 L134.8 -453.7 L155.1 -448.9 L174.4 -442.5 L192.7 -434.3 L209.9 -424.6 L226.0 -413.3 L240.8 -400.5 L254.4 -386.4 L266.7 -370.9 L277.6 -354.2 L287.0 -336.3 L294.9 -317.3 L300.5 -299.5 L305.0 -280.9 L308.3 -261.8" stroke="#d8302a" stroke-width="2.5" opacity="0.5"/>
+      <path d="M-85.8 -362.8 L-74.4 -380.6 L-60.4 -396.7 L-44.0 -410.8 L-25.6 -423.0 L-5.3 -433.1 L16.6 -441.1 L39.9 -446.8 L64.3 -450.3 L89.6 -451.3 L115.5 -449.8 L136.2 -446.7 L156.0 -441.9 L174.9 -435.3 L192.7 -427.1 L209.5 -417.3 L225.2 -406.1 L239.7 -393.4 L252.9 -379.3 L264.9 -364.0 L275.5 -347.4 L284.7 -329.7 L292.4 -310.9 L297.7 -293.8 L302.0 -276.0 L305.1 -257.6 L307.3 -238.7 L308.4 -219.4" stroke="#ff6a4a" stroke-width="3.5" opacity="0.8"/>
+      <path d="M-100.0 -322.0 L-93.6 -342.4 L-84.2 -361.2 L-72.2 -378.3 L-57.8 -393.6 L-41.1 -407.2 L-22.5 -418.8 L-2.2 -428.3 L19.6 -435.8 L42.7 -441.1 L66.9 -444.2 L91.8 -444.8 L117.3 -443.1 L137.5 -439.8 L156.9 -434.8 L175.3 -428.1 L192.8 -419.9 L209.1 -410.1 L224.4 -398.8 L238.5 -386.2 L251.4 -372.3 L263.1 -357.1 L273.4 -340.7 L282.3 -323.1 L289.8 -304.5 L294.9 -288.2 L299.0 -271.1 L302.0 -253.5 L304.0 -235.3" stroke="#a81c16" stroke-width="2.5" opacity="0.65"/>
+      <path d="M-82.6 -359.6 L-70.0 -375.9 L-55.2 -390.6 L-38.2 -403.5 L-19.5 -414.5 L0.9 -423.5 L22.7 -430.5 L45.6 -435.4 L69.5 -438.0 L94.0 -438.4 L119.1 -436.4 L138.9 -432.9 L157.8 -427.7 L175.8 -420.9 L192.8 -412.6 L208.8 -402.8 L223.6 -391.6 L237.4 -379.1 L249.9 -365.2 L261.2 -350.1 L271.3 -333.9 L280.0 -316.5 L287.3 -298.2 L292.1 -282.5 L296.0 -266.2 L298.9 -249.3 L300.8 -232.0 L301.9 -214.3 L302.1 -196.4 L301.5 -178.2" stroke="#d8302a" stroke-width="3.5" opacity="0.5"/>
+      <path d="M-100.0 -322.0 L-91.8 -340.7 L-81.0 -358.0 L-67.8 -373.6 L-52.5 -387.6 L-35.3 -399.8 L-16.4 -410.2 L4.0 -418.7 L25.7 -425.2 L48.4 -429.7 L72.0 -431.9 L96.3 -431.9 L120.9 -429.6 L140.3 -425.9 L158.7 -420.6 L176.3 -413.8 L192.8 -405.4 L208.4 -395.6 L222.9 -384.4 L236.2 -371.9 L248.4 -358.1 L259.4 -343.2 L269.2 -327.1 L277.6 -310.0 L284.7 -291.8 L289.3 -276.8 L293.0 -261.2 L295.7 -245.2 L297.6 -228.6 L298.6 -211.8 L298.8 -194.7 L298.2 -177.4" stroke="#d8302a" stroke-width="3.5" opacity="0.5"/>
+      <path d="M-90.9 -339.9 L-79.4 -356.4 L-65.6 -371.3 L-49.9 -384.6 L-32.4 -396.2 L-13.4 -406.0 L7.1 -414.0 L28.7 -420.0 L51.3 -423.9 L74.6 -425.8 L98.5 -425.5 L122.7 -422.9 L141.6 -419.0 L159.6 -413.5 L176.7 -406.6 L192.9 -398.1 L208.0 -388.3 L222.1 -377.2 L235.1 -364.7 L246.9 -351.1 L257.6 -336.3 L267.1 -320.3 L275.3 -303.4 L282.2 -285.5 L286.6 -271.2 L290.0 -256.3 L292.6 -241.0 L294.3 -225.3 L295.3 -209.2 L295.5 -193.0 L294.9 -176.5 L293.7 -160.0" stroke="#d8302a" stroke-width="2" opacity="0.5"/>
+      <path d="M-90.0 -339.1 L-77.7 -354.8 L-63.5 -369.0 L-47.3 -381.6 L-29.5 -392.5 L-10.3 -401.8 L10.2 -409.2 L31.7 -414.7 L54.2 -418.2 L77.2 -419.7 L100.7 -419.0 L124.5 -416.2 L143.0 -412.1 L160.6 -406.5 L177.2 -399.4 L192.9 -390.9 L207.6 -381.1 L221.3 -369.9 L233.9 -357.6 L245.4 -344.0 L255.8 -329.3 L265.0 -313.6 L272.9 -296.8 L279.6 -279.1 L283.8 -265.5 L287.0 -251.4 L289.4 -236.9 L291.1 -221.9 L292.0 -206.7 L292.2 -191.3 L291.7 -175.7" stroke="#a81c16" stroke-width="3" opacity="0.65"/>
+      <path d="M-89.1 -338.3 L-76.1 -353.2 L-61.3 -366.6 L-44.7 -378.6 L-26.6 -388.9 L-7.2 -397.5 L13.3 -404.4 L34.8 -409.4 L57.0 -412.5 L79.8 -413.6 L103.0 -412.6 L126.4 -409.5 L144.4 -405.2 L161.5 -399.4 L177.7 -392.2 L193.0 -383.7 L207.3 -373.8 L220.5 -362.7 L232.8 -350.4 L244.0 -336.9 L254.0 -322.4 L262.9 -306.8 L270.6 -290.2 L277.1 -272.7 L281.0 -259.8 L284.0 -246.5 L286.3 -232.7 L287.9 -218.6" stroke="#a81c16" stroke-width="2.5" opacity="0.5"/>
+      <path d="M-88.2 -337.5 L-74.5 -351.6 L-59.1 -364.3 L-42.1 -375.5 L-23.7 -385.2 L-4.2 -393.2 L16.4 -399.6 L37.8 -404.1 L59.9 -406.8 L82.4 -407.5 L105.2 -406.1 L128.2 -402.7 L145.7 -398.2 L162.4 -392.3 L178.2 -385.0 L193.0 -376.4 L206.9 -366.6 L219.8 -355.5 L231.6 -343.2 L242.5 -329.9 L252.2 -315.5 L260.8 -300.0 L268.3 -283.7 L274.5 -266.4 L278.2 -254.2 L281.0 -241.6 L283.2 -228.6 L284.6 -215.2 L285.4 -201.6" stroke="#6a0e0c" stroke-width="3" opacity="0.65"/>
+      <path d="M-87.3 -336.6 L-72.9 -350.0 L-56.9 -362.0 L-39.5 -372.5 L-20.8 -381.6 L-1.1 -389.0 L19.5 -394.8 L40.8 -398.8 L62.7 -401.0 L85.0 -401.4 L107.5 -399.7 L130.0 -396.0 L147.1 -391.3 L163.3 -385.2 L178.6 -377.8 L193.0 -369.2 L206.5 -359.3 L219.0 -348.2 L230.5 -336.1 L241.0 -322.8 L250.4 -308.5 L258.7 -293.3 L265.9 -277.1 L272.0 -260.0 L275.4 -248.5 L278.0 -236.6 L280.0 -224.4 L281.4 -211.9 L282.1 -199.1 L282.3 -186.2 L281.9 -173.1" stroke="#6a0e0c" stroke-width="3" opacity="0.65"/>
+      <path d="M-100.0 -322.0 L-86.4 -335.8 L-71.3 -348.4 L-54.7 -359.6 L-36.9 -369.5 L-17.9 -377.9 L1.9 -384.8 L22.6 -390.0 L43.8 -393.5 L65.6 -395.3 L87.6 -395.2 L109.7 -393.3 L131.8 -389.3 L148.4 -384.4 L164.2 -378.2 L179.1 -370.7 L193.1 -361.9 L206.1 -352.1 L218.2 -341.0 L229.3 -328.9 L239.5 -315.8 L248.6 -301.6 L256.6 -286.5 L263.6 -270.5 L269.5 -253.6 L272.6 -242.9 L275.1 -231.7 L276.9 -220.3 L278.1 -208.5" stroke="#a81c16" stroke-width="3" opacity="0.5"/>
+      <path d="M-69.7 -346.8 L-52.5 -357.3 L-34.3 -366.5 L-15.0 -374.2 L5.0 -380.5 L25.7 -385.2 L46.9 -388.2 L68.4 -389.6 L90.1 -389.1 L111.9 -386.8 L133.6 -382.5 L149.8 -377.4 L165.1 -371.1 L179.6 -363.5 L193.1 -354.7 L205.8 -344.8 L217.5 -333.8 L228.2 -321.7 L238.0 -308.7 L246.8 -294.7 L254.5 -279.7 L261.2 -263.9 L266.9 -247.3 L269.8 -237.2 L272.1 -226.8 L273.8 -216.1 L274.9 -205.2 L275.5 -194.0 L275.7 -182.8" stroke="#a81c16" stroke-width="3.5" opacity="0.8"/>
+      <path d="M-68.0 -345.2 L-50.3 -355.0 L-31.6 -363.5 L-12.1 -370.6 L8.0 -376.2 L28.8 -380.4 L49.9 -383.0 L71.3 -383.8 L92.7 -383.0 L114.2 -380.4 L135.5 -375.8 L151.2 -370.5 L166.0 -364.0 L180.0 -356.3 L193.2 -347.5 L205.4 -337.5 L216.7 -326.6 L227.1 -314.6 L236.5 -301.6 L244.9 -287.7 L252.4 -273.0 L258.9 -257.3 L264.4 -240.9 L267.0 -231.5 L269.1 -221.9 L270.6 -212.0 L271.7 -201.8 L272.2 -191.5 L272.4 -181.1 L272.1 -170.6" stroke="#6a0e0c" stroke-width="2.5" opacity="0.5"/>
+      <path d="M-66.4 -343.6 L-48.1 -352.7 L-29.0 -360.5 L-9.2 -366.9 L11.1 -372.0 L31.9 -375.6 L52.9 -377.7 L74.1 -378.1 L95.3 -376.9 L116.4 -373.9 L137.3 -369.1 L152.5 -363.6 L167.0 -356.9 L180.5 -349.1 L193.2 -340.2 L205.0 -330.3 L215.9 -319.3 L225.9 -307.4 L235.0 -294.6 L243.1 -280.8 L250.3 -266.2 L256.6 -250.8 L261.8 -234.5 L264.2 -225.9 L266.1 -217.0 L267.5 -207.8 L268.4 -198.5 L268.9 -189.0 L269.1 -179.4 L268.8 -169.7 L268.3 -160.0" stroke="#6a0e0c" stroke-width="3" opacity="0.65"/>
+      <path d="M-100.0 -322.0 L-82.9 -332.5 L-64.8 -342.0 L-45.9 -350.3 L-26.4 -357.4 L-6.3 -363.3 L14.2 -367.8 L35.0 -370.8 L55.9 -372.4 L77.0 -372.4 L97.9 -370.8 L118.7 -367.5 L139.1 -362.4 L153.9 -356.7 L167.9 -349.8 L181.0 -341.9 L193.2 -333.0 L204.6 -323.0 L215.1 -312.1 L224.8 -300.3 L233.5 -287.5 L241.3 -273.9 L248.2 -259.4 L254.2 -244.2 L259.3 -228.2 L261.4 -220.2 L263.1 -212.0 L264.3 -203.7 L265.2 -195.1" stroke="#6a0e0c" stroke-width="3" opacity="0.65"/>
+      <path d="M-100.0 -322.0 L-82.0 -331.7 L-63.2 -340.4 L-43.8 -348.0 L-23.8 -354.4 L-3.4 -359.6 L17.2 -363.5 L38.1 -366.0 L59.0 -367.1 L79.8 -366.7 L100.5 -364.7 L120.9 -361.0 L140.9 -355.6 L155.3 -349.7 L168.8 -342.8 L181.5 -334.8 L193.3 -325.8 L204.3 -315.8 L214.4 -304.9 L223.6 -293.1 L232.0 -280.4 L239.5 -266.9 L246.1 -252.7 L251.9 -237.6 L256.7 -221.8 L258.6 -214.6 L260.1 -207.1 L261.2 -199.5 L261.9 -191.8 L262.4 -183.9" stroke="#3a0606" stroke-width="2.5" opacity="0.8"/>
+      <path d="M-81.1 -330.9 L-61.6 -338.8 L-41.6 -345.7 L-21.2 -351.4 L-0.5 -356.0 L20.3 -359.2 L41.1 -361.2 L62.0 -361.8 L82.7 -360.9 L103.1 -358.5 L123.1 -354.6 L142.7 -348.9 L156.6 -342.8 L169.7 -335.7 L181.9 -327.6 L193.3 -318.5 L203.9 -308.5 L213.6 -297.7 L222.5 -285.9 L230.5 -273.4 L237.7 -260.0 L244.0 -245.9 L249.5 -231.0 L254.2 -215.5 L255.8 -208.9 L257.1 -202.2 L258.1 -195.4 L258.7 -188.4 L259.1 -181.4 L259.2 -174.3 L259.0 -167.2 L258.7 -160.0" stroke="#6a0e0c" stroke-width="3.5" opacity="0.65"/>
+      <path d="M-59.9 -337.2 L-39.4 -343.3 L-18.6 -348.4 L2.4 -352.3 L23.3 -355.0 L44.2 -356.4 L65.0 -356.5 L85.5 -355.2 L105.7 -352.4 L125.4 -348.1 L144.5 -342.2 L158.0 -335.9 L170.6 -328.6 L182.4 -320.4 L193.4 -311.3 L203.5 -301.3 L212.8 -290.4 L221.3 -278.8 L229.0 -266.3 L235.9 -253.1 L241.9 -239.1 L247.2 -224.4 L251.6 -209.1 L253.0 -203.2 L254.1 -197.3 L254.9 -191.2 L255.5 -185.1" stroke="#3a0606" stroke-width="3.5" opacity="0.5"/>
+      <path d="M-58.3 -335.6 L-37.2 -341.0 L-16.0 -345.4 L5.3 -348.6 L26.4 -350.8 L47.3 -351.6 L68.0 -351.2 L88.4 -349.5 L108.3 -346.3 L127.6 -341.7 L146.4 -335.5 L159.4 -328.9 L171.5 -321.5 L182.9 -313.2 L193.4 -304.0 L203.1 -294.0 L212.0 -283.2 L220.2 -271.6 L227.5 -259.2 L234.1 -246.1 L239.8 -232.3 L244.8 -217.9 L249.1 -202.7 L250.2 -197.6 L251.1 -192.3 L251.8 -187.1 L252.2 -181.7 L252.5 -176.3 L252.6 -170.9" stroke="#3a0606" stroke-width="2" opacity="0.5"/>
+      <path d="M-56.7 -334.0 L-35.0 -338.7 L-13.4 -342.4 L8.2 -345.0 L29.4 -346.5 L50.4 -346.8 L71.1 -346.0 L91.2 -343.8 L110.8 -340.2 L129.9 -335.2 L148.2 -328.7 L160.7 -322.0 L172.4 -314.4 L183.3 -306.0 L193.4 -296.8 L202.7 -286.8 L211.3 -276.0 L219.0 -264.4 L226.0 -252.2 L232.2 -239.2 L237.7 -225.6 L242.5 -211.3 L246.5 -196.4 L247.5 -191.9 L248.1 -187.4 L248.7 -182.9 L249.0 -178.4" stroke="#3a0606" stroke-width="2.5" opacity="0.65"/>
+    </g>
+    <!-- crest holder -->
+    <path d="M-70 -330 C-20 -350 60 -350 120 -322 L110 -306 C60 -330 -20 -332 -64 -314 Z" fill="#6a4020"/>
+    <use xlink:href="#helm" fill="url(#bronze)"/>
+    <use xlink:href="#helm" fill="url(#bronzeV)"/>
+    <!-- eye opening and the slit down to the cheek piece -->
+    <path d="M-186 -152 C-156 -180 -100 -184 -58 -152 C-92 -130 -152 -128 -186 -152 Z" fill="#0a0302"/>
+    <path d="M-182 -140 L-176 -56 L-166 -56 L-156 -134 Z" fill="#0a0302"/>
+    <!-- brow ridge and the raised edge along the rim -->
+    <path d="M-190 -170 C-150 -200 -80 -206 -30 -176" fill="none" stroke="#f3c995" stroke-width="5" opacity="0.75"/>
+    <path d="M-164 -28 C-160 2 -148 22 -118 30 C-80 38 -40 32 -14 16 C4 -10 12 -40 30 -64 C52 -30 92 -6 142 -2 L190 0"
+          fill="none" stroke="#2a1408" stroke-width="6" opacity="0.6"/>
+    <!-- engraved spiral on the cheek piece -->
+    <path d="M-110 -40 C-100 -70 -60 -70 -60 -44 C-60 -26 -84 -24 -88 -40" fill="none" stroke="#5a3218" stroke-width="3"/>
+    <!-- rim light along the face side and the specular streak over the dome -->
+    <path d="M-52 -332 C-132 -312 -178 -252 -188 -190 L-194 -148 L-198 -70" fill="none" stroke="#fff0c8" stroke-width="4" opacity="0.9"/>
+    <path d="M190 0 C222 -60 218 -170 176 -242 C150 -286 120 -310 90 -326" fill="none" stroke="#e0603a" stroke-width="3.5" opacity="0.75"/>
+    <path d="M-164 -28 C-160 2 -148 22 -118 30 C-80 38 -40 32 -14 16" fill="none" stroke="#c0502a" stroke-width="3" opacity="0.5"/>
+    <path d="M-120 -290 C-80 -320 -20 -332 40 -326" fill="none" stroke="#fff6dc" stroke-width="7" opacity="0.55" filter="url(#glowXS)"/>
+  </g>
+
+  <!-- ── embers rising from the field -->
+  <g fill="#ffb070" filter="url(#glowXS)">
+    <circle cx="1180" cy="900" r="3"/><circle cx="1230" cy="820" r="2.5"/><circle cx="1150" cy="760" r="2"/>
+    <circle cx="1320" cy="700" r="2"/><circle cx="1900" cy="880" r="3"/><circle cx="1950" cy="790" r="2"/>
+    <circle cx="1460" cy="1060" r="2.5"/><circle cx="880" cy="1040" r="2"/><circle cx="560" cy="900" r="2"/>
+    <circle cx="1560" cy="940" r="2"/><circle cx="2120" cy="960" r="2.5"/><circle cx="1270" cy="1100" r="3"/>
+  </g>
+  <g fill="#ff6a4a" opacity="0.8">
+    <circle cx="1180" cy="900" r="1.4"/><circle cx="1900" cy="880" r="1.4"/><circle cx="1270" cy="1100" r="1.4"/>
+  </g>
+
+  <!-- ── finish: quiet top for the bar, darker top-right for notifications, vignette, grain -->
+  <rect width="2560" height="300" fill="url(#topShade)"/>
+  <rect width="2560" height="1440" fill="url(#cornerShade)"/>
+  <rect width="2560" height="1440" fill="url(#vignette)"/>
+  <rect width="2560" height="1440" filter="url(#grain)"/>
+</svg>

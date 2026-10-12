@@ -57,6 +57,33 @@ for t in default/themes/*/theme.json; do
         cp "$cache"/frame-*.png "$share/themes/$id/wallpaper/$h/"
     done
 done
+# Every god's illustration (art/illustrations/<id>.svg, the second background in its theme.json): one still frame per
+# size, drawn by rsvg-convert, in themes/<id>/backgrounds/<bg>/<h>/frame-00.png. Kept in build/illustrations/<id>/<h>
+# until the SVG changes. All 14 together stay under 80 MB on the ISO (docs/themes.md).
+command -v rsvg-convert >/dev/null || { echo "dev/build-iso: rsvg-convert mangler (pacman -S librsvg)" >&2; exit 1; }
+jobs=()
+for svg in art/illustrations/*.svg; do
+    id=$(basename "$svg" .svg)
+    for size in 1920x1080 2560x1440; do
+        w=${size%x*} h=${size#*x}
+        cache=build/illustrations/$id/$h
+        if [ -s "$cache/frame-00.png" ] && [ "$cache/frame-00.png" -nt "$svg" ] && [ "$cache/frame-00.png" -nt art/illustrations/render.py ]; then :; else
+            jobs+=("$svg $cache $w $h")
+        fi
+    done
+done
+if [ ${#jobs[@]} -gt 0 ]; then
+    printf '%s\n' "${jobs[@]}" | xargs -P "$(nproc)" -L1 sh -c 'if command -v uv >/dev/null; then uv run -q --no-project --with pillow python art/illustrations/render.py "$@"; else python art/illustrations/render.py "$@"; fi >/dev/null' render
+fi
+for svg in art/illustrations/*.svg; do
+    id=$(basename "$svg" .svg)
+    bg=$(python3 -I -c 'import json, sys; print(json.load(open(sys.argv[1]))["backgrounds"][0]["id"])' "default/themes/$id/theme.json")
+    for h in 1080 1440; do
+        mkdir -p "$share/themes/$id/backgrounds/$bg/$h"
+        cp "build/illustrations/$id/$h/frame-00.png" "$share/themes/$id/backgrounds/$bg/$h/"
+    done
+done
+du -ch "$share"/themes/*/backgrounds | tail -1
 du -sh "$share/themes" "$share/wallpaper"
 # (Plymouth and the Limine menu stay gold for every theme: they run before anyone has logged in.)
 # ── end Themes
