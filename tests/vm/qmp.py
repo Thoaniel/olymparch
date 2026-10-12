@@ -1,0 +1,56 @@
+"""Tiny QMP client for the VM tests (stdlib only).
+
+  qmp.py SOCKET screendump OUT.png
+  qmp.py SOCKET keys "text to type\n"      types with US qcodes
+  qmp.py SOCKET quit
+"""
+import json
+import socket
+import sys
+import time
+
+QCODE = {" ": "spc", "\n": "ret", "-": "minus", "=": "equal", ".": "dot", ",": "comma", "/": "slash",
+         ";": "semicolon", "'": "apostrophe", "[": "bracket_left", "]": "bracket_right", "\\": "backslash",
+         "`": "grave_accent", "\t": "tab"}
+SHIFTED = {"_": "minus", "+": "equal", ":": "semicolon", '"': "apostrophe", "?": "slash", ">": "dot", "<": "comma",
+           "!": "1", "@": "2", "#": "3", "$": "4", "%": "5", "^": "6", "&": "7", "*": "8", "(": "9", ")": "0",
+           "{": "bracket_left", "}": "bracket_right", "|": "backslash", "~": "grave_accent"}
+
+
+class QMP:
+    def __init__(self, path):
+        self.s = socket.socket(socket.AF_UNIX)
+        self.s.connect(path)
+        self.f = self.s.makefile("rw")
+        json.loads(self.f.readline())  # greeting
+        self.cmd("qmp_capabilities")
+
+    def cmd(self, name, **args):
+        self.f.write(json.dumps({"execute": name, "arguments": args} if args else {"execute": name}) + "\n")
+        self.f.flush()
+        while True:
+            msg = json.loads(self.f.readline())
+            if "return" in msg or "error" in msg:
+                if "error" in msg:
+                    raise RuntimeError(msg["error"])
+                return msg["return"]
+
+    def key(self, ch):
+        if ch in SHIFTED or ch.isupper():
+            keys = ["shift", SHIFTED.get(ch, ch.lower())]
+        else:
+            keys = [QCODE.get(ch, ch)]
+        self.cmd("send-key", keys=[{"type": "qcode", "data": k} for k in keys])
+        time.sleep(0.04)
+
+
+if __name__ == "__main__":
+    q = QMP(sys.argv[1])
+    op = sys.argv[2]
+    if op == "screendump":
+        q.cmd("screendump", filename=sys.argv[3], format="png")
+    elif op == "keys":
+        for ch in sys.argv[3].encode().decode("unicode_escape"):
+            q.key(ch)
+    elif op == "quit":
+        q.cmd("quit")

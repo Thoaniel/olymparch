@@ -1,0 +1,10 @@
+#!/bin/bash
+# Build the Olymparch ISO as a normal user. mkarchiso runs pacstrap -N and its other steps in a user
+# namespace when it is not root (needs entries for you in /etc/subuid and /etc/subgid).
+set -euo pipefail
+cd "$(dirname "$0")/.."
+. dev/env
+mkdir -p cache out
+rm -rf -- work
+mkarchiso -v -r -w work -o out iso
+ls -lh out/*.iso | tail -1

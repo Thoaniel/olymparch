@@ -1,3 +1,6 @@
 out/
+work/
+cache/
 *.qcow2
 *.iso
+tests/vm/out/
