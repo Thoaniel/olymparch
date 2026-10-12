@@ -49,7 +49,7 @@ if [ "${OLYMPARCH_TEST_HOLD:-0}" = 1 ]; then   # debugging: keep the prepared VM
     exit 0
 fi
 
-# ── every level (top: Apper 0, Stil 1, Installer 2, Fjern 3, Verktøy 4, Oppsett 5, Oppdater 6, System 7, Hjelp 8)
+# ── every level (top: Apper, Stil, Installer, Fjern, Verktøy («kommer»: skipped by the arrows), Oppsett, Oppdater, System, Hjelp)
 menu_open
 shot meny "Super+Alt+Space: Olymparch-menyen, øverste nivå"
 press down; press ret; sleep 0.5
@@ -60,14 +60,12 @@ press esc; press esc
 press down; press ret; sleep 0.5
 shot installer "Installer: Apper, Nettapp (kommer), Pakke"
 press ret; sleep 0.8
-shot katalog "Installer › Apper: katalogen (ett klikk via install-app)"
+shot katalog "Installer › Apper: utvalgte apper (install-app, fast liste)"
 press esc; press esc
 press down; press ret; sleep 3
 shot fjern "Fjern: det du har installert selv (ingen systempakker)"
 press esc
-press down; press ret; sleep 0.5
-shot verktoy "Verktøy (olymparch-tool mangler ennå: «kommer»)"
-press esc
+shot verktoy "Verktøy er «kommer» på øverste nivå (olymparch-tool mangler ennå); piltastene hopper over den"
 press down; press ret; sleep 0.5
 shot oppsett "Oppsett: Wi-Fi, Bluetooth, Skjermer, Lyd, Tastatur"
 press esc
