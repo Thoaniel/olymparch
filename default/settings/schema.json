@@ -181,7 +181,7 @@
       "label": { "en": "Bluetooth", "nb": "Bluetooth" }, "description": { "en": "Radio on or off", "nb": "Radioen av eller på" },
       "apply": { "via": "bluetooth", "command": "bluetoothctl power on|off" } },
     { "key": "bluetooth.devices", "page": "bluetooth", "level": "simple", "type": "action", "widget": "items", "ready": true,
-      "label": { "en": "Pair, connect and disconnect", "nb": "Par, koble til og fra" }, "description": { "en": "Click a device; «Search» finds new ones (put them in pairing mode first)", "nb": "Klikk en enhet; «Søk» finner nye (sett dem i paringsmodus først)" },
+      "label": { "en": "Pair, connect and disconnect", "nb": "Par, koble til og fra" }, "description": { "en": "Click a device; «Search again» finds new ones (put them in pairing mode first)", "nb": "Klikk en enhet; «Søk på nytt» finner nye (sett dem i paringsmodus først)" },
       "apply": { "via": "action", "command": "olymparch-settings items bluetooth.devices" } },
     { "key": "bluetooth.controller_mode", "page": "bluetooth", "level": "advanced", "type": "choice", "widget": "segmented", "default": "dual", "ready": false,
       "options": [ { "value": "dual", "label": { "en": "Dual", "nb": "Begge" } }, { "value": "le", "label": { "en": "LE", "nb": "LE" } }, { "value": "bredr", "label": { "en": "Classic", "nb": "Klassisk" } } ],

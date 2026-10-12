@@ -25,7 +25,7 @@ quick=${OLYMPARCH_TEST_QUICK:-0}   # 1: skip the pages, wallpaper, scale and do-
 
 # check NAME 'condition': runs in the VM terminal (needs focus there), the answer comes back on the serial console
 check() {
-    keys "c $1 '$2'\n" 0.3
+    keys " c $1 '$2'\n" 0.3
     wait_for "CHK-$1-(OK|NO)" 30
     seen "CHK-$1-OK" || fails+=("$1")
 }
@@ -49,7 +49,7 @@ search() {  # search WORD: Ctrl+F in Settings, type, Enter goes to the first con
     shot "sok-$1" "Søk: «$1»"
     press ret; sleep 0.5
 }
-close_settings() { press esc; press esc; sleep 1; }
+close_settings() { press esc; press esc; sleep 2; }   # the terminal has the keyboard again before we type
 
 vm boot.log -virtfs local,path="$PWD",mount_tag=olysrc,security_model=none,readonly=on,id=src \
     -audiodev none,id=snd0 -device ich9-intel-hda -device hda-duplex,audiodev=snd0
@@ -183,7 +183,7 @@ press ret; sleep 2
 shot nett-kabel "Kabel: tilstand, adresse og hastighet fra NetworkManager"
 close_settings
 check wired 'olymparch-settings wired | grep -q "connected"'
-check wifi-none 'olymparch-settings items network.wifi | grep -q "^! no Wi-Fi"'
+check wifi-none 'olymparch-settings items network.wifi | grep -q "^! nowifi"'
 check wifi-refuses 'olymparch-settings pick network.wifi "$(printf "a\nb")"; [ $? = 2 ]'
 keys "clear; olymparch-settings run network.vpn; sleep 2.5; c vpn 'pgrep -x nmtui || pgrep -x nm-connection-editor'\n" 3
 wait_for 'CHK-vpn-(OK|NO)' 30; seen 'CHK-vpn-OK' || fails+=(vpn)

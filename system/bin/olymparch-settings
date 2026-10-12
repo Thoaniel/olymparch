@@ -670,7 +670,10 @@ elseif cmd == "set" then
     if s.installed and v ~= "" and not have(v) then die(("%s: %s is not installed"):format(s.key, v), 2) end
     if s.apply.key == "bind" then
         local o, c = shortcut_conflict(s, v, values)
-        if o then die(("%s: %s is already %s (%s)"):format(s.key, c:upper(), o.key, label(o)), 4) end
+        if o then
+            local nb = (os.getenv("LANG") or ""):match("^n[bno]")
+            die((nb and "%s er allerede «%s» (%s)" or "%s is already «%s» (%s)"):format(c:upper(), label(o), o.key), 4)
+        end
     end
     if try then
         revert()   -- one question at a time
@@ -775,8 +778,13 @@ elseif cmd == "about" then
 elseif cmd == "items" or cmd == "pick" then
     local key = arg[2] or die("usage: " .. cmd .. " KEY …", 2)
     local function clean(t) return ((t or ""):gsub("%c", " ")) end
+    if cmd == "pick" then   -- what was clicked is checked before anything else runs
+        local id = arg[3] or die("usage: pick KEY ID", 2)
+        if key == "network.wifi" and (#id > 32 or id == "" or id:find("%c")) then die("not a network name", 2) end
+        if key == "bluetooth.devices" and not id:match("^%x%x:%x%x:%x%x:%x%x:%x%x:%x%x$") then die("not a device address", 2) end
+    end
     if key == "network.wifi" then
-        if not have("nmcli") then print("! NetworkManager (nmcli) is not installed"); os.exit(0) end
+        if not have("nmcli") then print("! nonm NetworkManager (nmcli) is not installed"); os.exit(0) end
         -- security as a class: open, wep or wpa (WPA2/WPA3/OWE/802.1X). A saved network is only joined through its
         -- own connection (by UUID), and only when an access point with that name offers the same class: an open
         -- or WEP twin of a WPA network is never joined in its place.
@@ -815,7 +823,7 @@ elseif cmd == "items" or cmd == "pick" then
             return false
         end
         if cmd == "items" then
-            if capture("nmcli -t -f TYPE device"):find("wifi") == nil then print("! no Wi-Fi adapter"); os.exit(0) end
+            if capture("nmcli -t -f TYPE device"):find("wifi") == nil then print("! nowifi no Wi-Fi adapter"); os.exit(0) end
             if arg[3] == "--scan" then os.execute("nmcli device wifi rescan >/dev/null 2>&1; sleep 3") end
             local seen = {}
             for _, n in ipairs(wifi_list()) do
@@ -849,16 +857,16 @@ elseif cmd == "items" or cmd == "pick" then
         end
     elseif key == "bluetooth.devices" then
         local function bt(args) return capture("timeout 5 bluetoothctl " .. args) end
-        if not have("bluetoothctl") then print("! Bluetooth (bluez) is not installed: no adapter was found"); os.exit(0) end
+        if not have("bluetoothctl") then print("! nobluez Bluetooth (bluez) is not installed: no adapter was found"); os.exit(0) end
         local show = bt("show")
-        if not show:find("Controller") then print("! no Bluetooth adapter"); os.exit(0) end
+        if not show:find("Controller") then print("! nobt no Bluetooth adapter"); os.exit(0) end
         local function set_of(args)
             local t = {}
             for mac in bt(args):gmatch("Device (%x%x:%x%x:%x%x:%x%x:%x%x:%x%x)") do t[mac] = true end
             return t
         end
         if cmd == "items" then
-            if not show:find("Powered: yes") then print("! Bluetooth is off"); os.exit(0) end
+            if not show:find("Powered: yes") then print("! btoff Bluetooth is off"); os.exit(0) end
             if arg[3] == "--scan" then os.execute("timeout 12 bluetoothctl --timeout 10 scan on >/dev/null 2>&1") end
             local paired, connected = set_of("devices Paired"), set_of("devices Connected")
             for mac, name in bt("devices"):gmatch("Device (%x%x:%x%x:%x%x:%x%x:%x%x:%x%x) ([^\n]*)") do

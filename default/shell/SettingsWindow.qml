@@ -48,7 +48,11 @@ Scope {
         Settings.run(["items", key].concat(scan ? ["--scan"] : []), out => {
             const lines = [], msgs = [];
             for (const l of out.split("\n").filter(l => l)) {
-                if (l.startsWith("! ")) { msgs.push(l.slice(2)); continue; }
+                if (l.startsWith("! ")) {   // "! CODE english text": the code picks the translation
+                    const m = l.match(/^! (\S+) (.*)$/);
+                    msgs.push(m ? I18n.t("settings.items." + m[1], m[2]) : l.slice(2));
+                    continue;
+                }
                 const t = l.split("\t");
                 lines.push({ id: t[0], state: t[1], name: t[2] || t[0], detail: t[3] || "" });
             }
@@ -786,12 +790,13 @@ Scope {
                                         readonly property var d: win.items[row.s.key] || { lines: [], message: "", busy: "" }
                                         Row {
                                             spacing: 8
+                                            visible: itm.d.message === ""   // no adapter: nothing to search with
                                             Rectangle {
                                                 id: scanBtn
                                                 width: scanText.implicitWidth + 24; height: 26
                                                 color: win.theme.raised
                                                 border.color: activeFocus ? win.theme.gold : win.theme.line
-                                                activeFocusOnTab: itm.visible && row.ready
+                                                activeFocusOnTab: itm.visible && row.ready && itm.d.message === ""
                                                 onActiveFocusChanged: if (activeFocus) list.show(row)
                                                 Keys.onReturnPressed: win.loadItems(row.s.key, true)
                                                 Keys.onSpacePressed: win.loadItems(row.s.key, true)
