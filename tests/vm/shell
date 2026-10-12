@@ -4,13 +4,13 @@
 set -uo pipefail
 cd "$(dirname "$0")/../.."
 . dev/env
-SRC=tests/vm/out/install-disk
+SRC=${OLYMPARCH_BASE:-tests/vm/out/install-disk}   # a read-only installed disk to test on (overlay)
 [ -f "$SRC/disk.qcow2" ] || { echo "kjør tests/vm/install-disk først" >&2; exit 2; }
 O=tests/vm/out/shell
 rm -rf -- tests/vm/out/shell
 mkdir -p "$O"
 cp "$SRC/vars.fd" "$O/vars.fd"
-qemu-img create -q -f qcow2 -b "$PWD/$SRC/disk.qcow2" -F qcow2 "$O/disk.qcow2"
+qemu-img create -q -f qcow2 -b "$(realpath "$SRC/disk.qcow2")" -F qcow2 "$O/disk.qcow2"
 QMP=$O/qmp.sock
 . tests/vm/lib.sh
 PW='olymp-test-123'
