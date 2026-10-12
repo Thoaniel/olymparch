@@ -1,35 +1,59 @@
 # Builds the [olymparch] pacman repo from repo/packages.tsv and publishes it as the assets of the release
 # "repo-x86_64". Installed systems use: Server = https://github.com/<owner>/olymparch/releases/download/repo-x86_64
-# Secret OLYMPARCH_SIGNING_KEY: the ASCII-armoured private signing key (no passphrase; only this workflow sees it).
+#
+# Two jobs on purpose: "build" runs the AUR PKGBUILDs with no secrets and a read-only token; "publish" signs and
+# uploads without running any PKGBUILD code. Secret OLYMPARCH_SIGNING_KEY: the ASCII-armoured private key.
 name: repo
 on:
   push:
     branches: [main]
     paths: [repo/**]
   workflow_dispatch:
-permissions:
-  contents: write
 concurrency: repo
 jobs:
   build:
     runs-on: ubuntu-latest
     container: archlinux:base-devel
+    permissions:
+      contents: read
+    steps:
+      - run: pacman -Syu --noconfirm --needed git
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - run: repo/build build out
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: packages
+          path: out/*.pkg.tar.zst
+          retention-days: 1
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    permissions:
+      contents: write
     steps:
       - run: pacman -Syu --noconfirm --needed git github-cli
-      - uses: actions/checkout@v4
-      - name: Signing key
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: packages
+          path: out
+      - name: Sign
         env:
           KEY: ${{ secrets.OLYMPARCH_SIGNING_KEY }}
         run: |
           [ -n "$KEY" ] || { echo "OLYMPARCH_SIGNING_KEY is not set" >&2; exit 1; }
           printf '%s\n' "$KEY" | gpg --batch --import
-          echo "KEYID=$(gpg --batch --list-secret-keys --with-colons | awk -F: '/^fpr/ {print $10; exit}')" >>"$GITHUB_ENV"
-      - run: repo/build out "$KEYID"
+          repo/build sign out "$(gpg --batch --list-secret-keys --with-colons | awk -F: '/^fpr/ {print $10; exit}')"
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          git config --global --add safe.directory "$PWD"
           gh release view repo-x86_64 >/dev/null 2>&1 ||
             gh release create repo-x86_64 --title "Package repo (x86_64)" --notes "pacman repo [olymparch]" --latest=false
           gh release upload repo-x86_64 out/* --clobber

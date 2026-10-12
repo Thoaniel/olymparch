@@ -3,11 +3,15 @@ on:
   push:
     branches: [main]
   pull_request:
+permissions:
+  contents: read
 jobs:
   checks:
     runs-on: ubuntu-latest
     container: archlinux:latest
     steps:
       - run: pacman -Syu --noconfirm --needed shellcheck python lua git
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - run: tests/ci-checks
