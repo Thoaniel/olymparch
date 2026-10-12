@@ -64,6 +64,9 @@ wait_for 'SETTINGS-UPDATED' 40 || finish "FAIL · fikk ikke kopiert filene inn"
 # (recovery key, media keys, update check, colour filter, Orca offer: their scripts, units, shaders and helper)
 keys "sudo install -m755 /mnt/system/bin/olymparch-recovery-key /mnt/system/bin/olymparch-media /mnt/system/bin/olymparch-update-check /usr/bin/ && sudo install -Dm755 /mnt/system/lib/install-app /usr/lib/olymparch/install-app && sudo cp -r /mnt/default/hypr/shaders /usr/share/olymparch/hypr/ && sudo install -m644 /mnt/default/systemd/user/olymparch-update-check.service /mnt/default/systemd/user/olymparch-update-check.timer /usr/lib/systemd/user/ && systemctl --user daemon-reload && { command -v fakeroot >/dev/null || sudo pacman -Sy --noconfirm --needed fakeroot >/dev/null; }; echo '<2>EXTRA-UPDATED' > /dev/kmsg\n" 1
 wait_for 'EXTRA-UPDATED' 120 || finish "FAIL · fikk ikke kopiert de nye skriptene inn"
+# ── devices/audio/network/power keys: the game hook, Proton and the one-click installer from this repo too
+keys "sudo install -m755 /mnt/system/bin/olymparch-game-hook /mnt/system/bin/olymparch-proton /usr/bin/ && sudo install -Dm755 /mnt/system/lib/install-app /usr/lib/olymparch/install-app && echo '<2>DEVICES-UPDATED' > /dev/kmsg\n" 1
+wait_for 'DEVICES-UPDATED' 30 || finish "FAIL · fikk ikke kopiert spillkroken og install-app inn"
 keys "c() { if eval \"\$2\" >/dev/null 2>&1; then echo \"<2>CHK-\$1-OK\"; else echo \"<2>CHK-\$1-NO\"; fi > /dev/kmsg; }; clear\n" 0.5
 sleep 4
 shot skrivebord "Skrivebordet med det nye skallet (norsk)"
@@ -482,6 +485,89 @@ keys "olymparch-settings set notifications.dnd on; notify-send -u critical Disk 
 wait_for 'CHK-dnd-critical-(OK|NO)' 30; seen 'CHK-dnd-critical-OK' || fails+=(dnd-critical)
 shot dnd-kritisk "Ikke forstyrr på: kritiske varsler vises likevel"
 keys "olymparch-settings set notifications.dnd off; clear\n" 1
+
+# ── Displays, sound, input, network, power, games: the keys that were «coming» (one block, so merges stay easy)
+# the installs below take minutes: no lock or blank screen meanwhile (an earlier step set 5 min)
+keys "clear; olymparch-settings set account.lock_minutes 0; olymparch-settings set power.screen_off_minutes 0; olymparch-settings set settings.advanced on; clear\n" 2
+# colour space and HDR end up as cm in monitors.lua and Hyprland takes them; games go to the chosen monitor
+check colorspace 'olymparch-settings set display.colorspace@Virtual-1 wide && grep -q "cm = .wide." ~/.config/olymparch/monitors.lua && [ -z "$(hyprctl configerrors | tr -d "[:space:]")" ] && hyprctl monitors | grep -q Virtual-1'
+check hdr 'olymparch-settings set display.hdr@Virtual-1 on && grep -q "cm = .hdr., bitdepth = 10" ~/.config/olymparch/monitors.lua && [ -z "$(hyprctl configerrors | tr -d "[:space:]")" ] && olymparch-settings set display.hdr@Virtual-1 off && grep -q "cm = .wide." ~/.config/olymparch/monitors.lua'
+check game-monitor 'olymparch-settings set display.game_monitor Virtual-1 && (SteamAppId=4242 setsid -f foot -T spilltest sleep 4) && sleep 6 && grep -q "move window=.* to monitor Virtual-1: ok" ~/.local/state/olymparch/games.log'
+keys "clear; olymparch-settings open display\n" 2.5
+search display.colorspace
+shot dev-fargerom "Skjermer (avansert): fargerom Bred (BT.2020), HDR, hovedskjerm for spill = Virtual-1"
+close_settings
+keys "clear; olymparch-settings set display.colorspace@Virtual-1 srgb; clear\n" 2
+# night light and Tailscale: hidden until installed, offered with one click (install-app), then on/off
+check nightlight-offered 'command -v hyprsunset || (olymparch-settings missing | grep -q display.night_light && ! olymparch-settings missing | grep -q display.night_light_install)'
+keys "clear; olymparch-settings open display\n" 2.5
+search nattlys
+shot dev-nattlys-tilbud "Nattlys mangler: «Installer nattlys» med ett klikk"
+press ret; sleep 2
+shot dev-nattlys-installerer "Klikket: «Installerer …» under raden"
+sleep 90
+shot dev-nattlys-installert "Etter installasjonen: raden er byttet ut med Nattlys-bryteren"
+close_settings
+shot dev-nattlys-lukket "Innstillinger lukket med Esc: terminalen har tastaturet igjen"
+# pacman's udev hook makes /dev/kmsg root-only again: open it up once the install is done
+keys "clear; for i in \$(seq 90); do command -v hyprsunset >/dev/null && break; sleep 2; done; echo '$PW' | sudo -S chmod 666 /dev/kmsg; echo '<2>NIGHTLIGHT-DONE' > /dev/kmsg; clear\n" 1
+wait_for 'NIGHTLIGHT-DONE' 240
+check nightlight-installed 'command -v hyprsunset && olymparch-settings missing | grep -q display.night_light_install'
+check nightlight-on 'olymparch-settings set display.night_light on && sleep 1 && pgrep -x hyprsunset && grep -q "temperature = 4000" ~/.config/hypr/hyprsunset.conf'
+keys "clear; olymparch-settings open display\n" 2.5
+search nattlys
+shot dev-nattlys-pa "Nattlys installert og på (hyprsunset kjører; varmere 20–07)"
+close_settings
+check nightlight-off 'olymparch-settings set display.night_light off && sleep 1 && ! pgrep -x hyprsunset'
+keys "clear; olymparch-settings run network.tailscale_install; echo '$PW' | sudo -S chmod 666 /dev/kmsg; echo '<2>INSTALLS-DONE' > /dev/kmsg; clear\n" 1
+wait_for 'INSTALLS-DONE' 400
+check tailscale 'command -v tailscale && olymparch-settings set network.tailscale on && systemctl is-active -q tailscaled && olymparch-settings set network.tailscale off && ! systemctl is-active -q tailscaled'
+keys "clear; olymparch-settings open network\n" 2.5
+search tailscale
+shot dev-nett "Nett: Tailscale installert med ett klikk, og av/på"
+close_settings
+# volume per app: a silent stream shows up in the list, − turns it down; Game/Chat outputs come and go
+keys "clear; paplay --raw /dev/zero & p=\$!; sleep 2; clear\n" 3
+check per-app-list 'olymparch-settings items audio.per_app | grep -q paplay'
+check per-app-down 'id=$(olymparch-settings items audio.per_app | grep paplay | cut -f1 | head -n 1); olymparch-settings pick audio.per_app "$id" down && wpctl get-volume "$id" | grep -q "0.95"'
+check per-app-refuses 'olymparch-settings pick audio.per_app "1;id" up; [ $? = 2 ]'
+keys "clear; olymparch-settings open audio\n" 2.5
+search audio.per_app
+shot dev-volum-per-app "Volum per app: paplay med − og + (95 % etter ett trykk på −)"
+close_settings
+check game-chat 'olymparch-settings set audio.game_chat on && sleep 4 && wpctl status -n | grep -q olymparch_game && wpctl status -n | grep -q olymparch_chat'
+keys "clear; paplay --raw /dev/zero & p2=\$!; sleep 2; clear\n" 3
+keys "clear; olymparch-settings open audio\n" 2.5
+search audio.game_chat
+shot dev-game-chat "Game- og Chat-utganger på: begge finnes i PipeWire"
+close_settings
+keys "clear; kill \$p \$p2; clear\n" 1
+check game-chat-off 'olymparch-settings set audio.game_chat off && sleep 4 && ! wpctl status -n | grep -q olymparch_game'
+check audio-priority 's=$(wpctl status -n | grep -o "alsa_output[^ ]*" | head -1); olymparch-settings set audio.priority "$s" && grep -q "node.name = .$s." ~/.config/wireplumber/wireplumber.conf.d/90-olymparch-priority.conf && olymparch-settings set audio.priority "" && [ ! -e ~/.config/wireplumber/wireplumber.conf.d/90-olymparch-priority.conf ]'
+# input: read-only lists, USB mouse polling through the helper
+check controllers 'olymparch-settings run input.controllers | grep -q Steam && olymparch-settings run input.device_profiles | grep -qi keyboard'
+check mousepoll 'olymparch-settings set input.polling_rate fast && grep -q "mousepoll=1" /etc/modprobe.d/50-olymparch-mousepoll.conf && olymparch-settings set input.polling_rate auto && [ ! -e /etc/modprobe.d/50-olymparch-mousepoll.conf ]'
+keys "clear; olymparch-settings open input\n" 2.5
+search input.controllers
+press ret; sleep 2
+shot dev-kontrollere "Mus og kontrollere: «Kontrollere og ratt» viser hva som er koblet til"
+close_settings
+# power: no battery in the VM, so no charge limit (and the helper refuses); the CPU view; Bluetooth adapters
+check charge-limit-hidden 'olymparch-settings missing | grep -q power.charge_limit && pkexec /usr/lib/olymparch/settings-apply charge-limit 80; [ $? = 3 ] && ! pkexec /usr/lib/olymparch/settings-apply charge-limit 40'
+check cpu-view 'olymparch-settings run power.cpu_limits | grep -q driver'
+check bt-adapters 'olymparch-settings missing | grep -q bluetooth.adapter || olymparch-settings run bluetooth.adapter | grep -q .'
+keys "clear; olymparch-settings open power\n" 2.5
+search power.cpu_limits
+press ret; sleep 2
+shot dev-cpu "Strøm: CPU-grenser (driver, governor, boost, område)"
+close_settings
+# games: the order after a crash is what olymparch-proton walks
+check crash-order 'olymparch-settings set games.crash_order ge-valve-experimental && [ "$(olymparch-settings get games.crash_order)" = ge-valve-experimental ] && ! olymparch-settings set games.crash_order proton'
+keys "clear; olymparch-settings open games\n" 2.5
+search crash
+shot dev-krasj "Spill: rekkefølge ved krasj = GE → Valve → Experimental"
+close_settings
+keys "clear; olymparch-settings reset games.crash_order; olymparch-settings reset display.game_monitor; olymparch-settings reset account.lock_minutes; olymparch-settings reset power.screen_off_minutes; olymparch-settings set settings.advanced off; clear\n" 2
 
 # The shell's own log, for errors
 keys "tail -n 60 ~/.local/state/olymparch/shell.log | while IFS= read -r l; do echo \"<2>QS: \$l\" > /dev/kmsg; done; echo '<2>LOG-DONE' > /dev/kmsg\n" 1

@@ -10,6 +10,9 @@ case $1 in
     torrent) pkgs=(transmission-gtk) ;;
     backup) pkgs=(git openssh age) ;;   # Settings → Backup (olymparch-gitbackup)
     screen-reader) pkgs=(orca) ;;   # Settings → Accessibility → Install the screen reader
+    # Settings rows that need a program Olymparch doesn't install (official Arch repositories only)
+    nightlight) pkgs=(hyprsunset) ;;   # display.night_light
+    tailscale) pkgs=(tailscale) ;;     # network.tailscale
     *) echo "install-app: ukjent app" >&2; exit 2 ;;
 esac
 exec </dev/null 9>/run/olymparch-install-app.lock

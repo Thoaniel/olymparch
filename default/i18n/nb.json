@@ -57,5 +57,10 @@
   "settings.items.nobluez": "Bluetooth (bluez) er ikke installert: ingen adapter er funnet",
   "settings.items.nobt": "Ingen Bluetooth-adapter",
   "settings.items.btoff": "Bluetooth er av",
-  "settings.items.add": "+ SUPER + B = firefox · Enter legger til"
+  "settings.items.add": "+ SUPER + B = firefox · Enter legger til",
+  "settings.items.refresh": "Oppdater",
+  "settings.items.nostreams": "Ingen apper spiller lyd akkurat nå",
+  "settings.items.nowp": "PipeWire (wpctl) er ikke installert",
+  "settings.install.busy": "Installerer … (kan ta et minutt)",
+  "settings.install.failed": "Ikke installert: se /var/log/olymparch-install-app.log"
 }
