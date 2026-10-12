@@ -13,7 +13,7 @@ Row {
     id: status
     required property var theme
     property string clockFormat: "ddd d MMM  HH:mm"   // day and month in the session's language (shell.qml sets it)
-    TextMetrics { id: digits; font { family: status.theme.mono; pixelSize: 13 } text: "0" }
+    TextMetrics { id: digits; font { family: status.theme.mono; pixelSize: status.theme.px(13) } text: "0" }
     spacing: 4   // the cells have 6 px padding of their own: 16 px between icons
 
     // ---- what is playing: the first player that plays, else the first paused one with a title
@@ -80,14 +80,14 @@ Row {
             spacing: 6
             Text {
                 text: cell.icon
-                font { family: "Symbols Nerd Font Mono"; pixelSize: 15 }
+                font { family: "Symbols Nerd Font Mono"; pixelSize: status.theme.px(15) }
                 color: cell.alert ? status.theme.bg : cell.hot ? status.theme.goldHi : cell.tint
                 anchors.verticalCenter: parent.verticalCenter
             }
             Text {
                 visible: cell.label.length > 0
                 text: cell.label
-                font { family: status.theme.mono; pixelSize: 13 }
+                font { family: status.theme.mono; pixelSize: status.theme.px(13) }
                 color: cell.alert ? status.theme.bg : cell.hot ? status.theme.goldHi : cell.labelTint
                 elide: Text.ElideRight
                 horizontalAlignment: cell.labelChars > 0 ? Text.AlignRight : Text.AlignLeft
@@ -165,7 +165,7 @@ Row {
         anchors.verticalCenter: parent.verticalCenter
         text: Qt.locale().toString(clock.date, status.clockFormat)
         leftPadding: 6
-        font { family: status.theme.mono; pixelSize: 13 }
+        font { family: status.theme.mono; pixelSize: status.theme.px(13) }
         color: status.theme.text
     }
 

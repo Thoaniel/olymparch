@@ -161,6 +161,10 @@ for f in list((root / "default/shell").glob("*.qml")) + list((root / "default/lo
         shell_reads.add(k)
         if k not in keys:
             bad(f"{f.name}: reads setting {k}, which the schema doesn't have")
+# Text size (accessibility.text_size) and high contrast only work if every font and colour goes through the theme
+for f in (root / "default/shell").glob("*.qml"):
+    for m in re.finditer(r'pixelSize: *\d', f.read_text()):
+        bad(f"{f.name}: a fixed font size ({m.group(0)}…); use theme.px(N) so Settings → Text size scales it")
 for s in settings:
     if s["apply"].get("via") == "shell" and s["ready"] and s["key"] not in shell_reads:
         bad(f"{s['key']}: ready, applied by the shell, but no QML reads it")

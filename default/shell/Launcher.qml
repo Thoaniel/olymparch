@@ -49,7 +49,7 @@ Scope {
                 id: search
                 anchors { left: parent.left; right: parent.right; top: parent.top; margins: 14 }
                 height: 28
-                font { family: launcher.theme.mono; pixelSize: 15 }
+                font { family: launcher.theme.mono; pixelSize: launcher.theme.px(15) }
                 color: launcher.theme.text
                 verticalAlignment: TextInput.AlignVCenter
                 focus: launcher.open
@@ -91,7 +91,7 @@ Scope {
                     Text {
                         anchors { left: parent.left; leftMargin: 12; verticalCenter: parent.verticalCenter }
                         text: parent.modelData.name
-                        font { family: launcher.theme.mono; pixelSize: 14 }
+                        font { family: launcher.theme.mono; pixelSize: launcher.theme.px(14) }
                         color: parent.ListView.isCurrentItem ? launcher.theme.goldHi : launcher.theme.text
                     }
                     MouseArea { anchors.fill: parent; onClicked: list.launch(parent.index) }

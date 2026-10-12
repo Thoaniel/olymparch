@@ -72,13 +72,13 @@ Scope {
                             readonly property string app: parent.parent.modelData.appName || ""
                             visible: app.length > 0 && app !== "notify-send"
                             text: app.toUpperCase()
-                            font { family: notes.theme.mono; pixelSize: 11; letterSpacing: 1.5; bold: true }
+                            font { family: notes.theme.mono; pixelSize: notes.theme.px(11); letterSpacing: 1.5; bold: true }
                             color: parent.parent.critical ? notes.theme.red : notes.theme.gold
                         }
                         Text {
                             width: parent.width
                             text: parent.parent.modelData.summary
-                            font { family: notes.theme.mono; pixelSize: 14; bold: true }
+                            font { family: notes.theme.mono; pixelSize: notes.theme.px(14); bold: true }
                             color: notes.theme.text
                             wrapMode: Text.Wrap
                         }
@@ -86,7 +86,7 @@ Scope {
                             width: parent.width
                             visible: text.length > 0
                             text: parent.parent.modelData.body
-                            font { family: notes.theme.mono; pixelSize: 13 }
+                            font { family: notes.theme.mono; pixelSize: notes.theme.px(13) }
                             color: notes.theme.muted
                             wrapMode: Text.Wrap
                             maximumLineCount: 4
@@ -109,7 +109,7 @@ Scope {
                                         id: label
                                         anchors.centerIn: parent
                                         text: parent.modelData.text
-                                        font { family: notes.theme.mono; pixelSize: 12; bold: true }
+                                        font { family: notes.theme.mono; pixelSize: notes.theme.px(12); bold: true }
                                         color: parent.index === 0 ? notes.theme.bg : notes.theme.text
                                     }
                                     MouseArea { anchors.fill: parent; onClicked: parent.modelData.invoke() }

@@ -39,7 +39,7 @@ Scope {
                 spacing: 12
                 Text {
                     text: osd.muted ? "\u{f0581}" : "\u{f057e}"   // nf-md volume_off / volume_high
-                    font { family: "Symbols Nerd Font Mono"; pixelSize: 18 }
+                    font { family: "Symbols Nerd Font Mono"; pixelSize: osd.theme.px(18) }
                     color: osd.muted ? osd.theme.muted : osd.theme.gold
                     anchors.verticalCenter: parent.verticalCenter
                 }
@@ -57,7 +57,7 @@ Scope {
                 }
                 Text {
                     text: osd.muted ? I18n.t("osd.muted", "muted") : Math.round(osd.volume * 100) + "%"
-                    font { family: osd.theme.mono; pixelSize: 14 }
+                    font { family: osd.theme.mono; pixelSize: osd.theme.px(14) }
                     color: osd.theme.text
                     anchors.verticalCenter: parent.verticalCenter
                     width: 60

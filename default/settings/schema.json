@@ -543,7 +543,7 @@
       "label": { "en": "In games and fullscreen", "nb": "I spill og fullskjerm" }, "description": { "en": "While a game runs; critical ones held back by «None» show when it ends", "nb": "Mens et spill kjører; kritiske som holdes tilbake av «Ingen» vises når det er slutt" },
       "apply": { "via": "shell", "file": "~/.config/olymparch/settings.json", "key": "notifications.in_games" } },
 
-    { "key": "accessibility.text_size", "page": "accessibility", "level": "simple", "type": "choice", "widget": "segmented", "default": "100", "ready": false,
+    { "key": "accessibility.text_size", "page": "accessibility", "level": "simple", "type": "choice", "widget": "segmented", "default": "100", "ready": true,
       "options": [ { "value": "100", "label": { "en": "100 %", "nb": "100 %" } }, { "value": "125", "label": { "en": "125 %", "nb": "125 %" } }, { "value": "150", "label": { "en": "150 %", "nb": "150 %" } } ],
       "label": { "en": "Text size", "nb": "Tekststørrelse" }, "description": { "en": "Bar, menus and popups", "nb": "Bar, menyer og popuper" },
       "apply": { "via": "shell", "file": "~/.config/olymparch/settings.json", "key": "accessibility.text_size" } },

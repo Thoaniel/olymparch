@@ -20,6 +20,9 @@ ShellRoot {
     readonly property color surface: "#15151c"
     readonly property color raised: "#1c1c25"
     readonly property color red: "#e0605e"
+    // Settings → Accessibility → Text size: every font in the shell is theme.px(size)
+    readonly property real fontScale: ({ "125": 1.25, "150": 1.5 })[Settings.get("accessibility.text_size")] || 1
+    function px(n) { return Math.round(n * fontScale); }
     readonly property string mono: Settings.get("appearance.font") || "JetBrains Mono"   // Settings → Appearance
     readonly property string art: "/usr/share/olymparch/wallpaper"
     readonly property int frames: 48
@@ -100,7 +103,7 @@ ShellRoot {
                                 Text {
                                     anchors.centerIn: parent
                                     text: parent.modelData.id
-                                    font { family: root.mono; pixelSize: 13; bold: parent.modelData.focused }
+                                    font { family: root.mono; pixelSize: root.px(13); bold: parent.modelData.focused }
                                     color: parent.modelData.focused ? root.goldHi : root.muted
                                 }
                                 Rectangle {
@@ -120,19 +123,19 @@ ShellRoot {
                         spacing: 10
                         Text {
                             text: "\uf0e7"
-                            font { family: "Symbols Nerd Font Mono"; pixelSize: 15 }
+                            font { family: "Symbols Nerd Font Mono"; pixelSize: root.px(15) }
                             color: root.gold
                             anchors.verticalCenter: parent.verticalCenter
                         }
                         Text {
                             visible: barStatus.x > (parent.parent.width + wordmarkFull.advanceWidth) / 2 + 24
                             text: "OLYMPARCH"
-                            font { family: root.mono; pixelSize: 13; bold: true; letterSpacing: 2 }
+                            font { family: root.mono; pixelSize: root.px(13); bold: true; letterSpacing: 2 }
                             color: root.gold
                             anchors.verticalCenter: parent.verticalCenter
                         }
                     }
-                    TextMetrics { id: wordmarkFull; font { family: root.mono; pixelSize: 13; bold: true; letterSpacing: 2 } text: "OLYMPARCH  " }
+                    TextMetrics { id: wordmarkFull; font { family: root.mono; pixelSize: root.px(13); bold: true; letterSpacing: 2 } text: "OLYMPARCH  " }
 
                     BarStatus {
                         id: barStatus
