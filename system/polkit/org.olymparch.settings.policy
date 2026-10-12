@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- pkexec /usr/lib/olymparch/settings-apply ACTION VALUE: the few Settings rows that change files in /etc
+     (lid, connectivity check, Bluetooth mode). The helper takes only its fixed actions and values.
+     50-olymparch-settings.rules lets the desktop's own (wheel) user do it with the click in Settings. -->
+<policyconfig>
+  <vendor>Olymparch</vendor>
+  <action id="org.olymparch.settings-apply">
+    <description>Change a system setting from Olymparch Settings</description>
+    <description xml:lang="nb">Endre en systeminnstilling fra Olymparch Innstillinger</description>
+    <message>Authentication is required to change a system setting</message>
+    <message xml:lang="nb">Du må logge inn for å endre en systeminnstilling</message>
+    <icon_name>preferences-system</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/olymparch/settings-apply</annotate>
+  </action>
+</policyconfig>

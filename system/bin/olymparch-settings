@@ -633,6 +633,25 @@ appliers["brightness"] = function(s, values, key)   -- the built-in screen (lapt
         os.execute(("brightnessctl -q set %d%% >/dev/null 2>&1"):format(math.tointeger(value_of(values, key)) or 100))
     end
 end
+-- System files (/etc): only through the pkexec helper, which takes these actions and values and nothing else
+-- (system/lib/settings-apply has the same list; tests/settings-coverage compares them).
+local HELPER = "/usr/lib/olymparch/settings-apply"
+local SYSTEM_ACTIONS = {
+    lid = { suspend = true, lock = true, ignore = true },
+    connectivity = { on = true, off = true },
+    ["bt-mode"] = { dual = true, le = true, bredr = true },
+    ["bt-fast"] = { on = true, off = true },
+}
+appliers["system"] = function(s, values, key)
+    local v = value_of(values, key)
+    if type(v) == "boolean" then v = v and "on" or "off" end
+    local act = s.apply.action
+    if not (SYSTEM_ACTIONS[act] and SYSTEM_ACTIONS[act][v]) then die(("%s: %s is not allowed"):format(key, tostring(v)), 5) end
+    if not io.open(HELPER) then die(HELPER .. " is missing (olymparch update)", 3) end
+    if not os.execute("pkexec " .. HELPER .. " " .. sh_quote(act) .. " " .. sh_quote(v) .. " >/dev/null 2>&1") then
+        die(key .. ": not changed (the system said no)", 3)
+    end
+end
 -- headset switch: /etc/pipewire/pipewire-pulse.conf.d/50-olymparch-switch-on-connect.conf loads the module unless
 -- olymparch.switch-on-connect is false; this drop-in says so. pactl changes the running server too.
 appliers["headset"] = function(s, values, key)
@@ -708,6 +727,10 @@ elseif cmd == "set" then
         apply(key, values, { key = key, value = v })
         os.execute(("setsid -f sh -c %s >/dev/null 2>&1"):format(sh_quote(("sleep %d; exec %s revert --token %s"):format(try, sh_quote(SELF), token))))
         print("pending " .. token)
+    elseif s.apply.via == "system" then   -- /etc: remembered only once the helper has done it
+        values[key] = v
+        apply(key, values)
+        save_values(values)
     else
         values[key] = v
         save_values(values)
@@ -932,7 +955,7 @@ elseif cmd == "wired" then
 -- settings that need a program this machine doesn't have (the window hides them): one key per line
 elseif cmd == "missing" then
     for _, s in ipairs(schema.settings) do
-        if s.needs and not have(s.needs) then print(s.key) end
+        if (s.needs and not have(s.needs)) or (s.needs_file and not io.open(s.needs_file)) then print(s.key) end
     end
 
 -- what a choice can be on this machine: VALUE <tab> LABEL per line (default apps, terminals)
