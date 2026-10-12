@@ -66,7 +66,7 @@ Scope {
     // the rows on screen need their choices and lists
     function loadFor(rows) {
         for (const s of rows) {
-            if ((s.options_from === "desktop" || s.installed) && !choices[s.key]) loadChoices(s);
+            if ((s.options_from === "desktop" || s.installed || /^olympus\./.test(s.options_from || "")) && !choices[s.key]) loadChoices(s);   // olympus.*: Zeus' models
             if (s.widget === "items" && !items[s.key]) loadItems(s.key, false);
         }
     }
@@ -105,6 +105,9 @@ Scope {
             for (const x of modes) if (x[1] === res && !seen.has(x[2])) { seen.add(x[2]); out.push({ value: x[2], text: Math.round(parseFloat(x[2])) + " Hz" }); }
         } else if (s.options_from === "monitors") {
             for (const x of monitors) out.push({ value: x.name, text: x.model ? x.model + " (" + x.name + ")" : x.name });
+        } else if (/^olympus\./.test(s.options_from || "")) {   // Zeus: the models Olympus has («» = Olympus decides)
+            const c = choices[s.key] || [];
+            return c.length ? c : [{ value: "", text: I18n.t("settings.zeus.no_models", "No models yet: «Set up» downloads one, after asking") }];
         } else if (s.options_from === "desktop" || s.installed) {   // default apps, terminals: what is installed
             const c = choices[s.key];
             if (c && s.installed) return c;

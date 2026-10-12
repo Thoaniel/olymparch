@@ -48,7 +48,8 @@ for g in schema["groups"]:
     if not any(p["group"] == g["id"] for p in schema["pages"]):
         bad(f"group {g['id']}: no pages")
 
-VIAS = {"shell", "hypr", "monitor", "idle", "audio", "cursor", "stored", "action", "info", "bluetooth", "power", "mime", "terminal", "unit", "dropin", "headset", "mangohud", "envd", "brightness", "system", "pwclock"}
+VIAS = {"shell", "hypr", "monitor", "idle", "audio", "cursor", "stored", "action", "info", "bluetooth", "power", "mime", "terminal", "unit", "dropin", "headset", "mangohud", "envd", "brightness", "system", "pwclock",
+        "olympus"}   # olympus = Zeus, through Olympus' own CLI (olympus modell / config set)
 seen = set()
 for s in settings:
     k = s.get("key", "?")
@@ -223,7 +224,7 @@ with tempfile.TemporaryDirectory() as home:
         bad("olymparch-settings left PWNED or temp files behind")
 
 # ── system state: olymparch-settings never escalates (no pkexec/sudo), and only switches units from its allow-list
-allowed_units = set(re.findall(r'\["(olymparch-[\w.-]+\.(?:path|timer|service))"\] = true', cli))
+allowed_units = set(re.findall(r'\["(olymp(?:arch|us)-[\w.-]+\.(?:path|timer|service))"\] = true', cli))
 for s in settings:
     a = s["apply"]
     for u in a.get("units", []) + ([a["unit"]] if a.get("unit") else []):
@@ -309,6 +310,70 @@ exit 0
         bad(f"Wi-Fi: the list shows an open twin of a saved WPA network as saved:\n{r.stdout}")
     if re.search(r'password|psk|wifi-sec', log.read_text()):
         bad("Wi-Fi: a password went through nmcli's command line")
+
+# ── Zeus and Backup: models only from what Olympus lists, through its own CLI with fixed subcommands; free text
+#    (parameters, the repository, the folders) only in its own grammar. A stand-in olympus logs every call.
+with tempfile.TemporaryDirectory() as home:
+    zbin = Path(home, ".local/bin")
+    zbin.mkdir(parents=True)
+    zlog = Path(home, "olympus.log")
+    (zbin / "olympus").write_text(f'''#!/bin/sh
+echo "$*" >> {str(zlog)!r}
+case "$1" in
+  modell) [ -z "$2" ] && printf '\\342\\227\\217 \\342\\230\\201 groq/openai/gpt-oss-120b           gratisniv\\303\\245\\n\\342\\227\\213   gemma4-26b-a4b                     Gemma 4\\n\\nBytt med `olympus modell <id>`\\n' ;;
+  config) [ "$2" = get ] && echo gemma4-26b-a4b ;;
+esac
+exit 0
+''')
+    (zbin / "olympus").chmod(0o755)
+    zenv = {k: v for k, v in os.environ.items() if k not in ("HYPRLAND_INSTANCE_SIGNATURE", "WAYLAND_DISPLAY", "XDG_CONFIG_HOME")}
+    zenv.update(HOME=home, XDG_RUNTIME_DIR=home, OLYMPARCH_SETTINGS_SCHEMA=str(root / "default/settings/schema.json"))
+    def zrun(*args):
+        return subprocess.run([cli_path, *args], env=zenv, capture_output=True, text=True)
+    r = zrun("choices", "zeus.model")
+    if r.stdout.split("\n")[:2] != ["groq/openai/gpt-oss-120b\t☁ groq/openai/gpt-oss-120b", "gemma4-26b-a4b\tgemma4-26b-a4b"]:
+        bad(f"Zeus: choices zeus.model should list what `olympus modell` lists, said:\n{r.stdout}{r.stderr}")
+    if zrun("get", "zeus.model").stdout.strip() != "groq/openai/gpt-oss-120b":
+        bad("Zeus: the model in use (● in `olympus modell`) was not taken into settings.json")
+    if zrun("choices", "zeus.local_model").stdout.strip() != "gemma4-26b-a4b\tgemma4-26b-a4b":
+        bad("Zeus: choices zeus.local_model must list local models only")
+    zlog.write_text("")
+    good = [(("zeus.model", "gemma4-26b-a4b"), "modell gemma4-26b-a4b"),
+            (("zeus.local_model", "gemma4-26b-a4b"), 'config set general.local_model "gemma4-26b-a4b"'),
+            (("zeus.params", "temperature=0.3, context=8192"), "config set llamacpp.ctx_size 8192"),
+            (("zeus.vram_limit", "12"), "config set vram.budget_gb 12.0")]
+    for args, want in good:
+        r = zrun("set", *args)
+        if r.returncode or want not in zlog.read_text():
+            bad(f"Zeus: set {' '.join(args)} should run `olympus {want}` (rc {r.returncode}):\n{zlog.read_text()}{r.stderr}")
+    if "config set agents.zeus.temperature 0.30" not in zlog.read_text():
+        bad("Zeus: zeus.params did not set agents.zeus.temperature")
+    zlog.write_text("")
+    for args in (("zeus.model", "llama-not-downloaded"), ("zeus.model", "x; touch PWNED"), ("zeus.model", "-rf"),
+                 ("zeus.local_model", "groq/openai/gpt-oss-120b"), ("zeus.params", "temperature=5"),
+                 ("zeus.params", "temperature=0.3; rm -rf ~"), ("zeus.params", "context=1e9"), ("zeus.vram_limit", "65"),
+                 ("backup.repo", "ext::sh -c touch% PWNED"), ("backup.repo", "git@github.com:-oProxyCommand=x/r.git"),
+                 ("backup.repo", "https://github.com/me/..git"), ("backup.repo", "https://evil.example/me/r.git"),
+                 ("backup.include", "~/../etc"), ("backup.include", "/etc"), ("backup.include", "~/a,~/b/../../x"),
+                 ("backup.include", "~/$(touch PWNED)"), ("backup.days", "0")):
+        r = zrun("set", *args)
+        if r.returncode != 2:
+            bad(f"olymparch-settings set {' '.join(args)!r} was not refused (rc {r.returncode})")
+    if [l for l in zlog.read_text().splitlines() if l != "modell"] or list(Path(home).rglob("PWNED")):
+        bad(f"Zeus: a refused value reached olympus:\n{zlog.read_text()}")
+    for args in (("backup.repo", "git@github.com:me/olymparch-backup.git"), ("backup.repo", "https://github.com/me/backup.git"),
+                 ("backup.include", "~/Documents, ~/My Pictures/Screens"), ("backup.include", ""), ("backup.days", "14")):
+        r = zrun("set", *args)
+        if r.returncode:
+            bad(f"olymparch-settings set {' '.join(args)!r} was refused: {r.stderr}")
+    # no Olympus: the Zeus rows are hidden, except Install (and the on/off switch for the login offer)
+    (zbin / "olympus").unlink()
+    hidden = set(zrun("missing").stdout.split())
+    for s in settings:
+        if s["page"] == "zeus" and s["key"] not in ("zeus.install", "zeus.enabled") and s["key"] not in hidden:
+            bad(f"{s['key']}: shown without Olympus (needs_file ~/.local/bin/olympus)")
+    if "zeus.install" in hidden:
+        bad("zeus.install must show when Olympus is missing")
 
 # ── Norwegian for every string the shell shows
 nb = json.loads((root / "default/i18n/nb.json").read_text())
