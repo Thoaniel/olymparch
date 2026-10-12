@@ -399,9 +399,9 @@
       "options": [ { "value": "foot", "label": { "en": "foot", "nb": "foot" } }, { "value": "kitty", "label": { "en": "kitty", "nb": "kitty" } }, { "value": "alacritty", "label": { "en": "alacritty", "nb": "alacritty" } }, { "value": "wezterm", "label": { "en": "wezterm", "nb": "wezterm" } }, { "value": "ghostty", "label": { "en": "ghostty", "nb": "ghostty" } }, { "value": "konsole", "label": { "en": "konsole", "nb": "konsole" } }, { "value": "gnome-terminal", "label": { "en": "gnome-terminal", "nb": "gnome-terminal" } }, { "value": "xterm", "label": { "en": "xterm", "nb": "xterm" } } ],
       "label": { "en": "Terminal", "nb": "Terminal" }, "description": { "en": "The terminal shortcut (Super+Enter) opens it; only installed ones are listed", "nb": "Terminal-hurtigtasten (Super+Enter) åpner den; bare installerte vises" },
       "apply": { "via": "terminal", "file": "~/.config/olymparch/hypr.lua", "key": "OLYMPARCH_TERMINAL" } },
-    { "key": "apps.all_types", "page": "apps", "level": "advanced", "type": "action", "ready": false,
+    { "key": "apps.all_types", "page": "apps", "level": "advanced", "type": "action", "ready": true, "output": true,
       "label": { "en": "All file types and links", "nb": "Alle filtyper og lenker" }, "description": { "en": "magnet:, steam: …", "nb": "magnet:, steam: …" },
-      "apply": { "via": "action", "command": "xdg-mime" } },
+      "apply": { "via": "action", "command": "olymparch-apps" } },
 
     { "key": "account.password", "page": "account", "level": "simple", "type": "action", "ready": true,
       "label": { "en": "Change password", "nb": "Bytt passord" }, "description": { "en": "Opens passwd in a terminal", "nb": "Åpner passwd i en terminal" },

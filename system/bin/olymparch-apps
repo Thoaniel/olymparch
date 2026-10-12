@@ -1,0 +1,9 @@
+#!/bin/bash
+# Which app opens which file type and link (read-only; Settings → Apps → «Alle filtyper og lenker»).
+set -uo pipefail
+for t in x-scheme-handler/http x-scheme-handler/https x-scheme-handler/magnet x-scheme-handler/steam \
+         application/x-bittorrent application/pdf application/zip application/x-7z-compressed \
+         inode/directory image/png image/jpeg video/mp4 video/x-matroska audio/mpeg audio/flac text/plain; do
+    app=$(xdg-mime query default "$t" 2>/dev/null)
+    printf '%-28s %s\n' "$t" "${app:--}"
+done
