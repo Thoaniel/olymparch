@@ -277,7 +277,7 @@ Scope {
                         id: search
                         anchors { fill: parent; leftMargin: 9; rightMargin: 9 }
                         verticalAlignment: TextInput.AlignVCenter
-                        font { family: win.theme.mono; pixelSize: 13 }
+                        font { family: win.theme.mono; pixelSize: win.theme.px(13) }
                         color: win.theme.text
                         clip: true
                         text: win.query
@@ -313,7 +313,7 @@ Scope {
                                 Text {
                                     leftPadding: 14; topPadding: 10; bottomPadding: 4
                                     text: win.tr(grp.modelData.label)
-                                    font { family: win.theme.mono; pixelSize: 10; letterSpacing: 1.5 }
+                                    font { family: win.theme.mono; pixelSize: win.theme.px(10); letterSpacing: 1.5 }
                                     color: win.theme.muted
                                 }
                                 Repeater {
@@ -334,7 +334,7 @@ Scope {
                                             anchors { left: parent.left; leftMargin: 14; right: parent.right; rightMargin: 8; verticalCenter: parent.verticalCenter }
                                             text: win.tr(item.modelData.label)
                                             elide: Text.ElideRight
-                                            font { family: win.theme.mono; pixelSize: 13; bold: item.current }
+                                            font { family: win.theme.mono; pixelSize: win.theme.px(13); bold: item.current }
                                             color: item.current ? win.theme.goldHi : win.theme.text
                                         }
                                         MouseArea { anchors.fill: parent; onClicked: { win.query = ""; win.outputKey = ""; win.page = item.modelData.id; } }
@@ -359,7 +359,7 @@ Scope {
                         anchors.verticalCenter: parent.verticalCenter
                         text: win.query ? I18n.t("settings.results", "Search: %1 (%2)").arg(win.query).arg(win.rows.length)
                                         : (win.pageOf(win.page) ? win.tr(win.pageOf(win.page).label) : "")
-                        font { family: win.theme.mono; pixelSize: 15; bold: true }
+                        font { family: win.theme.mono; pixelSize: win.theme.px(15); bold: true }
                         color: win.theme.text
                     }
                     Item {
@@ -372,7 +372,7 @@ Scope {
                             id: advRow
                             anchors.verticalCenter: parent.verticalCenter
                             spacing: 8
-                            Text { text: I18n.t("settings.advanced", "Advanced view"); font { family: win.theme.mono; pixelSize: 12 } color: advSwitch.activeFocus ? win.theme.goldHi : win.theme.muted; anchors.verticalCenter: parent.verticalCenter }
+                            Text { text: I18n.t("settings.advanced", "Advanced view"); font { family: win.theme.mono; pixelSize: win.theme.px(12) } color: advSwitch.activeFocus ? win.theme.goldHi : win.theme.muted; anchors.verticalCenter: parent.verticalCenter }
                             Rectangle {
                                 width: 30; height: 16; color: "#0d0d12"; anchors.verticalCenter: parent.verticalCenter
                                 border.color: win.advanced || advSwitch.activeFocus ? win.theme.gold : win.theme.line
@@ -436,19 +436,19 @@ Scope {
                                         border { color: sel ? win.theme.gold : win.theme.line; width: sel ? 2 : 1 }
                                         Column {
                                             anchors.centerIn: parent
-                                            Text { anchors.horizontalCenter: parent.horizontalCenter; text: mon.modelData.model || mon.modelData.name; font { family: win.theme.mono; pixelSize: 13; bold: true } color: mon.sel ? win.theme.goldHi : win.theme.text }
-                                            Text { anchors.horizontalCenter: parent.horizontalCenter; text: mon.modelData.name + " · " + mon.modelData.width + "×" + mon.modelData.height; font { family: win.theme.mono; pixelSize: 11 } color: win.theme.muted }
+                                            Text { anchors.horizontalCenter: parent.horizontalCenter; text: mon.modelData.model || mon.modelData.name; font { family: win.theme.mono; pixelSize: win.theme.px(13); bold: true } color: mon.sel ? win.theme.goldHi : win.theme.text }
+                                            Text { anchors.horizontalCenter: parent.horizontalCenter; text: mon.modelData.name + " · " + mon.modelData.width + "×" + mon.modelData.height; font { family: win.theme.mono; pixelSize: win.theme.px(11) } color: win.theme.muted }
                                         }
                                         MouseArea { anchors.fill: parent; onClicked: win.monitor = mon.modelData.name }
                                     }
                                 }
                             }
-                            Text { text: I18n.t("settings.monitors.hint", "Click to choose · position is set below"); font { family: win.theme.mono; pixelSize: 11 } color: win.theme.muted }
+                            Text { text: I18n.t("settings.monitors.hint", "Click to choose · position is set below"); font { family: win.theme.mono; pixelSize: win.theme.px(11) } color: win.theme.muted }
                             Text {
                                 topPadding: 6
                                 readonly property var m: win.monitors.find(x => x.name === win.monitor)
                                 text: m ? ((m.model || m.description || "") + " · " + m.name).toUpperCase() : ""
-                                font { family: win.theme.mono; pixelSize: 11; letterSpacing: 1.5 }
+                                font { family: win.theme.mono; pixelSize: win.theme.px(11); letterSpacing: 1.5 }
                                 color: win.theme.muted
                             }
                         }
@@ -458,8 +458,8 @@ Scope {
                             width: parent.width
                             visible: !win.query && win.page === "about"
                             bottomPadding: 6
-                            Text { text: win.about.version || "Olymparch"; font { family: win.theme.mono; pixelSize: 20; bold: true; letterSpacing: 1 } color: win.theme.gold }
-                            Text { topPadding: 2; text: (win.about.hyprland ? "Hyprland " + win.about.hyprland + " · " : "") + "Quickshell"; font { family: win.theme.mono; pixelSize: 12 } color: win.theme.muted }
+                            Text { text: win.about.version || "Olymparch"; font { family: win.theme.mono; pixelSize: win.theme.px(20); bold: true; letterSpacing: 1 } color: win.theme.gold }
+                            Text { topPadding: 2; text: (win.about.hyprland ? "Hyprland " + win.about.hyprland + " · " : "") + "Quickshell"; font { family: win.theme.mono; pixelSize: win.theme.px(12) } color: win.theme.muted }
                         }
 
                         Repeater {
@@ -484,7 +484,7 @@ Scope {
                                         width: parent.width
                                         text: (win.query ? win.tr(win.pageOf(row.s.page).label) + " › " : "") + win.tr(row.s.label)
                                         wrapMode: Text.Wrap
-                                        font { family: win.theme.mono; pixelSize: 13 }
+                                        font { family: win.theme.mono; pixelSize: win.theme.px(13) }
                                         color: row.ready ? win.theme.text : win.theme.muted
                                     }
                                     Text {
@@ -492,14 +492,14 @@ Scope {
                                         visible: text.length > 0
                                         text: win.tr(row.s.description)
                                         wrapMode: Text.Wrap
-                                        font { family: win.theme.mono; pixelSize: 11 }
+                                        font { family: win.theme.mono; pixelSize: win.theme.px(11) }
                                         color: win.theme.muted
                                     }
                                     Text {
                                         width: parent.width
                                         text: win.where(row.s)
                                         elide: Text.ElideMiddle
-                                        font { family: win.theme.mono; pixelSize: 10 }
+                                        font { family: win.theme.mono; pixelSize: win.theme.px(10) }
                                         color: win.dim
                                     }
                                 }
@@ -535,7 +535,7 @@ Scope {
                                         Text {
                                             anchors { left: swBox.right; leftMargin: 8; verticalCenter: parent.verticalCenter }
                                             text: row.value === true ? I18n.t("settings.on", "On") : I18n.t("settings.off", "Off")
-                                            font { family: win.theme.mono; pixelSize: 12; bold: sw.activeFocus }
+                                            font { family: win.theme.mono; pixelSize: win.theme.px(12); bold: sw.activeFocus }
                                             color: sw.activeFocus ? win.theme.goldHi : win.theme.text
                                         }
                                         MouseArea { anchors.fill: parent; onClicked: sw.flip() }
@@ -574,7 +574,7 @@ Scope {
                                                         id: segText
                                                         anchors.centerIn: parent
                                                         text: segItem.modelData.text
-                                                        font { family: win.theme.mono; pixelSize: 12; bold: segItem.on }
+                                                        font { family: win.theme.mono; pixelSize: win.theme.px(12); bold: segItem.on }
                                                         color: segItem.on ? "#0a0a0e" : win.theme.text
                                                     }
                                                     MouseArea { anchors.fill: parent; onClicked: if (!segItem.on) win.change(row.s, segItem.modelData.value) }
@@ -615,10 +615,10 @@ Scope {
                                                 id: selText
                                                 anchors { left: parent.left; leftMargin: 9; verticalCenter: parent.verticalCenter }
                                                 text: row.opts.length ? win.textOf(row.s, row.value) : String(row.value === undefined ? "" : row.value)
-                                                font { family: win.theme.mono; pixelSize: 12 }
+                                                font { family: win.theme.mono; pixelSize: win.theme.px(12) }
                                                 color: sel.activeFocus ? win.theme.goldHi : win.theme.text
                                             }
-                                            Text { anchors { right: parent.right; rightMargin: 9; verticalCenter: parent.verticalCenter } text: sel.expanded ? "▴" : "▾"; color: win.theme.muted; font.pixelSize: 12 }
+                                            Text { anchors { right: parent.right; rightMargin: 9; verticalCenter: parent.verticalCenter } text: sel.expanded ? "▴" : "▾"; color: win.theme.muted; font.pixelSize: win.theme.px(12) }
                                             MouseArea { anchors.fill: parent; onClicked: { sel.forceActiveFocus(); sel.expanded = !sel.expanded; } }
                                         }
                                         Rectangle {
@@ -639,7 +639,7 @@ Scope {
                                                         width: Math.max(198, optText.implicitWidth + 24); height: 24
                                                         color: sel.hover === index ? win.theme.surface : "transparent"
                                                         Rectangle { visible: opt.on; width: 2; height: parent.height; color: win.theme.gold }
-                                                        Text { id: optText; anchors { left: parent.left; leftMargin: 10; verticalCenter: parent.verticalCenter } text: opt.modelData.text; font { family: win.theme.mono; pixelSize: 12; bold: opt.on } color: opt.on ? win.theme.goldHi : win.theme.text }
+                                                        Text { id: optText; anchors { left: parent.left; leftMargin: 10; verticalCenter: parent.verticalCenter } text: opt.modelData.text; font { family: win.theme.mono; pixelSize: win.theme.px(12); bold: opt.on } color: opt.on ? win.theme.goldHi : win.theme.text }
                                                         MouseArea {
                                                             anchors.fill: parent; hoverEnabled: true
                                                             onEntered: sel.hover = opt.index
@@ -691,7 +691,7 @@ Scope {
                                         Text {
                                             anchors { left: track.right; leftMargin: 12; verticalCenter: parent.verticalCenter }
                                             text: (sld.st < 1 ? sld.shown.toFixed(2).replace(/0$/, "") : Math.round(sld.shown)) + (row.s.unit ? " " + row.s.unit : "")
-                                            font { family: win.theme.mono; pixelSize: 12 }
+                                            font { family: win.theme.mono; pixelSize: win.theme.px(12) }
                                             color: sld.activeFocus ? win.theme.goldHi : win.theme.text
                                         }
                                     }
@@ -711,7 +711,7 @@ Scope {
                                             onActiveFocusChanged: if (activeFocus) list.show(row)
                                             clip: true
                                             text: row.value === undefined ? "" : String(row.value)
-                                            font { family: win.theme.mono; pixelSize: 12 }
+                                            font { family: win.theme.mono; pixelSize: win.theme.px(12) }
                                             color: win.theme.text
                                             Keys.onReturnPressed: win.change(row.s, text)
                                             onEditingFinished: if (text !== String(row.value)) win.change(row.s, text)
@@ -775,7 +775,7 @@ Scope {
                                             anchors { left: parent.left; leftMargin: 9; verticalCenter: parent.verticalCenter }
                                             text: kc.listening ? I18n.t("settings.keys.press", "Press the keys · Esc cancels · ⌫ none")
                                                 : (row.value === "" ? I18n.t("settings.keys.none", "No shortcut") : String(row.value))
-                                            font { family: win.theme.mono; pixelSize: 12; bold: !kc.listening && row.value !== "" }
+                                            font { family: win.theme.mono; pixelSize: win.theme.px(12); bold: !kc.listening && row.value !== "" }
                                             color: kc.listening ? win.theme.goldHi : row.value === "" ? win.theme.muted : (kc.activeFocus ? win.theme.goldHi : win.theme.text)
                                         }
                                         MouseArea { anchors.fill: parent; onClicked: { kc.forceActiveFocus(); kc.listening = !kc.listening; } }
@@ -800,14 +800,14 @@ Scope {
                                                 onActiveFocusChanged: if (activeFocus) list.show(row)
                                                 Keys.onReturnPressed: win.loadItems(row.s.key, true)
                                                 Keys.onSpacePressed: win.loadItems(row.s.key, true)
-                                                Text { id: scanText; anchors.centerIn: parent; text: I18n.t("settings.items.scan", "Search again"); font { family: win.theme.mono; pixelSize: 12; bold: true } color: scanBtn.activeFocus ? win.theme.goldHi : win.theme.text }
+                                                Text { id: scanText; anchors.centerIn: parent; text: I18n.t("settings.items.scan", "Search again"); font { family: win.theme.mono; pixelSize: win.theme.px(12); bold: true } color: scanBtn.activeFocus ? win.theme.goldHi : win.theme.text }
                                                 MouseArea { anchors.fill: parent; onClicked: win.loadItems(row.s.key, true) }
                                             }
                                             Text {
                                                 anchors.verticalCenter: parent.verticalCenter
                                                 visible: itm.d.busy !== ""
                                                 text: itm.d.busy
-                                                font { family: win.theme.mono; pixelSize: 12 }
+                                                font { family: win.theme.mono; pixelSize: win.theme.px(12) }
                                                 color: win.theme.goldHi
                                             }
                                         }
@@ -816,7 +816,7 @@ Scope {
                                             width: itm.width
                                             wrapMode: Text.Wrap
                                             text: itm.d.message
-                                            font { family: win.theme.mono; pixelSize: 12 }
+                                            font { family: win.theme.mono; pixelSize: win.theme.px(12) }
                                             color: win.theme.muted
                                         }
                                         Repeater {
@@ -837,7 +837,7 @@ Scope {
                                                     anchors { left: parent.left; leftMargin: 10; right: itAct.left; rightMargin: 8; verticalCenter: parent.verticalCenter }
                                                     text: it.modelData.name + (it.modelData.detail ? "  ·  " + it.modelData.detail : "")
                                                     elide: Text.ElideRight
-                                                    font { family: win.theme.mono; pixelSize: 12; bold: it.on }
+                                                    font { family: win.theme.mono; pixelSize: win.theme.px(12); bold: it.on }
                                                     color: it.on ? win.theme.goldHi : win.theme.text
                                                 }
                                                 Text {
@@ -846,7 +846,7 @@ Scope {
                                                     text: it.on ? I18n.t("settings.items.disconnect", "Disconnect ›")
                                                         : it.modelData.state === "saved" ? I18n.t("settings.items.connect", "Connect ›")
                                                         : row.s.key === "bluetooth.devices" ? I18n.t("settings.items.pair", "Pair ›") : I18n.t("settings.items.connect", "Connect ›")
-                                                    font { family: win.theme.mono; pixelSize: 11 }
+                                                    font { family: win.theme.mono; pixelSize: win.theme.px(11) }
                                                     color: it.activeFocus ? win.theme.goldHi : win.theme.muted
                                                 }
                                                 MouseArea { anchors.fill: parent; onClicked: win.pickItem(row.s.key, it.modelData) }
@@ -864,7 +864,7 @@ Scope {
                                         text: row.s.key === "about.version" ? (win.about.version || "")
                                             : row.s.key === "about.hardware" ? ["cpu", "gpu", "memory", "kernel", "disk", "monitors"].filter(k => win.about[k]).map(k => I18n.t("settings.hw." + k, k.toUpperCase()) + "  " + win.about[k]).join("\n")
                                             : String(row.value || "")
-                                        font { family: win.theme.mono; pixelSize: 12 }
+                                        font { family: win.theme.mono; pixelSize: win.theme.px(12) }
                                         color: win.theme.text
                                     }
 
@@ -883,7 +883,7 @@ Scope {
                                             id: btnText
                                             anchors.centerIn: parent
                                             text: win.tr(row.s.label) + " ›"
-                                            font { family: win.theme.mono; pixelSize: 12; bold: true }
+                                            font { family: win.theme.mono; pixelSize: win.theme.px(12); bold: true }
                                             color: btn.activeFocus ? win.theme.goldHi : win.theme.text
                                         }
                                         MouseArea { anchors.fill: parent; onClicked: win.act(row.s) }
@@ -896,7 +896,7 @@ Scope {
                                         width: soon.implicitWidth + 12; height: 20
                                         color: "transparent"
                                         border.color: win.theme.line
-                                        Text { id: soon; anchors.centerIn: parent; text: I18n.t("settings.soon", "coming"); font { family: win.theme.mono; pixelSize: 11 } color: win.theme.muted }
+                                        Text { id: soon; anchors.centerIn: parent; text: I18n.t("settings.soon", "coming"); font { family: win.theme.mono; pixelSize: win.theme.px(11) } color: win.theme.muted }
                                     }
                                 }
 
@@ -914,7 +914,7 @@ Scope {
                                         x: 10; y: 8; width: parent.width - 20
                                         text: win.outputKey === row.s.key ? win.output : ""
                                         wrapMode: Text.Wrap
-                                        font { family: win.theme.mono; pixelSize: 12 }
+                                        font { family: win.theme.mono; pixelSize: win.theme.px(12) }
                                         color: win.outputError ? win.theme.red : win.theme.text
                                         textFormat: Text.PlainText
                                     }
@@ -935,7 +935,7 @@ Scope {
                                 text: I18n.t("settings.more", "+ %1 advanced: %2 · shown with «Advanced view»").arg(win.hiddenAdvanced.length)
                                       .arg(win.hiddenAdvanced.map(s => win.tr(s.label)).join(", "))
                                 wrapMode: Text.Wrap
-                                font { family: win.theme.mono; pixelSize: 11 }
+                                font { family: win.theme.mono; pixelSize: win.theme.px(11) }
                                 color: win.theme.muted
                             }
                             MouseArea { anchors.fill: parent; onClicked: Settings.set("settings.advanced", true) }
@@ -945,7 +945,7 @@ Scope {
                             visible: win.query && win.rows.length === 0
                             topPadding: 20
                             text: I18n.t("settings.nothing", "Nothing matches «%1».").arg(win.query)
-                            font { family: win.theme.mono; pixelSize: 13 }
+                            font { family: win.theme.mono; pixelSize: win.theme.px(13) }
                             color: win.theme.muted
                         }
                     }
@@ -962,7 +962,7 @@ Scope {
                         readonly property var p: win.pageOf(win.page)
                         text: p ? I18n.t("settings.where", "Saved in %1").arg(p.where) + (p.command ? I18n.t("settings.same", " · same as %1").arg(p.command) : "") : ""
                         elide: Text.ElideRight
-                        font { family: win.theme.mono; pixelSize: 11 }
+                        font { family: win.theme.mono; pixelSize: win.theme.px(11) }
                         color: win.theme.muted
                     }
                     Rectangle {
@@ -974,7 +974,7 @@ Scope {
                         activeFocusOnTab: true
                         Keys.onReturnPressed: win.resetPage()
                         Keys.onSpacePressed: win.resetPage()
-                        Text { id: defText; anchors.centerIn: parent; text: I18n.t("settings.defaults", "Defaults"); font { family: win.theme.mono; pixelSize: 12; bold: true } color: defaults.activeFocus ? win.theme.goldHi : win.theme.text }
+                        Text { id: defText; anchors.centerIn: parent; text: I18n.t("settings.defaults", "Defaults"); font { family: win.theme.mono; pixelSize: win.theme.px(12); bold: true } color: defaults.activeFocus ? win.theme.goldHi : win.theme.text }
                         MouseArea { anchors.fill: parent; onClicked: win.resetPage() }
                     }
                 }
@@ -1017,14 +1017,14 @@ Scope {
                         width: parent.width
                         text: I18n.t("settings.keep.title", "KEEP %1?").arg(win.pending ? win.pending.text : "")
                         wrapMode: Text.Wrap
-                        font { family: win.theme.mono; pixelSize: 12; bold: true; letterSpacing: 1 }
+                        font { family: win.theme.mono; pixelSize: win.theme.px(12); bold: true; letterSpacing: 1 }
                         color: win.theme.goldHi
                     }
                     Text {
                         width: parent.width
                         text: I18n.t("settings.keep.body", "Goes back in %1 s if you don't answer. Esc goes back.").arg(win.countdown)
                         wrapMode: Text.Wrap
-                        font { family: win.theme.mono; pixelSize: 13 }
+                        font { family: win.theme.mono; pixelSize: win.theme.px(13) }
                         color: win.theme.text
                     }
                     Row {
@@ -1035,14 +1035,14 @@ Scope {
                             width: keepText.implicitWidth + 24; height: 28
                             color: win.theme.gold
                             border { color: isDefault ? win.theme.goldHi : win.theme.gold; width: isDefault ? 2 : 1 }
-                            Text { id: keepText; anchors.centerIn: parent; text: I18n.t("settings.keep.yes", "Keep"); font { family: win.theme.mono; pixelSize: 12; bold: true } color: "#0a0a0e" }
+                            Text { id: keepText; anchors.centerIn: parent; text: I18n.t("settings.keep.yes", "Keep"); font { family: win.theme.mono; pixelSize: win.theme.px(12); bold: true } color: "#0a0a0e" }
                             MouseArea { anchors.fill: parent; onClicked: win.keep() }
                         }
                         Rectangle {
                             width: backText.implicitWidth + 24; height: 28
                             color: win.theme.raised
                             border.color: keepBtn.isDefault ? win.theme.line : win.theme.gold
-                            Text { id: backText; anchors.centerIn: parent; text: I18n.t("settings.keep.no", "Go back"); font { family: win.theme.mono; pixelSize: 12; bold: true } color: win.theme.text }
+                            Text { id: backText; anchors.centerIn: parent; text: I18n.t("settings.keep.no", "Go back"); font { family: win.theme.mono; pixelSize: win.theme.px(12); bold: true } color: win.theme.text }
                             MouseArea { anchors.fill: parent; onClicked: win.revert() }
                         }
                     }

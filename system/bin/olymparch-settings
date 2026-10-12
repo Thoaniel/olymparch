@@ -475,6 +475,7 @@ end
 local function write_idle(values)
     local lock = math.floor(tonumber(value_of(values, "account.lock_minutes")) or 0)
     local off = math.floor(tonumber(value_of(values, "power.screen_off_minutes")) or 0)
+    local sleep = math.floor(tonumber(value_of(values, "power.suspend")) or 0)
     local t = { "# Written by olymparch-settings (Settings → Account and lock, Power). Delete it to use",
         "# /usr/share/olymparch/idle/hypridle.conf again. Apps, video and games that inhibit idle stop these timers.",
         "general {",
@@ -495,6 +496,13 @@ local function write_idle(values)
         t[#t + 1] = ("    timeout = %d                      # %d min: screens off"):format(off * 60, off)
         t[#t + 1] = "    on-timeout = hyprctl dispatch 'hl.dsp.dpms({ action = \"disable\" })'"
         t[#t + 1] = "    on-resume = hyprctl dispatch 'hl.dsp.dpms({ action = \"enable\" })'"
+        t[#t + 1] = "}"
+    end
+    if sleep > 0 then   -- before_sleep_cmd above locks first
+        t[#t + 1] = ""
+        t[#t + 1] = "listener {"
+        t[#t + 1] = ("    timeout = %d                      # %d min: sleep"):format(sleep * 60, sleep)
+        t[#t + 1] = "    on-timeout = systemctl suspend"
         t[#t + 1] = "}"
     end
     write(FILES.idle, table.concat(t, "\n") .. "\n")
@@ -650,12 +658,23 @@ local SYSTEM_ACTIONS = {
     connectivity = { on = true, off = true },
     ["bt-mode"] = { dual = true, le = true, bredr = true },
     ["bt-fast"] = { on = true, off = true },
+    dns = { auto = true, cloudflare = true, quad9 = true },
+    ["mac-random"] = { on = true, off = true },
 }
+local SYSTEM_RANGES = {   -- whole numbers from MIN to MAX (settings-apply has the same globs)
+    snapshots = { 2, 50 },
+}
+local function system_allowed(act, v)
+    if SYSTEM_ACTIONS[act] then return SYSTEM_ACTIONS[act][v] == true end
+    local r, n = SYSTEM_RANGES[act], math.tointeger(tonumber(v))
+    return r ~= nil and n ~= nil and tostring(n) == v and n >= r[1] and n <= r[2]
+end
 appliers["system"] = function(s, values, key)
     local v = value_of(values, key)
     if type(v) == "boolean" then v = v and "on" or "off" end
+    if type(v) == "number" then v = tostring(math.tointeger(v) or v) end
     local act = s.apply.action
-    if not (SYSTEM_ACTIONS[act] and SYSTEM_ACTIONS[act][v]) then die(("%s: %s is not allowed"):format(key, tostring(v)), 5) end
+    if type(v) ~= "string" or not system_allowed(act, v) then die(("%s: %s is not allowed"):format(key, tostring(v)), 5) end
     if not io.open(HELPER) then die(HELPER .. " is missing (olymparch update)", 3) end
     if not os.execute("pkexec " .. HELPER .. " " .. sh_quote(act) .. " " .. sh_quote(v) .. " >/dev/null 2>&1") then
         die(key .. ": not changed (the system said no)", 3)
@@ -954,7 +973,7 @@ elseif cmd == "apply" then
         save_values(values)
         write_hypr(values)
         write_monitors(values)
-        if values["account.lock_minutes"] ~= nil or values["power.screen_off_minutes"] ~= nil then write_idle(values) end
+        if values["account.lock_minutes"] ~= nil or values["power.screen_off_minutes"] ~= nil or values["power.suspend"] ~= nil then write_idle(values) end
         if os.getenv("HYPRLAND_INSTANCE_SIGNATURE") then os.execute("hyprctl reload >/dev/null 2>&1") end
     end
 

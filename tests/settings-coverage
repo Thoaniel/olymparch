@@ -156,10 +156,18 @@ else:
 shell_reads = set()
 for f in list((root / "default/shell").glob("*.qml")) + list((root / "default/lock").glob("*.qml")):
     text = f.read_text()
-    for k in re.findall(r'Settings\.(?:get|set|reset)\("([^"@]+)', text):
+    # the lock screen is a process of its own: it reads settings.json with setting("…")
+    for k in re.findall(r'(?:Settings\.(?:get|set|reset)|\bsetting)\("([^"@]+)', text):
         shell_reads.add(k)
         if k not in keys:
             bad(f"{f.name}: reads setting {k}, which the schema doesn't have")
+# Text size (accessibility.text_size) and high contrast only work if every font and colour goes through the theme
+for f in (root / "default/shell").glob("*.qml"):
+    if f.name != "shell.qml" and re.search(r'"#(?:9a96a3|3a3644|e8e6df)"', f.read_text(), re.I):
+        bad(f"{f.name}: a fixed text/muted/line colour; use theme.text, theme.muted or theme.line so high contrast reaches it")
+for f in (root / "default/shell").glob("*.qml"):
+    for m in re.finditer(r'pixelSize: *\d', f.read_text()):
+        bad(f"{f.name}: a fixed font size ({m.group(0)}…); use theme.px(N) so Settings → Text size scales it")
 for s in settings:
     if s["apply"].get("via") == "shell" and s["ready"] and s["key"] not in shell_reads:
         bad(f"{s['key']}: ready, applied by the shell, but no QML reads it")
@@ -189,7 +197,7 @@ with tempfile.TemporaryDirectory() as home:
         "appearance.gaps_in": "1 }) os.execute('touch PWNED') --",
         "keyboard.layout": evil, "keyboard.variant": evil, "keyboard.options": "a\nos.execute('x')",
         "display.position@Virtual-1": evil, "display.scale@Virtual-1": "1 }) os.execute('x') --",
-        "display.resolution@Bad\"Out": "1920x1080", "account.lock_minutes": "5\nlistener {",
+        "display.resolution@Bad\"Out": "1920x1080", "account.lock_minutes": "5\nlistener {", "power.suspend": 99999,
         "appearance.rounding": 4, "keyboard.model": "pc105",
     }))
     env = {k: v for k, v in os.environ.items() if k not in ("HYPRLAND_INSTANCE_SIGNATURE", "WAYLAND_DISPLAY", "XDG_CONFIG_HOME")}
@@ -199,15 +207,16 @@ with tempfile.TemporaryDirectory() as home:
     written = "".join(p.read_text() for p in conf.rglob("*") if p.is_file() and p.name != "settings.json")
     if r.returncode or "os.execute" in written or "PWNED" in written or "listener {\n" in written.split("listener")[0]:
         bad(f"olymparch-settings let a malicious settings.json value through (rc {r.returncode}):\n{written}{r.stderr}")
-    if r.stderr.count("ignoring") != 9:
-        bad(f"olymparch-settings should ignore 9 bad values, said:\n{r.stderr}")
+    if r.stderr.count("ignoring") != 10:
+        bad(f"olymparch-settings should ignore 10 bad values, said:\n{r.stderr}")
     if "rounding = 4" not in written or 'kb_model = "pc105"' not in written:
         bad("olymparch-settings dropped good values next to bad ones")
     for p in conf.rglob("*.lua"):
         if lua and subprocess.run([lua, "-e", f"assert(loadfile({str(p)!r}))"], capture_output=True).returncode:
             bad(f"{p.name} written by olymparch-settings is not valid Lua")
     for args in (["set", "keyboard.variant", evil], ["set", "display.position@Virtual-1", evil],
-                 ["set", "display.scale@x;rm", "1"], ["set", "accessibility.cursor_size", "24 && rm -rf ~"]):
+                 ["set", "display.scale@x;rm", "1"], ["set", "accessibility.cursor_size", "24 && rm -rf ~"],
+                 ["set", "updates.snapshots", "51"], ["set", "updates.snapshots", "10; reboot"], ["set", "power.suspend", "-5"]):
         if subprocess.run([cli_path, *args], env=env, capture_output=True).returncode != 2:
             bad(f"olymparch-settings {' '.join(args)!r} was not refused")
     if list(Path(home).rglob("PWNED")) or list(Path(home).rglob(".*.??????")):
@@ -227,17 +236,34 @@ if 'local HELPER = "/usr/lib/olymparch/settings-apply"' not in cli:
     bad("olymparch-settings: HELPER must be /usr/lib/olymparch/settings-apply")
 # the helper and the CLI allow exactly the same actions and values, and the schema stays inside them
 helper = (root / "system/lib/settings-apply").read_text()
-helper_allowed = set(re.findall(r'([a-z-]+:[a-z]+)', helper.split('case "$action:$value" in')[1].split(';;')[0]))
+helper_globs = [g.strip() for g in helper.split('case "$action:$value" in')[1].split(';;')[0].replace("\\", " ").replace(")", " ").split("|")]
+if not helper_globs or any(re.search(r'[*?]|[^a-z0-9:\[\]-]', g) for g in helper_globs):
+    bad(f"settings-apply: allowed values must be fixed words or digit classes, not {helper_globs}")
+from fnmatch import fnmatchcase
+def helper_ok(av):
+    return any(fnmatchcase(av, g) for g in helper_globs)
+cli_sys = cli.split("local SYSTEM_ACTIONS")[1].split("appliers")[0]
 cli_allowed = set()
-for m in re.finditer(r'(?:\["([a-z-]+)"\]|\b([a-z]+)) = \{ ((?:[a-z]+ = true,? ?)+)\}', cli.split("local SYSTEM_ACTIONS")[1].split("appliers")[0]):
+for m in re.finditer(r'(?:\["([a-z-]+)"\]|\b([a-z]+)) = \{ ((?:[a-z0-9]+ = true,? ?)+)\}', cli_sys):
     act = m.group(1) or m.group(2)
-    for v in re.findall(r'([a-z]+) = true', m.group(3)):
+    for v in re.findall(r"([a-z0-9]+) = true", m.group(3)):
         cli_allowed.add(f"{act}:{v}")
-if not helper_allowed or helper_allowed != cli_allowed:
-    bad(f"settings-apply allows {sorted(helper_allowed)}, olymparch-settings {sorted(cli_allowed)}: they must match")
+ranges = {(m.group(1) or m.group(2)): (int(m.group(3)), int(m.group(4)))
+          for m in re.finditer(r'(?:\["([a-z-]+)"\]|\b([a-z]+)) = \{ (\d+), (\d+) \}', cli_sys)}
+for act, (lo, hi) in ranges.items():
+    cli_allowed |= {f"{act}:{n}" for n in range(lo, hi + 1)}
+probe = set(cli_allowed) | {g for g in helper_globs if "[" not in g} | {f"{a.split(':')[0]}:{x}" for a in cli_allowed for x in ("", "x", "0", "1", "01", "05", "51", "99", "100", "-1", "2a", "on", "off")}
+helper_allowed = {av for av in probe if helper_ok(av)}
+if not cli_allowed or helper_allowed != cli_allowed:
+    bad(f"settings-apply and olymparch-settings must allow the same values; differ on {sorted(helper_allowed ^ cli_allowed)}")
 for s in settings:
     a = s["apply"]
     if a.get("via") == "system":
+        if s["type"] == "number":
+            lo, hi = ranges.get(a.get("action"), (None, None))
+            if (lo, hi) != (s.get("min"), s.get("max")):
+                bad(f"{s['key']}: min/max {s.get('min')}–{s.get('max')} must match SYSTEM_RANGES {lo}–{hi}")
+            continue
         vals = ["on", "off"] if s["type"] == "bool" else [o["value"] for o in s.get("options", [])]
         for v in vals:
             if f"{a.get('action')}:{v}" not in helper_allowed:

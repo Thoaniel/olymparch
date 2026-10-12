@@ -2,8 +2,11 @@
 // The Olymparch lock screen, a small process of its own so a crash in the bar can never touch the lock.
 // Still temple wallpaper (no animation), a clock, and the same password box as the boot screen.
 // Started by olymparch-lock (Super+L, hypridle). Exits when unlocked.
+// Settings → Account and lock → «The lock screen shows» (account.lock_shows) can hide the clock; it reads
+// ~/.config/olymparch/settings.json itself (no Settings singleton here), and anything unknown shows the clock.
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.Pam
 
@@ -19,6 +22,17 @@ ShellRoot {
     property string password: ""
     property bool checking: false
     property bool failed: false
+    readonly property bool showClock: setting("account.lock_shows") !== "nothing"
+
+    FileView {
+        id: settingsFile
+        path: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/olymparch/settings.json"
+        blockLoading: true
+        printErrors: false
+    }
+    function setting(key) {
+        try { return (JSON.parse(settingsFile.text() || "{}") || {})[key]; } catch (e) { return undefined; }
+    }
 
     PamContext {
         id: pam
@@ -60,6 +74,7 @@ ShellRoot {
 
             SystemClock { id: clock; precision: SystemClock.Minutes }
             Column {
+                visible: root.showClock
                 anchors.horizontalCenter: parent.horizontalCenter
                 y: parent.height * 0.16
                 spacing: 6
