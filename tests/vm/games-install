@@ -41,7 +41,7 @@ sleep 3
 shot start "Installasjonen startes med OPTIONS=games"
 shot_done=0
 for ((i = 0; i < 2400; i++)); do
-    if ((!shot_done)) && seen 'olymparch-install: Valg'; then
+    if ((!shot_done)) && { seen 'olymparch-install: Valg' || seen 'olymparch-install: Options'; }; then
         sleep 20; shot valg "Installasjonen: «Valg: games» (Steam, gamemode, MangoHud, lib32-Vulkan)"; shot_done=1
     fi
     seen 'INSTALL-EXIT=' && break

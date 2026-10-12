@@ -16,7 +16,9 @@ step() {  # progress line on screen; in tests also on the serial console via the
     printf '\n\033[1;33m==> %s\033[0m\n' "$*"
     if [ "${OLYMPARCH_TEST:-0}" = 1 ]; then echo "<2>olymparch-install: $*" >/dev/kmsg; fi
 }
-die() { step "FEIL: $*"; exit 1; }
+# Messages in the language picked in the wizard (LANGUAGE=nb), English otherwise
+L() { if [ "${LANGUAGE:-en}" = nb ]; then printf '%s' "$2"; else printf '%s' "$1"; fi; }
+die() { step "$(L ERROR FEIL): $*"; exit 1; }
 
 # ---- Options (OPTIONS=games,emu,zeus,discord,spotify,obs,code,hibernate from the wizard) ----------------------
 # Kept in one block: called once after the desktop is in place, before the boot menu and the first snapshot.
@@ -33,7 +35,7 @@ gpu_vendors() {  # vendor IDs of every display controller (PCI class 0x03xxxx): 
 install_options() {
     [ -n "${OPTIONS:-}" ] || return 0
     local pkgs=() conf=/tmp/olymparch-pacman.conf home=/mnt/home/$USERNAME v gpus=''
-    step "Valg: ${OPTIONS//,/, }"
+    step "$(L Options Valg): ${OPTIONS//,/, }"
     if has_opt games; then
         # Steam is 32-bit: [multilib] on in the new system, and for this install
         sed -i '/^#\[multilib\]$/,/^#Include/ s/^#//' /mnt/etc/pacman.conf
@@ -94,18 +96,18 @@ install_options() {
 }
 # ---- end of options ------------------------------------------------------------------------------------------
 
-[ "${1:-}" = --answers ] && [ -f "${2:-}" ] || die "bruk: olymparch-install --answers FIL [--recovery-key-file FIL]"
+[ "${1:-}" = --answers ] && [ -f "${2:-}" ] || die "usage: olymparch-install --answers FILE [--recovery-key-file FILE]"
 KEYFILE=''
 [ "${3:-}" = --recovery-key-file ] && KEYFILE=${4:?}
 CMDLINE_EXTRA='' KERNEL=linux KEYMAP=us LOCALE=en_US.UTF-8 TIMEZONE=UTC HOSTNAME=olymparch
 # shellcheck disable=SC1090
 . "$2"
-for v in DISK DISK_SERIAL USERNAME PASSWORD; do [ -n "${!v:-}" ] || die "$v mangler i svarfila"; done
-[ -b "$DISK" ] || die "$DISK er ikke en disk"
+for v in DISK DISK_SERIAL USERNAME PASSWORD; do [ -n "${!v:-}" ] || die "$v $(L "is missing from the answers file" "mangler i svarfila")"; done
+[ -b "$DISK" ] || die "$DISK $(L "is not a disk" "er ikke en disk")"
 serial=$(lsblk -dno SERIAL "$DISK" | tr -d ' ')
-[ "$serial" = "$DISK_SERIAL" ] || die "serienummeret på $DISK er «$serial», ikke «$DISK_SERIAL». Ingenting er endret."
-[[ $USERNAME =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] || die "ugyldig brukernavn"
-[ -d /sys/firmware/efi ] || die "maskinen er ikke startet med UEFI"
+[ "$serial" = "$DISK_SERIAL" ] || die "$(L "the serial number of $DISK is '$serial', not '$DISK_SERIAL'. Nothing was changed." "serienummeret på $DISK er «$serial», ikke «$DISK_SERIAL». Ingenting er endret.")"
+[[ $USERNAME =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] || die "$(L "invalid user name" "ugyldig brukernavn")"
+[ -d /sys/firmware/efi ] || die "$(L "the machine was not started with UEFI" "maskinen er ikke startet med UEFI")"
 
 step "Disk: $DISK ($(lsblk -dno SIZE,MODEL "$DISK" | xargs))"
 case $DISK in *nvme*|*mmcblk*) P=${DISK}p ;; *) P=$DISK ;; esac
@@ -120,17 +122,17 @@ type=linux, name=olymparch
 EOF
 udevadm settle
 
-step "Kryptering (LUKS2)"
+step "$(L "Encryption (LUKS2)" "Kryptering (LUKS2)")"
 printf '%s' "$PASSWORD" | cryptsetup luksFormat --batch-mode --type luks2 --pbkdf argon2id --label OLYMPARCH --key-file=- "$ROOT"
 printf '%s' "$PASSWORD" | cryptsetup open --allow-discards --key-file=- "$ROOT" root
-step "Gjenopprettingsnøkkel"
+step "$(L "Recovery key" "Gjenopprettingsnøkkel")"
 # 8 groups of 8 letters; unlocks the disk at the same prompt as the password
 RECOVERY_KEY=$(PASSWORD=$PASSWORD systemd-cryptenroll --recovery-key "$ROOT" 2>/dev/null \
     | grep -oE '[a-z]{8}(-[a-z]{8}){7}' | head -n 1) || true
-[ -n "$RECOVERY_KEY" ] || die "fikk ikke laget gjenopprettingsnøkkelen"
+[ -n "$RECOVERY_KEY" ] || die "$(L "could not create the recovery key" "fikk ikke laget gjenopprettingsnøkkelen")"
 if [ -n "$KEYFILE" ]; then (umask 077; printf '%s\n' "$RECOVERY_KEY" >"$KEYFILE"); fi
 
-step "Filsystemer (btrfs med volumer)"
+step "$(L "File systems (btrfs with subvolumes)" "Filsystemer (btrfs med volumer)")"
 mkfs.fat -F 32 -n ESP "$ESP" >/dev/null
 mkfs.btrfs -q -L olymparch /dev/mapper/root
 mount /dev/mapper/root /mnt
@@ -145,7 +147,7 @@ mount -o "$opts,subvol=@var_log" /dev/mapper/root /mnt/var/log
 mount -o "$opts,subvol=@pkg" /dev/mapper/root /mnt/var/cache/pacman/pkg
 mount "$ESP" /mnt/boot
 
-step "Systemet (pacstrap)"
+step "$(L "The system (pacstrap)" "Systemet (pacstrap)")"
 mkdir -p /mnt/etc
 printf 'KEYMAP=%s\n' "$KEYMAP" >/mnt/etc/vconsole.conf   # before mkinitcpio runs, so the LUKS prompt has the layout
 pacstrap_opts=(-K)
@@ -155,7 +157,7 @@ pacstrap "${pacstrap_opts[@]}" /mnt base "$KERNEL" mkinitcpio btrfs-progs crypts
     pipewire pipewire-pulse wireplumber xdg-desktop-portal-hyprland plymouth \
     firefox thunar tumbler gvfs thunar-volman imv mpv xdg-utils xdg-user-dirs udiskie udisks2 clamav pacman-contrib
 
-step "Oppsett"
+step "$(L "Configuration" "Oppsett")"
 genfstab -U /mnt | sed -E 's/,subvolid=[0-9]+//' >/mnt/etc/fstab
 echo "$HOSTNAME" >/mnt/etc/hostname
 ln -sf "/usr/share/zoneinfo/$TIMEZONE" /mnt/etc/localtime
@@ -185,7 +187,7 @@ echo '%wheel ALL=(ALL:ALL) ALL' >/mnt/etc/sudoers.d/10-wheel
 chmod 440 /mnt/etc/sudoers.d/10-wheel
 arch-chroot /mnt systemctl enable NetworkManager >/dev/null 2>&1
 
-step "Skrivebordet (Hyprland og skallet)"
+step "$(L "The desktop (Hyprland and the shell)" "Skrivebordet (Hyprland og skallet)")"
 cp -r /usr/share/olymparch /mnt/usr/share/
 install -Dm755 /usr/lib/olymparch/launch-shell /mnt/usr/lib/olymparch/launch-shell
 install -Dm644 /usr/share/olymparch/foot/foot.ini /mnt/etc/xdg/foot/foot.ini
@@ -237,7 +239,7 @@ SESSION
 
 install_options
 
-step "Oppstartsmeny (Limine) og øyeblikksbilder"
+step "$(L "Boot menu (Limine) and snapshots" "Oppstartsmeny (Limine) og øyeblikksbilder")"
 uuid=$(blkid -s UUID -o value "$ROOT")
 mkdir -p /mnt/boot/EFI/BOOT /mnt/etc/olymparch
 cp /mnt/usr/share/limine/BOOTX64.EFI /mnt/boot/EFI/BOOT/BOOTX64.EFI
@@ -288,8 +290,9 @@ arch-chroot /mnt olymparch-boot sync
 
 rm -f -- "$2"   # the answers file holds the password in plain text
 if [ -z "$KEYFILE" ]; then
-    printf '\n  Gjenopprettingsnøkkel (låser opp disken hvis du glemmer passordet; skriv den ned):\n\n    %s\n' "$RECOVERY_KEY"
+    printf '\n  %s:\n\n    %s\n' "$(L "Recovery key (unlocks the disk if you forget the password; write it down)" \
+        "Gjenopprettingsnøkkel (låser opp disken hvis du glemmer passordet; skriv den ned)")" "$RECOVERY_KEY"
 fi
-step "Ferdig. Ta ut installasjonsmediet og start på nytt."
+step "$(L "Done. Remove the installation medium and restart." "Ferdig. Ta ut installasjonsmediet og start på nytt.")"
 umount -R /mnt
 cryptsetup close root
