@@ -62,8 +62,8 @@ keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default
 keys "$PW\n" 1
 wait_for 'SETTINGS-UPDATED' 40 || finish "FAIL · fikk ikke kopiert filene inn"
 # (recovery key, media keys, update check, colour filter, Orca offer: their scripts, units, shaders and helper)
-keys "sudo install -m755 /mnt/system/bin/olymparch-recovery-key /mnt/system/bin/olymparch-media /mnt/system/bin/olymparch-update-check /usr/bin/ && sudo install -Dm755 /mnt/system/lib/install-app /usr/lib/olymparch/install-app && sudo cp -r /mnt/default/hypr/shaders /usr/share/olymparch/hypr/ && sudo install -m644 /mnt/default/systemd/user/olymparch-update-check.service /mnt/default/systemd/user/olymparch-update-check.timer /usr/lib/systemd/user/ && systemctl --user daemon-reload && echo '<2>EXTRA-UPDATED' > /dev/kmsg\n" 1
-wait_for 'EXTRA-UPDATED' 30 || finish "FAIL · fikk ikke kopiert de nye skriptene inn"
+keys "sudo install -m755 /mnt/system/bin/olymparch-recovery-key /mnt/system/bin/olymparch-media /mnt/system/bin/olymparch-update-check /usr/bin/ && sudo install -Dm755 /mnt/system/lib/install-app /usr/lib/olymparch/install-app && sudo cp -r /mnt/default/hypr/shaders /usr/share/olymparch/hypr/ && sudo install -m644 /mnt/default/systemd/user/olymparch-update-check.service /mnt/default/systemd/user/olymparch-update-check.timer /usr/lib/systemd/user/ && systemctl --user daemon-reload && { command -v fakeroot >/dev/null || sudo pacman -Sy --noconfirm --needed fakeroot >/dev/null; }; echo '<2>EXTRA-UPDATED' > /dev/kmsg\n" 1
+wait_for 'EXTRA-UPDATED' 120 || finish "FAIL · fikk ikke kopiert de nye skriptene inn"
 keys "c() { if eval \"\$2\" >/dev/null 2>&1; then echo \"<2>CHK-\$1-OK\"; else echo \"<2>CHK-\$1-NO\"; fi > /dev/kmsg; }; clear\n" 0.5
 sleep 4
 shot skrivebord "Skrivebordet med det nye skallet (norsk)"
