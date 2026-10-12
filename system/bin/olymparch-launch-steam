@@ -17,6 +17,11 @@ elif [ ! -f "$user_conf" ] && [ -f /usr/share/olymparch/games/MangoHud.conf ]; t
     export MANGOHUD_CONFIGFILE=/usr/share/olymparch/games/MangoHud.conf
 fi
 mangohud=$(olymparch-settings get games.mangohud 2>/dev/null || echo hidden)
+# Settings → Games → gamescope: Steam (and so every game) runs nested in gamescope, MangoHud through its mangoapp
+if [ "$(olymparch-settings get games.gamescope 2>/dev/null)" = true ] && command -v gamescope >/dev/null; then
+    if [ "$mangohud" != off ] && command -v mangoapp >/dev/null; then exec gamescope --mangoapp -e -- /usr/bin/steam "$@"; fi
+    exec gamescope -e -- /usr/bin/steam "$@"
+fi
 mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/olymparch/mangohud"
 if [ "$mangohud" != off ] && command -v mangohud >/dev/null; then exec mangohud /usr/bin/steam "$@"; fi
 exec /usr/bin/steam "$@"

@@ -120,7 +120,8 @@ hl.window_rule({ name = "olymparch-settings", match = { title = "^Olymparch Sett
 -- The shell (bar, wallpaper) starts with the session
 hl.on("hyprland.start", function()
     hl.exec_cmd("/usr/lib/olymparch/launch-shell")
-    hl.exec_cmd("udiskie --automount --notify --no-tray")   -- USB disks: mounted, with Open / Eject in the notification
+    -- USB disks: mounted, with Open / Eject in the notification (Settings → Disks → Open USB disks automatically)
+    hl.exec_cmd("sh -c '[ \"$(olymparch-settings get disks.usb_automount 2>/dev/null)\" = false ] && exec udiskie --no-automount --notify --no-tray; exec udiskie --automount --notify --no-tray'")
     hl.exec_cmd("olymparch-welcome")   -- first-login hints (e.g. set up Zeus)
     hl.exec_cmd("sh -c 'f=$HOME/.config/hypr/hypridle.conf; [ -f \"$f\" ] || f=/usr/share/olymparch/idle/hypridle.conf; exec hypridle -c \"$f\"'")
 end)

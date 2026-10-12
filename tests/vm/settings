@@ -242,6 +242,18 @@ check shader-cache 'olymparch-settings set games.shader_cache 20 && grep -q "^ME
 keys "clear; olymparch-settings set settings.advanced on; olymparch-settings open games\n" 2.5
 shot spill "Spill (avansert): MangoHud klar og skjult, FPS-tak 141, shader-cache 20 GB"
 close_settings
+# ── Disks, Hardware, Games, Zeus: read-only views print something; Zeus shows Install or Set up, never both
+check view-disks 'olymparch-settings run disks.overview | grep -q / && olymparch-settings run disks.subvolumes | grep -q @'
+check view-hw 'olymparch-settings run hardware.detected | grep -q . && olymparch-settings run hardware.rules | grep -q .'
+check view-games 'olymparch-settings run games.proton | grep -q Proton && olymparch-settings run games.add | grep -q .'
+check view-zeus 'olymparch-settings run zeus.overview | grep -q . && if [ -x ~/.local/bin/olympus ]; then olymparch-settings missing | grep -q zeus.install; else olymparch-settings missing | grep -q zeus.setup; fi'
+check usb-automount 'olymparch-settings set disks.usb_automount off && [ "$(olymparch-settings get disks.usb_automount)" = false ] && olymparch-settings reset disks.usb_automount'
+keys "clear; olymparch-settings open disks\n" 2.5
+shot disker "Disker: disker og ledig plass, Rydd opp, spillbibliotek, USB-automontering"
+close_settings
+keys "clear; olymparch-settings open zeus\n" 2.5
+shot zeus "Zeus: oversikt og Installer Zeus eller Sett opp / Status / Åpne Zeus"
+close_settings
 # the shell's font follows Settings → Appearance → Font
 keys "clear; olymparch-settings set appearance.font 'DejaVu Serif'; sleep 1.5\n" 2
 shot skrift "Skrift satt til DejaVu Serif: baren følger med"
