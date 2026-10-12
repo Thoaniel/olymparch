@@ -1,6 +1,6 @@
 #!/bin/bash
 # VM test: backgrounds (docs/themes.md, «Backgrounds»). Copies the shell, lock screen, settings, olymparch-theme and every
-# theme with its temple and scenes (made here at 1080 with art/torch.py and art/scenes/render.py) into a copy of the
+# theme with its temple (made here at 1080 with art/torch.py) and its own backgrounds into a copy of the
 # installed disk. Then, for every theme: each background on an empty desktop, and with a floating terminal and two
 # notifications over it (is the text readable?); the background picker (Super+Ctrl+Space) with → trying the next one
 # and Esc going back; Settings → Appearance → Background with its thumbnails. Then pictures of your own dropped into
@@ -39,16 +39,9 @@ for id in "${ids[@]}"; do
     if [ "$id" != zeus ] && ! { [ -s "$c/frame-47.png" ] && [ "$c/frame-47.png" -nt "$t" ] && [ "$c/frame-47.png" -nt art/torch.py ]; }; then
         jobs+=("TORCH $c 1920 1080 48 $t")
     fi
-    for scene in $(py art/scenes/render.py "$t" --list | cut -d' ' -f1); do
-        c=$A/$id/$scene/1080
-        if [ -s "$c/frame-00.png" ] && [ -z "$(find "$t" "art/scenes/$id.py" art/scenes/pixel.py art/scenes/common.py -newer "$c/frame-00.png")" ]; then :; else
-            rm -rf -- "$c"
-            jobs+=("$t $scene $c 1920 1080")
-        fi
-    done
 done
 if [ ${#jobs[@]} -gt 0 ]; then
-    printf '%s\n' "${jobs[@]}" | xargs -P "$(nproc)" -L1 sh -c 'if [ "$1" = TORCH ]; then shift; s=art/torch.py; else s=art/scenes/render.py; fi
+    printf '%s\n' "${jobs[@]}" | xargs -P "$(nproc)" -L1 sh -c 'shift; s=art/torch.py
         if command -v uv >/dev/null; then uv run -q --no-project --with pillow python $s "$@"; else python $s "$@"; fi >/dev/null' art
 fi
 # pictures of your own: a photo-like JPEG, a PNG for every theme, and a text file called .png (must be skipped)
@@ -98,7 +91,7 @@ vm boot.log -virtfs local,path="$PWD",mount_tag=olysrc,security_model=none,reado
     -audiodev none,id=snd0 -device ich9-intel-hda -device hda-output,audiodev=snd0 -device qemu-xhci -device usb-tablet
 unlock_and_desktop "$PW"
 
-# This repo's files in place (the themes with their temples and scenes), the shell restarted in Norwegian, the helpers
+# This repo's files in place (the themes with their temples and backgrounds), the shell restarted in Norwegian, the helpers
 press meta_l+ret; sleep 2
 keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /mnt/default/settings /mnt/default/lock /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -Dm644 /mnt/default/foot/foot.ini /etc/xdg/foot/foot.ini && sudo install -m755 /mnt/system/bin/olymparch-settings /mnt/system/bin/olymparch-theme /usr/bin/ && sudo install -m755 /mnt/tests/vm/backgrounds-guest.sh /usr/local/bin/bgt && sudo mkdir -p /usr/share/olymparch/themes && sudo cp -r /mnt/default/themes/. /usr/share/olymparch/themes/ && for d in /mnt/tests/vm/out/backgrounds-art/*/*/1080; do s=\${d%/1080}; sc=\${s##*/}; i=\${s%/*}; i=\${i##*/}; [ \$i = user ] && continue; if [ \$sc = temple ]; then t=/usr/share/olymparch/themes/\$i/wallpaper; else t=/usr/share/olymparch/themes/\$i/backgrounds/\$sc; fi; sudo mkdir -p \$t && sudo cp -r \$d \$t/; done; sudo chmod 666 /dev/kmsg && olymparch-theme apply --quiet; hyprctl reload >/dev/null; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=nb_NO.UTF-8 setsid -f /usr/lib/olymparch/launch-shell; echo '<2>BG-UPDATED' > /dev/kmsg\n" 1
 keys "$PW\n" 1
@@ -158,8 +151,9 @@ seen 'CHK-user-OK' || fails+=("egne-bilder")
 shot egne-liste "Hades: egne bilder i listen (fake.png, en symlenke og en for stor fil er hoppet over)"
 press meta_l+2; sleep 1
 press ctrl+meta_l+spc; sleep 2
-shot egne-velger "Hades: velgeren med egne bilder etter scenene"
-for _ in 1 2 3 4; do press right; sleep 0.4; done
+shot egne-velger "Hades: velgeren med egne bilder etter gudens egne"
+own=$(python3 -I -c 'import json, sys; print(len(json.load(open(sys.argv[1])).get("backgrounds", [])))' default/themes/hades/theme.json)
+for _ in $(seq 0 "$own"); do press right; sleep 0.4; done
 sleep 1.5
 shot egne-prov "Hades: → til ditt eget bilde (Fyrlykt.jpg), fyller skjermen"
 press ret; sleep 2.5
@@ -176,17 +170,17 @@ seen 'CHK-remember-OK' || fails+=("husket-per-tema")
 grep -aoE 'BG-REMEMBER.*' "$O/$LOG" | head -1 >"$O/remember.txt"
 keys "bgt term && exit\n" 2.5
 keys "clear; olymparch-theme background list\n" 1.5
-shot husket "Zevs etter byttene: «Over skyene» er fortsatt valgt (*)"
+shot husket "Zevs etter byttene: «Skumring» (all:Skumring.png) er fortsatt valgt (*)"
 
-# ── Live wallpaper: Torch moves, Off is still (on Zeus' storm, which drifts all the time)
-keys "clear; olymparch-theme background set storm >/dev/null; olymparch-settings set appearance.wallpaper torch\n" 2
+# ── Live wallpaper: Torch moves, Off is still (on Zeus' temple, whose torch flickers all the time)
+keys "clear; olymparch-theme background set temple >/dev/null; olymparch-settings set appearance.wallpaper torch\n" 2
 press meta_l+2; sleep 1.5
 same_screen && fails+=("fakkel-står-stille")
 press meta_l+1; sleep 0.5
 keys "clear; olymparch-settings set appearance.wallpaper off\n" 2
 press meta_l+2; sleep 1.5
 same_screen || fails+=("av-beveger-seg")
-shot av "Zevs, uvær med «Levende bakgrunn: Av»: står stille"
+shot av "Zevs, tempelet med «Levende bakgrunn: Av»: står stille"
 press meta_l+1; sleep 0.5
 keys "clear; olymparch-settings set appearance.wallpaper torch\n" 1.5
 

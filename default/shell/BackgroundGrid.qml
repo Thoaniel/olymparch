@@ -1,5 +1,5 @@
 // Thumbnails of the backgrounds of the theme in use (olymparch-theme background list --json): the temple, the theme's
-// scenes and your pictures. Used by the background picker (Super+Ctrl+Space) and by Settings → Appearance → Background.
+// own backgrounds and your pictures. Used by the background picker (Super+Ctrl+Space) and by Settings → Appearance → Background.
 // The one in use has a ✓ and «in use»; the one under the keyboard (or the pointer) a thick frame with a ring.
 import QtQuick
 

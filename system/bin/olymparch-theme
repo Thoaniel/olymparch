@@ -10,7 +10,7 @@
 --   olymparch-theme install URL         a community theme from https://github.com/OWNER/REPO(.git)
 --   olymparch-theme remove ID           remove a theme you installed
 --   olymparch-theme background [list [--json] [THEME] | current | set N|ID | next | prev]
---                                       the backgrounds of the theme in use: the temple, the theme's scenes and
+--                                       the backgrounds of the theme in use: the temple, the theme's own and
 --                                       your pictures (~/.config/olymparch/backgrounds/THEME/ and …/all/); each
 --                                       theme remembers its own (appearance.background@THEME)
 --

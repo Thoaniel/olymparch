@@ -31,13 +31,13 @@ user)
         k "CHK-user-NO"
     fi ;;
 remember)
-    olymparch-theme set hades >/dev/null; olymparch-theme background set styx >/dev/null
-    olymparch-theme set zeus >/dev/null; olymparch-theme background set summit >/dev/null
+    olymparch-theme set hades >/dev/null; olymparch-theme background set mine:Fyrlykt.jpg >/dev/null
+    olymparch-theme set zeus >/dev/null; olymparch-theme background set all:Skumring.png >/dev/null
     olymparch-settings reset appearance.background@athena >/dev/null   # never chosen: a theme starts on the temple
     olymparch-theme set athena >/dev/null; a0=$(olymparch-theme background current)
     olymparch-theme set hades >/dev/null; a=$(olymparch-theme background current)
     w=$(grep -o '"background": "[^"]*"' ~/.config/olymparch/theme/theme.json)
     olymparch-theme set zeus >/dev/null; b=$(olymparch-theme background current)
     k "BG-REMEMBER athena=$a0 hades=$a ($w) zeus=$b $(grep -o 'appearance.background@[a-z]*": "[^"]*' ~/.config/olymparch/settings.json | tr '\n' ' ')"
-    if [ "$a0" = temple ] && [ "$a" = styx ] && [ "$w" = '"background": "styx"' ] && [ "$b" = summit ]; then k "CHK-remember-OK"; else k "CHK-remember-NO"; fi ;;
+    if [ "$a0" = temple ] && [ "$a" = mine:Fyrlykt.jpg ] && [ "$w" = '"background": "mine:Fyrlykt.jpg"' ] && [ "$b" = all:Skumring.png ]; then k "CHK-remember-OK"; else k "CHK-remember-NO"; fi ;;
 esac

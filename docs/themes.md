@@ -40,31 +40,12 @@ locks.
 
 ## Backgrounds
 
-Every theme has several backgrounds, and you pick one per theme. The first is always the torch-lit temple in the
-theme's colours; after it come the theme's own scenes, in the same low-resolution pixel art, and then pictures of
-your own. Each theme remembers its choice, so switching from Hades to Zeus and back brings Hades' river Styx back.
-A new theme starts on the temple.
+Every theme has its backgrounds, and you pick one per theme. The first is always the torch-lit temple in the
+theme's colours; after it come any backgrounds the theme brings, and then pictures of your own. Each theme remembers
+its choice. A new theme starts on the temple.
 
-| Theme | 1 | 2 | 3 | 4 |
-|---|---|---|---|---|
-| Zeus | Temple | Storm over Olympus | Above the clouds | Sign in the stars |
-| Aphrodite | Temple | Shell in the sea foam | Falling rose petals | Sign in the stars |
-| Apollo | Temple | The sun chariot at dawn | The golden lyre | Sign in the stars |
-| Ares | Temple | Battlefield at sunset | The bronze helmet | Sign in the stars |
-| Artemis | Temple | Moon over the forest | The golden hind | Sign in the stars |
-| Athena | Temple | Owl on the olive branch | Parthenon by moonlight | Sign in the stars |
-| Demeter | Temple | Wheat at dusk | Poppies under the harvest moon | Sign in the stars |
-| Dionysus | Temple | Vineyard at dusk | Grapes and wine | Sign in the stars |
-| Hades | Temple | Charon on the Styx | Embers of the underworld | Sign in the stars |
-| Hephaestus | Temple | The forge | Etna at night | Sign in the stars |
-| Hera | Temple | Peacock's tail | Hera's Milky Way | Sign in the stars |
-| Hermes | Temple | Winged sandals | The herald's staff | Sign in the stars |
-| Hestia | Temple | The hearth | Oil lamps | Sign in the stars |
-| Poseidon | Temple | Trident from the sea | The deep sea | Sign in the stars |
-
-Most scenes move slowly in a loop of 32 frames; the motion is small, and nothing flashes. The **Live wallpaper**
-setting (Torch, Calm, Off) applies to every background: Calm plays at half speed and Off shows the first frame as a
-still. Like the temple, a background stops moving while windows cover it.
+The **Live wallpaper** setting (Torch, Calm, Off) applies to every background that moves: Calm plays at half speed and
+Off shows the first frame as a still. Like the temple, a background stops moving while windows cover it.
 
 Pick one:
 
@@ -76,12 +57,12 @@ Pick one:
 
   ```
   olymparch-theme background list            the theme in use (* = chosen); list THEME for another one, --json
-  olymparch-theme background set 3           by its number in the list, or by its id (storm, mine:beach.jpg)
+  olymparch-theme background set 3           by its number in the list, or by its id (temple, mine:beach.jpg)
   olymparch-theme background next | prev
   olymparch-theme background current
   ```
 
-  `olymparch-settings set appearance.background@hades styx` does the same for any theme.
+  `olymparch-settings set appearance.background@hades mine:beach.jpg` does the same for any theme.
 
 The shell can open the picker from elsewhere (a menu entry such as *Style → Background*) with
 `qs ipc -p /usr/share/olymparch/shell call backgrounds open`; `… backgrounds next` and `… prev` switch without it.
@@ -98,7 +79,7 @@ Put pictures in
 - `~/.config/olymparch/backgrounds/all/` for every theme.
 
 They show up in the picker and in Settings the next time you open them, after the theme's own backgrounds. A picture
-fills the screen and is cropped to fit (it is smoothed; the pixel-art scenes are not). Your pictures are checked
+fills the screen and is cropped to fit (it is smoothed; pixel-art frames are not). Your pictures are checked
 before the shell reads them: only PNG, JPEG and WebP files whose first bytes match the format, at most 20 MiB each, at
 most 64 per theme. The name must start with a letter or digit and may hold letters, digits, spaces and `_ . , ( ) + -`
 (at most 100 bytes); hidden files, symlinks and anything else are skipped. Their id is `mine:<file>` or `all:<file>`.
@@ -249,19 +230,8 @@ python art/torch.py OUT/1080 1920 1080 48 default/themes/hades/theme.json
 
 `dev/build-iso` does this for every built-in theme.
 
-The built-in scenes are drawn by code too, in the same way: `art/scenes/<id>.py` holds a theme's scenes (each a
-function that draws one frame on a 320×180 canvas from the theme's palette), `art/scenes/pixel.py` the shared pixel-art
-helpers (dithered gradients, glows, stars, clouds, sprites from text, the scanlines) and `art/scenes/common.py` the
-god's sign as a constellation. The frames are scaled up without smoothing and saved as palette PNGs:
-
-```
-python art/scenes/render.py default/themes/hades/theme.json --list
-python art/scenes/render.py default/themes/hades/theme.json styx OUT/1080 1920 1080 [--gif]
-```
-
-`dev/build-iso` makes every scene for 1080 and 1440 (in parallel, kept in `build/backgrounds/` until the theme or the
-art changes). All backgrounds together, temples included, must stay under 120 MB on the ISO; today they are about
-86 MB (the 14 temples about 37 MB, the 42 scenes about 49 MB). Nothing is generated by AI or downloaded: every picture is made by this code from the palette.
+All backgrounds together must stay under 120 MB on the ISO; the 14 temples take about 37 MB. Nothing is generated
+by AI or downloaded: every picture is made by this code from the palette.
 
 ## What is written where
 

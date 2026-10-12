@@ -11,7 +11,7 @@ Fails if
 - olymparch-theme takes a theme with a bad colour, an unknown field, a symlink, a wrong id or unreadable text, an
   install URL that is not https://github.com/OWNER/REPO, or removes a built-in theme;
 - olymparch-settings takes an appearance.theme that is no theme;
-- a theme names backgrounds art/scenes doesn't make, or olymparch-theme lists a picture that is no picture (wrong first
+- olymparch-theme lists a picture that is no picture (wrong first
   bytes, over 20 MiB, a symlink), forgets a theme's background across a switch or takes a bad background id.
 """
 import json
@@ -73,16 +73,6 @@ for d in themes:
     rows.append((d.name, ratios))
 if not light:
     bad("no light theme")
-for d in themes:   # theme.json's backgrounds and art/scenes/<id>.py's SCENES are the same ids, in that order
-    t = json.loads((d / "theme.json").read_text())
-    named = [b["id"] for b in t.get("backgrounds", [])]
-    art = root / "art/scenes" / f"{d.name}.py"
-    made = re.findall(r'^\s+"([a-z]+)":\s*(?:\(|sign\()', art.read_text().split("SCENES = {")[-1], re.M) if art.exists() else []
-    if named != made:
-        bad(f"{d.name}: theme.json backgrounds {named} but art/scenes/{d.name}.py makes {made}")
-    if not 2 <= len(named) + 1 <= 6:
-        bad(f"{d.name}: {len(named) + 1} backgrounds; 3 to 4 expected (the temple and the scenes)")
-
 # ── olymparch-theme refuses bad themes, URLs and removals
 GOOD = json.loads((root / "default/themes/zeus/theme.json").read_text())
 with tempfile.TemporaryDirectory() as home:

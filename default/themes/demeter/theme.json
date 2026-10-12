@@ -39,10 +39,5 @@
     "#c2aed0",
     "#94cac3",
     "#ffffff"
-  ],
-  "backgrounds": [
-    {"id": "wheat", "name": {"en": "Wheat at dusk", "nb": "Kornåker i skumringen"}},
-    {"id": "poppies", "name": {"en": "Poppies under the harvest moon", "nb": "Valmuer under høstmånen"}},
-    {"id": "sign", "name": {"en": "Sign in the stars", "nb": "Tegn på himmelen"}}
   ]
 }
