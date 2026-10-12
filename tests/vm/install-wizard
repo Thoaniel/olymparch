@@ -58,6 +58,9 @@ press ret
 shot by "Tidssone: by (Oslo forhåndsvalgt)"
 press ret
 sleep 3
+shot maskinvare "Maskinvare: det olymparch-hw fant og vil installere"
+press ret
+sleep 2
 shot disk "Disk: bare NVMe-disken vises, ikke installasjonsmediet"
 press ret
 shot slett "Bekreft sletting med ERASE"

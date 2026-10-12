@@ -9,7 +9,7 @@ SRC=${OLYMPARCH_BASE:-tests/vm/out/install-disk}   # a read-only installed disk 
 O=tests/vm/out/shell
 rm -rf -- tests/vm/out/shell
 mkdir -p "$O"
-cp "$SRC/vars.fd" "$O/vars.fd"
+install -m644 "$SRC/vars.fd" "$O/vars.fd"   # a writable copy (the base is read-only)
 qemu-img create -q -f qcow2 -b "$(realpath "$SRC/disk.qcow2")" -F qcow2 "$O/disk.qcow2"
 QMP=$O/qmp.sock
 . tests/vm/lib.sh

@@ -124,7 +124,10 @@ done
 # Shown before the disk is chosen; nothing is installed here (olymparch-install does that after pacstrap).
 hw=/usr/share/olymparch/system/bin/olymparch-hw
 if [ -x "$hw" ]; then
-    OLYMPARCH_LANG=$lang "$hw" plan --summary >/tmp/olymparch-hw.txt 2>&1
+    # planned against an empty root: what the NEW system gets (the live system has its own packages)
+    empty=$(mktemp -d)
+    OLYMPARCH_LANG=$lang "$hw" plan --summary --root "$empty" >/tmp/olymparch-hw.txt 2>&1
+    rmdir -- "$empty"
     whiptail --backtitle "$BT" --title "$(t hw)" --scrolltext --textbox /tmp/olymparch-hw.txt 22 $W || bail
 fi
 
