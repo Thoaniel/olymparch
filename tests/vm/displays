@@ -1,0 +1,84 @@
+#!/bin/bash
+# VM test: monitor combinations remember their layout (display.profiles). On a copy of the installed disk, with
+# olymparch-settings, the schema and the Hyprland defaults copied in from this repo. QEMU cannot hot-plug a
+# monitor head, so a second monitor is a Hyprland headless output (hyprctl output create headless OLYTEST):
+#   1. login: the monitors in use become the first combination (no notification)
+#   2. a second monitor appears → new combination: preferred mode, automatic position, «Ny skjermkombinasjon»
+#   3. its layout is set (as Settings → Displays does): position 1280x0, scale 2 → saved for this combination
+#   4. it is removed → the single-monitor layout comes back; 5. it comes back → placed and scaled as in 3
+set -uo pipefail
+cd "$(dirname "$0")/../.."
+. dev/env
+SRC=${OLYMPARCH_BASE:-tests/vm/out/install-disk}
+[ -f "$SRC/disk.qcow2" ] || { echo "kjør tests/vm/install-disk først (eller sett OLYMPARCH_BASE)" >&2; exit 2; }
+O=tests/vm/out/displays
+rm -rf -- tests/vm/out/displays
+mkdir -p "$O"
+install -m644 "$SRC/vars.fd" "$O/vars.fd"   # a writable copy (the base is read-only)
+qemu-img create -q -f qcow2 -b "$(realpath "$SRC/disk.qcow2")" -F qcow2 "$O/disk.qcow2"
+QMP=$O/qmp.sock
+. tests/vm/lib.sh
+PW='olymp-test-123'
+trap 'kill "$QPID" 2>/dev/null; python3 -I tests/vm/report.py tests/vm/out/report.html "$O" >/dev/null 2>&1' EXIT
+t0=$SECONDS
+fails=()
+check() {  # check NAME 'condition': runs in the VM terminal, the answer comes back on the serial console
+    keys "c $1 '$2'\n" 0.3
+    wait_for "CHK-$1-(OK|NO)" 30
+    seen "CHK-$1-OK" || fails+=("$1")
+}
+
+vm boot.log -virtfs local,path="$PWD",mount_tag=olysrc,security_model=none,readonly=on,id=src
+unlock_and_desktop "$PW"
+
+press meta_l+ret; sleep 2
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /mnt/default/settings /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -m755 /mnt/system/bin/olymparch-settings /usr/bin/ && sudo chmod 666 /dev/kmsg && hyprctl reload >/dev/null; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=nb_NO.UTF-8 setsid -f /usr/lib/olymparch/launch-shell; echo '<2>DISPLAYS-UPDATED' > /dev/kmsg\n" 1
+keys "$PW\n" 1
+wait_for 'DISPLAYS-UPDATED' 40 || finish "FAIL · fikk ikke kopiert filene inn"
+keys "c() { if eval \"\$2\" >/dev/null 2>&1; then echo \"<2>CHK-\$1-OK\"; else echo \"<2>CHK-\$1-NO\"; fi > /dev/kmsg; }; export LANG=nb_NO.UTF-8; clear\n" 0.5
+sleep 4
+
+# 1. login (Hyprland runs this at hyprland.start; the session here started before the files were copied in)
+keys "olymparch-settings monitors-changed; olymparch-settings profiles\n" 3
+shot innlogging "Innlogging: skjermen i bruk blir den første kombinasjonen (ikke noe varsel)"
+check first 'grep -q "\"current\"" ~/.config/olymparch/display-profiles.json && [ "$(olymparch-settings profiles | grep -c "^[* ] [^ ]")" = 1 ]'
+
+# 2. a second monitor: monitor.added → new combination, notification with «Åpne Skjermer»
+keys "clear; hyprctl output create headless OLYTEST; sleep 3; hyprctl monitors | grep -E '^Monitor|at |scale'\n" 4
+press meta_l+1; sleep 1
+shot ny-kombinasjon "Skjerm nr. 2 kobles til (headless OLYTEST): varsel «Ny skjermkombinasjon» med «Åpne Skjermer»"
+check new-combo '[ "$(olymparch-settings profiles | grep -c "^[* ] [^ ]")" = 2 ] && olymparch-settings profiles | grep -q "^\* .*+" && hyprctl layers | grep -q olymparch-notifications'
+check new-defaults '! grep -q OLYTEST ~/.config/olymparch/settings.json'
+
+# 3. the layout, set the way Settings → Displays does it
+keys "clear; olymparch-settings set display.position@OLYTEST 1280x0; olymparch-settings set display.scale@OLYTEST 2; olymparch-settings profiles; hyprctl monitors | grep -E '^Monitor|at |scale'\n" 4
+shot oppsett-lagret "OLYTEST satt til 1280x0, skala 200 %: lagret for kombinasjonen (olymparch-settings profiles)"
+check saved 'olymparch-settings profiles | grep -A3 "^\* .*+" | grep -q "position=1280x0 scale=2"'
+check applied 'hyprctl monitors | grep -A12 "^Monitor OLYTEST" | grep -q "at 1280x0" && hyprctl monitors | grep -A12 "^Monitor OLYTEST" | grep -q "scale: 2$"'
+
+# 4. removed: the single-monitor layout again, nothing about OLYTEST left in settings.json
+keys "clear; hyprctl output remove OLYTEST; sleep 3; olymparch-settings profiles; cat ~/.config/olymparch/monitors.lua\n" 4
+shot fjernet "OLYTEST fjernet: kombinasjonen med én skjerm er i bruk igjen"
+check removed 'olymparch-settings profiles | grep -q "^\* [^+]*$" && ! grep -q OLYTEST ~/.config/olymparch/settings.json'
+
+# 5. back again: placed and scaled as before, no new notification needed
+keys "clear; hyprctl output create headless OLYTEST; sleep 3; hyprctl monitors | grep -E '^Monitor|at |scale'; grep OLYTEST ~/.config/olymparch/monitors.lua\n" 4
+press meta_l+1; sleep 1   # a monitor that comes back takes the focus; the checks type into the terminal
+shot tilbake "OLYTEST koblet til igjen: 1280x0 og skala 2 kommer tilbake av seg selv"
+check restored 'hyprctl monitors | grep -A12 "^Monitor OLYTEST" | grep -q "at 1280x0" && hyprctl monitors | grep -A12 "^Monitor OLYTEST" | grep -q "scale: 2$" && grep -q "display.scale@OLYTEST.: .2" ~/.config/olymparch/settings.json'
+
+# 6. the notification's button opens Settings on Skjermer (OLYTEST unplugged first: it is invisible here, and
+# Settings opens on the focused monitor)
+keys "clear; hyprctl output remove OLYTEST; sleep 3; olymparch-settings open display; sleep 2; c settings-open 'hyprctl clients | grep -q \"title: Olymparch Settings\"'\n" 1
+wait_for 'CHK-settings-open-(OK|NO)' 30; seen 'CHK-settings-open-OK' || fails+=(settings-open)
+shot innstillinger-skjermer "«Åpne Skjermer» (olymparch-settings open display): Innstillinger på Skjermer"
+press ctrl+f; keys "husk" 1
+shot innstillinger-husk "Søk «husk»: bryteren «Husk oppsettet per skjermkombinasjon», på som standard"
+press esc; press esc; sleep 1
+check toggle-off 'olymparch-settings set display.profiles off && [ "$(olymparch-settings monitors-changed)" = off ]; olymparch-settings set display.profiles on'
+
+if ((${#fails[@]} == 0)); then
+    finish "PASS · skjermkombinasjoner: første, ny (varsel), lagret, fjernet, gjenopprettet på $((SECONDS - t0)) s"
+else
+    finish "FAIL · ${fails[*]} ($((SECONDS - t0)) s)"
+fi

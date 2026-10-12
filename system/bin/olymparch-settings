@@ -589,8 +589,8 @@ end
 local function notify_new_combination()
     local nb = (os.getenv("LANG") or ""):match("^n[bno]")
     local title = nb and "Ny skjermkombinasjon" or "New monitor combination"
-    local body = nb and "Ny skjermkombinasjon — åpne Skjermer for å ordne den. Oppsettet huskes til neste gang."
-        or "New monitor combination — open Displays to arrange it. The layout is remembered for next time."
+    local body = nb and "Åpne Skjermer for å ordne den. Oppsettet huskes til neste gang de samme skjermene kobles til."
+        or "Open Displays to arrange it. The layout is remembered for the next time these monitors are connected."
     local button = nb and "Åpne Skjermer" or "Open Displays"
     local script = ('a=$(notify-send -a Olymparch -w --action=open=%s %s %s); [ "$a" = open ] && exec %s open display')
         :format(sh_quote(button), sh_quote(title), sh_quote(body), sh_quote(SELF))
