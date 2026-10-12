@@ -1,0 +1,9 @@
+[Unit]
+Description=Olymparch: watch the Downloads folder
+
+[Path]
+PathChanged=%h/Downloads
+Unit=olymparch-downloads.service
+
+[Install]
+WantedBy=default.target

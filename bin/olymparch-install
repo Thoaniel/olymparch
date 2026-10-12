@@ -64,7 +64,8 @@ pacstrap_opts=(-K)
 [ "${OLYMPARCH_HOST_CACHE:-0}" = 1 ] && pacstrap_opts+=(-c)   # tests: reuse the package cache mounted from the host
 pacstrap "${pacstrap_opts[@]}" /mnt base "$KERNEL" mkinitcpio btrfs-progs cryptsetup limine sudo networkmanager snapper \
     hyprland hypridle quickshell foot adwaita-cursors ttf-jetbrains-mono ttf-nerd-fonts-symbols-mono libnotify polkit \
-    pipewire pipewire-pulse wireplumber xdg-desktop-portal-hyprland plymouth
+    pipewire pipewire-pulse wireplumber xdg-desktop-portal-hyprland plymouth \
+    firefox thunar tumbler gvfs thunar-volman imv mpv xdg-utils xdg-user-dirs udiskie udisks2 clamav pacman-contrib
 
 step "Oppsett"
 genfstab -U /mnt | sed -E 's/,subvolid=[0-9]+//' >/mnt/etc/fstab
@@ -100,6 +101,13 @@ step "Skrivebordet (Hyprland og skallet)"
 cp -r /usr/share/olymparch /mnt/usr/share/
 install -Dm755 /usr/lib/olymparch/launch-shell /mnt/usr/lib/olymparch/launch-shell
 install -Dm644 /usr/share/olymparch/foot/foot.ini /mnt/etc/xdg/foot/foot.ini
+# Events: virus check of downloads, disk-space check, archive extraction, default apps
+install -Dm644 -t /mnt/usr/lib/systemd/user /usr/share/olymparch/systemd/user/*
+arch-chroot /mnt systemctl --global enable olymparch-downloads.path olymparch-disk-check.timer >/dev/null 2>&1
+arch-chroot /mnt systemctl enable clamav-freshclam.service >/dev/null 2>&1 || true
+install -Dm644 /usr/share/olymparch/apps/olymparch-extract.desktop /mnt/usr/share/applications/olymparch-extract.desktop
+install -Dm644 /usr/share/olymparch/apps/mimeapps.list /mnt/etc/xdg/mimeapps.list
+arch-chroot /mnt sudo -u "$USERNAME" xdg-user-dirs-update >/dev/null 2>&1 || mkdir -p "/mnt/home/$USERNAME/Downloads"
 install -Dm644 /usr/share/olymparch/idle/olymparch-lock.pam /mnt/etc/pam.d/olymparch-lock
 xkb=$KEYMAP
 case $KEYMAP in no-latin1) xkb=no ;; sv-latin1) xkb=se ;; dk-latin1) xkb=dk ;; de-latin1) xkb=de ;; fr-latin1) xkb=fr ;; uk) xkb=gb ;; esac

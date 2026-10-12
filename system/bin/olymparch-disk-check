@@ -1,0 +1,7 @@
+#!/bin/bash
+# Daily (and at login): when / is 90 % full, offer a cleanup that shows what it frees first.
+use=$(df --output=pcent / | tail -n 1 | tr -dc 0-9)
+(( use >= 90 )) || exit 0
+action=$(notify-send -u critical -a Olymparch -w --action=clean="Rydd opp" "Disken er ${use} % full" \
+    "Rydd opp viser hva som kan fjernes, og hvor mye det frigjør, før noe slettes.")
+[ "$action" = clean ] && exec foot -T "Olymparch: rydd opp" olymparch-cleanup

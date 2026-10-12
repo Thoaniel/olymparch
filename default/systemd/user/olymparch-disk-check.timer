@@ -1,0 +1,10 @@
+[Unit]
+Description=Olymparch: daily check of free disk space
+
+[Timer]
+OnStartupSec=2min
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target

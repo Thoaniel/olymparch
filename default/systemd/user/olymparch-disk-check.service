@@ -1,0 +1,7 @@
+[Unit]
+Description=Olymparch: is the disk nearly full?
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/olymparch-disk-check

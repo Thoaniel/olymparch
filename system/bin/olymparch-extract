@@ -1,0 +1,14 @@
+#!/bin/bash
+# Extract an archive into a folder next to it (the default app for archives).
+set -euo pipefail
+for f in "$@"; do
+    base=${f%.*}; base=${base%.tar}
+    dest=$base; n=1
+    while [ -e "$dest" ]; do dest="$base ($n)"; n=$((n + 1)); done
+    mkdir -p -- "$dest"
+    if bsdtar -xf "$f" -C "$dest"; then
+        notify-send -a Olymparch "Pakket ut" "${f##*/} → ${dest##*/}"
+    else
+        notify-send -u critical -a Olymparch "Kunne ikke pakke ut" "${f##*/}"
+    fi
+done

@@ -1,0 +1,20 @@
+#!/bin/bash
+# Virus check of new downloads (started by olymparch-downloads.path when ~/Downloads changes). Only file types
+# that can do harm, at low priority; a notification only when something is found.
+set -uo pipefail
+dir=$(xdg-user-dir DOWNLOAD 2>/dev/null || echo "$HOME/Downloads")
+state=${XDG_STATE_HOME:-$HOME/.local/state}/olymparch/downloads.seen
+mkdir -p "${state%/*}"; touch "$state"
+command -v clamscan >/dev/null || exit 0
+sleep 3   # let the browser finish renaming the file
+mapfile -t new < <(find "$dir" -maxdepth 1 -type f -newer "$state" ! -name '.*' ! -name '*.part' ! -name '*.crdownload' \
+    \( -iname '*.exe' -o -iname '*.msi' -o -iname '*.zip' -o -iname '*.7z' -o -iname '*.rar' -o -iname '*.tar*' \
+       -o -iname '*.iso' -o -iname '*.appimage' -o -iname '*.sh' -o -iname '*.pdf' -o -iname '*.jar' -o -iname '*.bat' \
+       -o -iname '*.ps1' -o -iname '*.deb' -o -iname '*.rpm' -o -perm -u+x \) 2>/dev/null)
+touch "$state"
+[ ${#new[@]} -gt 0 ] || exit 0
+found=$(nice -n 19 ionice -c 3 clamscan --no-summary --infected -- "${new[@]}" 2>/dev/null | sed -n 's/: .* FOUND$//p')
+[ -z "$found" ] && exit 0
+while IFS= read -r f; do
+    notify-send -u critical -a Olymparch "Virus funnet i en nedlasting" "${f##*/} ser farlig ut. Ikke åpne den. Den ligger i ${f%/*}."
+done <<<"$found"

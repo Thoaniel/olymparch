@@ -1,0 +1,7 @@
+[Unit]
+Description=Olymparch: virus check of new downloads
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/olymparch-scan-downloads
+Nice=19

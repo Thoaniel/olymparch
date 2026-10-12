@@ -1,0 +1,27 @@
+# Olymparch default apps. Change them in Settings → Default apps (writes ~/.config/mimeapps.list, which wins).
+[Default Applications]
+text/html=firefox.desktop
+x-scheme-handler/http=firefox.desktop
+x-scheme-handler/https=firefox.desktop
+application/pdf=firefox.desktop
+inode/directory=thunar.desktop
+image/png=imv.desktop
+image/jpeg=imv.desktop
+image/gif=imv.desktop
+image/webp=imv.desktop
+image/bmp=imv.desktop
+image/avif=imv.desktop
+video/mp4=mpv.desktop
+video/x-matroska=mpv.desktop
+video/webm=mpv.desktop
+video/quicktime=mpv.desktop
+video/x-msvideo=mpv.desktop
+audio/mpeg=mpv.desktop
+audio/flac=mpv.desktop
+audio/ogg=mpv.desktop
+application/zip=olymparch-extract.desktop
+application/x-7z-compressed=olymparch-extract.desktop
+application/vnd.rar=olymparch-extract.desktop
+application/x-compressed-tar=olymparch-extract.desktop
+application/x-xz-compressed-tar=olymparch-extract.desktop
+application/x-zstd-compressed-tar=olymparch-extract.desktop
