@@ -1,0 +1,30 @@
+#!/bin/bash
+# Fetch the build and test tools (QEMU, OVMF, archiso and its helpers) as ordinary Arch packages, verify their
+# signatures against the Arch keyring, and unpack them into ~/.local/opt/olymparch-tools. Needs no root and
+# installs nothing into the system. Use dev/env to put them on PATH.
+set -euo pipefail
+PREFIX=${OLYMPARCH_TOOLS:-$HOME/.local/opt/olymparch-tools}
+PKGS=(qemu-system-x86 qemu-img qemu-hw-display-virtio-gpu qemu-hw-display-virtio-vga edk2-ovmf
+      archiso arch-install-scripts squashfs-tools libisoburn mtools dosfstools erofs-utils socat)
+mkdir -p "$PREFIX/pkgs" "$PREFIX/root"
+T=$(mktemp -d -p "${XDG_RUNTIME_DIR:-/tmp}")
+trap 'rm -rf -- "$T"' EXIT
+
+# A private copy of the Arch keyring, so gpg can verify without touching /etc/pacman.d/gnupg.
+cp -r /etc/pacman.d/gnupg/pubring.gpg /etc/pacman.d/gnupg/trustdb.gpg "$T/" 2>/dev/null || true
+mkdir -m 700 "$T/gnupg" && cp "$T"/pubring.gpg "$T"/trustdb.gpg "$T/gnupg/"
+
+mapfile -t urls < <(pacman -Sp "${PKGS[@]}")
+echo "${#urls[@]} pakker"
+for u in "${urls[@]}"; do
+    f=$PREFIX/pkgs/${u##*/}
+    [ -s "$f" ] || curl -sfL --retry 3 -o "$f" "$u"
+    [ -s "$f.sig" ] || curl -sfL --retry 3 -o "$f.sig" "$u.sig"
+    if ! gpg --homedir "$T/gnupg" --quiet --batch --verify "$f.sig" "$f" 2>/dev/null; then
+        echo "FEIL signatur: ${u##*/}" >&2
+        rm -f -- "$f" "$f.sig"
+        exit 1
+    fi
+    bsdtar -xf "$f" -C "$PREFIX/root" --exclude '.PKGINFO' --exclude '.BUILDINFO' --exclude '.MTREE' --exclude '.INSTALL'
+done
+echo "ok: verktøyene ligger i $PREFIX/root"

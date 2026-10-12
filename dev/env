@@ -1,0 +1,8 @@
+# Source this (bash) to use the tools from dev/fetch-tools without installing them.
+OT=${OLYMPARCH_TOOLS:-$HOME/.local/opt/olymparch-tools}/root
+export PATH=$OT/usr/bin:$PATH
+export LD_LIBRARY_PATH=$OT/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+export QEMU_MODULE_DIR=$OT/usr/lib/qemu
+export OLYMPARCH_OVMF_CODE=$OT/usr/share/edk2/x64/OVMF_CODE.4m.fd
+export OLYMPARCH_OVMF_VARS=$OT/usr/share/edk2/x64/OVMF_VARS.4m.fd
+export OLYMPARCH_QEMU_DATA=$OT/usr/share/qemu
