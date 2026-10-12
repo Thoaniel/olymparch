@@ -634,7 +634,6 @@
       "general.col.active_border": "theme colour (gold)",
       "general.col.inactive_border": "theme colour (line)",
       "dwindle.preserve_split": "layout detail, follows appearance.layout",
-      "decoration.shadow.enabled": "see appearance.shadow",
       "misc.force_default_wallpaper": "the shell draws the wallpaper",
       "misc.disable_hyprland_logo": "the shell draws the wallpaper",
       "misc.disable_splash_rendering": "the shell draws the wallpaper",

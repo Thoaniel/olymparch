@@ -1,0 +1,192 @@
+#!/usr/bin/env python3
+"""Settings coverage (no VM): nothing in Olymparch may be configurable without a schema entry.
+
+  tests/settings-coverage        exit 0 and a summary, or 1 and one line per problem
+
+Fails if
+- an option in default/hypr/olymparch.lua (hl.config keys, hl.bind keys, hl.env, hl.monitor) has no schema entry
+  and is not listed under "internal" with a reason. The file is run in Lua with a stand-in `hl`, so loops and
+  computed keys count too;
+- the shell reads a setting (Settings.get("…")) that the schema doesn't have, or a ready shell setting is never read;
+- olymparch-settings uses a key or an apply.via the schema doesn't have, or the schema uses a via it can't apply;
+- a schema entry lacks en/nb labels or descriptions, has a bad page, level, type, default or option;
+- a page from the spec is missing, or the shell uses an I18n key with no Norwegian text.
+"""
+import json
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+root = Path(__file__).resolve().parent.parent
+problems = []
+bad = problems.append
+
+schema = json.loads((root / "default/settings/schema.json").read_text())
+settings = schema["settings"]
+keys = {s["key"]: s for s in settings}
+internal = schema.get("internal", {})
+
+# ── the schema itself
+SPEC_PAGES = ["display", "audio", "input", "network", "bluetooth", "power", "disks", "hardware", "games", "zeus",
+              "events", "apps", "account", "keyboard", "appearance", "notifications", "accessibility", "privacy",
+              "updates", "backup", "about"]
+groups = {g["id"] for g in schema["groups"]}
+pages = {p["id"]: p for p in schema["pages"]}
+for p in SPEC_PAGES:
+    if p not in pages:
+        bad(f"page missing: {p}")
+for p in schema["pages"]:
+    if p["group"] not in groups:
+        bad(f"page {p['id']}: unknown group {p['group']}")
+    if not (p["label"].get("en") and p["label"].get("nb")):
+        bad(f"page {p['id']}: needs en and nb labels")
+for g in schema["groups"]:
+    if not (g["label"].get("en") and g["label"].get("nb")):
+        bad(f"group {g['id']}: needs en and nb labels")
+    if not any(p["group"] == g["id"] for p in schema["pages"]):
+        bad(f"group {g['id']}: no pages")
+
+VIAS = {"shell", "hypr", "monitor", "idle", "audio", "cursor", "stored", "action", "info"}
+seen = set()
+for s in settings:
+    k = s.get("key", "?")
+    if k in seen:
+        bad(f"{k}: listed twice")
+    seen.add(k)
+    for field in ("label", "description"):
+        d = s.get(field) or {}
+        if not (d.get("en") and d.get("nb")):
+            bad(f"{k}: needs {field} in en and nb")
+    if s.get("page") not in pages:
+        bad(f"{k}: unknown page {s.get('page')}")
+    if s.get("level") not in ("simple", "advanced"):
+        bad(f"{k}: level must be simple or advanced")
+    t = s.get("type")
+    if t not in ("bool", "choice", "number", "text", "action"):
+        bad(f"{k}: unknown type {t}")
+    if not isinstance(s.get("ready"), bool):
+        bad(f"{k}: ready must be true or false")
+    a = s.get("apply") or {}
+    if a.get("via") not in VIAS:
+        bad(f"{k}: apply.via must be one of {sorted(VIAS)}")
+    if not (a.get("command") or a.get("file")):
+        bad(f"{k}: apply needs a command, or a file and key")
+    if t == "action":
+        if a.get("via") not in ("action",):
+            bad(f"{k}: actions apply via action")
+        continue
+    if "default" not in s:
+        bad(f"{k}: no default")
+        continue
+    dv = s["default"]
+    if t == "bool" and not isinstance(dv, bool):
+        bad(f"{k}: default must be true or false")
+    if t == "number":
+        if not isinstance(dv, (int, float)) or isinstance(dv, bool):
+            bad(f"{k}: default must be a number")
+        elif not (s.get("min", dv) <= dv <= s.get("max", dv)):
+            bad(f"{k}: default {dv} is outside min/max")
+    if t == "choice":
+        opts = s.get("options") or []
+        for o in opts:
+            if not (o.get("label", {}).get("en") and o.get("label", {}).get("nb")):
+                bad(f"{k}: option {o.get('value')} needs en and nb labels")
+        if not s.get("options_from") and dv not in [o["value"] for o in opts]:
+            bad(f"{k}: default {dv!r} is not one of its options")
+        if not opts and not s.get("options_from"):
+            bad(f"{k}: a choice needs options or options_from")
+
+# ── Hyprland: run olymparch.lua with a stand-in hl and collect everything it sets
+LUA = r'''
+local out = {}
+local function any() return setmetatable({}, { __index = function() return any() end, __call = function() return any() end }) end
+local function flat(prefix, t)
+    for k, v in pairs(t) do
+        local p = prefix == "" and tostring(k) or prefix .. "." .. tostring(k)
+        if type(v) == "table" and type(k) == "string" and next(v) ~= nil and type(next(v)) == "string" and k ~= "col" then flat(p, v)
+        elseif type(v) == "table" and k == "col" then for c in pairs(v) do out[#out + 1] = "config " .. p .. "." .. c end
+        else out[#out + 1] = "config " .. p end
+    end
+end
+hl = setmetatable({
+    config = function(t) flat("", t) end,
+    bind = function(k) out[#out + 1] = "bind " .. k; return any() end,
+    env = function(k) out[#out + 1] = "env " .. k end,
+    monitor = function(m) out[#out + 1] = "monitor " .. (m.output or "") end,
+}, { __index = function() return any() end })
+dofile(arg[1])
+for _, l in ipairs(out) do print(l) end
+'''
+lua = shutil.which("lua") or shutil.which("lua5.4")
+if not lua:
+    bad("lua not found (Hyprland needs it; install lua)")
+else:
+    r = subprocess.run([lua, "-", str(root / "default/hypr/olymparch.lua")], input=LUA, capture_output=True, text=True)
+    if r.returncode:
+        bad(f"olymparch.lua did not run: {r.stderr.strip()}")
+    hypr_keys = {s["apply"]["key"]: s["key"] for s in settings if s["apply"].get("via") == "hypr"}
+    binds = [(re.compile(b), s["key"]) for s in settings for b in s.get("binds", [])]
+    covered_env = set(internal.get("env", {}))
+    n = {"config": 0, "bind": 0, "env": 0, "monitor": 0}
+    for line in r.stdout.splitlines():
+        kind, _, name = line.partition(" ")
+        n[kind] += 1
+        if kind == "config" and name not in hypr_keys and name not in internal.get("hypr", {}):
+            bad(f"olymparch.lua: {name} has no schema entry (apply.via hypr, apply.key {name}) and is not internal")
+        if kind == "bind" and not any(rx.search(name) for rx, _ in binds):
+            bad(f"olymparch.lua: shortcut {name!r} has no schema entry (keys.*, binds)")
+        if kind == "env" and name not in covered_env:
+            bad(f"olymparch.lua: hl.env {name} has no schema entry and is not internal")
+        if kind == "monitor" and name not in internal.get("monitor", {}):
+            bad(f"olymparch.lua: monitor rule {name!r} is not covered")
+    for k in internal.get("hypr", {}):
+        if k in hypr_keys:
+            bad(f"internal.hypr {k} is also a setting ({hypr_keys[k]}); pick one")
+    # the Hyprland option names must exist (when the stubs are installed)
+    stubs = Path("/usr/share/hypr/stubs/hl.meta.lua")
+    if stubs.exists():
+        known = set(re.findall(r'"([a-z_]+(?:\.[a-z_]+)+)"', stubs.read_text()))
+        for hk, sk in hypr_keys.items():
+            if hk != "bind" and hk not in known:
+                bad(f"{sk}: {hk} is not a Hyprland option")
+
+# ── the shell
+shell_reads = set()
+for f in list((root / "default/shell").glob("*.qml")) + list((root / "default/lock").glob("*.qml")):
+    text = f.read_text()
+    for k in re.findall(r'Settings\.(?:get|set|reset)\("([^"@]+)', text):
+        shell_reads.add(k)
+        if k not in keys:
+            bad(f"{f.name}: reads setting {k}, which the schema doesn't have")
+for s in settings:
+    if s["apply"].get("via") == "shell" and s["ready"] and s["key"] not in shell_reads:
+        bad(f"{s['key']}: ready, applied by the shell, but no QML reads it")
+
+# ── olymparch-settings
+cli = (root / "system/bin/olymparch-settings").read_text()
+appliers = set(re.findall(r'appliers\["([a-z]+)"\]', cli))
+for v in sorted({s["apply"]["via"] for s in settings} - appliers):
+    bad(f"olymparch-settings has no applier for apply.via {v}")
+for v in sorted(appliers - VIAS):
+    bad(f"olymparch-settings applies via {v}, which the schema doesn't know")
+for k in set(re.findall(r'(?:byKey|values)\["([a-z_]+\.[a-z_.]+)"\]|value_of\(values, "([a-z_.]+)"\)', cli)):
+    k = k[0] or k[1]
+    if k not in keys:
+        bad(f"olymparch-settings uses {k}, which the schema doesn't have")
+
+# ── Norwegian for every string the shell shows
+nb = json.loads((root / "default/i18n/nb.json").read_text())
+for f in (root / "default/shell").glob("*.qml"):
+    for k in re.findall(r'I18n\.t\("([^"]+)",', f.read_text()):
+        if k not in nb:
+            bad(f"{f.name}: I18n key {k} has no Norwegian text in default/i18n/nb.json")
+
+if problems:
+    print("\n".join(problems))
+    print(f"FAIL · {len(problems)} problem(s)")
+    sys.exit(1)
+ready = sum(s["ready"] for s in settings)
+print(f"PASS · {len(settings)} settings on {len(pages)} pages ({ready} working, {len(settings) - ready} coming); "
+      f"olymparch.lua: {n['config']} options, {n['bind']} shortcuts, {n['env']} env, {n['monitor']} monitor rules covered")

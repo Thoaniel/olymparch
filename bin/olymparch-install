@@ -95,6 +95,8 @@ cp -r /usr/share/olymparch /mnt/usr/share/
 install -Dm755 /usr/lib/olymparch/launch-shell /mnt/usr/lib/olymparch/launch-shell
 install -Dm644 /usr/share/olymparch/foot/foot.ini /mnt/etc/xdg/foot/foot.ini
 install -Dm644 /usr/share/olymparch/idle/olymparch-lock.pam /mnt/etc/pam.d/olymparch-lock
+# Settings (olymparch-settings migrates the keyboard line in hyprland.lua and adds its loader on first use)
+install -Dm644 /usr/share/olymparch/settings/olymparch-settings.desktop /mnt/usr/share/applications/olymparch-settings.desktop
 xkb=$KEYMAP
 case $KEYMAP in no-latin1) xkb=no ;; sv-latin1) xkb=se ;; dk-latin1) xkb=dk ;; de-latin1) xkb=de ;; fr-latin1) xkb=fr ;; uk) xkb=gb ;; esac
 home=/mnt/home/$USERNAME
