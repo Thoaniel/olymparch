@@ -130,6 +130,9 @@ end
 
 -- Settings is a window of the shell; it floats in the middle instead of taking a tile
 hl.window_rule({ name = "olymparch-settings", match = { title = "^Olymparch Settings$" }, float = true, center = true, size = "monitor_w*0.82 monitor_h*0.86" })
+-- Web apps (olymparch-webapp): tiled like any app, but a site may not maximize its window on its own, and a
+-- video in full screen keeps the screen awake
+hl.window_rule({ name = "olymparch-webapps", match = { class = "^webapp-" }, suppress_event = "maximize", idle_inhibit = "fullscreen" })
 
 -- The shell (bar, wallpaper) starts with the session
 hl.on("hyprland.start", function()
