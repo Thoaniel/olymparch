@@ -30,7 +30,7 @@ Scope {
     property var missing: []
     property var choices: ({})           // KEY → [{ value, text }]
     property var items: ({})             // KEY → { lines: [{ id, state, name, detail }], message, busy }
-    function loadMissing() { Settings.run(["missing"], out => { win.missing = out.split("\n").filter(l => l); }); }
+    function loadMissing(then) { Settings.run(["missing"], out => { win.missing = out.split("\n").filter(l => l); if (then) then(); }); }
     function loadChoices(s) {
         Settings.run(["choices", s.key], out => {
             const c = Object.assign({}, win.choices);
@@ -171,7 +171,7 @@ Scope {
             // ── an «Install …» row (unless): once installed it goes and the setting it was for shows
             if (s.unless) {
                 if (code) { win.outputKey = s.key; win.output = I18n.t("settings.install.failed", "Not installed: see /var/log/olymparch-install-app.log"); win.outputError = true; }
-                win.loadMissing();
+                win.loadMissing(() => search.forceActiveFocus());   // the row (and its focus) is gone: keys go to search again
             }
         });
     }

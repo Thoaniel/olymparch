@@ -349,8 +349,12 @@ check nightlight-offered 'command -v hyprsunset || (olymparch-settings missing |
 keys "clear; olymparch-settings open display\n" 2.5
 search nattlys
 shot dev-nattlys-tilbud "Nattlys mangler: «Installer nattlys» med ett klikk"
-press ret; sleep 1
+press ret; sleep 2
+shot dev-nattlys-installerer "Klikket: «Installerer …» under raden"
+sleep 90
+shot dev-nattlys-installert "Etter installasjonen: raden er byttet ut med Nattlys-bryteren"
 close_settings
+shot dev-nattlys-lukket "Innstillinger lukket med Esc: terminalen har tastaturet igjen"
 # pacman's udev hook makes /dev/kmsg root-only again: open it up once the install is done
 keys "clear; for i in \$(seq 90); do command -v hyprsunset >/dev/null && break; sleep 2; done; echo '$PW' | sudo -S chmod 666 /dev/kmsg; echo '<2>NIGHTLIGHT-DONE' > /dev/kmsg; clear\n" 1
 wait_for 'NIGHTLIGHT-DONE' 240
