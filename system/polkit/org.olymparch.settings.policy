@@ -2,7 +2,7 @@
 <!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <!-- pkexec /usr/lib/olymparch/settings-apply ACTION VALUE: the few Settings rows that change files in /etc
-     (lid, connectivity check, Bluetooth mode). The helper takes only its fixed actions and values.
+     (lid, connectivity check, DNS, MAC address, Bluetooth mode, snapshot count). The helper takes only its fixed actions and values.
      50-olymparch-settings.rules lets the desktop's own (wheel) user do it with the click in Settings. -->
 <policyconfig>
   <vendor>Olymparch</vendor>

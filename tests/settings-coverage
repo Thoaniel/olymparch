@@ -244,15 +244,15 @@ def helper_ok(av):
     return any(fnmatchcase(av, g) for g in helper_globs)
 cli_sys = cli.split("local SYSTEM_ACTIONS")[1].split("appliers")[0]
 cli_allowed = set()
-for m in re.finditer(r'(?:\["([a-z-]+)"\]|\b([a-z]+)) = \{ ((?:[a-z]+ = true,? ?)+)\}', cli_sys):
+for m in re.finditer(r'(?:\["([a-z-]+)"\]|\b([a-z]+)) = \{ ((?:[a-z0-9]+ = true,? ?)+)\}', cli_sys):
     act = m.group(1) or m.group(2)
-    for v in re.findall(r'([a-z]+) = true', m.group(3)):
+    for v in re.findall(r"([a-z0-9]+) = true", m.group(3)):
         cli_allowed.add(f"{act}:{v}")
 ranges = {(m.group(1) or m.group(2)): (int(m.group(3)), int(m.group(4)))
           for m in re.finditer(r'(?:\["([a-z-]+)"\]|\b([a-z]+)) = \{ (\d+), (\d+) \}', cli_sys)}
 for act, (lo, hi) in ranges.items():
     cli_allowed |= {f"{act}:{n}" for n in range(lo, hi + 1)}
-probe = set(cli_allowed) | {f"{a.split(':')[0]}:{x}" for a in cli_allowed for x in ("", "x", "0", "1", "01", "05", "51", "99", "100", "-1", "2a", "on", "off")}
+probe = set(cli_allowed) | {g for g in helper_globs if "[" not in g} | {f"{a.split(':')[0]}:{x}" for a in cli_allowed for x in ("", "x", "0", "1", "01", "05", "51", "99", "100", "-1", "2a", "on", "off")}
 helper_allowed = {av for av in probe if helper_ok(av)}
 if not cli_allowed or helper_allowed != cli_allowed:
     bad(f"settings-apply and olymparch-settings must allow the same values; differ on {sorted(helper_allowed ^ cli_allowed)}")

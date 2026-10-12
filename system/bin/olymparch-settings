@@ -658,6 +658,7 @@ local SYSTEM_ACTIONS = {
     connectivity = { on = true, off = true },
     ["bt-mode"] = { dual = true, le = true, bredr = true },
     ["bt-fast"] = { on = true, off = true },
+    dns = { auto = true, cloudflare = true, quad9 = true },
 }
 local SYSTEM_RANGES = {   -- whole numbers from MIN to MAX (settings-apply has the same globs)
     snapshots = { 2, 50 },
