@@ -277,6 +277,18 @@ local CHECKS = {
     ["olympus.local"] = function(v) return olympus_id(v), "not a model id" end,
 }
 -- ── end Zeus and Backup
+-- ── Themes (appearance.theme): the id of a theme folder, yours (~/.config/olymparch/themes) or a built-in one.
+--   olymparch-theme checks the theme itself (colours, names) again before anything reads it.
+local THEME_DIRS = { CONFIG .. "/olymparch/themes", "/usr/share/olymparch/themes", script_dir() .. "/../../default/themes" }
+CHECKS["themes"] = function(v)
+    if #v < 1 or #v > 32 or not v:match("^[a-z0-9-]+$") then return false, "a theme id is a-z, 0-9 and -, at most 32 long" end
+    for _, d in ipairs(THEME_DIRS) do
+        local f = io.open(d .. "/" .. v .. "/theme.json")
+        if f then f:close(); return true end
+    end
+    return false, "no theme called " .. v .. " (olymparch-theme list)"
+end
+-- ── end Themes
 
 -- ── lists (type "list") and text with rules of its own. Own shortcuts: { "SUPER + B", "firefox" }, a canonical
 --   combo (no mouse buttons) and one line of command; it reaches hypr.lua only through %q. Muted apps: names.
@@ -963,6 +975,13 @@ appliers["wpprio"] = function(s, values, key)
             "monitor.alsa.rules = [\n" .. rule .. "]\nmonitor.bluez.rules = [\n" .. rule .. "]\n")
     end
     os.execute("systemctl --user restart wireplumber.service >/dev/null 2>&1")
+end
+-- ── Themes: olymparch-theme writes ~/.config/olymparch/theme/ (shell, lock screen, foot, Hyprland) and applies it live
+appliers["theme"] = function()
+    local mine = script_dir() .. "/olymparch-theme"
+    local f = io.open(mine)
+    if f then f:close() else mine = "olymparch-theme" end
+    os.execute(sh_quote(mine) .. " apply --quiet")
 end
 appliers["gamechat"] = function(s, values, key)
     local path = CONFIG .. "/pipewire/pipewire.conf.d/olymparch-game-chat.conf"

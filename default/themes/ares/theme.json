@@ -1,0 +1,43 @@
+{
+  "id": "ares",
+  "name": {
+    "en": "Ares",
+    "nb": "Ares"
+  },
+  "god": "Ares",
+  "description": {
+    "en": "War: blood red and battle bronze.",
+    "nb": "Krig: blodrødt og kampbronse."
+  },
+  "light": false,
+  "glyph": "f04e5",
+  "palette": {
+    "bg": "#140606",
+    "surface": "#260b0b",
+    "raised": "#321010",
+    "line": "#6e2420",
+    "text": "#f5e4df",
+    "muted": "#c39c93",
+    "accent": "#dba467",
+    "accentHi": "#f3c995",
+    "danger": "#ff4d4d"
+  },
+  "terminal": [
+    "#260b0b",
+    "#f05656",
+    "#a5c389",
+    "#d5a741",
+    "#89a2c4",
+    "#b68ec0",
+    "#7fb1b3",
+    "#f5e4df",
+    "#a06c67",
+    "#f86c6a",
+    "#bcd49f",
+    "#f0cc5f",
+    "#a5b9d3",
+    "#cca8d0",
+    "#9ec4c4",
+    "#ffffff"
+  ]
+}

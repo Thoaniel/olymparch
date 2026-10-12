@@ -18,7 +18,7 @@ Scope {
     property string query: ""
     readonly property bool advanced: Settings.get("settings.advanced") === true
     readonly property string lang: I18n.lang
-    readonly property color dim: "#6e6a78"
+    readonly property color dim: theme.dim
     property var monitors: []            // hyprctl monitors -j
     property string monitor: ""          // the output the display page shows
     property var about: ({})             // olymparch-settings about
@@ -79,9 +79,19 @@ Scope {
         for (const s of rows) {
             if ((s.options_from === "desktop" || s.installed || /^olympus\./.test(s.options_from || "")) && !choices[s.key]) loadChoices(s);   // olympus.*: Zeus' models
             if (s.widget === "items" && !items[s.key]) loadItems(s.key, false);
+            if (s.widget === "themes" && !themeList.length) themeLister.running = true;
         }
     }
     onRowsChanged: if (open) loadFor(rows)
+    // ── Themes (appearance.theme): every theme with its colours, for the cards (ThemeGrid)
+    property var themeList: []
+    Process {
+        id: themeLister
+        command: ["olymparch-theme", "list", "--json"]
+        stdout: StdioCollector { id: themeListed }
+        onExited: { try { win.themeList = JSON.parse(themeListed.text) || []; } catch (e) { win.themeList = []; } }
+    }
+    // ── end Themes
     property var pending: null           // a --try waiting for «Keep»: { key, value, text, token }
     property int countdown: 0
 
@@ -294,7 +304,7 @@ Scope {
                     id: searchBox
                     anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
                     height: 32
-                    color: "#0d0d12"
+                    color: win.theme.field
                     border.color: search.activeFocus ? win.theme.gold : win.theme.line
                     TextInput {
                         id: search
@@ -399,7 +409,7 @@ Scope {
                             spacing: 8
                             Text { text: I18n.t("settings.advanced", "Advanced view"); font { family: win.theme.mono; pixelSize: win.theme.px(12) } color: advSwitch.activeFocus ? win.theme.goldHi : win.theme.muted; anchors.verticalCenter: parent.verticalCenter }
                             Rectangle {
-                                width: 30; height: 16; color: "#0d0d12"; anchors.verticalCenter: parent.verticalCenter
+                                width: 30; height: 16; color: win.theme.field; anchors.verticalCenter: parent.verticalCenter
                                 border.color: win.advanced || advSwitch.activeFocus ? win.theme.gold : win.theme.line
                                 Rectangle { x: win.advanced ? 16 : 2; y: 2; width: 10; height: 10; color: win.advanced ? win.theme.gold : win.theme.muted }
                             }
@@ -436,7 +446,7 @@ Scope {
                             Rectangle {
                                 id: arrange
                                 width: parent.width; height: 150
-                                color: "#0d0d12"
+                                color: win.theme.field
                                 border.color: win.theme.line
                                 readonly property var box: {
                                     let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
@@ -498,7 +508,8 @@ Scope {
                                 readonly property string w: s.widget || ({ bool: "switch", choice: "select", number: "slider", text: "field", action: "button" })[s.type]
                                 readonly property var opts: s.type === "choice" ? win.options(s) : []
                                 width: content.width
-                                height: Math.max(info.implicitHeight, ctl.height) + 18 + (out.visible ? out.height + 8 : 0)
+                                readonly property bool wide: w === "themes"   // the theme cards get the whole width, under the text
+                                height: (wide ? info.implicitHeight + 10 + ctl.height : Math.max(info.implicitHeight, ctl.height)) + 18 + (out.visible ? out.height + 8 : 0)
 
                                 Column {
                                     id: info
@@ -531,14 +542,25 @@ Scope {
 
                                 Item {
                                     id: ctl
-                                    x: 316
-                                    y: 7
-                                    width: row.width - 316
+                                    x: row.wide ? 0 : 316
+                                    y: row.wide ? info.y + info.implicitHeight + 10 : 7
+                                    width: row.width - x
                                     height: Math.max(26, sw.visible ? sw.height : seg.visible ? seg.height : sel.visible ? sel.height
                                                            : sld.visible ? sld.height : fld.visible ? fld.height : btn.visible ? btn.height : kc.visible ? kc.height
-                                                           : itm.visible ? itm.implicitHeight : info2.height)
+                                                           : thm.visible ? thm.height : itm.visible ? itm.implicitHeight : info2.height)
                                     opacity: row.ready ? 1 : 0.45
                                     enabled: row.ready
+
+                                    // themes: a card per theme in its own colours; a click uses it at once
+                                    ThemeGrid {
+                                        id: thm
+                                        visible: row.w === "themes"
+                                        theme: win.theme
+                                        columns: Math.max(1, Math.floor((ctl.width + spacing) / (cardW + spacing)))
+                                        themes: visible ? win.themeList : []
+                                        current: String(row.value)
+                                        onPicked: id => { if (id !== String(row.value)) win.change(row.s, id); }
+                                    }
 
                                     // switch
                                     Item {
@@ -553,7 +575,7 @@ Scope {
                                         Rectangle {
                                             id: swBox
                                             width: 30; height: 16; anchors.verticalCenter: parent.verticalCenter
-                                            color: "#0d0d12"
+                                            color: win.theme.field
                                             border.color: row.value === true || sw.activeFocus ? win.theme.gold : win.theme.line
                                             Rectangle { x: row.value === true ? 16 : 2; y: 2; width: 10; height: 10; color: row.value === true ? win.theme.gold : win.theme.muted }
                                         }
@@ -600,7 +622,7 @@ Scope {
                                                         anchors.centerIn: parent
                                                         text: segItem.modelData.text
                                                         font { family: win.theme.mono; pixelSize: win.theme.px(12); bold: segItem.on }
-                                                        color: segItem.on ? "#0a0a0e" : win.theme.text
+                                                        color: segItem.on ? win.theme.onAccent : win.theme.text
                                                     }
                                                     MouseArea { anchors.fill: parent; onClicked: if (!segItem.on) win.change(row.s, segItem.modelData.value) }
                                                 }
@@ -634,7 +656,7 @@ Scope {
                                         Keys.onEscapePressed: e => { if (expanded) expanded = false; else e.accepted = false; }
                                         Rectangle {
                                             width: Math.max(200, selText.implicitWidth + 44); height: 26
-                                            color: "#0d0d12"
+                                            color: win.theme.field
                                             border.color: sel.activeFocus ? win.theme.gold : win.theme.line
                                             Text {
                                                 id: selText
@@ -701,7 +723,7 @@ Scope {
                                         Rectangle {
                                             id: track
                                             width: 200; height: 6; anchors.verticalCenter: parent.verticalCenter
-                                            color: "#0d0d12"; border.color: sld.activeFocus ? win.theme.gold : win.theme.line
+                                            color: win.theme.field; border.color: sld.activeFocus ? win.theme.gold : win.theme.line
                                             Rectangle { width: (parent.width - 2) * (sld.shown - sld.lo) / (sld.hi - sld.lo); height: 4; x: 1; y: 1; color: win.theme.gold }
                                             Rectangle {
                                                 x: (parent.width - width) * (sld.shown - sld.lo) / (sld.hi - sld.lo); y: -5
@@ -726,7 +748,7 @@ Scope {
                                         id: fld
                                         visible: row.w === "field" && !row.s.readonly
                                         width: 300; height: 26
-                                        color: "#0d0d12"
+                                        color: win.theme.field
                                         border.color: fldIn.activeFocus ? win.theme.gold : win.theme.line
                                         TextInput {
                                             id: fldIn
@@ -753,7 +775,7 @@ Scope {
                                         Component.onDestruction: if (listening) Hyprland.dispatch('hl.dsp.submap("reset")')
                                         Timer { running: kc.listening; interval: 15000; onTriggered: kc.listening = false }
                                         width: Math.max(200, kcText.implicitWidth + 24); height: 26
-                                        color: listening ? "#17130b" : "#0d0d12"
+                                        color: listening ? win.theme.selected : win.theme.field
                                         border.color: listening || activeFocus ? win.theme.gold : win.theme.line
                                         activeFocusOnTab: visible && row.ready
                                         onActiveFocusChanged: { if (activeFocus) list.show(row); else listening = false; }
@@ -818,7 +840,7 @@ Scope {
                                             id: addBox
                                             visible: row.s.add === true
                                             width: itm.width; height: 26
-                                            color: "#0d0d12"
+                                            color: win.theme.field
                                             border.color: addIn.activeFocus ? win.theme.gold : win.theme.line
                                             TextInput {
                                                 id: addIn
@@ -879,7 +901,7 @@ Scope {
                                                 required property var modelData
                                                 readonly property bool on: modelData.state === "on"
                                                 width: itm.width; height: 28
-                                                color: activeFocus ? win.theme.raised : "#0d0d12"
+                                                color: activeFocus ? win.theme.raised : win.theme.field
                                                 border.color: activeFocus ? win.theme.gold : win.theme.line
                                                 activeFocusOnTab: itm.visible && row.ready
                                                 onActiveFocusChanged: if (activeFocus) list.show(row)
@@ -984,7 +1006,7 @@ Scope {
                                     y: Math.max(info.y + info.implicitHeight, ctl.y + ctl.height) + 8
                                     width: parent.width
                                     height: outText.implicitHeight + 16
-                                    color: "#0d0d12"
+                                    color: win.theme.field
                                     border.color: win.outputError ? win.theme.red : win.theme.line
                                     Text {
                                         id: outText
@@ -1073,13 +1095,13 @@ Scope {
             WlrLayershell.keyboardFocus: visible && first ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
             exclusionMode: ExclusionMode.Ignore
             anchors { top: true; bottom: true; left: true; right: true }
-            color: "#99060609"
+            color: win.theme.scrim
 
             Rectangle {
                 anchors.centerIn: parent
                 width: 380
                 height: askCol.implicitHeight + 28
-                color: "#17130b"
+                color: win.theme.selected
                 border.color: win.theme.gold
                 focus: ask.first
                 Keys.onReturnPressed: keepBtn.isDefault ? win.keep() : win.revert()
@@ -1112,7 +1134,7 @@ Scope {
                             width: keepText.implicitWidth + 24; height: 28
                             color: win.theme.gold
                             border { color: isDefault ? win.theme.goldHi : win.theme.gold; width: isDefault ? 2 : 1 }
-                            Text { id: keepText; anchors.centerIn: parent; text: I18n.t("settings.keep.yes", "Keep"); font { family: win.theme.mono; pixelSize: win.theme.px(12); bold: true } color: "#0a0a0e" }
+                            Text { id: keepText; anchors.centerIn: parent; text: I18n.t("settings.keep.yes", "Keep"); font { family: win.theme.mono; pixelSize: win.theme.px(12); bold: true } color: win.theme.onAccent }
                             MouseArea { anchors.fill: parent; onClicked: win.keep() }
                         }
                         Rectangle {

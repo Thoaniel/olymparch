@@ -11,22 +11,62 @@ import Quickshell.Io
 
 ShellRoot {
     id: root
-    readonly property color bg: "#0a0a0e"
+    // ── Theme: the colours, glyph and wallpaper of the active theme (Settings → Appearance → Theme, Super+Ctrl+Shift+Space,
+    //    `olymparch-theme set ID`). olymparch-theme checks the theme and writes ~/.config/olymparch/theme/theme.json;
+    //    this reads only that file, and Zeus' black and gold stand in for anything missing. See docs/themes.md.
+    readonly property var themeData: {
+        const t = themeFile.text();
+        if (!t || !t.trim()) return {};
+        try { return JSON.parse(t) || {}; } catch (e) { return {}; }
+    }
+    function themeColour(k, zeus) {
+        const v = (themeData.palette || {})[k];
+        return /^#[0-9a-fA-F]{6}$/.test(v || "") ? v : zeus;
+    }
+    function mix(a, b, t) { return Qt.tint(a, Qt.rgba(b.r, b.g, b.b, t)); }
+    FileView {
+        id: themeFile
+        path: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/olymparch/theme/theme.json"
+        blockLoading: true
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+    }
+    IpcHandler {   // olymparch-theme apply calls this, so the new colours show at once
+        target: "theme"
+        function reload(): void { themeFile.reload(); }
+    }
+    readonly property string themeId: /^[a-z0-9-]{1,32}$/.test(themeData.id || "") ? themeData.id : "zeus"
+    readonly property bool light: themeData.light === true
+    readonly property color bg: themeColour("bg", "#0a0a0e")
     readonly property bool highContrast: Settings.get("accessibility.high_contrast") === true   // Settings → Accessibility
-    readonly property color line: highContrast ? "#8c8799" : "#3a3644"
-    readonly property color text: highContrast ? "#ffffff" : "#e8e6df"
-    readonly property color muted: highContrast ? "#dcd9e2" : "#9a96a3"
-    readonly property color gold: "#d4a73a"
-    readonly property color goldHi: "#f4d35e"
-    readonly property color surface: "#15151c"
-    readonly property color raised: "#1c1c25"
-    readonly property color red: "#e0605e"
+    readonly property color line: highContrast ? mix(themeColour("line", "#3a3644"), text, 0.45) : themeColour("line", "#3a3644")
+    readonly property color text: highContrast ? (light ? "#000000" : "#ffffff") : themeColour("text", "#e8e6df")
+    readonly property color muted: highContrast ? mix(themeColour("muted", "#9a96a3"), text, 0.6) : themeColour("muted", "#9a96a3")
+    readonly property color gold: themeColour("accent", "#d4a73a")        // the accent (gold in Zeus)
+    readonly property color goldHi: themeColour("accentHi", "#f4d35e")    // the accent, emphasised
+    readonly property color surface: themeColour("surface", "#15151c")
+    readonly property color raised: themeColour("raised", "#1c1c25")
+    readonly property color red: themeColour("danger", "#e0605e")
+    readonly property color field: mix(bg, surface, 0.4)          // input boxes, switches, sliders
+    readonly property color selected: mix(bg, gold, 0.1)          // a row that is waiting for you (recording a shortcut)
+    readonly property color onAccent: bg                          // text on an accent-filled button
+    readonly property color dim: mix(muted, bg, 0.15)             // the file/command hint under a setting
+    readonly property color scrim: Qt.rgba(bg.r, bg.g, bg.b, 0.6) // behind a question in the middle of the screen
+    readonly property color wallpaperBg: light ? bg : Qt.darker(bg, 1.25)
+    readonly property string glyph: {   // the god's sign in the bar (a Nerd Font code point)
+        const cp = parseInt(themeData.glyph || "f0e7", 16);
+        return (cp >= 0xe000 && cp <= 0xf8ff) || (cp >= 0xf0000 && cp <= 0xffffd) ? String.fromCodePoint(cp) : "\uf0e7";
+    }
+    readonly property string art: /^\/[^\0]*$/.test(themeData.wallpaper || "") && (themeData.wallpaper || "").indexOf("..") < 0 ? themeData.wallpaper : "/usr/share/olymparch/wallpaper"
+    readonly property int frames: Math.max(1, Math.min(48, themeData.frames || 48))
+    onFramesChanged: frame = 0
+    readonly property bool has1440: !themeData.sets || themeData.sets.indexOf("1440") >= 0
+    // ── end Theme
     // Settings → Accessibility → Text size: every font in the shell is theme.px(size)
     readonly property real fontScale: ({ "125": 1.25, "150": 1.5 })[Settings.get("accessibility.text_size")] || 1
     function px(n) { return Math.round(n * fontScale); }
     readonly property string mono: Settings.get("appearance.font") || "JetBrains Mono"   // Settings → Appearance
-    readonly property string art: "/usr/share/olymparch/wallpaper"
-    readonly property int frames: 48
     // Do not disturb: the setting (kept; the bell in the bar flips it), «olymparch dnd» for now, or a running game
     readonly property bool dndSetting: Settings.get("notifications.dnd") === true
     function toggleDnd() {
@@ -65,11 +105,11 @@ ShellRoot {
                     WlrLayershell.namespace: "olymparch-wallpaper"
                     exclusionMode: ExclusionMode.Ignore
                     anchors { top: true; bottom: true; left: true; right: true }
-                    color: "#08080c"
+                    color: root.wallpaperBg
 
                     Image {
                         anchors.fill: parent
-                        readonly property string set: parent.height >= 1300 ? "1440" : "1080"
+                        readonly property string set: parent.height >= 1300 && root.has1440 ? "1440" : "1080"
                         source: `file://${root.art}/${set}/frame-${String(root.frame).padStart(2, "0")}.png`
                         fillMode: Image.PreserveAspectCrop
                         smooth: false
@@ -123,7 +163,7 @@ ShellRoot {
                         anchors.centerIn: parent
                         spacing: 10
                         Text {
-                            text: "\uf0e7"
+                            text: root.glyph
                             font { family: "Symbols Nerd Font Mono"; pixelSize: root.px(15) }
                             color: root.gold
                             anchors.verticalCenter: parent.verticalCenter
@@ -170,4 +210,5 @@ ShellRoot {
     // ── everyday tools (olymparch-tool): clipboard history (Super+Ctrl+V) and emoji (Super+period)
     Clipboard { theme: root }
     Emoji { theme: root }
+    ThemePicker { theme: root }   // Super+Ctrl+Shift+Space
 }

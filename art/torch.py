@@ -2,7 +2,9 @@
 endrer størrelse, styrke og høyde fra bilde til bilde. Bevegelsen er en sum av sinuser med helt antall
 perioder per løkke, så den ser uregelmessig ut men går sømløst rundt.
 
-Bruk: torch.py <ut-mappe> <bredde> <høyde> [bilder=24]  ->  frame-00.png … og preview.gif (fps 8)
+Bruk: torch.py <ut-mappe> <bredde> <høyde> [bilder=48] [theme.json]  ->  frame-00.png … og preview.gif (fps 8)
+Med et tema (default/themes/<id>/theme.json) farges alt om etter paletten: bakgrunnen etter bg/surface, tempelet,
+glorien og gnistene etter accent/accentHi. Samme tegning og samme pikselstil; uten tema er det Zevs' gull.
 """
 import math
 import sys
@@ -19,6 +21,30 @@ W, H = math.ceil(OW / S), math.ceil(OH / S)
 BG_TOP, BG_BOT = (13, 13, 18), (8, 8, 12)
 HALO = [(30, 22, 10), (42, 29, 12), (60, 39, 12), (84, 52, 14)]  # ett ekstra, varmere trinn for flammetoppene
 GOLD = [(90, 44, 8), (156, 94, 12), (214, 148, 22), (244, 198, 52), (255, 234, 118)]
+SCAN = 3 / 4  # skannlinjene: hver linje så mye mørkere
+# ── tema: fargene fra paletten (bare #RRGGBB godtas; det er data, ingenting kjøres)
+if len(sys.argv) > 5:
+    import json
+    import re
+    pal = json.loads(Path(sys.argv[5]).read_text())["palette"]
+    for k in ("bg", "surface", "accent", "accentHi"):
+        if not re.fullmatch(r"#[0-9a-fA-F]{6}", pal.get(k, "")):
+            sys.exit(f"torch.py: palette.{k} må være #RRGGBB")
+    rgb = lambda h: tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
+    mix = lambda a, b, t: tuple(round(a[i] + (b[i] - a[i]) * t) for i in range(3))
+    bg, surface, acc, hi = (rgb(pal[k]) for k in ("bg", "surface", "accent", "accentHi"))
+    lum = sum(bg) / 765
+    light = lum > 0.5
+    BG_TOP, BG_BOT = mix(bg, surface, 0.3), (bg if light else mix(bg, (0, 0, 0), 0.2))
+    if light:  # lyst tema: en mild sol bak tempelet, mørkt metall i tempelet så det synes på det lyse
+        HALO = [mix(bg, hi, t) for t in (0.06, 0.12, 0.2, 0.3)]
+        HALO = [mix(h, (255, 214, 120), 0.25) for h in HALO]
+        GOLD = [mix(acc, (0, 0, 0), 0.55), mix(acc, (0, 0, 0), 0.3), acc, mix(acc, hi, 0.5), mix(hi, (255, 255, 255), 0.15)]
+        SCAN = 0.97  # på det lyse er skannlinjene bare et streif
+    else:
+        warm = mix(acc, (0, 0, 0), 0.35)  # glorien: en mørkere, varmere utgave av aksenten
+        HALO = [mix(bg, warm, t) for t in (0.13, 0.2, 0.31, 0.45)]
+        GOLD = [mix(acc, (0, 0, 0), 0.58), mix(acc, (0, 0, 0), 0.3), acc, mix(acc, hi, 0.6), mix(hi, (255, 255, 255), 0.45)]
 BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
 cx, cy = W // 2, int(H * 0.56)
 
@@ -87,7 +113,7 @@ for n in range(N):
     for y in range(0, OH, P):
         for x in range(OW):
             r, g_, b = d[x, y]
-            d[x, y] = (r * 3 // 4, g_ * 3 // 4, b * 3 // 4)
+            d[x, y] = (int(r * SCAN), int(g_ * SCAN), int(b * SCAN))
     big.save(out / f"frame-{n:02d}.png", optimize=True)
     frames.append(big)
 

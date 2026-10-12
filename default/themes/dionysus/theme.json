@@ -1,0 +1,43 @@
+{
+  "id": "dionysus",
+  "name": {
+    "en": "Dionysus",
+    "nb": "Dionysos"
+  },
+  "god": "Dionysus",
+  "description": {
+    "en": "Wine and revelry: deep wine and ripe grapes.",
+    "nb": "Vin og fest: dyp vin og modne druer."
+  },
+  "light": false,
+  "glyph": "f0876",
+  "palette": {
+    "bg": "#110614",
+    "surface": "#1f0c24",
+    "raised": "#2a1131",
+    "line": "#552a60",
+    "text": "#f4e6f4",
+    "muted": "#bb9cc2",
+    "accent": "#e2558f",
+    "accentHi": "#c99af0",
+    "danger": "#ff6b4a"
+  },
+  "terminal": [
+    "#1f0c24",
+    "#f06654",
+    "#a6b88f",
+    "#d69b47",
+    "#8a96ca",
+    "#b882c6",
+    "#80a5b9",
+    "#f4e6f4",
+    "#926f99",
+    "#f87a69",
+    "#bdc8a5",
+    "#f1c065",
+    "#a6add9",
+    "#cd9cd6",
+    "#9fb8ca",
+    "#ffffff"
+  ]
+}

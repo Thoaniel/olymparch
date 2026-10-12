@@ -1,0 +1,43 @@
+{
+  "id": "artemis",
+  "name": {
+    "en": "Artemis",
+    "nb": "Artemis"
+  },
+  "god": "Artemis",
+  "description": {
+    "en": "The huntress by night: moonlight silver on night blue.",
+    "nb": "Jegerinnen om natta: månesølv på nattblått."
+  },
+  "light": false,
+  "glyph": "f0f65",
+  "palette": {
+    "bg": "#080c19",
+    "surface": "#101728",
+    "raised": "#171f34",
+    "line": "#2e3a5a",
+    "text": "#e6ebf5",
+    "muted": "#9aa6c0",
+    "accent": "#c2cde0",
+    "accentHi": "#f3f6fc",
+    "danger": "#ff7b86"
+  },
+  "terminal": [
+    "#101728",
+    "#f06e72",
+    "#a2ca9b",
+    "#d1ad53",
+    "#85a8d6",
+    "#b394d2",
+    "#7bb7c5",
+    "#e6ebf5",
+    "#707b96",
+    "#f88287",
+    "#b8dab1",
+    "#ecd272",
+    "#a2bfe5",
+    "#c8aee3",
+    "#9acad6",
+    "#ffffff"
+  ]
+}

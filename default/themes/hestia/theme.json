@@ -1,0 +1,43 @@
+{
+  "id": "hestia",
+  "name": {
+    "en": "Hestia",
+    "nb": "Hestia"
+  },
+  "god": "Hestia",
+  "description": {
+    "en": "The hearth: amber firelight on warm wood.",
+    "nb": "Arnen: ravgult ildlys på varmt treverk."
+  },
+  "light": false,
+  "glyph": "f0238",
+  "palette": {
+    "bg": "#1a1009",
+    "surface": "#28190e",
+    "raised": "#332113",
+    "line": "#5c4128",
+    "text": "#f8ecdc",
+    "muted": "#c4a888",
+    "accent": "#ffb21e",
+    "accentHi": "#ff8f52",
+    "danger": "#ff5e5e"
+  },
+  "terminal": [
+    "#28190e",
+    "#f05f5e",
+    "#abc67e",
+    "#daa936",
+    "#8ea4b9",
+    "#bc90b5",
+    "#85b3a8",
+    "#f8ecdc",
+    "#947a5f",
+    "#f87473",
+    "#c1d694",
+    "#f6ce54",
+    "#abbbc8",
+    "#d1aac5",
+    "#a3c6b9",
+    "#ffffff"
+  ]
+}

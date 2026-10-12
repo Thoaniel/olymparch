@@ -1,0 +1,43 @@
+{
+  "id": "demeter",
+  "name": {
+    "en": "Demeter",
+    "nb": "Demeter"
+  },
+  "god": "Demeter",
+  "description": {
+    "en": "The harvest: green fields and ripe wheat.",
+    "nb": "Innhøstingen: grønne åkrer og moden hvete."
+  },
+  "light": false,
+  "glyph": "f032a",
+  "palette": {
+    "bg": "#0b1109",
+    "surface": "#152012",
+    "raised": "#1d2b19",
+    "line": "#3a5232",
+    "text": "#eef1e3",
+    "muted": "#a9b595",
+    "accent": "#9ccc65",
+    "accentHi": "#f0d68c",
+    "danger": "#ff7a5c"
+  },
+  "terminal": [
+    "#152012",
+    "#f06d5d",
+    "#9cc989",
+    "#ccad40",
+    "#7fa8c3",
+    "#ad94c0",
+    "#76b7b2",
+    "#eef1e3",
+    "#728464",
+    "#f88272",
+    "#b2da9f",
+    "#e7d25f",
+    "#9cbfd3",
+    "#c2aed0",
+    "#94cac3",
+    "#ffffff"
+  ]
+}
