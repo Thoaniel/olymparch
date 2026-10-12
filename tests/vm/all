@@ -5,7 +5,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/../.."
 tests=("$@")
-[ ${#tests[@]} -gt 0 ] || tests=(install-disk install-wizard snapshots shell events settings hw games games-install)
+[ ${#tests[@]} -gt 0 ] || tests=(install-disk install-wizard snapshots shell events settings displays hw games games-install)
 summary=tests/vm/out/all.txt
 mkdir -p tests/vm/out
 : >"$summary"

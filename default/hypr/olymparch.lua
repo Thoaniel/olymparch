@@ -106,3 +106,9 @@ end)
 hl.on("window.open", function(w)
     hl.exec_cmd("olymparch-game-hook window " .. tostring(w.address) .. " " .. tostring(w.pid or 0))
 end)
+
+-- Every monitor combination remembers its layout: plugging monitors in or out applies the layout saved for exactly
+-- that set (by make/model/serial, not port), or offers to arrange a new one. Settings → Displays saves it.
+for _, event in ipairs({ "hyprland.start", "monitor.added", "monitor.removed" }) do
+    hl.on(event, function() hl.exec_cmd("olymparch-settings monitors-changed") end)
+end

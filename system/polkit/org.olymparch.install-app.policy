@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- pkexec /usr/lib/olymparch/install-app APP: install an app from Olymparch's fixed list (torrent → transmission-gtk).
+     50-olymparch-install-app.rules lets the desktop's own (wheel) user do it with the one click. -->
+<policyconfig>
+  <vendor>Olymparch</vendor>
+  <action id="org.olymparch.install-app">
+    <description>Install an app Olymparch offered</description>
+    <description xml:lang="nb">Installer en app Olymparch tilbød</description>
+    <message>Authentication is required to install the app</message>
+    <message xml:lang="nb">Du må logge inn for å installere appen</message>
+    <icon_name>system-software-install</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/olymparch/install-app</annotate>
+  </action>
+</policyconfig>

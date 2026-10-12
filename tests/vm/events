@@ -3,6 +3,7 @@
 # copied in from this repo:
 #   download virus check (a clamscan stub flags the EICAR test file; no 200 MB virus database in the test),
 #   disk nearly full (threshold lowered), archive → extracted with one click, USB disk plugged in → mounted.
+#   magnet link with no torrent app → offer; one click installs Transmission (pkexec install-app) and opens it.
 set -uo pipefail
 cd "$(dirname "$0")/../.."
 . dev/env
@@ -57,7 +58,36 @@ keys "clear; findmnt -no TARGET -S LABEL=OLYUSB && cat \"\$(findmnt -no TARGET -
 wait_for 'USB-MOUNTED' 15
 shot usb-innhold "Filen på USB-pinnen kan leses"
 
+# ── 5. Torrents: a magnet link with no torrent app → offer Transmission; one click installs it and opens the link
+torrent=ok
+keys "clear; sudo install -m755 /mnt/system/bin/olymparch-open-torrent /usr/bin/ && sudo install -Dm755 /mnt/system/lib/install-app /usr/lib/olymparch/install-app && sudo install -m644 /mnt/system/polkit/org.olymparch.install-app.policy /usr/share/polkit-1/actions/ && sudo install -m644 /mnt/system/polkit/50-olymparch-install-app.rules /usr/share/polkit-1/rules.d/ && sudo install -m644 /mnt/default/apps/olymparch-open-torrent.desktop /usr/share/applications/ && sudo install -m644 /mnt/default/apps/mimeapps.list /etc/xdg/mimeapps.list && sudo systemctl restart polkit && ! command -v transmission-gtk && sudo chmod 666 /dev/kmsg && echo '<2>TORRENT-READY' >/dev/kmsg; clear\n" 2
+wait_for 'TORRENT-READY' 30 || torrent="ikke klar"
+python3 -I tests/vm/qmp.py "$QMP" cmd device_add '{"driver": "usb-tablet", "bus": "xhci.0", "id": "tablet"}' >/dev/null
+# an evil link is refused before anything runs (and never reaches a shell)
+keys "xdg-open 'magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567&dn=\$(touch ~/PWNED)' 2>~/torrent.log; sleep 1; cat ~/torrent.log\n" 2
+shot torrent-avvist "Magnetlenke med \$(…) i: avvist, varsel «Ikke en torrent», ingenting kjørt"
+sleep 8   # until that toast has gone, so the offer is the newest notification
+mag='magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567&dn=Olymparch+test'
+keys "clear; xdg-mime query default x-scheme-handler/magnet; setsid -f xdg-open '$mag' 2>>~/torrent.log </dev/null\n" 1
+if xy=$(for i in $(seq 30); do python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/probe.ppm" 2>/dev/null &&
+        python3 -I tests/vm/button.py "$O/probe.ppm" 0 2>/dev/null && break; sleep 1; done); [ -n "$xy" ]; then
+    shot torrent-tilbud "xdg-open magnet:-lenke uten torrent-app: varsel «Ingen torrent-app» med «Installer Transmission»"
+else
+    shot torrent-feil "Ingen varsel for magnetlenken"; torrent="intet tilbud"
+fi
+[ "$torrent" = ok ] && {
+    # typed first: Transmission takes the keyboard focus when it opens
+    keys "clear; for i in \$(seq 120); do pgrep -x transmission-gt >/dev/null && break; sleep 2; done; sleep 4; pgrep -af transmission-gtk | grep -q 'btih:0123456789abcdef0123456789abcdef01234567' && ! [ -e ~/PWNED ] && grep -q 'offering Transmission' ~/torrent.log && grep -q 'refused' ~/torrent.log && echo '<2>TORRENT-OPENED' >/dev/kmsg\n" 1
+    # shellcheck disable=SC2086
+    python3 -I tests/vm/qmp.py "$QMP" click $xy
+    sleep 2
+    shot torrent-installerer "Klikk på «Installer Transmission»: pkexec /usr/lib/olymparch/install-app torrent"
+    wait_for 'TORRENT-OPENED' 280 || torrent="Transmission åpnet ikke lenken"
+    shot torrent-transmission "Transmission installert med ett klikk og åpner magnetlenken"
+}
+
 ok=1
+[ "$torrent" = ok ] || ok=0
 seen 'USB-MOUNTED' || ok=0
 (( ${red:-0} > 40 )) || ok=0   # the critical toast has a red border
-finish "$([ $ok = 1 ] && echo PASS || echo FAIL) · hendelser: virus (røde piksler: ${red:-0}), disk, arkiv og USB på $((SECONDS - t0)) s"
+finish "$([ $ok = 1 ] && echo PASS || echo FAIL) · hendelser: virus (røde piksler: ${red:-0}), disk, arkiv, USB og torrent ($torrent) på $((SECONDS - t0)) s"
