@@ -70,6 +70,18 @@ done
 for f in system/bin/* system/lib/*; do
     printf 'file_permissions+=(["/usr/share/olymparch/%s"]="0:0:755")\n' "$f" >>profile/profiledef.sh
 done
+# Personal additions (OLYMPARCH_PERSONAL=DIR, never for releases): DIR is a tree laid over the new system's / (for
+# example DIR/usr/local/bin/hent-alt). It rides along in /usr/share/olymparch/personal, the installer copies it in,
+# and the ISO is named olymparch-personal-*, so it is never mistaken for the public one.
+if [ -n "${OLYMPARCH_PERSONAL:-}" ]; then
+    [ -d "$OLYMPARCH_PERSONAL" ] || { echo "OLYMPARCH_PERSONAL=$OLYMPARCH_PERSONAL is not a folder" >&2; exit 2; }
+    mkdir -p "$share/personal"
+    cp -r --preserve=mode -- "$OLYMPARCH_PERSONAL"/. "$share/personal/"
+    (cd "$OLYMPARCH_PERSONAL" && find . -type f -perm -u+x) | while IFS= read -r f; do
+        printf 'file_permissions+=(["/usr/share/olymparch/personal/%s"]="0:0:755")\n' "${f#./}" >>profile/profiledef.sh
+    done
+    sed -i 's/^iso_name=.*/iso_name="olymparch-personal"/' profile/profiledef.sh
+fi
 mkarchiso -v -r -w work -o out profile
 rm -rf -- profile
 ls -lh out/*.iso | tail -1
