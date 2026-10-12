@@ -1,0 +1,43 @@
+{
+  "id": "zeus",
+  "name": {
+    "en": "Zeus",
+    "nb": "Zevs"
+  },
+  "god": "Zeus",
+  "description": {
+    "en": "King of the gods: black marble, gold and lightning.",
+    "nb": "Gudenes konge: svart marmor, gull og lyn."
+  },
+  "light": false,
+  "glyph": "f0e7",
+  "palette": {
+    "bg": "#0a0a0e",
+    "surface": "#15151c",
+    "raised": "#1c1c25",
+    "line": "#3a3644",
+    "text": "#e8e6df",
+    "muted": "#9a96a3",
+    "accent": "#d4a73a",
+    "accentHi": "#f4d35e",
+    "danger": "#e0605e"
+  },
+  "terminal": [
+    "#15151c",
+    "#e0605e",
+    "#9cc98f",
+    "#d4a73a",
+    "#7aa2d4",
+    "#b08ad0",
+    "#6fb3c0",
+    "#e8e6df",
+    "#3a3644",
+    "#f08a88",
+    "#b6dca9",
+    "#f4d35e",
+    "#9cbde6",
+    "#c9a9e3",
+    "#93cad4",
+    "#ffffff"
+  ]
+}

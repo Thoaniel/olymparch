@@ -1,0 +1,480 @@
+#!/usr/bin/lua
+-- olymparch-theme: the look of Olymparch. One theme restyles the shell (bar, menu, notifications, OSD, Settings),
+-- the lock screen, the Hyprland borders, the foot terminal and the animated temple wallpaper.
+--
+--   olymparch-theme list [--json]       every theme (* = in use); built-in ones and yours (~/.config/olymparch/themes)
+--   olymparch-theme current             the theme in use
+--   olymparch-theme set ID              use a theme (the same as olymparch-settings set appearance.theme ID)
+--   olymparch-theme apply               write the files for the theme in use and apply them live (Settings runs it)
+--   olymparch-theme validate DIR        check a theme folder without installing it
+--   olymparch-theme install URL         a community theme from https://github.com/OWNER/REPO(.git)
+--   olymparch-theme remove ID           remove a theme you installed
+--
+-- A theme is data only: theme.json and optional wallpaper frames (PNG). Nothing in a theme is ever run, and no
+-- symlink in it is followed. Every value is checked here before it reaches the shell, Hyprland or foot; the shell
+-- and the lock screen only read the checked copy in ~/.config/olymparch/theme/theme.json. Format: docs/themes.md.
+
+local HOME = os.getenv("HOME") or "."
+local CONFIG = os.getenv("XDG_CONFIG_HOME") or (HOME .. "/.config")
+local CACHE = os.getenv("XDG_CACHE_HOME") or (HOME .. "/.cache")
+local SELF = arg[0]
+local function script_dir() return (SELF:match("^(.*)/[^/]*$") or ".") end
+
+local USER_DIR = CONFIG .. "/olymparch/themes"
+local SYSTEM_DIR = os.getenv("OLYMPARCH_THEMES") or "/usr/share/olymparch/themes"
+do -- running from the repo (tests): the themes next to it
+    local f = io.open(SYSTEM_DIR .. "/zeus/theme.json")
+    if f then f:close() else SYSTEM_DIR = script_dir() .. "/../../default/themes" end
+end
+local DEFAULT_WALLPAPER = "/usr/share/olymparch/wallpaper"   -- Zeus' torch frames (1080/, 1440/)
+local OUT = CONFIG .. "/olymparch/theme"                      -- what the shell, lock screen, foot and Hyprland read
+local DEFAULT = "zeus"
+local PALETTE = { "bg", "surface", "raised", "line", "text", "muted", "accent", "accentHi", "danger" }
+local MAX_FRAMES = 48
+
+local nb = (os.getenv("LANG") or ""):match("^n[bno]") ~= nil
+local function L(en, no) return nb and no or en end
+local function die(msg, code) io.stderr:write("olymparch-theme: " .. msg .. "\n"); os.exit(code or 1) end
+local function sh_quote(s) return "'" .. tostring(s):gsub("'", "'\\''") .. "'" end
+local function ok(cmd) return os.execute(cmd .. " >/dev/null 2>&1") == true end
+local function capture(cmd)
+    local p = io.popen(cmd .. " 2>/dev/null")
+    if not p then return "" end
+    local s = p:read("a") or ""; p:close()
+    return s
+end
+-- a regular file or folder, never through a symlink
+local function regular_file(p) return ok("test -f " .. sh_quote(p) .. " && test ! -L " .. sh_quote(p)) end
+local function regular_dir(p) return ok("test -d " .. sh_quote(p) .. " && test ! -L " .. sh_quote(p)) end
+local function read(path, limit)
+    local f = io.open(path, "rb")
+    if not f then return nil end
+    local s = f:read(limit or "a"); f:close()
+    return s
+end
+local function write(path, text)   -- atomic, through a mktemp file next to the target
+    local dir, name = path:match("^(.*)/([^/]+)$")
+    os.execute("mkdir -p " .. sh_quote(dir))
+    local tmp = capture("mktemp " .. sh_quote(dir .. "/." .. name .. ".XXXXXX")):gsub("%s+$", "")
+    if tmp == "" then die("cannot write " .. path) end
+    local f = assert(io.open(tmp, "wb"))
+    f:write(text); f:close()
+    if not os.rename(tmp, path) then os.remove(tmp); die("cannot write " .. path) end
+end
+
+---------------------------------------------------------------------------------------------------- JSON
+local json = {}
+do
+    local esc = { ['"'] = '\\"', ["\\"] = "\\\\", ["\n"] = "\\n", ["\r"] = "\\r", ["\t"] = "\\t" }
+    local function str(s) return '"' .. s:gsub('[%c"\\]', function(c) return esc[c] or string.format("\\u%04x", c:byte()) end) .. '"' end
+    function json.encode(v, indent)
+        indent = indent or ""
+        local t = type(v)
+        if t == "string" then return str(v)
+        elseif t == "boolean" or t == "number" then return tostring(v)
+        elseif t == "table" then
+            local inner = indent .. "  "
+            if #v > 0 or next(v) == nil then
+                local parts = {}
+                for i, x in ipairs(v) do parts[i] = json.encode(x, inner) end
+                return "[" .. table.concat(parts, ", ") .. "]"
+            end
+            local keys = {}
+            for k in pairs(v) do keys[#keys + 1] = k end
+            table.sort(keys)
+            local parts = {}
+            for i, k in ipairs(keys) do parts[i] = inner .. str(k) .. ": " .. json.encode(v[k], inner) end
+            return "{\n" .. table.concat(parts, ",\n") .. "\n" .. indent .. "}"
+        end
+        return "null"
+    end
+    function json.decode(s)
+        local pos, depth = 1, 0
+        local function err(what) error(("JSON: %s at byte %d"):format(what, pos), 0) end
+        local function ws() pos = s:find("[^ \t\r\n]", pos) or #s + 1 end
+        local value
+        local function string_()
+            local out, i = {}, pos + 1
+            while true do
+                local c = s:sub(i, i)
+                if c == "" then err("unterminated string") end
+                if c == '"' then pos = i + 1; return table.concat(out) end
+                if c == "\\" then
+                    local n = s:sub(i + 1, i + 1)
+                    local map = { b = "\b", f = "\f", n = "\n", r = "\r", t = "\t", ['"'] = '"', ["\\"] = "\\", ["/"] = "/" }
+                    if map[n] then out[#out + 1] = map[n]; i = i + 2
+                    elseif n == "u" then
+                        local cp = tonumber(s:sub(i + 2, i + 5), 16) or err("bad \\u")
+                        i = i + 6
+                        if cp >= 0xD800 and cp <= 0xDBFF and s:sub(i, i + 1) == "\\u" then
+                            local lo = tonumber(s:sub(i + 2, i + 5), 16) or err("bad \\u")
+                            cp = 0x10000 + (cp - 0xD800) * 0x400 + (lo - 0xDC00)
+                            i = i + 6
+                        end
+                        if cp < 0 or cp > 0x10FFFF or (cp >= 0xD800 and cp <= 0xDFFF) then err("bad \\u") end
+                        out[#out + 1] = utf8.char(cp)
+                    else err("bad escape") end
+                else
+                    local j = s:find('["\\]', i) or #s + 1
+                    out[#out + 1] = s:sub(i, j - 1); i = j
+                end
+            end
+        end
+        function value()
+            ws()
+            local c = s:sub(pos, pos)
+            if c == "{" or c == "[" then
+                depth = depth + 1
+                if depth > 8 then err("nested too deep") end
+            end
+            if c == "{" then
+                local obj = {}
+                pos = pos + 1; ws()
+                if s:sub(pos, pos) == "}" then pos = pos + 1; depth = depth - 1; return obj end
+                while true do
+                    ws()
+                    if s:sub(pos, pos) ~= '"' then err("expected key") end
+                    local k = string_()
+                    ws()
+                    if s:sub(pos, pos) ~= ":" then err("expected :") end
+                    pos = pos + 1
+                    if obj[k] ~= nil then err("duplicate key " .. k) end
+                    obj[k] = value()
+                    ws()
+                    local d = s:sub(pos, pos); pos = pos + 1
+                    if d == "}" then depth = depth - 1; return obj end
+                    if d ~= "," then err("expected , or }") end
+                end
+            elseif c == "[" then
+                local arr = {}
+                pos = pos + 1; ws()
+                if s:sub(pos, pos) == "]" then pos = pos + 1; depth = depth - 1; return arr end
+                while true do
+                    arr[#arr + 1] = value()
+                    ws()
+                    local d = s:sub(pos, pos); pos = pos + 1
+                    if d == "]" then depth = depth - 1; return arr end
+                    if d ~= "," then err("expected , or ]") end
+                end
+            elseif c == '"' then return string_()
+            elseif s:sub(pos, pos + 3) == "true" then pos = pos + 4; return true
+            elseif s:sub(pos, pos + 4) == "false" then pos = pos + 5; return false
+            else err("unexpected " .. (c ~= "" and c or "end")) end   -- no numbers or null in a theme
+        end
+        local v = value()
+        ws()
+        if pos <= #s then err("trailing data") end
+        return v
+    end
+end
+
+---------------------------------------------------------------------------------------------------- validation
+local function valid_id(id) return type(id) == "string" and #id >= 1 and #id <= 32 and id:match("^[a-z0-9-]+$") ~= nil end
+local function colour(c) return type(c) == "string" and c:match("^#%x%x%x%x%x%x$") ~= nil end
+local function plain(s, max)   -- one line of text: no control characters, valid UTF-8
+    return type(s) == "string" and s ~= "" and #s <= max and not s:find("%c") and utf8.len(s) ~= nil
+end
+local function lang_text(t, max)   -- { en = "…", nb = "…" }: en required, nb optional
+    if type(t) ~= "table" or #t > 0 then return false end
+    for k, v in pairs(t) do
+        if (k ~= "en" and k ~= "nb") or not plain(v, max) then return false end
+    end
+    return t.en ~= nil
+end
+-- relative luminance and contrast (WCAG 2)
+local function lum(c)
+    local function ch(x) x = x / 255; return x <= 0.03928 and x / 12.92 or ((x + 0.055) / 1.055) ^ 2.4 end
+    return 0.2126 * ch(tonumber(c:sub(2, 3), 16)) + 0.7152 * ch(tonumber(c:sub(4, 5), 16)) + 0.0722 * ch(tonumber(c:sub(6, 7), 16))
+end
+local function contrast(a, b)
+    local x, y = lum(a), lum(b)
+    if x < y then x, y = y, x end
+    return (x + 0.05) / (y + 0.05)
+end
+local ALLOWED = { id = true, name = true, god = true, description = true, light = true, glyph = true, palette = true,
+    terminal = true, author = true, version = true }
+-- theme.json text → the checked theme, or nil and why. EXPECT_ID: the folder's name must match.
+local function check_theme(text, expect_id)
+    if not text then return nil, "no theme.json" end
+    if #text > 65536 then return nil, "theme.json is larger than 64 KiB" end
+    local okj, t = pcall(json.decode, text)
+    if not okj then return nil, t end
+    if type(t) ~= "table" or #t > 0 then return nil, "theme.json must be an object" end
+    for k in pairs(t) do if not ALLOWED[k] then return nil, "unknown field " .. k end end
+    if not valid_id(t.id) then return nil, "id must match ^[a-z0-9-]{1,32}$" end
+    if expect_id and t.id ~= expect_id then return nil, ("id %s does not match the folder %s"):format(t.id, expect_id) end
+    if not lang_text(t.name, 40) then return nil, "name must be { \"en\": \"…\", \"nb\": \"…\" } (one line, at most 40 bytes)" end
+    if not lang_text(t.description, 200) then return nil, "description must be { \"en\": \"…\", \"nb\": \"…\" } (one line, at most 200 bytes)" end
+    if not plain(t.god, 40) then return nil, "god must be one line of text" end
+    if t.light ~= nil and type(t.light) ~= "boolean" then return nil, "light must be true or false" end
+    if t.author ~= nil and not plain(t.author, 80) then return nil, "author must be one line of text" end
+    if t.version ~= nil and not (plain(t.version, 20) and t.version:match("^[%w.-]+$")) then return nil, "version must be like 1.0" end
+    if t.glyph ~= nil then   -- a Nerd Font icon (private use area), as hex: "f0e7"
+        local cp = type(t.glyph) == "string" and t.glyph:match("^%x%x%x%x%x?$") and tonumber(t.glyph, 16)
+        if not cp or not ((cp >= 0xE000 and cp <= 0xF8FF) or (cp >= 0xF0000 and cp <= 0xFFFFD)) then
+            return nil, "glyph must be a Nerd Font code point (hex, private use area) such as f0e7"
+        end
+    end
+    if type(t.palette) ~= "table" or #t.palette > 0 then return nil, "palette must be an object" end
+    for k in pairs(t.palette) do
+        local known = false
+        for _, p in ipairs(PALETTE) do if p == k then known = true end end
+        if not known then return nil, "unknown palette colour " .. tostring(k) end
+    end
+    for _, p in ipairs(PALETTE) do
+        if not colour(t.palette[p]) then return nil, ("palette.%s must be #RRGGBB"):format(p) end
+    end
+    if type(t.terminal) ~= "table" or #t.terminal ~= 16 then return nil, "terminal must be a list of 16 colours" end
+    for k in pairs(t.terminal) do if math.type(k) ~= "integer" or k < 1 or k > 16 then return nil, "terminal must be a list of 16 colours" end end
+    for i, c in ipairs(t.terminal) do if not colour(c) then return nil, ("terminal[%d] must be #RRGGBB"):format(i - 1) end end
+    local p = t.palette
+    for _, pair in ipairs({ { "text", "bg" }, { "text", "surface" } }) do
+        local c = contrast(p[pair[1]], p[pair[2]])
+        if c < 4.5 then return nil, ("%s on %s has contrast %.2f:1; it must be at least 4.5:1"):format(pair[1], pair[2], c) end
+    end
+    return t
+end
+local function warnings(t)   -- readable, but worth knowing
+    local w, p = {}, t.palette
+    for _, pair in ipairs({ { "muted", "bg" }, { "accent", "bg" }, { "accent", "surface" }, { "accentHi", "raised" }, { "danger", "bg" } }) do
+        local c = contrast(p[pair[1]], p[pair[2]])
+        if c < 4.5 then w[#w + 1] = ("%s on %s: contrast %.2f:1 (below 4.5)"):format(pair[1], pair[2], c) end
+    end
+    return w
+end
+
+-- where theme ID lives: yours first (it overrides a built-in one), then the built-in ones
+local function theme_dir(id)
+    if not valid_id(id) then return nil end
+    for _, base in ipairs({ USER_DIR, SYSTEM_DIR }) do
+        local d = base .. "/" .. id
+        if regular_dir(d) and regular_file(d .. "/theme.json") then return d, base == USER_DIR end
+    end
+end
+local function load(id)
+    local d, user = theme_dir(id)
+    if not d then return nil, "no theme called " .. tostring(id) end
+    local t, why = check_theme(read(d .. "/theme.json", 65537), id)
+    if not t then return nil, d .. "/theme.json: " .. why end
+    return t, d, user
+end
+local function ids_in(base)
+    local list = {}
+    for name in capture("find -P " .. sh_quote(base) .. " -mindepth 1 -maxdepth 1 -type d -printf '%f\\n'"):gmatch("[^\n]+") do
+        if valid_id(name) then list[#list + 1] = name end
+    end
+    return list
+end
+local function all_ids()
+    local seen, list = {}, {}
+    for _, base in ipairs({ SYSTEM_DIR, USER_DIR }) do
+        for _, id in ipairs(ids_in(base)) do if not seen[id] then seen[id] = true; list[#list + 1] = id end end
+    end
+    table.sort(list, function(a, b)   -- Zeus first, then by name
+        if a == DEFAULT or b == DEFAULT then return a == DEFAULT end
+        return a < b
+    end)
+    return list
+end
+
+-- wallpaper frames: DIR/1080/frame-00.png … (regular files only), counted from 00 without gaps
+local function frames_in(dir)
+    local have = {}
+    for name in capture("find -P " .. sh_quote(dir) .. " -maxdepth 1 -type f -name 'frame-??.png' -printf '%f\\n'"):gmatch("[^\n]+") do
+        have[name] = true
+    end
+    local n = 0
+    while n < MAX_FRAMES and have[("frame-%02d.png"):format(n)] do n = n + 1 end
+    return n
+end
+local function wallpaper(d)
+    local w = d .. "/wallpaper"
+    if regular_dir(w) and regular_dir(w .. "/1080") then
+        local n = frames_in(w .. "/1080")
+        if n > 0 then
+            local n2 = regular_dir(w .. "/1440") and frames_in(w .. "/1440") or 0
+            return { dir = w, frames = n, sets = n2 >= n and { "1080", "1440" } or { "1080" } }
+        end
+    end
+    return { dir = DEFAULT_WALLPAPER, frames = MAX_FRAMES, sets = { "1080", "1440" } }
+end
+
+---------------------------------------------------------------------------------------------------- settings
+local function settings_cmd()
+    local mine = script_dir() .. "/olymparch-settings"
+    return (io.open(mine) and mine) or "olymparch-settings"
+end
+local function current()
+    local id = capture(sh_quote(settings_cmd()) .. " get appearance.theme"):gsub("%s+$", "")
+    if not valid_id(id) then id = DEFAULT end
+    return id
+end
+
+---------------------------------------------------------------------------------------------------- apply
+local function hexrgb(c) return c:sub(2):lower() end
+local function darker(c, f)
+    local r, g, b = tonumber(c:sub(2, 3), 16), tonumber(c:sub(4, 5), 16), tonumber(c:sub(6, 7), 16)
+    return ("#%02x%02x%02x"):format(math.floor(r * f), math.floor(g * f), math.floor(b * f))
+end
+local function hypr_code(t)
+    local p = t.palette
+    local back = t.light and p.bg or darker(p.bg, 0.8)
+    return ('hl.config({ general = { col = { active_border = "rgb(%s)", inactive_border = "rgb(%s)" } }, misc = { background_color = "rgb(%s)" } })')
+        :format(hexrgb(p.accent), hexrgb(p.line), hexrgb(back))
+end
+local function foot_ini(t)
+    local p, term = t.palette, t.terminal
+    local l = { "# Written by olymparch-theme (theme: " .. t.id .. "). Change the theme in Settings → Appearance or with",
+        "# `olymparch-theme set ID`; edits here are overwritten. foot reads it when a new terminal opens.",
+        "[colors-dark]", "alpha=1.0",
+        ("cursor=%s %s"):format(hexrgb(p.bg), hexrgb(p.accent)),
+        "background=" .. hexrgb(p.bg), "foreground=" .. hexrgb(p.text),
+        "selection-background=" .. hexrgb(p.line), "selection-foreground=" .. hexrgb(t.light and p.text or p.accentHi) }
+    for i = 0, 7 do l[#l + 1] = ("regular%d=%s"):format(i, hexrgb(term[i + 1])) end
+    for i = 0, 7 do l[#l + 1] = ("bright%d=%s"):format(i, hexrgb(term[i + 9])) end
+    return table.concat(l, "\n") .. "\n"
+end
+local function apply(quiet)
+    local id = current()
+    local t, d = load(id)
+    if not t then
+        io.stderr:write("olymparch-theme: " .. tostring(d) .. "; using " .. DEFAULT .. "\n")
+        id = DEFAULT
+        t, d = load(DEFAULT)
+        if not t then die("the default theme is missing: " .. tostring(d)) end
+    end
+    local wp = wallpaper(d)
+    local resolved = { id = t.id, name = t.name, god = t.god, light = t.light == true, glyph = t.glyph or "f0e7",
+        palette = t.palette, wallpaper = wp.dir, frames = wp.frames, sets = wp.sets }
+    write(OUT .. "/foot.ini", foot_ini(t))
+    write(OUT .. "/hypr.lua", "-- Written by olymparch-theme (theme: " .. t.id .. "); olymparch.lua loads it.\n" .. hypr_code(t) .. "\n")
+    write(OUT .. "/theme.json", json.encode(resolved) .. "\n")   -- last: the shell and lock screen watch this one
+    if os.getenv("HYPRLAND_INSTANCE_SIGNATURE") then os.execute("hyprctl eval " .. sh_quote(hypr_code(t)) .. " >/dev/null 2>&1") end
+    if os.getenv("WAYLAND_DISPLAY") then
+        os.execute("qs ipc -p /usr/share/olymparch/shell call theme reload >/dev/null 2>&1")
+    end
+    if not quiet then print(L("theme ", "tema ") .. t.id) end
+end
+
+---------------------------------------------------------------------------------------------------- install
+-- https://github.com/OWNER/REPO or …/REPO.git, nothing else (no ssh, no other hosts, no options to git)
+local function github_url(u)
+    if type(u) ~= "string" then return nil end
+    local owner, repo = u:match("^https://github%.com/([%w-]+)/([%w_.-]+)$")
+    if not owner then return nil end
+    repo = repo:gsub("%.git$", "")
+    if #owner > 39 or owner:match("^%-") or owner:match("%-$") or repo == "" or #repo > 100 or repo:match("^[.-]") or repo:find("%.%.") then return nil end
+    return ("https://github.com/%s/%s.git"):format(owner, repo), repo
+end
+local function install(url)
+    local clean = github_url(url)
+    if not clean then die(L("expected https://github.com/OWNER/REPO(.git)", "forventet https://github.com/EIER/REPO(.git)"), 2) end
+    if not ok("command -v git") then die(L("git is not installed (sudo pacman -S git)", "git er ikke installert (sudo pacman -S git)"), 3) end
+    os.execute("mkdir -p " .. sh_quote(CACHE .. "/olymparch"))
+    local stage = capture("mktemp -d " .. sh_quote(CACHE .. "/olymparch/theme-install.XXXXXX")):gsub("%s+$", "")
+    if stage == "" or not stage:match("/theme%-install%.[%w]+$") then die("cannot make a temporary folder") end
+    local function cleanup() os.execute("rm -rf -- " .. sh_quote(stage)) end
+    -- a shallow clone over https only: no submodules, no hooks, no LFS filters, symlinks checked out as plain files
+    local git = "GIT_TERMINAL_PROMPT=0 GIT_LFS_SKIP_SMUDGE=1 GIT_CONFIG_NOSYSTEM=1 git -c protocol.allow=never -c protocol.https.allow=always " ..
+        "-c core.symlinks=false -c core.hooksPath=/dev/null -c submodule.recurse=false -c filter.lfs.smudge= -c filter.lfs.process= " ..
+        "clone --quiet --depth 1 --no-recurse-submodules --single-branch -- " .. sh_quote(clean) .. " " .. sh_quote(stage .. "/repo")
+    if not ok("timeout 120 " .. git) then cleanup(); die(L("could not clone ", "kunne ikke klone ") .. clean, 4) end
+    local src = stage .. "/repo"
+    if not regular_file(src .. "/theme.json") then cleanup(); die(L("the repository has no theme.json at the top", "repoet har ingen theme.json øverst"), 5) end
+    local t, why = check_theme(read(src .. "/theme.json", 65537))
+    if not t then cleanup(); die("theme.json: " .. why, 5) end
+    local dest = USER_DIR .. "/" .. t.id
+    if theme_dir(t.id) and not select(2, theme_dir(t.id)) then
+        io.stderr:write(L("note: this overrides the built-in theme ", "merk: dette overstyrer det innebygde temaet ") .. t.id .. "\n")
+    end
+    -- only what a theme may hold is copied: theme.json (written again from the checked data) and wallpaper frames
+    -- that really are PNG files (regular files, at most 8 MiB each, at most 48 per size)
+    local new = stage .. "/theme"
+    os.execute("mkdir -p " .. sh_quote(new))
+    local f = assert(io.open(new .. "/theme.json", "wb")); f:write(json.encode(t) .. "\n"); f:close()
+    local copied = 0
+    for _, set in ipairs({ "1080", "1440" }) do
+        local from = src .. "/wallpaper/" .. set
+        if regular_dir(src .. "/wallpaper") and regular_dir(from) then
+            local n = frames_in(from)
+            for i = 0, n - 1 do
+                local name = ("frame-%02d.png"):format(i)
+                local head = read(from .. "/" .. name, 8)
+                local size = tonumber(capture("stat -c %s -- " .. sh_quote(from .. "/" .. name))) or math.huge
+                if head ~= "\137PNG\r\n\26\n" or size > 8388608 then cleanup(); die(("wallpaper/%s/%s is not a PNG under 8 MiB"):format(set, name), 5) end
+                os.execute("mkdir -p " .. sh_quote(new .. "/wallpaper/" .. set))
+                if not ok("cp -P -- " .. sh_quote(from .. "/" .. name) .. " " .. sh_quote(new .. "/wallpaper/" .. set .. "/" .. name)) then cleanup(); die("copy failed") end
+                copied = copied + 1
+            end
+        end
+    end
+    os.execute("mkdir -p " .. sh_quote(USER_DIR))
+    if regular_dir(dest) then os.execute("rm -rf -- " .. sh_quote(dest)) end
+    if ok("test -e " .. sh_quote(dest) .. " -o -L " .. sh_quote(dest)) then cleanup(); die(dest .. L(" exists and is not a folder", " finnes og er ikke en mappe")) end
+    if not ok("mv -T -- " .. sh_quote(new) .. " " .. sh_quote(dest)) then cleanup(); die("cannot install into " .. dest) end
+    cleanup()
+    for _, w in ipairs(warnings(t)) do io.stderr:write(L("warning: ", "advarsel: ") .. w .. "\n") end
+    print(("%s %s (%s, %d %s)"):format(L("installed", "installerte"), t.id, t.name.en, copied, L("wallpaper frames", "bakgrunnsbilder")))
+    print(L("use it: olymparch-theme set ", "bruk det: olymparch-theme set ") .. t.id)
+end
+
+---------------------------------------------------------------------------------------------------- commands
+local cmd = arg[1]
+if cmd == "list" then
+    local now = current()
+    local rows = {}
+    for _, id in ipairs(all_ids()) do
+        local t, d, user = load(id)
+        if t then
+            local p = t.palette
+            rows[#rows + 1] = { id = id, name = t.name, god = t.god, description = t.description, light = t.light == true,
+                glyph = t.glyph or "f0e7", user = user == true, current = id == now,
+                swatch = { p.bg, p.surface, p.accent, p.accentHi, p.text, p.danger } }
+        else
+            io.stderr:write("olymparch-theme: skipping " .. id .. ": " .. tostring(d) .. "\n")
+        end
+    end
+    if arg[2] == "--json" then
+        local parts = {}
+        for i, r in ipairs(rows) do parts[i] = json.encode(r, "  ") end
+        print("[" .. table.concat(parts, ",\n") .. "]")
+    else
+        for _, r in ipairs(rows) do
+            print(("%s %-12s %-12s %s%s"):format(r.current and "*" or " ", r.id, nb and (r.name.nb or r.name.en) or r.name.en,
+                nb and (r.description.nb or r.description.en) or r.description.en, r.user and L("  (yours)", "  (ditt)") or ""))
+        end
+    end
+elseif cmd == "current" then
+    print(current())
+elseif cmd == "set" then
+    local id = arg[2] or die("usage: set ID", 2)
+    if not valid_id(id) or not theme_dir(id) then die(L("no theme called ", "fant ikke temaet ") .. id .. L(" (olymparch-theme list)", " (olymparch-theme list)"), 2) end
+    os.exit(os.execute(sh_quote(settings_cmd()) .. " set appearance.theme " .. sh_quote(id)) and 0 or 1)
+elseif cmd == "apply" then
+    apply(arg[2] == "--quiet")
+elseif cmd == "validate" then
+    local d = arg[2] or die("usage: validate DIR", 2)
+    if not regular_file(d .. "/theme.json") then die(d .. "/theme.json: missing, or a symlink", 5) end
+    local t, why = check_theme(read(d .. "/theme.json", 65537))
+    if not t then die("theme.json: " .. why, 5) end
+    for _, w in ipairs(warnings(t)) do io.stderr:write("warning: " .. w .. "\n") end
+    print("ok " .. t.id)
+elseif cmd == "install" then
+    install(arg[2] or die("usage: install https://github.com/OWNER/REPO", 2))
+elseif cmd == "remove" then
+    local id = arg[2] or die("usage: remove ID", 2)
+    if not valid_id(id) then die("bad theme id", 2) end
+    local d = USER_DIR .. "/" .. id
+    if not ok("test -e " .. sh_quote(d) .. " -o -L " .. sh_quote(d)) then
+        die(theme_dir(id) and L("built-in themes cannot be removed", "innebygde temaer kan ikke fjernes") or L("no theme called ", "fant ikke temaet ") .. id, 2)
+    end
+    if ok("test -L " .. sh_quote(d)) then os.remove(d) else os.execute("rm -rf -- " .. sh_quote(d)) end
+    print(L("removed ", "fjernet ") .. id)
+    if current() == id then
+        if theme_dir(id) then apply(true)   -- the built-in one with that id again
+        else os.execute(sh_quote(settings_cmd()) .. " set appearance.theme " .. DEFAULT) end
+    end
+else
+    io.stderr:write("usage: olymparch-theme list [--json] | current | set ID | apply | validate DIR | install URL | remove ID\n")
+    os.exit(2)
+end

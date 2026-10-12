@@ -1,0 +1,43 @@
+{
+  "id": "aphrodite",
+  "name": {
+    "en": "Aphrodite",
+    "nb": "Afrodite"
+  },
+  "god": "Aphrodite",
+  "description": {
+    "en": "Love and beauty: rose and pearl.",
+    "nb": "Kjærlighet og skjønnhet: rose og perlemor."
+  },
+  "light": false,
+  "glyph": "f02d1",
+  "palette": {
+    "bg": "#150b11",
+    "surface": "#22131b",
+    "raised": "#2c1924",
+    "line": "#553245",
+    "text": "#fbeef2",
+    "muted": "#c6a6b4",
+    "accent": "#f48fb6",
+    "accentHi": "#ffd6e4",
+    "danger": "#ff6a52"
+  },
+  "terminal": [
+    "#22131b",
+    "#f06558",
+    "#a9c095",
+    "#d9a34d",
+    "#8c9fd0",
+    "#ba8bcc",
+    "#83aebe",
+    "#fbeef2",
+    "#553245",
+    "#f87a6d",
+    "#bfd0ab",
+    "#f4c96b",
+    "#a9b6df",
+    "#cfa5dc",
+    "#a2c1d0",
+    "#ffffff"
+  ]
+}

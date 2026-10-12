@@ -1,0 +1,43 @@
+{
+  "id": "hera",
+  "name": {
+    "en": "Hera",
+    "nb": "Hera"
+  },
+  "god": "Hera",
+  "description": {
+    "en": "Queen of Olympus: royal indigo and peacock blue.",
+    "nb": "Olympens dronning: kongelig indigo og påfuglblått."
+  },
+  "light": false,
+  "glyph": "f01a5",
+  "palette": {
+    "bg": "#0b0b20",
+    "surface": "#141538",
+    "raised": "#1b1d48",
+    "line": "#363a7c",
+    "text": "#eceaff",
+    "muted": "#a6a8d8",
+    "accent": "#5b9bff",
+    "accentHi": "#62e0c8",
+    "danger": "#ff6b8b"
+  },
+  "terminal": [
+    "#141538",
+    "#f06674",
+    "#92c2a0",
+    "#c2a558",
+    "#75a1da",
+    "#a38dd7",
+    "#6cafc9",
+    "#eceaff",
+    "#363a7c",
+    "#f87a8a",
+    "#a8d2b6",
+    "#ddcb76",
+    "#92b8ea",
+    "#b8a7e7",
+    "#8bc3da",
+    "#ffffff"
+  ]
+}

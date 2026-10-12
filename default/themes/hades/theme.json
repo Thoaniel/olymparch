@@ -1,0 +1,43 @@
+{
+  "id": "hades",
+  "name": {
+    "en": "Hades",
+    "nb": "Hades"
+  },
+  "god": "Hades",
+  "description": {
+    "en": "The underworld: black stone, embers and violet shade.",
+    "nb": "Underverdenen: svart stein, glør og fiolett skygge."
+  },
+  "light": false,
+  "glyph": "f068c",
+  "palette": {
+    "bg": "#070507",
+    "surface": "#130c14",
+    "raised": "#1b111d",
+    "line": "#3d2850",
+    "text": "#ede2e8",
+    "muted": "#a995b4",
+    "accent": "#ec6a3f",
+    "accentHi": "#ffa463",
+    "danger": "#ff4f7a"
+  },
+  "terminal": [
+    "#130c14",
+    "#f0586c",
+    "#a8bb83",
+    "#d89e3b",
+    "#8b9abe",
+    "#b985ba",
+    "#82a8ad",
+    "#ede2e8",
+    "#3d2850",
+    "#f86c81",
+    "#becb99",
+    "#f3c359",
+    "#a8b1cd",
+    "#cea0ca",
+    "#a0bcbe",
+    "#ffffff"
+  ]
+}

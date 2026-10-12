@@ -1,0 +1,43 @@
+{
+  "id": "poseidon",
+  "name": {
+    "en": "Poseidon",
+    "nb": "Poseidon"
+  },
+  "god": "Poseidon",
+  "description": {
+    "en": "Lord of the sea: deep water and sea-foam teal.",
+    "nb": "Havets herre: dypt vann og skumgrønt."
+  },
+  "light": false,
+  "glyph": "f078d",
+  "palette": {
+    "bg": "#03121a",
+    "surface": "#0a1f2a",
+    "raised": "#0f2936",
+    "line": "#1e4a5a",
+    "text": "#dff3f1",
+    "muted": "#8db5b9",
+    "accent": "#2ec4b6",
+    "accentHi": "#86f2e3",
+    "danger": "#ff7a66"
+  },
+  "terminal": [
+    "#0a1f2a",
+    "#f06d62",
+    "#8cc895",
+    "#bbab4d",
+    "#6fa7d0",
+    "#9c93cc",
+    "#65b6be",
+    "#dff3f1",
+    "#1e4a5a",
+    "#f88277",
+    "#a2d8ab",
+    "#d6d16b",
+    "#8cbedf",
+    "#b2addc",
+    "#84c9d0",
+    "#ffffff"
+  ]
+}

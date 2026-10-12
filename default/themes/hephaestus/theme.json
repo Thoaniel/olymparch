@@ -1,0 +1,43 @@
+{
+  "id": "hephaestus",
+  "name": {
+    "en": "Hephaestus",
+    "nb": "Hefaistos"
+  },
+  "god": "Hephaestus",
+  "description": {
+    "en": "The forge: hot iron and furnace orange.",
+    "nb": "Smia: varmt jern og esseoransje."
+  },
+  "light": false,
+  "glyph": "f089b",
+  "palette": {
+    "bg": "#0d0c0b",
+    "surface": "#1a1816",
+    "raised": "#23211e",
+    "line": "#4a453f",
+    "text": "#ede8e2",
+    "muted": "#aba298",
+    "accent": "#ff7b1c",
+    "accentHi": "#ffb547",
+    "danger": "#ff4d5e"
+  },
+  "terminal": [
+    "#1a1816",
+    "#f0565e",
+    "#abbd7e",
+    "#daa036",
+    "#8e9cb8",
+    "#bc88b5",
+    "#85aba7",
+    "#ede8e2",
+    "#4a453f",
+    "#f86c73",
+    "#c1cd94",
+    "#f6c654",
+    "#abb3c8",
+    "#d1a2c5",
+    "#a3beb8",
+    "#ffffff"
+  ]
+}

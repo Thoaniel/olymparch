@@ -1,0 +1,43 @@
+{
+  "id": "hermes",
+  "name": {
+    "en": "Hermes",
+    "nb": "Hermes"
+  },
+  "god": "Hermes",
+  "description": {
+    "en": "The messenger: open sky and quick silver.",
+    "nb": "Budbringeren: åpen himmel og kvikksølv."
+  },
+  "light": false,
+  "glyph": "f0d16",
+  "palette": {
+    "bg": "#07121d",
+    "surface": "#0e1d2c",
+    "raised": "#142739",
+    "line": "#2a4864",
+    "text": "#e9f3fb",
+    "muted": "#98b1c6",
+    "accent": "#5cc8ff",
+    "accentHi": "#d2eeff",
+    "danger": "#ff7272"
+  },
+  "terminal": [
+    "#0e1d2c",
+    "#f06968",
+    "#92c9a0",
+    "#c2ac58",
+    "#76a8da",
+    "#a393d7",
+    "#6cb6c9",
+    "#e9f3fb",
+    "#2a4864",
+    "#f87e7d",
+    "#a8d9b6",
+    "#ddd176",
+    "#92bfea",
+    "#b9aee7",
+    "#8bcada",
+    "#ffffff"
+  ]
+}

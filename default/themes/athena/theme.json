@@ -1,0 +1,43 @@
+{
+  "id": "athena",
+  "name": {
+    "en": "Athena",
+    "nb": "Athene"
+  },
+  "god": "Athena",
+  "description": {
+    "en": "Wisdom and the owl: olive leaves, silver and grey.",
+    "nb": "Visdom og ugla: olivenblad, sølv og grått."
+  },
+  "light": false,
+  "glyph": "f03d2",
+  "palette": {
+    "bg": "#0f110d",
+    "surface": "#191c16",
+    "raised": "#21251d",
+    "line": "#40463a",
+    "text": "#e9ebe4",
+    "muted": "#a3a99a",
+    "accent": "#a9bb6b",
+    "accentHi": "#d8ddcb",
+    "danger": "#e2735f"
+  },
+  "terminal": [
+    "#191c16",
+    "#e16a5e",
+    "#9ec78a",
+    "#ceaa41",
+    "#81a6c4",
+    "#af91c1",
+    "#78b4b3",
+    "#e9ebe4",
+    "#40463a",
+    "#e97e74",
+    "#b4d7a0",
+    "#e9cf60",
+    "#9ebdd4",
+    "#c4acd1",
+    "#96c8c4",
+    "#ffffff"
+  ]
+}
