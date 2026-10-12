@@ -76,8 +76,32 @@ Scope {
                             elide: Text.ElideRight
                             textFormat: Text.PlainText
                         }
+                        // Buttons from the app (e.g. «Rydd opp»): gold on the first, plain on the rest
+                        Row {
+                            spacing: 6
+                            topPadding: 4
+                            visible: parent.parent.modelData.actions.length > 0
+                            Repeater {
+                                model: parent.parent.parent.modelData.actions
+                                delegate: Rectangle {
+                                    required property var modelData
+                                    required property int index
+                                    width: label.implicitWidth + 20; height: 24
+                                    color: index === 0 ? notes.theme.gold : notes.theme.raised
+                                    border.color: index === 0 ? notes.theme.gold : notes.theme.line
+                                    Text {
+                                        id: label
+                                        anchors.centerIn: parent
+                                        text: parent.modelData.text
+                                        font { family: notes.theme.mono; pixelSize: 12; bold: true }
+                                        color: parent.index === 0 ? "#0a0a0e" : notes.theme.text
+                                    }
+                                    MouseArea { anchors.fill: parent; z: 2; onClicked: parent.modelData.invoke() }
+                                }
+                            }
+                        }
                     }
-                    MouseArea { anchors.fill: parent; onClicked: parent.modelData.dismiss() }
+                    MouseArea { anchors.fill: parent; z: -1; onClicked: parent.modelData.dismiss() }
                 }
             }
         }

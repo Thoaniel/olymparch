@@ -29,7 +29,7 @@ unlock_and_desktop "$PW"
 
 press meta_l+ret; sleep 2
 # put the event pieces in place (packages from the base disk's cache/mirrors), a clamscan stub for the test
-keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo install -m755 /mnt/system/bin/olymparch-* /usr/bin/ && sudo install -Dm644 -t /usr/lib/systemd/user /mnt/default/systemd/user/* && sudo install -Dm644 /mnt/default/apps/olymparch-extract.desktop /usr/share/applications/olymparch-extract.desktop && sudo install -Dm644 /mnt/default/apps/mimeapps.list /etc/xdg/mimeapps.list && sudo pacman -S --noconfirm --needed udiskie udisks2 xdg-utils xdg-user-dirs >/dev/null && printf '#!/bin/sh\\nr=0; for f; do grep -q EICAR \"\$f\" && { echo \"\$f: Eicar-Signature FOUND\"; r=1; }; done; exit \$r\\n' | sudo tee /usr/local/bin/clamscan >/dev/null && sudo chmod +x /usr/local/bin/clamscan && echo '<2>EVENTS-READY' | sudo tee /dev/kmsg\n" 1
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo install -m755 /mnt/system/bin/olymparch-* /usr/bin/ && sudo install -Dm644 -t /usr/lib/systemd/user /mnt/default/systemd/user/* && sudo install -Dm644 /mnt/default/apps/olymparch-extract.desktop /usr/share/applications/olymparch-extract.desktop && sudo install -Dm644 /mnt/default/apps/mimeapps.list /etc/xdg/mimeapps.list && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /usr/share/olymparch/ && pkill -x quickshell; sudo pacman -S --noconfirm --needed udiskie udisks2 xdg-utils xdg-user-dirs >/dev/null && printf '#!/bin/sh\\nr=0; for f; do grep -q EICAR \"\$f\" && { echo \"\$f: Eicar-Signature FOUND\"; r=1; }; done; exit \$r\\n' | sudo tee /usr/local/bin/clamscan >/dev/null && sudo chmod +x /usr/local/bin/clamscan && echo '<2>EVENTS-READY' | sudo tee /dev/kmsg\n" 1
 keys "$PW\n" 1
 wait_for 'EVENTS-READY' 240 || finish "FAIL · fikk ikke lagt inn hendelsesdelene"
 keys "mkdir -p ~/Downloads && systemctl --user daemon-reload && systemctl --user start olymparch-downloads.path && (udiskie --automount --notify --no-tray &) && clear\n" 2
@@ -38,6 +38,8 @@ shot klar "Hendelsesdelene er lagt inn"
 # 1. A dangerous download (the EICAR test string, harmless) → critical notification
 keys "printf 'X5O!P%%@AP[4\\\\\\\\PZX54(P^)7CC)7}\$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!\$H+H*' > ~/Downloads/setup.exe\n" 7
 shot virus "Nedlastet setup.exe med EICAR-testteksten: kritisk varsel"
+python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/virus.ppm"
+red=$(python3 -I tests/vm/pixels.py "$O/virus.ppm" | sed -E 's/.*red=([0-9]+).*/\1/')
 
 # 2. Disk nearly full (threshold lowered to 1 % for the test) → notification with «Rydd opp»
 keys "OLYMPARCH_DISK_LIMIT=1 olymparch-disk-check &\n" 3
@@ -57,4 +59,5 @@ shot usb-innhold "Filen på USB-pinnen kan leses"
 
 ok=1
 seen 'USB-MOUNTED' || ok=0
-finish "$([ $ok = 1 ] && echo PASS || echo FAIL) · hendelser: virus, disk, arkiv og USB på $((SECONDS - t0)) s"
+(( ${red:-0} > 40 )) || ok=0   # the critical toast has a red border
+finish "$([ $ok = 1 ] && echo PASS || echo FAIL) · hendelser: virus (røde piksler: ${red:-0}), disk, arkiv og USB på $((SECONDS - t0)) s"

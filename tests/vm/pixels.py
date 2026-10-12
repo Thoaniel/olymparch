@@ -18,11 +18,13 @@ while len(parts) < 4:  # header: P6, width, height, maxval (comments not used by
 pos += 1
 w, h = int(parts[1]), int(parts[2])
 px = data[pos:pos + w * h * 3]
-gold = lit = 0
+gold = lit = red = 0
 for i in range(0, len(px), 3 * 4):  # every 4th pixel is plenty
     r, g, b = px[i], px[i + 1], px[i + 2]
     if r + g + b > 90:
         lit += 1
     if r > 150 and 80 < g < 220 and b < 90 and r > g > b:
         gold += 1
-print(f"gold={gold} lit={lit} total={w * h // 4}")
+    if r > 190 and g < 120 and b < 120:
+        red += 1
+print(f"gold={gold} lit={lit} red={red} total={w * h // 4}")
