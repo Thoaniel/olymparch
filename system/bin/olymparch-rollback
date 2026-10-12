@@ -1,8 +1,20 @@
 #!/bin/bash
 # Make snapshot N the system. The current system is kept as @.broken-<date>, never deleted.
 #   olymparch rollback N      (then reboot)
+#   olymparch rollback        in a terminal: shows the snapshots and asks for N (Settings → Disks → Roll back)
 set -euo pipefail
 n=${1:-}
+if [ -z "$n" ] && [ -t 0 ]; then
+    [ "$(id -u)" = 0 ] || exec sudo "$0"
+    snapper list || true
+    echo
+    read -r -p "Nummer på øyeblikksbildet som skal bli systemet (tomt = avbryt): " n
+    [ -n "$n" ] || exit 0
+    [[ $n =~ ^[0-9]+$ ]] || { echo "ikke et tall" >&2; read -r -p "Trykk Enter for å lukke." _; exit 2; }
+    rc=0; "$0" "$n" || rc=$?
+    read -r -p "Trykk Enter for å lukke." _
+    exit "$rc"
+fi
 [[ $n =~ ^[0-9]+$ ]] || { echo "bruk: olymparch rollback N   (se: snapper list)" >&2; exit 2; }
 [ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
 dev=$(findmnt -no SOURCE /.snapshots | sed 's/\[.*//')   # / is an overlay when booted from a snapshot

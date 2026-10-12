@@ -7,6 +7,7 @@
 #   olymparch-hw apply [--root DIR] [--user NAME] [--when W] [RULE...]    as root (pkexec: hw-apply)
 #   olymparch-hw boot-check                as root, from olymparch-hw-boot.service
 #   olymparch-hw notify --boot | RULE      as the user: one notification with an Install button
+#   olymparch-hw install-offers            as the user: install what boot-check offered (pkexec hw-apply), in a terminal
 #   olymparch-hw udev-rules                the hotplug udev rules, compiled from the rules
 #   olymparch-hw lint                      check the rules (needs pacman -Si)
 #   olymparch-hw setup-system [--root DIR] [--from DIR]   install the helper, units, polkit and udev files
@@ -844,11 +845,40 @@ cmd_setup_system() {
     fi
 }
 
+# install-offers: Settings → Hardware → «Install offered drivers». The IDs come from boot-check's offers file and
+# are checked again here and by hw-apply; nothing is installed without the polkit prompt.
+cmd_install_offers() {
+    local f=/run/olymparch/hw/offers id ids=()
+    if [ -r "$f" ]; then
+        while IFS= read -r id; do
+            [ "$id" = gpu-changed ] && continue
+            [[ $id =~ ^[a-z0-9][a-z0-9-]{0,63}$ ]] && ids+=("$id")
+        done <"$f"
+    fi
+    if [ ${#ids[@]} -eq 0 ]; then
+        if [ "$NB" = 1 ]; then echo "Ingen drivere er tilbudt: alt som trengs er installert."; else echo "No drivers are offered: everything needed is installed."; fi
+        return 0
+    fi
+    ids=("${ids[@]:0:8}")
+    if [ "$NB" = 1 ]; then echo "Installerer: ${ids[*]}"; else echo "Installing: ${ids[*]}"; fi
+    if pkexec "$LIB/hw-apply" "${ids[@]}"; then
+        if [ "$NB" = 1 ]; then echo "Ferdig."; else echo "Done."; fi
+    else
+        if [ "$NB" = 1 ]; then echo "Feilet. Se /var/log/olymparch-hw.log"; else echo "Failed. See /var/log/olymparch-hw.log"; fi
+        return 1
+    fi
+}
+
 cmd=${1:-help}
 shift || true
+if [ "$cmd" = install-offers ]; then
+    rc=0; cmd_install_offers || rc=$?
+    [ -t 0 ] && read -r -p "Enter …" _
+    exit "$rc"
+fi
 case $cmd in
     scan | plan | explain | dump | apply | boot-check | notify | udev-rules | lint | setup-system) ;;
-    *) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; [ "$cmd" = help ] || [ "$cmd" = --help ]; exit ;;
+    *) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; [ "$cmd" = help ] || [ "$cmd" = --help ]; exit ;;
 esac
 load_rules
 case $cmd in udev-rules | lint | setup-system) ;; *) collect; evaluate ;; esac

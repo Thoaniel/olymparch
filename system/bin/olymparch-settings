@@ -15,6 +15,9 @@
 --   olymparch-settings monitors-changed        apply the layout for the monitors connected now (Hyprland runs it)
 --   olymparch-settings items KEY [--scan]      Wi-Fi networks, Bluetooth devices; pick KEY ID connects
 --   olymparch-settings choices KEY | missing   what a choice can be here; settings this machine can't use
+--   olymparch-settings view NAME              disks, libraries, mounts, subvolumes, snapshots, kernel, overdrive,
+--                                             firmware, games, proton, proton-games, zeus (read-only)
+--   olymparch-settings zeus-install | zeus-setup   in a terminal (Settings → Zeus); never downloads a model
 --   olymparch-settings about | files | check | pending | wired
 -- Per-monitor keys take the output after @, such as display.scale@DP-1.
 
@@ -24,6 +27,7 @@ local RUNTIME = os.getenv("XDG_RUNTIME_DIR") or (HOME .. "/.local/state/olymparc
 local SELF = arg[0]
 
 local function script_dir() return (SELF:match("^(.*)/[^/]*$") or ".") end
+local ZEUS_COMMIT = "741dbb0520f3ebffed781d2e0b135e37d1e42d64"   -- the Olympus release the installer uses too
 local SCHEMA = os.getenv("OLYMPARCH_SETTINGS_SCHEMA") or "/usr/share/olymparch/settings/schema.json"
 do -- running from the repo (tests): use the schema next to it
     local f = io.open(SCHEMA)
@@ -1141,8 +1145,14 @@ elseif cmd == "wired" then
 
 -- settings that need a program this machine doesn't have (the window hides them): one key per line
 elseif cmd == "missing" then
+    local function exists(f)   -- needs_file / unless_file: a fixed path from the schema; ~/ is the home folder
+        local h = io.open((f:gsub("^~/", HOME .. "/")))
+        if h then h:close() end
+        return h ~= nil
+    end
     for _, s in ipairs(schema.settings) do
-        if (s.needs and not have(s.needs)) or (s.needs_file and not io.open(s.needs_file)) then print(s.key) end
+        if (s.needs and not have(s.needs)) or (s.needs_file and not exists(s.needs_file))
+            or (s.unless_file and exists(s.unless_file)) then print(s.key) end
     end
 
 -- what a choice can be on this machine: VALUE <tab> LABEL per line (default apps, terminals)
@@ -1175,6 +1185,160 @@ elseif cmd == "choices" then
             if o.value == "" or not s.installed or have(o.value) then print(o.value .. "\t" .. label(o)) end
         end
     end
+
+-- ── read-only views the window shows under a row (Disks, Hardware, Games, Zeus). Fixed commands only: nothing from
+--   settings.json or the command line reaches a shell; paths found on disk are quoted.
+elseif cmd == "view" then
+    local name = arg[2] or die("usage: view NAME", 2)
+    local lang = os.getenv("OLYMPARCH_LANG") or os.getenv("LC_ALL") or os.getenv("LC_MESSAGES") or os.getenv("LANG") or ""
+    local nb = lang:match("^n[bno]") ~= nil
+    local function L(en, no) return nb and no or en end
+    local function out(s) s = (s or ""):gsub("%s+$", ""); if s ~= "" then print(s) end end
+    local steam = HOME .. "/.local/share/Steam"
+    local function libraries()   -- Steam library folders, from libraryfolders.vdf
+        local libs, seen = {}, {}
+        local vdf = read(steam .. "/steamapps/libraryfolders.vdf") or ""
+        for raw in vdf:gmatch('"path"%s+"([^"\n]+)"') do
+            local p = raw:gsub("\\\\", "\\")
+            if not seen[p] and not p:find("%c") then seen[p] = true; libs[#libs + 1] = p end
+        end
+        if #libs == 0 and io.open(steam .. "/steamapps") then libs[1] = steam end
+        return libs
+    end
+    local function games()   -- every installed Steam game: { id, name }
+        local list = {}
+        for _, lib in ipairs(libraries()) do
+            for f in capture("ls -1 " .. sh_quote(lib .. "/steamapps")):gmatch("[^\n]+") do
+                local id = f:match("^appmanifest_(%d+)%.acf$")
+                local acf = id and read(lib .. "/steamapps/" .. f) or ""
+                local gname = acf:match('"name"%s+"([^"\n]*)"') or ""
+                if id and not (gname:match("^Proton") or gname:match("^Steam Linux Runtime") or gname:match("^Steamworks")) then
+                    local acf = read(lib .. "/steamapps/" .. f) or ""
+                    list[#list + 1] = { id = id, name = ((acf:match('"name"%s+"([^"\n]*)"') or id):gsub("%c", " ")) }
+                end
+            end
+        end
+        table.sort(list, function(a, b) return a.name:lower() < b.name:lower() end)
+        return list
+    end
+    if name == "disks" then
+        out(capture("lsblk -e 7 -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS"))
+        print("")
+        out(capture("df -h -x tmpfs -x devtmpfs -x efivarfs -x overlay --output=target,size,used,avail,pcent"))
+        if capture("findmnt -no FSTYPE /"):find("btrfs") and have("btrfs") then
+            print("")
+            out(capture("btrfs filesystem df -h /"))
+        end
+    elseif name == "libraries" then
+        local libs = libraries()
+        if #libs == 0 then print(L("Steam has no game libraries yet", "Steam har ingen spillbibliotek ennå")) end
+        for _, lib in ipairs(libs) do
+            local d = capture("df -h --output=avail,size,target " .. sh_quote(lib) .. " | tail -n 1"):gsub("^%s+", ""):gsub("%s+$", "")
+            local avail, size, target = d:match("^(%S+)%s+(%S+)%s+(.+)$")
+            print(lib .. (avail and ("  (" .. avail .. L(" free of ", " ledig av ") .. size .. L(", on ", ", på ") .. target .. ")") or ""))
+        end
+        print("")
+        print(L("Steam → Settings → Storage adds a library on another disk; disks in /etc/fstab are mounted at boot.",
+                "Steam → Innstillinger → Lagring legger til et bibliotek på en annen disk; disker i /etc/fstab monteres ved oppstart."))
+    elseif name == "mounts" then
+        out(capture("findmnt -t btrfs,ext4,xfs,vfat,ntfs3,exfat -o TARGET,FSTYPE,OPTIONS"))
+        print("")
+        print(L("From /etc/fstab: change it as root, then restart", "Fra /etc/fstab: endres som root, deretter omstart"))
+    elseif name == "subvolumes" then
+        out(capture("findmnt -t btrfs -o TARGET,FSROOT,SOURCE"))
+    elseif name == "snapshots" then
+        local list = capture("snapper --no-dbus list 2>/dev/null || snapper list")
+        if list:find("#") then out(list) else
+            print(L("snapper needs root to list them: «Roll back» shows the list in a terminal",
+                    "snapper trenger root for å vise dem: «Rull tilbake» viser listen i en terminal"))
+        end
+        local conf = read("/etc/snapper/configs/root")
+        if conf then
+            print("")
+            for _, k in ipairs({ "SPACE_LIMIT", "NUMBER_LIMIT" }) do
+                local v = conf:match("\n" .. k .. '="([^"\n]*)"')
+                if v then print(k .. "=" .. v) end
+            end
+        end
+    elseif name == "kernel" then
+        print(L("running: ", "kjører: ") .. capture("uname -r"):gsub("%s+$", ""))
+        local conf = read("/etc/olymparch/boot.conf") or ""
+        local k = ("\n" .. conf):match('\nKERNEL="?([%w._-]+)')
+        if k then print(L("boots by default: ", "starter som standard: ") .. k) end
+        local found, seen = {}, {}
+        for p in capture("cat /usr/lib/modules/*/pkgbase"):gmatch("[%w._-]+") do
+            if not seen[p] then seen[p] = true; found[#found + 1] = p end
+        end
+        if #found > 0 then print(L("installed: ", "installert: ") .. table.concat(found, ", ")) end
+        print("")
+        print(L("The boot menu lists every installed kernel; linux-lts stays as a fallback",
+                "Oppstartsmenyen viser alle installerte kjerner; linux-lts blir værende som reserve"))
+    elseif name == "overdrive" then
+        local mask = (read("/proc/cmdline") or ""):match("amdgpu%.ppfeaturemask=(%S+)")
+        print(mask and (L("on: ", "på: ") .. "amdgpu.ppfeaturemask=" .. mask) or L("off (amdgpu.ppfeaturemask is not set)", "av (amdgpu.ppfeaturemask er ikke satt)"))
+        print(L("Set in /etc/olymparch/boot.conf (CMDLINE) as root", "Settes i /etc/olymparch/boot.conf (CMDLINE) som root"))
+    elseif name == "firmware" then
+        if not have("fwupdmgr") then
+            print(L("fwupd is not installed: firmware comes with linux-firmware and olymparch update",
+                    "fwupd er ikke installert: fastvare kommer med linux-firmware og olymparch update"))
+        else out(capture("timeout 30 fwupdmgr get-updates --no-unreported-check --no-metadata-check 2>&1")) end
+    elseif name == "games" then
+        local list = capture("olymparch-game list")
+        if list:match("^%s*$") then list = read(CONFIG .. "/olymparch/games.conf") or "" end
+        out(list)
+        print("")
+        print(L("Super+Shift+G counts the focused window's program as a game", "Super+Shift+G regner programmet i vinduet med fokus som et spill"))
+    elseif name == "proton" then
+        local tools = {}
+        for _, lib in ipairs(libraries()) do
+            for d in capture("ls -1 " .. sh_quote(lib .. "/steamapps/common")):gmatch("[^\n]+") do
+                if d:match("^Proton") then tools[#tools + 1] = d end
+            end
+        end
+        for d in capture("ls -1 " .. sh_quote(steam .. "/compatibilitytools.d")):gmatch("[^\n]+") do tools[#tools + 1] = d end
+        print(L("Automatic: Valve's default, then the newest GE-Proton, then Proton Experimental after a crash",
+                "Automatisk: Valves standard, så nyeste GE-Proton, så Proton Experimental etter krasj"))
+        print(L("Installed: ", "Installert: ") .. (#tools > 0 and table.concat(tools, ", ") or L("none yet", "ingen ennå")))
+    elseif name == "proton-games" then
+        local list = games()
+        if #list == 0 then print(L("No Steam games installed", "Ingen Steam-spill installert")) end
+        for i, g in ipairs(list) do
+            if i > 60 then print("…"); break end
+            local tool = have("olymparch-proton") and capture("olymparch-proton get " .. g.id):gsub("%s+$", "") or ""
+            print(("%-9s %-36s %s"):format(g.id, g.name, tool ~= "" and tool or "default"))
+        end
+        print("")
+        print(L("Pin one: olymparch-proton set APPID TOOL (or default)", "Lås ett: olymparch-proton set APPID VERKTØY (eller default)"))
+    elseif name == "zeus" then
+        local oly = HOME .. "/.local/bin/olympus"
+        if not io.open(oly) then
+            print(L("Zeus is not installed. «Install Zeus» installs it; no AI model is downloaded.",
+                    "Zeus er ikke installert. «Installer Zeus» installerer den; ingen AI-modell lastes ned."))
+        else
+            out(capture("timeout 10 " .. sh_quote(oly) .. " --version"))
+            print("")
+            out(capture("timeout 15 " .. sh_quote(oly) .. " modell"))   -- lists the models; changes nothing
+        end
+    else
+        die("no view " .. name, 2)
+    end
+
+-- Settings → Zeus, in a terminal: install Zeus for this user only, or run its setup. Never downloads a model.
+elseif cmd == "zeus-install" or cmd == "zeus-setup" then
+    local oly = HOME .. "/.local/bin/olympus"
+    local present = io.open(oly) ~= nil
+    local function pause() io.write("\nEnter …"); io.read() end
+    if cmd == "zeus-setup" then
+        if not present then print("Zeus er ikke installert: Innstillinger → Zeus → Installer Zeus"); pause(); os.exit(1) end
+        os.exit(os.execute(sh_quote(oly) .. " setup") and 0 or 1)
+    end
+    if present then print("Zeus er allerede installert (" .. oly .. ")"); pause(); os.exit(0) end
+    if not have("uv") then print("uv mangler (olymparch update installerer det)"); pause(); os.exit(1) end
+    print("Installerer Zeus bare for deg (~/.local/bin/olympus). Ingen AI-modell lastes ned.")
+    local ok = os.execute("uv tool install " .. sh_quote("git+https://github.com/Thoaniel/olympus@" .. ZEUS_COMMIT))
+    print(ok and "\nFerdig. «Sett opp» velger modell; ingenting lastes ned uten å spørre deg." or "\nInstallasjonen feilet.")
+    pause()
+    os.exit(ok and 0 or 1)
 
 elseif cmd == "open" then
     if arg[2] then shell_call("page", arg[2]) else shell_call("open") end
