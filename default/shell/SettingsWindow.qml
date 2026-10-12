@@ -165,6 +165,7 @@ Scope {
     }
     Timer { id: reopen; interval: 200; onTriggered: win.open = true }
     function act(s) {
+        if (s.unless) { win.outputKey = s.key; win.output = I18n.t("settings.install.busy", "Installing … (this can take a minute)"); win.outputError = false; }
         Settings.run(["run", s.key], (out, code) => {
             if (s.output) { win.outputKey = s.key; win.output = out.trim(); win.outputError = false; }
             // ── an «Install …» row (unless): once installed it goes and the setting it was for shows

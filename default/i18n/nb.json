@@ -59,5 +59,6 @@
   "settings.items.refresh": "Oppdater",
   "settings.items.nostreams": "Ingen apper spiller lyd akkurat nå",
   "settings.items.nowp": "PipeWire (wpctl) er ikke installert",
+  "settings.install.busy": "Installerer … (kan ta et minutt)",
   "settings.install.failed": "Ikke installert: se /var/log/olymparch-install-app.log"
 }
