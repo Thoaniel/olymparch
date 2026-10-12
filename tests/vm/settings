@@ -337,7 +337,7 @@ errors=$(awk '/Launching config/ {n = 0} /ERROR|TypeError|ReferenceError/ {n++} 
 ((errors == 0)) || fails+=("$errors feil i skall-loggen")
 
 if ((${#fails[@]} == 0)); then
-    finish "PASS · innstillinger: 21 sider, bakgrunn (fakkel $torch / rolig $calm / av $still bilder), skala med angring og «Behold», ikke forstyrr, hurtigtaster, nett, Bluetooth, strøm, standardapper, personvern, hendelser, spill, headset, systemhjelper, tastatur, lås, lyd, kanal på $((SECONDS - t0)) s"
+    finish "PASS · innstillinger: 21 sider, bakgrunn (fakkel ${torch:-–} / rolig ${calm:-–} / av ${still:-–} bilder), skala med angring og «Behold», ikke forstyrr, hurtigtaster, nett, Bluetooth, strøm, standardapper, personvern, hendelser, spill, headset, systemhjelper, tastatur, lås, lyd, kanal på $((SECONDS - t0)) s"
 else
     finish "FAIL · ${fails[*]} ($((SECONDS - t0)) s)"
 fi
