@@ -265,8 +265,8 @@
       "label": { "en": "Rules", "nb": "Regler" }, "description": { "en": "udev rules Olymparch added", "nb": "udev-regler Olymparch har lagt til" },
       "apply": { "via": "action", "command": "olymparch hw rules" } },
 
-    { "key": "games.gamemode", "page": "games", "level": "simple", "type": "bool", "default": true, "ready": false,
-      "label": { "en": "gamemode + game mode", "nb": "gamemode + spillmodus" }, "description": { "en": "All games", "nb": "Alle spill" },
+    { "key": "games.gamemode", "page": "games", "level": "simple", "type": "bool", "default": true, "ready": true,
+      "label": { "en": "gamemode + game mode", "nb": "gamemode + spillmodus" }, "description": { "en": "Every game that is found gets gamemode, and the bar hides (do not disturb)", "nb": "Hvert spill som blir funnet får gamemode, og baren skjules (ikke forstyrr)" },
       "apply": { "via": "stored", "file": "~/.config/olymparch/settings.json", "key": "games.gamemode" } },
     { "key": "games.add", "page": "games", "level": "simple", "type": "action", "ready": false,
       "label": { "en": "Add a game", "nb": "Legg til spill" }, "description": { "en": "For games outside Steam", "nb": "For spill utenfor Steam" },
