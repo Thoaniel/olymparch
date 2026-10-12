@@ -9,8 +9,8 @@
   <action id="org.olymparch.packages">
     <description>Install or remove a package from the official repositories</description>
     <description xml:lang="nb">Installer eller fjern en pakke fra de offisielle pakkebrønnene</description>
-    <message>Authentication is required to install or remove the package</message>
-    <message xml:lang="nb">Du må logge inn for å installere eller fjerne pakken</message>
+    <message>Type your password to install or remove a package</message>
+    <message xml:lang="nb">Skriv passordet ditt for å installere eller fjerne en pakke</message>
     <icon_name>system-software-install</icon_name>
     <defaults>
       <allow_any>no</allow_any>

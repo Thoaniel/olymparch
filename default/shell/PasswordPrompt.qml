@@ -12,6 +12,9 @@ import Quickshell.Services.Polkit
 Scope {
     id: auth
     required property var theme
+    property string what: ""     // what the Olymparch menu asks for («installere cowsay (2 pakker)»), if it asked
+    readonly property bool ours: !!(flow && flow.actionId === "org.olymparch.packages" && what)
+    readonly property string user: Quickshell.env("USER") || ""
     readonly property string lang: I18n.lang
     function t(en, nb) { return lang === "nb" ? nb : en; }
     readonly property var flow: agent.flow
@@ -69,15 +72,15 @@ Scope {
                 Text {
                     width: parent.width
                     wrapMode: Text.Wrap
-                    text: auth.flow ? auth.flow.message : ""
+                    text: auth.ours ? auth.t("Type your password to ", "Skriv passordet ditt for å ") + auth.what : (auth.flow ? auth.flow.message : "")
                     font { family: auth.theme.mono; pixelSize: auth.theme.px(14) }
                     color: auth.theme.text
                 }
                 Text {
                     width: parent.width
                     wrapMode: Text.Wrap
-                    visible: !!(auth.flow && auth.flow.actionId)
-                    text: auth.flow ? auth.flow.actionId : ""
+                    // who is asked, and (for anything but the menu) which action, so a prompt can be checked
+                    text: (auth.user ? auth.t("Password for ", "Passordet til ") + auth.user : "") + (!auth.ours && auth.flow && auth.flow.actionId ? "  ·  " + auth.flow.actionId : "")
                     font { family: auth.theme.mono; pixelSize: auth.theme.px(11) }
                     color: auth.theme.muted
                 }
@@ -112,10 +115,10 @@ Scope {
                         }
                     }
                 }
-                Text {
+                Text {   // always there (empty or not), so the panel never moves when an error appears
                     width: parent.width
-                    wrapMode: Text.Wrap
-                    visible: auth.wrong || !!(auth.flow && auth.flow.supplementaryMessage)
+                    height: auth.theme.px(16)
+                    elide: Text.ElideRight
                     text: auth.wrong ? auth.t("Wrong password. Try again, or Esc to cancel.", "Feil passord. Prøv igjen, eller Esc for å avbryte.")
                                      : (auth.flow ? auth.flow.supplementaryMessage : "")
                     font { family: auth.theme.mono; pixelSize: auth.theme.px(12) }

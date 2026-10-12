@@ -161,7 +161,7 @@ ShellRoot {
     // ── the Olymparch menu (Super+Alt+Space, the bolt in the bar) and the list of shortcuts (Super+K)
     Menu { id: olymparchMenu; theme: root; launcher: launcher; cheatsheet: cheatsheet }
     Cheatsheet { id: cheatsheet; theme: root }
-    PasswordPrompt { theme: root }   // the polkit agent: password prompts (the menu's package helper asks)
+    PasswordPrompt { theme: root; what: olymparchMenu.authWhat }   // the polkit agent: password prompts (the menu's package helper asks)
     // ── (end of the menu block)
     // Settings → Notifications → in games: all (as usual), critical (only those), none (held back until it ends)
     readonly property string inGames: Settings.get("notifications.in_games")

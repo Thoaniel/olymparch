@@ -86,6 +86,10 @@ Scope {
     function term(cmd) {   // in a terminal that waits for Enter when done
         return ["foot", "-e", "sh", "-c", cmd + '; echo; printf "%s" "$1"; read -r _', "sh", t("Press Enter to close. ", "Trykk Enter for å lukke. ")];
     }
+    function prettyKeys(combo) {   // "SUPER + K" → "Super+K", like the keycaps in the shortcut list
+        return String(combo || "").split("+").map(s => s.trim()).filter(s => s)
+            .map(s => s.length > 1 ? s.charAt(0) + s.slice(1).toLowerCase() : s).join("+");
+    }
     function run(cmd) { Quickshell.execDetached(cmd); open = false; }
     function settingsPage(p) { run(["olymparch-settings", "open", p]); }
     readonly property var tree: {
@@ -111,13 +115,14 @@ Scope {
                 node("background", "", "Background", "Bakgrunn", { children: bg })
             ] }),
             node("install", "", "Install", "Installer", { children: [
-                node("catalog", "", "Apps", "Apper", { hint: t("one click", "ett klikk"), children: apps.length ? apps : [coming("catalog-none", "", "More apps", "Flere apper")] }),
+                node("catalog", "", "Apps", "Apper", { hint: t("picked apps", "utvalgte apper"), children: apps.length ? apps : [coming("catalog-none", "", "More apps", "Flere apper")] }),
                 have["olymparch-webapp"] ? node("webapp", "", "Web app", "Nettapp", { hint: t("a site as an app", "en nettside som app"), act: () => run(term("olymparch-webapp add")) })
                                          : coming("webapp", "", "Web app", "Nettapp"),
                 node("package", "", "Package", "Pakke", { hint: t("official Arch repositories", "offisielle Arch-pakker"), kind: "pkgsearch" })
             ] }),
             node("remove", "", "Remove", "Fjern", { hint: t("what you installed", "det du har installert"), kind: "remove" }),
-            node("tools", "", "Tools", "Verktøy", { children: tools.length ? tools : [coming("tools-none", "", "Screenshot, recording, colour picker …", "Skjermbilde, opptak, fargevelger …")] }),
+            tools.length ? node("tools", "", "Tools", "Verktøy", { children: tools })
+                         : coming("tools", "", "Tools: screenshot, recording, colour picker …", "Verktøy: skjermbilde, opptak, fargevelger …"),
             node("setup", "", "Setup", "Oppsett", { children: [
                 node("wifi", "", "Wi-Fi", "Wi-Fi", { act: () => settingsPage("network") }),
                 node("bluetooth", "", "Bluetooth", "Bluetooth", { act: () => settingsPage("bluetooth") }),
@@ -138,9 +143,9 @@ Scope {
                 node("rollback", "", "Snapshot rollback", "Rull tilbake til et øyeblikksbilde", { hint: t("in a terminal", "i en terminal"), act: () => run(["foot", "-e", "olymparch-rollback"]) })
             ] }),
             node("help", "", "Help", "Hjelp", { children: [
-                node("keys", "", "Keyboard shortcuts", "Hurtigtaster", { hint: Settings.get("keys.cheatsheet") || "", act: () => { open = false; if (cheatsheet) cheatsheet.open = true; } }),
+                node("keys", "", "Keyboard shortcuts", "Hurtigtaster", { hint: prettyKeys(Settings.get("keys.cheatsheet")), act: () => { open = false; if (cheatsheet) cheatsheet.open = true; } }),
                 node("manual", "", "Manual", "Brukerveiledning", { hint: "github.com/Thoaniel/olymparch", act: () => run(["xdg-open", repoUrl]) }),
-                node("report", "", "Report a bug", "Meld fra om en feil", { hint: t("you read it before sending", "du leser den før du sender"), act: () => run(["olymparch-settings", "run", "about.report"]) })
+                node("report", "", "Report a bug", "Meld fra om en feil", { hint: t("you see the report before it is sent", "du ser rapporten før den sendes"), act: () => run(["olymparch-settings", "run", "about.report"]) })
             ] })
         ];
         const walk = (nodes, prefix, crumb) => nodes.forEach(n => {
@@ -202,12 +207,15 @@ Scope {
         if (!query.trim()) return [{ text: t("Type a package name. Only the official Arch repositories (core, extra, multilib) and Olymparch's own; never the AUR.",
                                             "Skriv et pakkenavn. Bare de offisielle Arch-pakkebrønnene (core, extra, multilib) og Olymparchs egen; aldri AUR.") }];
         if (pkgBusy && !pkgResults.length) return [{ text: t("Searching …", "Søker …") }];
-        if (!pkgResults.length) return [{ text: t("No package by that name", "Ingen pakke med det navnet") }];
-        return pkgResults.map(p => ({
+        const q = query.trim().toLowerCase();
+        const missing = !pkgBusy && /^[a-z0-9@._+-]+$/.test(q) && !pkgResults.some(p => p.name === q)
+            ? [{ text: t(`«${q}» is not in the official repositories (the AUR is not supported here)`, `«${q}» finnes ikke i de offisielle pakkebrønnene (AUR støttes ikke her)`), error: true }] : [];
+        if (!pkgResults.length) return missing.length ? missing : [{ text: t("No package by that name", "Ingen pakke med det navnet") }];
+        return missing.concat(pkgResults.map(p => ({
             id: "pkg-" + p.name, icon: p.installed ? "" : "", label: p.name, sub: p.description,
             hint: p.installed ? t("installed", "installert") : p.repo + " · " + p.version, done: p.installed,
             act: p.installed ? null : () => previewInstall(p.name)
-        }));
+        })));
     }
     function removeRows() {
         if (!removableLoaded) return [{ text: t("Looking …", "Ser etter …") }];
@@ -268,7 +276,7 @@ Scope {
 
     // ── views: confirm, progress, text
     function confirm(title, lines, yes, danger, onYes) {
-        const rows = lines.map(l => ({ text: l }));
+        const rows = [{ text: title, heading: true }].concat(lines.map(l => ({ text: l })));
         rows.push({ id: "yes", icon: danger ? "" : "", label: yes, danger: danger, act: onYes });
         rows.push({ id: "no", icon: "", label: t("Cancel", "Avbryt"), act: () => back() });
         view = { kind: "confirm", title: title, rows: rows, focus: danger ? rows.length - 1 : rows.length - 2 };
@@ -287,7 +295,7 @@ Scope {
         command: ["olymparch-changes"]
         stdout: StdioCollector {
             onStreamFinished: {
-                const lines = text.split("\n").filter(l => l.trim());
+                const lines = text.split("\n").filter(l => l.trim()).map(l => menu.changeLine(l));
                 const shown = lines.slice(-14);
                 if (lines.length > shown.length) shown.unshift(t(`… and ${lines.length - shown.length} more`, `… og ${lines.length - shown.length} til`));
                 if (menu.view && menu.view.kind === "text") menu.textView(menu.t("What changed", "Hva som er endret"), shown.length ? shown : [menu.t("Nothing yet", "Ingenting ennå")]);
@@ -295,6 +303,15 @@ Scope {
         }
     }
 
+    // "2026-10-12T16:29:13+0200  installed cowsay (3.8.4-1)" → "12. okt. 16:29 · installert cowsay (3.8.4-1)"
+    function changeLine(l) {
+        const m = l.match(/^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)\S*\s+(\w+)\s+(.*)$/);
+        if (!m) return l;
+        const months = lang === "nb" ? ["jan.", "feb.", "mars", "apr.", "mai", "juni", "juli", "aug.", "sep.", "okt.", "nov.", "des."]
+                                     : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const verbs = { upgraded: t("updated", "oppdatert"), installed: t("installed", "installert"), removed: t("removed", "fjernet"), downgraded: t("downgraded", "nedgradert") };
+        return `${parseInt(m[3])}. ${months[parseInt(m[2]) - 1]} ${m[4]}:${m[5]} · ${verbs[m[6]] || m[6]} ${m[7]}`;
+    }
     // a one-click app from the catalog: install-app's fixed list decides the packages
     function confirmApp(a) {
         confirm(t("Install ", "Installere ") + tr(a.name) + "?", [tr(a.description), t("From the official Arch repositories. Takes a minute.", "Fra de offisielle Arch-pakkebrønnene. Tar et minutt.")],
@@ -309,7 +326,10 @@ Scope {
         preview.command = [helper, "preview", action, name];
         preview.running = true;
     }
-    function size(b) { return b >= 1048576 ? (b / 1048576).toFixed(1) + " MiB" : Math.max(1, Math.round(b / 1024)) + " KiB"; }
+    function size(b) {
+        const s = b >= 1048576 ? (b / 1048576).toFixed(1) + " MiB" : Math.max(1, Math.round(b / 1024)) + " KiB";
+        return lang === "nb" ? s.replace(".", ",") : s;
+    }
     Process {
         id: preview
         property string action
@@ -329,33 +349,44 @@ Scope {
             }
             if (inst && !lines.length) { menu.textView(name, [menu.t(name + " is already installed", name + " er allerede installert")]); return; }
             const total = lines.reduce((s, l) => s + (parseInt(l[2]) || 0), 0);
-            const list = lines.slice(0, 8).map(l => "  " + l[0] + "  " + (l[1] || ""));
+            const list = lines.slice(0, 8).map(l => {
+                const pkg = l[0].replace(/^[^/]*\//, "");
+                const note = pkg === name ? "" : inst ? menu.t(`  (needed by ${name})`, `  (trengs av ${name})`) : menu.t("  (no longer used)", "  (ikke lenger i bruk)");
+                return "  " + l[0] + "  " + (l[1] || "") + note;
+            });
             if (lines.length > 8) list.push(menu.t(`  … and ${lines.length - 8} more`, `  … og ${lines.length - 8} til`));
-            const head = inst ? menu.t(`Installs ${lines.length} package${lines.length > 1 ? "s" : ""}` + (total ? `, ${menu.size(total)} to download:` : ":"),
-                                       `Installerer ${lines.length} pakke${lines.length > 1 ? "r" : ""}` + (total ? `, ${menu.size(total)} å laste ned:` : ":"))
-                              : menu.t(`Removes ${lines.length} package${lines.length > 1 ? "s" : ""}:`, `Fjerner ${lines.length} pakke${lines.length > 1 ? "r" : ""}:`);
+            const n = lines.length;
+            const head = inst ? menu.t(`This is installed (${n} package${n > 1 ? "s" : ""}` + (total ? `, ${menu.size(total)}):` : "):"),
+                                       `Dette installeres (${n} pakke${n > 1 ? "r" : ""}` + (total ? `, ${menu.size(total)}):` : "):"))
+                              : menu.t(`This is removed (${n} package${n > 1 ? "s" : ""}):`, `Dette fjernes (${n} pakke${n > 1 ? "r" : ""}):`);
+            const what = (inst ? menu.t("install ", "installere ") : menu.t("remove ", "fjerne ")) + label + menu.t(` (${n} package${n > 1 ? "s" : ""})`, ` (${n} pakke${n > 1 ? "r" : ""})`);
             menu.confirm(inst ? menu.t("Install ", "Installere ") + label + "?" : menu.t("Remove ", "Fjerne ") + label + "?", [head].concat(list),
                          inst ? menu.t("Install", "Installer") : menu.t("Remove", "Fjern"), !inst,
                          () => menu.runJob((inst ? menu.t("Installing ", "Installerer ") : menu.t("Removing ", "Fjerner ")) + label,
-                                           ["pkexec", menu.helper, action, name], label, inst, true));
+                                           ["pkexec", menu.helper, action, name], label, inst, what));
         }
     }
 
     // progress: the helper's output as it comes; Esc hides the menu and a notification says when it is done.
     // The package helper asks for your password (PasswordPrompt.qml): the menu steps aside until it is typed.
     property bool waitingAuth: false
+    property string authWhat: ""     // what the password is for, shown in the prompt («installere cowsay (2 pakker)»)
     function runJob(title, cmd, label, inst, asks) {
         busy = true;
-        view = { kind: "run", title: title, label: label, inst: inst, lines: [], done: false, rows: [{ text: t("Starting …", "Starter …") }] };
+        view = { kind: "run", title: title, label: label, inst: inst, lines: [], done: false, rows: [{ text: title + " …", big: true }] };
         job.command = cmd;
         job.running = true;
-        if (asks) { waitingAuth = true; open = false; }
+        if (asks) { authWhat = asks; waitingAuth = true; open = false; }
     }
+    // pacman's own questions (answered by --noconfirm) and pkexec's English errors stay out of the log
+    function noise(l) { return !l.trim() || /\[[Yy]\/[Nn]\]|^:: Proceed|Do you want to|^Error executing command|^This incident|^==/.test(l); }
     function jobLine(l, fromHelper) {
-        if (waitingAuth && fromHelper) { waitingAuth = false; open = true; }   // the helper runs: the password was right
-        if (!view || view.kind !== "run" || !l.trim()) return;
-        const lines = view.lines.concat([l]).slice(-10);
-        view = Object.assign({}, view, { lines: lines, rows: lines.map(x => ({ text: x, dim: true })) });
+        if (waitingAuth && fromHelper) { waitingAuth = false; authWhat = ""; open = true; }   // the helper runs: the password was right
+        if (!view || view.kind !== "run" || noise(l)) return;
+        const lines = view.lines.concat([l.trim()]).slice(-6);
+        const step = (l.match(/^(?:installing|removing|upgrading) (\S+?)\.\.\./) || [])[1];
+        const status = view.title + (step ? "  ·  " + step : "") + " …";
+        view = Object.assign({}, view, { lines: lines, status: status, rows: [{ text: status, big: true }].concat(lines.map(x => ({ text: x, dim: true }))) });
     }
     Process {
         id: job
@@ -366,13 +397,15 @@ Scope {
             const ok = code === 0;
             const denied = menu.waitingAuth && (code === 126 || code === 127);   // pkexec: cancelled, or a wrong password
             const msg = ok ? (v.inst ? menu.t("Installed: ", "Installert: ") : menu.t("Removed: ", "Fjernet: ")) + v.label
-                      : denied ? menu.t("Not done: the password was wrong or the prompt was closed", "Ikke gjort: feil passord, eller spørsmålet ble lukket")
+                      : denied ? menu.t("Cancelled – nothing was changed", "Avbrutt – ingenting ble endret")
                       : menu.t("Did not work. Details: /var/log/olymparch-packages.log", "Det gikk ikke. Detaljer: /var/log/olymparch-packages.log");
             if (!menu.open && !menu.waitingAuth) Quickshell.execDetached(["notify-send", "-a", "Olymparch", msg]);
-            const rows = v.lines.map(x => ({ text: x, dim: true }));
-            rows.push({ text: msg, ok: ok, error: !ok });
+            const title = ok ? (v.inst ? menu.t("Installed", "Installert") : menu.t("Removed", "Fjernet"))
+                        : denied ? menu.t("Cancelled", "Avbrutt") : (v.inst ? menu.t("Not installed", "Ikke installert") : menu.t("Not removed", "Ikke fjernet"));
+            const rows = [{ text: (ok ? "✓  " : "✗  ") + msg, big: true, ok: ok, error: !ok }].concat((denied ? [] : v.lines).map(x => ({ text: x, dim: true })));
             rows.push({ id: "back", icon: "", label: menu.t("Back", "Tilbake"), act: () => menu.back() });
-            menu.view = Object.assign({}, v, { kind: "result", done: true, rows: rows, focus: rows.length - 1 });
+            menu.authWhat = "";
+            menu.view = Object.assign({}, v, { kind: "result", title: title, done: true, rows: rows, focus: rows.length - 1 });
             menu.current = rows.length - 1;
             if (menu.waitingAuth) { menu.waitingAuth = false; menu.open = true; }
             menu.busy = false;
@@ -410,8 +443,11 @@ Scope {
         }
     }
     // Install → Package: pacman -Ss through the helper (read-only), a moment after you stop typing
+    // the field shows the search, or nothing while a confirm/progress page is up (its hint says what keys do)
+    function syncInput() { const want = view ? "" : query; if (input.text !== want) input.text = want; }
+    onViewChanged: syncInput()
     onQueryChanged: {
-        if (input.text !== query) input.text = query;
+        syncInput();
         if (kind === "pkgsearch") { pkgError = ""; search.restart(); }
     }
     Timer { id: search; interval: 350; onTriggered: menu.searchPackages() }
@@ -419,7 +455,7 @@ Scope {
         const words = query.toLowerCase().split(/\s+/).filter(w => w);
         if (!words.length) { pkgResults = []; return; }
         if (words.some(w => !/^[a-z0-9@._+-]+$/.test(w) || w.startsWith("-")) || words.length > 4) {
-            pkgResults = []; pkgError = t("Package names are lower-case letters, digits and @ . _ + -", "Pakkenavn er små bokstaver, sifre og @ . _ + -"); return;
+            pkgResults = []; pkgError = t("A package name can only have lower-case letters, digits and @ . _ + -", "Pakkenavn kan bare ha små bokstaver, sifre og @ . _ + -"); return;
         }
         if (words.join("").length < 2) { pkgResults = []; return; }
         pkgBusy = true;
@@ -524,7 +560,7 @@ Scope {
                     clip: true
                     focus: menu.open
                     readOnly: menu.view !== null
-                    text: menu.query
+                    text: menu.view ? "" : menu.query
                     onTextEdited: { menu.query = text; menu.current = menu.firstSelectable(); }
                     Keys.onPressed: e => {
                         const empty = !menu.query;
@@ -580,7 +616,7 @@ Scope {
                             anchors { left: parent.left; right: parent.right; leftMargin: 12; rightMargin: 12; verticalCenter: parent.verticalCenter }
                             text: row.modelData.text || ""
                             elide: Text.ElideRight
-                            font { family: menu.theme.mono; pixelSize: menu.theme.px(row.modelData.dim ? 12 : 13) }
+                            font { family: menu.theme.mono; pixelSize: menu.theme.px(row.modelData.dim ? 12 : row.modelData.big || row.modelData.heading ? 14 : 13); bold: !!(row.modelData.big || row.modelData.heading) }
                             color: row.modelData.error ? menu.theme.red : row.modelData.ok ? menu.theme.goldHi : row.modelData.dim ? menu.theme.muted : menu.theme.text
                             wrapMode: Text.NoWrap
                         }
@@ -611,7 +647,7 @@ Scope {
                                 id: label
                                 text: row.modelData.label || ""
                                 font { family: menu.theme.mono; pixelSize: menu.theme.px(14); bold: row.isCurrent }
-                                color: row.modelData.disabled ? menu.theme.muted : row.modelData.danger && row.isCurrent ? menu.theme.red : row.isCurrent ? menu.theme.goldHi : menu.theme.text
+                                color: row.modelData.disabled ? menu.theme.muted : row.modelData.danger ? menu.theme.red : row.isCurrent ? menu.theme.goldHi : menu.theme.text
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Text {
@@ -671,7 +707,7 @@ Scope {
                     elide: Text.ElideRight
                     text: menu.kind === "run" ? menu.t("esc  hide (it goes on)", "esc  skjul (det fortsetter)")
                         : menu.view ? menu.t("↑↓  choose     ⏎  ok     esc  back", "↑↓  velg     ⏎  ok     esc  tilbake")
-                        : menu.kind === "pkgsearch" ? menu.t("type  search     ↑↓  choose     ⏎  install …     esc  back", "skriv  søk     ↑↓  velg     ⏎  installer …     esc  tilbake")
+                        : menu.kind === "pkgsearch" ? (menu.rows[menu.current] && menu.rows[menu.current].act ? menu.t("↑↓  choose     ⏎  install …     esc  back     type  search", "↑↓  velg     ⏎  installer …     esc  tilbake     skriv  søk") : menu.t("↑↓  choose     esc  back     type  search", "↑↓  velg     esc  tilbake     skriv  søk"))
                         : menu.path.length ? menu.t("↑↓  choose     ⏎ →  open     esc ←  back     type  search all", "↑↓  velg     ⏎ →  åpne     esc ←  tilbake     skriv  søk i alt")
                         : menu.t("↑↓  choose     ⏎ →  open     esc  close     type  search all", "↑↓  velg     ⏎ →  åpne     esc  lukk     skriv  søk i alt")
                     font { family: menu.theme.mono; pixelSize: menu.theme.px(11) }

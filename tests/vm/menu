@@ -118,10 +118,9 @@ press ret; sleep 1.5
 press ret; sleep 3
 press ret; sleep 3
 shot passord-igjen "Ny runde: passordspørsmålet igjen"
-keys "$PW\n" 5
+keys "$PW\n" 1.5
 shot pakke-installerer "Riktig passord: installerer, utdata fra hjelperen mens det går"
-for _ in $(seq 60); do sleep 2; python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/probe.ppm"; done &
-wait $!
+sleep 25
 shot pakke-installert "Installert: cowsay"
 press ret; sleep 1.5
 shot pakke-etter "Tilbake i søket: cowsay er merket installert"
@@ -164,7 +163,10 @@ shot hurtigtaster-sok "Søk «arbeid»: arbeidsflatene"
 press esc; press esc; sleep 1
 keys "olymparch-settings set keys.cheatsheet 'SUPER + J'; olymparch-settings add keyboard.custom_keys 'SUPER + B = firefox'; clear\n" 3
 press meta_l+j; sleep 2
-shot hurtigtaster-flyttet "Hurtigtastlisten flyttet til Super+J, og en egen (Super+B = firefox) er med"
+shot hurtigtaster-flyttet "Hurtigtastlisten flyttet: Super+J står nå under Åpne"
+keys "firefox" 1
+shot hurtigtaster-egne "Søk «firefox»: din egen hurtigtast (Super+B = firefox) under Dine egne"
+press esc
 press esc; sleep 1
 check moved 'olymparch-settings get keys.cheatsheet | grep -qx "SUPER + J" && hyprctl binds -j | grep -qi "key.: .j."'
 keys "olymparch-settings reset keys.cheatsheet; clear\n" 2

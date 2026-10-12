@@ -58,6 +58,7 @@ Scope {
         const special = {
             "keys.menu": t("Apps: search and start", "Apper: søk og start"),
             "keys.olymparch_menu": t("Olymparch menu", "Olymparch-menyen"),
+            "keys.add_game": t("Mark this window as a game", "Merk vinduet som spill"),
             "zeus.hotkey": t("Zeus", "Zeus")
         };
         if (special[e.key]) return special[e.key];
@@ -159,7 +160,8 @@ Scope {
             id: panel
             width: Math.min(parent.width - 32, sheet.theme.px(720))
             height: Math.min(parent.height * 0.8, head.height + flick.contentHeight + 46)
-            anchors.centerIn: parent
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: Math.round(parent.height * 0.1)   // the top stays put while the list shrinks under a search
             color: sheet.theme.surface
             border.color: sheet.theme.line
             Rectangle { x: -1; y: -1; width: 14; height: 2; color: sheet.theme.gold }
@@ -241,8 +243,8 @@ Scope {
                             Text {
                                 topPadding: 10; bottomPadding: 4
                                 text: grp.modelData.header.toUpperCase()
-                                font { family: sheet.theme.mono; pixelSize: sheet.theme.px(10); letterSpacing: 1.5 }
-                                color: sheet.theme.muted
+                                font { family: sheet.theme.mono; pixelSize: sheet.theme.px(11); letterSpacing: 1.5; bold: true }
+                                color: sheet.theme.gold
                             }
                             Repeater {
                                 model: grp.modelData.rows
@@ -297,7 +299,8 @@ Scope {
                 Text {
                     anchors { left: parent.left; right: parent.right; leftMargin: 14; rightMargin: 14; verticalCenter: parent.verticalCenter }
                     elide: Text.ElideRight
-                    text: sheet.t("type  search     ↑↓  scroll     esc  close     change them in Settings → Keyboard",
+                    text: (flick.contentY + flick.height < flick.contentHeight - 4 ? sheet.t("↓ more     ", "↓ flere     ") : "")
+                        + sheet.t("type  search     ↑↓  scroll     esc  close     change them in Settings → Keyboard",
                                   "skriv  søk     ↑↓  rull     esc  lukk     endre dem i Innstillinger → Tastatur")
                     font { family: sheet.theme.mono; pixelSize: sheet.theme.px(11) }
                     color: sheet.theme.muted
