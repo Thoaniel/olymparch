@@ -27,7 +27,7 @@ modalias=usb:v045Ep02E6*
 modalias=usb:v045Ep02FE*
 modalias=usb:v045Ep02F9*
 modalias=usb:v045Ep091E*
-ourrepo=xone
+ourrepo=xone-dkms
 when=install hotplug
 
 # Thrustmaster T300RS, T248, TX and TS-XW/TS-PC: force feedback needs hid-tmff2 (MOK enrolment under Secure Boot)
@@ -41,5 +41,5 @@ modalias=usb:v044FpB669*
 modalias=usb:v044FpB689*
 modalias=usb:v044FpB692*
 modalias=usb:v044FpB696*
-ourrepo=hid-tmff2
+ourrepo=hid-tmff2-dkms
 when=install hotplug

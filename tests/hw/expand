@@ -4,6 +4,7 @@
 # Lines: dmi KEY VALUE · cpu vendor_id|model_name|flags VALUE · power NAME TYPE · pkg NAME
 #        dev BUS ID path=P [driver=D module=M builtin=1 class=C vd=V:D boot_vga=B] modalias=A
 #        kbd INPUT path=P · node path=P driver=D [module=M builtin=1] · fw MODULE FILE · kmsg TEXT
+#        repo olymparch (the [olymparch] repo is configured)
 set -euo pipefail
 fix=$1 T=$2
 rm -rf -- "$T"
@@ -37,6 +38,7 @@ while IFS= read -r line || [ -n "$line" ]; do
             esac ;;
         power) mkdir -p "$T/sys/class/power_supply/$a"; echo "$rest" >"$T/sys/class/power_supply/$a/type" ;;
         pkg) echo "$a" >>"$T/.hw/pkgs" ;;
+        repo) [ "$a" = olymparch ] && : >"$T/.hw/ourrepo" ;;
         fw) echo "$rest" >>"$T/.hw/modinfo/$a" ;;
         kmsg) echo "$a $rest" >>"$T/.hw/kmsg" ;;
         dev | node | kbd)

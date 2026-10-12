@@ -13,7 +13,7 @@ Matched rules
                                packages: bluez bluez-utils
                                services: bluetooth.service
   xbox-dongle                Xbox wireless adapter: xone driver
-                               ourrepo: xone
+                               ourrepo: xone-dkms
 
 Firmware
   linux-firmware-nvidia      for nouveau
@@ -23,7 +23,7 @@ To install (7)
   vulkan-nouveau lib32-vulkan-nouveau amd-ucode bluez bluez-utils linux-firmware-nvidia
   linux-firmware-realtek
 From the Olymparch repo (not available yet)
-  xone
+  xone-dkms
 
 Notes
   gpu-nvidia-legacy: not promised: installed, but not tested

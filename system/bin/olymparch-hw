@@ -287,13 +287,16 @@ rnote() {
 declare -A INSTALLED=()
 KERNELS=()
 MULTILIB=1
+OURREPO=0   # the [olymparch] repo is configured: ourrepo= packages (xone-dkms, hid-tmff2-dkms) can be offered
 load_installed() {
     local p
     if [ -n "$S" ]; then
         [ -r "$S/.hw/pkgs" ] && while IFS= read -r p; do [ -n "$p" ] && INSTALLED[$p]=1; done <"$S/.hw/pkgs"
+        [ -e "$S/.hw/ourrepo" ] && OURREPO=1
     elif [ -d "$ROOT/var/lib/pacman/local" ]; then
         while IFS= read -r p; do INSTALLED[$p]=1; done < <(pacman --dbpath "$ROOT/var/lib/pacman" -Qq 2>/dev/null)
         grep -q '^\[multilib\]' "$ROOT/etc/pacman.conf" 2>/dev/null || MULTILIB=0
+        grep -q '^\[olymparch\]' "$ROOT/etc/pacman.conf" 2>/dev/null && OURREPO=1
     fi
     for p in linux linux-lts linux-zen linux-hardened linux-rt; do [ -n "${INSTALLED[$p]+x}" ] && KERNELS+=("$p"); done
     [ ${#KERNELS[@]} -gt 0 ] || KERNELS=(linux)
@@ -338,7 +341,7 @@ kernel_log() {
 missing_fw() {  # "Direct firmware load for X failed" → "package file" for packages that are not installed
     local f p
     while read -r f p; do
-        [ -z "${INSTALLED[$p]+x}" ] && echo "$p $f"
+        if [ -z "${INSTALLED[$p]+x}" ]; then echo "$p $f"; fi
     done < <(kernel_log | sed -nE 's/.*Direct firmware load for ([^ ]+) failed.*/\1/p' | sort -u | fw_map) | sort -u -k1,1
 }
 
@@ -360,7 +363,10 @@ build_plan() {  # build_plan [ID...]: only those rules (and their optional packa
         for p in $(words "$id" optional); do
             if ((explicit)); then all+=("$p"); else OPT+=("$p"); fi
         done
-        for p in $(words "$id" ourrepo); do REPO+=("$p"); done
+        # our own repo's DKMS drivers: always one click (xone shows Microsoft's firmware terms first)
+        for p in $(words "$id" ourrepo); do
+            if ((explicit && OURREPO)); then all+=("$p"); elif ((OURREPO)); then OPT+=("$p"); else REPO+=("$p"); fi
+        done
     done
     if ((want_fw)); then
         local only=''
@@ -688,7 +694,7 @@ cmd_boot_check() {
     local st; st=$(state_dir); mkdir -p "$st" /run/olymparch/hw
     local fp j
     fp=$(for ((j = 0; j < ${#DEV_ID[@]}; j++)); do
-        [ "${DEV_BUS[$j]}" = pci ] && [[ ${DEV_CLASS[$j]} == 03* ]] && echo "${DEV_VD[$j]}:${DEV_VGA[$j]:-0}"
+        if [ "${DEV_BUS[$j]}" = pci ] && [[ ${DEV_CLASS[$j]} == 03* ]]; then echo "${DEV_VD[$j]}:${DEV_VGA[$j]:-0}"; fi
     done | sort | paste -sd' ')
     local old=''; [ -r "$st/gpu" ] && old=$(<"$st/gpu")
     : >/run/olymparch/hw/offers
@@ -755,7 +761,7 @@ cmd_notify() {
     [[ $what =~ ^[a-z0-9][a-z0-9-]*$ ]] && [ -n "${RFILE[$what]+x}" ] || exit 0
     [[ " $(active | paste -sd' ') " == *" $what "* ]] || exit 0
     local repo; repo=$(words "$what" ourrepo)
-    if [ -n "$repo" ]; then
+    if [ -n "$repo" ] && ((!OURREPO)); then
         notify-send -a Olymparch "$(rname "$what")" "$(t n_repo) ($repo)" || true
         return 0
     fi

@@ -12,7 +12,7 @@ for id in "$@"; do
 done
 user=''
 [ -n "${PKEXEC_UID:-}" ] && user=$(id -nu "$PKEXEC_UID" 2>/dev/null || true)
-exec 9>/run/olymparch-hw-apply.lock
+exec </dev/null 9>/run/olymparch-hw-apply.lock
 flock 9   # one install at a time (pacman has its own lock, but a queue is friendlier than a failure)
 {
     printf '\n== %s hw-apply %s (uid %s)\n' "$(date '+%F %T')" "$*" "${PKEXEC_UID:-?}"

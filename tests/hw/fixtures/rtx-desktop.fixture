@@ -1,6 +1,6 @@
 # NVIDIA-only desktop: RTX 4070 next to an old GTX 1060 (both NVIDIA rules match; the open driver wins the
 # nvidia-driver group), Ryzen 7 5800X3D (no iGPU), a Thrustmaster T300RS wheel and an ASUS Aura RGB controller.
-# Some packages are already installed, as on a running system.
+# Some packages are already installed and the [olymparch] repo is configured, as on a running system.
 dmi chassis_type 3
 dmi sys_vendor ASUS
 dmi product_name System Product Name
@@ -10,6 +10,7 @@ cpu model_name AMD Ryzen 7 5800X3D 8-Core Processor
 pkg linux-zen
 pkg mesa
 pkg amd-ucode
+repo olymparch
 dev pci 0000:0a:00.0 path=pci0000:00/0000:00:03.1/0000:0a:00.0 driver=nouveau module=nouveau class=030000 vd=10de:2786 boot_vga=1 modalias=pci:v000010DEd00002786sv00001043sd000088F2bc03sc00i00
 dev pci 0000:0b:00.0 path=pci0000:00/0000:00:03.2/0000:0b:00.0 driver=nouveau module=nouveau class=030000 vd=10de:1c03 boot_vga=0 modalias=pci:v000010DEd00001C03sv00001462sd00003282bc03sc00i00
 dev pci 0000:0c:00.3 path=pci0000:00/0000:00:08.1/0000:0c:00.3 driver=xhci_hcd module=xhci_pci builtin=1 class=0c0330 vd=1022:149c modalias=pci:v00001022d0000149Csv00001043sd000087C0bc0Csc03i30

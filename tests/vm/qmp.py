@@ -57,5 +57,21 @@ if __name__ == "__main__":
         for chord in sys.argv[3:]:
             q.cmd("send-key", keys=[{"type": "qcode", "data": k} for k in chord.split("+")])
             time.sleep(0.12)
+    elif op == "device_add":  # device_add DRIVER ID [BUS]
+        args = {"driver": sys.argv[3], "id": sys.argv[4]}
+        if len(sys.argv) > 5:
+            args["bus"] = sys.argv[5]
+        q.cmd("device_add", **args)
+    elif op == "device_del":
+        q.cmd("device_del", id=sys.argv[3])
+    elif op == "click":  # click X Y WIDTH HEIGHT: left click at a screen pixel (needs an absolute pointer, usb-tablet)
+        x, y, w, h = (int(v) for v in sys.argv[3:7])
+        axes = [{"type": "abs", "data": {"axis": "x", "value": x * 32767 // (w - 1)}},
+                {"type": "abs", "data": {"axis": "y", "value": y * 32767 // (h - 1)}}]
+        q.cmd("input-send-event", events=axes)
+        time.sleep(0.3)
+        q.cmd("input-send-event", events=[{"type": "btn", "data": {"down": True, "button": "left"}}])
+        time.sleep(0.1)
+        q.cmd("input-send-event", events=[{"type": "btn", "data": {"down": False, "button": "left"}}])
     elif op == "quit":
         q.cmd("quit")
