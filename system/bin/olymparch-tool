@@ -1,0 +1,259 @@
+#!/bin/bash
+# olymparch-tool NAME: the everyday tools, one entry point for the hotkeys and the menu.
+#
+#   screenshot [region|window|screen]   grim (+ slurp) → ~/Pictures/Screenshots and the clipboard; the notification
+#                                       offers «Edit» (satty) and «Open folder»     Print, Super+Print, Shift+Print
+#   screenshot-edit FILE                satty on FILE; Enter or Ctrl+C copies, Ctrl+S saves over it
+#   record [region|screen]              start, or stop when one runs: gpu-screen-recorder (hardware encoding), else
+#                                       wf-recorder; no sound; → ~/Videos; red dot in the bar     Super+Shift+R
+#   colorpicker                         hyprpicker → #rrggbb on the clipboard                       Super+Shift+C
+#   ocr                                 a region → tesseract (English + Norwegian) → clipboard       Super+Shift+T
+#   clipboard                           the clipboard history picker in the shell                    Super+Ctrl+V
+#   emoji                               the emoji picker in the shell                                Super+period
+#
+# Used by the shell and the session (not for the menu):
+#   clip-watch       the history watcher (olymparch.lua starts it; privacy.clipboard_history off = it exits)
+#   clip-apply       Settings changed privacy.clipboard_*: restart the watcher, or stop it and wipe the history
+#   clip-store       one copy (wl-paste --watch runs it); skips what a password manager marks as sensitive
+#   clip-list        the history for the picker: ID <tab> text|image <tab> preview-or-thumbnail
+#   clip-paste ID | clip-delete ID | clip-wipe
+#   emoji-type TEXT  copies TEXT and types it into the focused window (wtype)
+set -uo pipefail
+
+RUN=${XDG_RUNTIME_DIR:-/tmp/olymparch-$UID}/olymparch
+mkdir -p -m 700 "$RUN"
+SHELL_DIR=/usr/share/olymparch/shell
+case ${LANG:-} in nb* | nn* | no*) nb=1 ;; *) nb=0 ;; esac
+L() { if [ $nb = 1 ]; then printf '%s' "$2"; else printf '%s' "$1"; fi; }
+shell_call() { qs ipc -p "$SHELL_DIR" call tools "$@" >/dev/null 2>&1; }
+setting() { olymparch-settings get "$1" 2>/dev/null; }
+dir_of() {  # PICTURES|VIDEOS → the folder (English names: the installer sets them so)
+    local d
+    d=$(xdg-user-dir "$1" 2>/dev/null)
+    [ -n "$d" ] && [ "$d" != "$HOME" ] || d=$HOME/$2
+    printf '%s' "$d"
+}
+stamp() { date +%Y-%m-%d_%H-%M-%S; }
+
+# a region with slurp in Olymparch colours (black veil, gold frame); a click takes the whole monitor; empty on Esc
+pick_region() { slurp -b 08080c99 -c d4a73aff -s d4a73a1f -B 00000000 -w 2 -o "$@" 2>/dev/null; }
+# geometry "X,Y WxH" of the focused window / name of the focused monitor (hyprctl's plain output: no jq needed)
+active_window() {
+    hyprctl activewindow 2>/dev/null | awk '/^\tat: /{split($2, a, ",")} /^\tsize: /{split($2, s, ",")}
+        END { if (s[1] > 0) printf "%d,%d %dx%d", a[1], a[2], s[1], s[2] }'
+}
+focused_monitor() { hyprctl monitors 2>/dev/null | awk '/^Monitor /{m = $2} /^\tfocused: yes/{print m; exit}'; }
+
+# notify APP TITLE BODY [notify-send options…]
+notify() {
+    local app=$1 title=$2 body=$3
+    shift 3
+    notify-send -a "$app" "$@" -- "$title" "$body"
+}
+
+screenshot() {
+    local mode=${1:-region} geom="" dir file
+    dir=$(dir_of PICTURES Pictures)/Screenshots
+    mkdir -p "$dir"
+    file=$dir/Screenshot_$(stamp).png
+    case $mode in
+        region) geom=$(pick_region) || exit 0; [ -n "$geom" ] || exit 0
+                grim -g "$geom" "$file" ;;
+        window) geom=$(active_window)
+                if [ -n "$geom" ]; then grim -g "$geom" "$file"; else grim -o "$(focused_monitor)" "$file"; fi ;;
+        screen) grim -o "$(focused_monitor)" "$file" ;;
+        *) echo "screenshot: region, window or screen" >&2; exit 2 ;;
+    esac
+    [ -s "$file" ] || { notify "$(L Screenshot Skjermbilde)" "$(L 'Screenshot failed' 'Skjermbildet feilet')" "grim" -u critical; exit 1; }
+    wl-copy --type image/png <"$file"
+    (
+        a=$(notify "$(L Screenshot Skjermbilde)" "$(L 'Copied and saved' 'Kopiert og lagret')" "${file/#$HOME/\~}" \
+            -h "string:image-path:$file" -t 10000 -A edit="$(L Edit Rediger)" -A folder="$(L 'Open folder' 'Åpne mappe')" --wait)
+        case $a in
+            edit) exec "$0" screenshot-edit "$file" ;;
+            folder) exec xdg-open "$dir" ;;
+        esac
+    ) >/dev/null 2>&1 &
+    disown
+}
+
+screenshot_edit() {
+    local file=$1
+    [ -f "$file" ] || { echo "screenshot-edit: no such file: $file" >&2; exit 2; }
+    local conf=/usr/share/olymparch/apps/satty.toml
+    [ -f "$HOME/.config/satty/config.toml" ] && conf=$HOME/.config/satty/config.toml
+    GTK_THEME=${GTK_THEME:-Adwaita:dark} exec satty --config "$conf" --filename "$file" --output-filename "$file"
+}
+
+# ── screen recording: one at a time; the state file holds the recorder's PID and the file
+REC=$RUN/recording
+recording_pid() { local p; read -r p _ <"$REC" 2>/dev/null && kill -0 "$p" 2>/dev/null && printf '%s' "$p"; }
+record() {
+    local pid
+    if pid=$(recording_pid); then   # running: stop it (record-run notifies when the file is done)
+        : >"$RUN/recording.stop"
+        kill -INT "$pid"
+        return
+    fi
+    local mode=${1:-region} geom="" mon
+    mon=$(focused_monitor)
+    if [ "$mode" = region ]; then geom=$(pick_region) || exit 0; [ -n "$geom" ] || exit 0; fi
+    rm -f "$RUN/recording.stop"
+    setsid -f "$0" record-run "$mon" "$geom" >/dev/null 2>&1 </dev/null
+}
+record_run() {   # MONITOR "X,Y WxH"-or-empty: runs the recorder in the foreground, then tells the shell and you
+    local mon=$1 geom=$2 dir file pid rc
+    dir=$(dir_of VIDEOS Videos)
+    mkdir -p "$dir"
+    file=$dir/Recording_$(stamp).mp4
+    shell_call recording true
+    if command -v gpu-screen-recorder >/dev/null; then   # hardware encoding; no -a: no sound is recorded
+        local target=(-w "$mon")
+        [ -n "$geom" ] && target=(-w region -region "$(awk -F'[, x]' '{printf "%dx%d+%d+%d", $3, $4, $1, $2}' <<<"$geom")")
+        gpu-screen-recorder "${target[@]}" -f 60 -c mp4 -o "$file" >"$RUN/recorder.log" 2>&1 &
+        pid=$!
+        echo "$pid $file" >"$REC"
+        wait "$pid"
+        rc=$?
+    fi
+    # no hardware encoder (or no gpu-screen-recorder): wf-recorder, x264 on the CPU
+    if [ ! -f "$RUN/recording.stop" ] && [ ! -s "$file" ] && command -v wf-recorder >/dev/null; then
+        rm -f -- "$file"
+        local target=(-o "$mon")
+        [ -n "$geom" ] && target=(-g "$geom")
+        wf-recorder "${target[@]}" -y -f "$file" >>"$RUN/recorder.log" 2>&1 &
+        pid=$!
+        echo "$pid $file" >"$REC"
+        wait "$pid"
+        rc=$?
+    fi
+    rm -f "$REC" "$RUN/recording.stop"
+    shell_call recording false
+    if [ -s "$file" ]; then
+        a=$(notify "$(L Recording Opptak)" "$(L 'Recording saved' 'Opptaket er lagret')" "${file/#$HOME/\~}" -t 10000 \
+            -A open="$(L Play Spill\ av)" -A folder="$(L 'Open folder' 'Åpne mappe')" --wait)
+        case $a in
+            open) exec xdg-open "$file" ;;
+            folder) exec xdg-open "$dir" ;;
+        esac
+    else
+        notify "$(L Recording Opptak)" "$(L 'Recording failed' 'Opptaket feilet')" "$(tail -n 2 "$RUN/recorder.log" 2>/dev/null)" -u critical
+        return "${rc:-1}"
+    fi
+}
+
+colorpicker() {
+    local hex r g b swatch
+    hex=$(hyprpicker -f hex 2>/dev/null | tail -n 1) || exit 0
+    [[ $hex =~ ^#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$ ]] || exit 0
+    r=$((16#${BASH_REMATCH[1]})) g=$((16#${BASH_REMATCH[2]})) b=$((16#${BASH_REMATCH[3]}))
+    hex=$(printf '#%02x%02x%02x' "$r" "$g" "$b")
+    printf '%s' "$hex" | wl-copy
+    # the swatch: a 96×32 PPM (Qt reads it; no image tools needed)
+    swatch=$RUN/swatch-${hex#\#}.ppm
+    { printf 'P6\n96 32\n255\n'; printf "$(printf '\\x%02x\\x%02x\\x%02x' "$r" "$g" "$b")%.0s" $(seq 3072); } >"$swatch"
+    notify "$(L 'Colour picker' Fargevelger)" "$hex $(L copied kopiert)" "rgb($r, $g, $b)" -h "string:image-path:$swatch"
+}
+
+ocr() {
+    local geom text
+    geom=$(pick_region) || exit 0
+    [ -n "$geom" ] || exit 0
+    # twice the size reads small screen text far better
+    text=$(grim -g "$geom" -s 2 - | tesseract stdin stdout -l eng+nor 2>/dev/null | sed -e 's/[[:space:]]*$//' | sed -e '/./,$!d')
+    if [ -z "${text//[[:space:]]/}" ]; then
+        notify "$(L 'Text from screen' 'Tekst fra skjermen')" "$(L 'No text found' 'Fant ingen tekst')" "$(L 'Try a larger region' 'Prøv et større område')"
+        exit 0
+    fi
+    printf '%s' "$text" | wl-copy
+    notify "$(L 'Text from screen' 'Tekst fra skjermen')" "$(L 'Text copied' 'Teksten er kopiert')" "$text"
+}
+
+# ── clipboard history (cliphist); privacy.clipboard_history and privacy.clipboard_max in Settings → Privacy
+CLIPWATCH=$RUN/clipwatch.pid
+clip_stop() { local p; read -r p <"$CLIPWATCH" 2>/dev/null && kill "$p" 2>/dev/null; rm -f "$CLIPWATCH"; }
+clip_watch() {
+    clip_stop
+    [ "$(setting privacy.clipboard_history)" = false ] && exit 0
+    local max
+    max=$(setting privacy.clipboard_max)
+    [[ $max =~ ^[0-9]+$ ]] || max=200
+    export OLYMPARCH_CLIP_MAX=$max
+    echo $$ >"$CLIPWATCH"
+    exec wl-paste --watch "$0" clip-store   # text and images
+}
+clip_store() {
+    # a password manager marks what it copies (KeePassXC, Bitwarden …): wl-paste says so in CLIPBOARD_STATE, and
+    # the offer carries x-kde-passwordManagerHint; neither is ever stored
+    [ "${CLIPBOARD_STATE:-}" = sensitive ] && exit 0
+    wl-paste --list-types 2>/dev/null | grep -qx 'x-kde-passwordManagerHint' && exit 0
+    exec cliphist -max-items "${OLYMPARCH_CLIP_MAX:-200}" store
+}
+clip_apply() {
+    if [ "$(setting privacy.clipboard_history)" = false ]; then
+        clip_stop
+        cliphist wipe 2>/dev/null
+        rm -rf -- "$RUN/clip"
+    elif [ -n "${WAYLAND_DISPLAY:-}" ]; then
+        setsid -f "$0" clip-watch >/dev/null 2>&1 </dev/null
+    fi
+}
+clip_list() {
+    mkdir -p "$RUN/clip"
+    local id rest
+    cliphist list 2>/dev/null | while IFS=$'\t' read -r id rest; do
+        [[ $id =~ ^[0-9]+$ ]] || continue
+        if [[ $rest =~ ^\[\[\ binary\ data\ .*(png|jpeg|jpg|bmp|webp|gif) ]]; then
+            [ -s "$RUN/clip/$id" ] || printf '%s\t\n' "$id" | cliphist decode >"$RUN/clip/$id" 2>/dev/null
+            printf '%s\timage\t%s\n' "$id" "$RUN/clip/$id"
+        elif [[ $rest =~ ^\[\[\ binary ]]; then
+            continue
+        else
+            printf '%s\ttext\t%s\n' "$id" "$rest"
+        fi
+    done
+}
+valid_id() { [[ ${1:-} =~ ^[0-9]+$ ]] || { echo "bad id" >&2; exit 2; }; }
+clip_paste() {
+    valid_id "${1:-}"
+    printf '%s\t\n' "$1" | cliphist decode | wl-copy
+    sleep 0.2   # the picker lets go of the keyboard first
+    # terminals paste with Ctrl+Shift+V, everything else with Ctrl+V
+    case $(hyprctl activewindow 2>/dev/null | awk '/^\tclass: /{print $2; exit}') in
+        foot | footclient | kitty | Alacritty | org.wezfurlong.wezterm | com.mitchellh.ghostty | org.gnome.Console | konsole | xterm*)
+            wtype -M ctrl -M shift v -m shift -m ctrl ;;
+        "") ;;
+        *) wtype -M ctrl v -m ctrl ;;
+    esac
+}
+clip_delete() { valid_id "${1:-}"; printf '%s\t\n' "$1" | cliphist delete; rm -f -- "$RUN/clip/$1"; }
+
+emoji_type() {
+    local e=${1:-}
+    [ -n "$e" ] && [ ${#e} -le 16 ] || exit 2
+    printf '%s' "$e" | wl-copy
+    sleep 0.2
+    wtype -- "$e"
+}
+
+cmd=${1:-}
+shift || true
+case $cmd in
+    screenshot) screenshot "$@" ;;
+    screenshot-edit) screenshot_edit "${1:-}" ;;
+    record) record "$@" ;;
+    record-run) record_run "${1:-}" "${2:-}" ;;
+    colorpicker) colorpicker ;;
+    ocr) ocr ;;
+    clipboard) shell_call clipboard ;;
+    emoji) shell_call emoji ;;
+    clip-watch) clip_watch ;;
+    clip-apply) clip_apply ;;
+    clip-store) clip_store ;;
+    clip-list) clip_list ;;
+    clip-paste) clip_paste "${1:-}" ;;
+    clip-delete) clip_delete "${1:-}" ;;
+    clip-wipe) cliphist wipe; rm -rf -- "$RUN/clip" ;;
+    emoji-type) emoji_type "${1:-}" ;;
+    *) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2 ;;
+esac

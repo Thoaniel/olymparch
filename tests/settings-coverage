@@ -52,6 +52,7 @@ VIAS = {"shell", "hypr", "monitor", "idle", "audio", "cursor", "stored", "action
         "olympus"}   # olympus = Zeus, through Olympus' own CLI (olympus modell / config set)
 VIAS |= {"hyprlua", "orca", "timer"}   # own shortcuts / media keys / colour filter, the screen reader, a user timer
 VIAS |= {"nightlight", "wpprio", "gamechat"}   # display.night_light, audio.priority, audio.game_chat
+VIAS |= {"clipboard"}   # privacy.clipboard_*: olymparch-tool clip-apply (watcher restarted, or stopped and wiped)
 seen = set()
 for s in settings:
     k = s.get("key", "?")

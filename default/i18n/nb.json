@@ -62,5 +62,19 @@
   "settings.items.nostreams": "Ingen apper spiller lyd akkurat nå",
   "settings.items.nowp": "PipeWire (wpctl) er ikke installert",
   "settings.install.busy": "Installerer … (kan ta et minutt)",
-  "settings.install.failed": "Ikke installert: se /var/log/olymparch-install-app.log"
+  "settings.install.failed": "Ikke installert: se /var/log/olymparch-install-app.log",
+  "clipboard.title": "UTKLIPP",
+  "clipboard.search": "Søk i det du har kopiert …",
+  "clipboard.image": "Bilde",
+  "clipboard.off": "Utklippshistorikken er av. Slå den på i Innstillinger → Personvern.",
+  "clipboard.no_match": "Ingenting passer.",
+  "clipboard.empty": "Ingenting kopiert ennå. Det du kopierer, dukker opp her.",
+  "clipboard.keys": "Enter lim inn · Del slett · Esc lukk",
+  "clipboard.clear": "Tøm historikk",
+  "clipboard.clear_confirm": "Tømme alt? Trykk igjen",
+  "emoji.title": "EMOJI",
+  "emoji.search": "Søk etter emoji (norsk eller engelsk) …",
+  "emoji.none": "Ingen emoji passer.",
+  "emoji.recent": "nylig brukt",
+  "emoji.keys": "Enter skriv inn · Esc lukk"
 }

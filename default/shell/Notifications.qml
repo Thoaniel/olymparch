@@ -50,8 +50,10 @@ Scope {
             if (!critical && notes.muted.includes(n.appName || "")) return;   // a muted app (Settings → Notifications)
             n.tracked = true;
             // offers with buttons («Install driver», «Undo» …) stay until answered, like critical ones
-            if (!critical && n.actions.length === 0) {
-                const t = Qt.createQmlObject(`import QtQuick; Timer { interval: ${Settings.get("notifications.duration") * 1000}; running: true }`, notes);
+            // (a sender that sets its own timeout gets it even with buttons: the tools' «Edit» / «Open folder»)
+            const own = n.expireTimeout > 0 ? n.expireTimeout : 0;
+            if (!critical && (n.actions.length === 0 || own > 0)) {
+                const t = Qt.createQmlObject(`import QtQuick; Timer { interval: ${own > 0 ? Math.round(own * 1000) : Settings.get("notifications.duration") * 1000}; running: true }`, notes);
                 // the toast may be gone already (dismissed)
                 t.triggered.connect(() => { try { if (n) n.expire(); } catch (e) {} t.destroy(); });
             }
@@ -114,6 +116,17 @@ Scope {
                             maximumLineCount: 4
                             elide: Text.ElideRight
                             textFormat: Text.PlainText
+                        }
+                        Image {   // an image the sender attached (a screenshot, a colour swatch)
+                            readonly property string src: parent.parent.modelData.image || ""
+                            visible: src.length > 0 && status === Image.Ready
+                            source: src.length === 0 ? "" : src.startsWith("/") ? "file://" + src : src
+                            width: Math.min(parent.width, implicitWidth * Math.min(1, 140 / Math.max(1, implicitHeight)))
+                            height: visible ? width * implicitHeight / Math.max(1, implicitWidth) : 0
+                            fillMode: Image.PreserveAspectFit
+                            sourceSize.height: 280
+                            asynchronous: true
+                            cache: false
                         }
                         Row {   // the sender's buttons («Rydd opp», «Undo» …): the first is the main one, in gold
                             visible: parent.parent.modelData.actions.length > 0

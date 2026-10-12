@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""Builds default/shell/emoji.tsv, the emoji picker's data (Super+period), from Unicode's emoji-test.txt and the
+CLDR annotations in English and Norwegian. Run by hand when a new Unicode emoji version is out:
+
+  dev/emoji-data DIR     DIR has emoji-test.txt (unicode.org/Public/emoji/latest) and en.xml, no.xml,
+                         en-derived.xml, no-derived.xml (cldr common/annotations and common/annotationsDerived)
+
+One line per emoji (fully qualified, no skin-tone variants): emoji, group, English name, Norwegian name, and the
+search words of both languages, lower case.
+"""
+import re
+import sys
+import xml.etree.ElementTree as ET
+from pathlib import Path
+
+src = Path(sys.argv[1])
+out = Path(__file__).resolve().parent.parent / "default/shell/emoji.tsv"
+
+
+def annotations(*files):
+    names, words = {}, {}
+    for f in files:
+        for a in ET.parse(src / f).getroot().iter("annotation"):
+            cp = a.get("cp")
+            if a.get("type") == "tts":
+                names[cp] = a.text.strip()
+            else:
+                words[cp] = [w.strip() for w in a.text.split("|")]
+    return names, words
+
+
+en_name, en_words = annotations("en.xml", "en-derived.xml")
+no_name, no_words = annotations("no.xml", "no-derived.xml")
+GROUPS = {"Smileys & Emotion": "smileys", "People & Body": "people", "Animals & Nature": "nature", "Food & Drink": "food",
+          "Travel & Places": "travel", "Activities": "activities", "Objects": "objects", "Symbols": "symbols", "Flags": "flags"}
+lines, group = [], ""
+for line in (src / "emoji-test.txt").read_text().splitlines():
+    if line.startswith("# group:"):
+        group = GROUPS.get(line.split(":", 1)[1].strip(), "")
+        continue
+    m = re.match(r"^[0-9A-F ]+;\s*fully-qualified\s*#\s*(\S+)\s+E[\d.]+\s+(.*)$", line)
+    if not m or not group or re.search("[\U0001F3FB-\U0001F3FF]", m.group(1)):
+        continue
+    e = m.group(1)
+    key = e.replace("️", "")
+    name = en_name.get(e) or en_name.get(key) or m.group(2)
+    nb = no_name.get(e) or no_name.get(key) or ""
+    words = []
+    for w in en_words.get(e, en_words.get(key, [])) + no_words.get(e, no_words.get(key, [])):
+        w = w.lower()
+        if w not in words and w not in (name.lower(), nb.lower()):
+            words.append(w)
+    lines.append("\t".join(x.replace("\t", " ") for x in (e, group, name, nb, " ".join(words))))
+out.write_text("\n".join(lines) + "\n")
+print(f"{len(lines)} emoji → {out} ({out.stat().st_size // 1024} KiB)")

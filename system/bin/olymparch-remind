@@ -1,0 +1,88 @@
+#!/bin/bash
+# olymparch-remind: a notification later.
+#
+#   olymparch-remind 10m "Ta en pause"     in 10 minutes (s, m, h, d; 1h30m; a bare number is minutes)
+#   olymparch-remind 14:30 "Ring Ola"      at 14:30 (tomorrow if that has passed)
+#   olymparch-remind list                  the ones waiting: ID <tab> when <tab> text
+#   olymparch-remind cancel ID|all
+#
+# Each one is a transient systemd user timer (systemd-run --user), so it survives the shell and the menu restarting;
+# not a reboot. The text stays in ~/.local/state/olymparch/reminders/ID, never on a command line.
+set -uo pipefail
+DIR=${XDG_STATE_HOME:-$HOME/.local/state}/olymparch/reminders
+case ${LANG:-} in nb* | nn* | no*) nb=1 ;; *) nb=0 ;; esac
+L() { if [ $nb = 1 ]; then printf '%s' "$2"; else printf '%s' "$1"; fi; }
+usage() { sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+valid_id() { [[ ${1:-} =~ ^olymparch-remind-[0-9]+$ ]] || { echo "olymparch-remind: bad id: ${1:-}" >&2; exit 2; }; }
+active() { systemctl --user is-active --quiet "$1.timer"; }
+
+cmd=${1:-}
+case $cmd in
+    "" | -h | --help) usage ;;
+    list)
+        mkdir -p "$DIR"
+        found=0
+        for f in "$DIR"/olymparch-remind-*; do
+            [ -f "$f" ] || continue
+            id=${f##*/}
+            if ! active "$id"; then rm -f -- "$f"; continue; fi   # fired or lost (a reboot)
+            IFS=$'\t' read -r at text <"$f"
+            printf '%s\t%s\t%s\n' "$id" "$(date -d "@$at" '+%a %H:%M')" "$text"
+            found=1
+        done
+        [ $found = 1 ] || L "No reminders waiting." "Ingen påminnelser venter."; [ $found = 1 ] || echo
+        ;;
+    cancel)
+        target=${2:-}
+        [ -n "$target" ] || usage
+        if [ "$target" = all ]; then ids=("$DIR"/olymparch-remind-*); else valid_id "$target"; ids=("$DIR/$target"); fi
+        for f in "${ids[@]}"; do
+            [ -e "$f" ] || continue
+            id=${f##*/}
+            systemctl --user stop "$id.timer" >/dev/null 2>&1
+            rm -f -- "$f"
+            echo "$(L Cancelled Avlyst): $id"
+        done
+        ;;
+    fire)   # the timer runs this: the notification, with a button so it stays until seen
+        valid_id "${2:-}"
+        f=$DIR/$2
+        [ -f "$f" ] || exit 0
+        IFS=$'\t' read -r _ text <"$f"
+        rm -f -- "$f"
+        notify-send -a "$(L Reminder Påminnelse)" -i alarm-symbolic -A ok=OK --wait -- "$text" "" >/dev/null
+        ;;
+    *)
+        when=$cmd
+        text=${2:-$(L Reminder Påminnelse)}
+        text=${text//$'\t'/ }
+        text=${text//$'\n'/ }
+        now=$(date +%s)
+        if [[ $when =~ ^([01]?[0-9]|2[0-3]):([0-5][0-9])$ ]]; then
+            at=$(date -d "$when" +%s) || usage
+            ((at > now)) || at=$(date -d "tomorrow $when" +%s)
+        elif [[ $when =~ ^[0-9]+$ ]]; then
+            at=$((now + when * 60))
+        elif [[ $when =~ ^([0-9]+[smhd])+$ ]]; then
+            secs=0
+            while [[ $when =~ ^([0-9]+)([smhd])(.*)$ ]]; do
+                n=$((10#${BASH_REMATCH[1]}))
+                case ${BASH_REMATCH[2]} in s) secs=$((secs + n)) ;; m) secs=$((secs + n * 60)) ;; h) secs=$((secs + n * 3600)) ;; d) secs=$((secs + n * 86400)) ;; esac
+                when=${BASH_REMATCH[3]}
+            done
+            at=$((now + secs))
+        else
+            usage
+        fi
+        ((at - now >= 1 && at - now <= 30 * 86400)) || { echo "olymparch-remind: $(L 'between 1 s and 30 days' 'mellom 1 s og 30 dager')" >&2; exit 2; }
+        mkdir -p "$DIR"
+        id=olymparch-remind-$now$RANDOM
+        printf '%s\t%s\n' "$at" "$text" >"$DIR/$id"
+        if ! systemd-run --user --quiet --collect --unit="$id" --description="Olymparch reminder" \
+            --on-active="$((at - now))s" --timer-property=AccuracySec=1s -- "$(command -v olymparch-remind || echo "$0")" fire "$id"; then
+            rm -f -- "$DIR/$id"
+            exit 1
+        fi
+        echo "$(L Reminder Påminnelse) $(date -d "@$at" '+%H:%M:%S'): $text  ($id)"
+        ;;
+esac

@@ -111,6 +111,20 @@ shortcut("keys.mouse", mod, { "mouse:272", "mouse:273" }, function(m)
     hl.bind(m .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
     hl.bind(m .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 end)
+-- ── Everyday tools (olymparch-tool): screenshots, screen recording, colour picker, text from the screen (OCR),
+--    clipboard history and emoji
+local function tool(args) return function(k) hl.bind(k, hl.dsp.exec_cmd("olymparch-tool " .. args)) end end
+shortcut("keys.screenshot", "PRINT", nil, tool("screenshot region"))
+shortcut("keys.screenshot_screen", "SHIFT + PRINT", nil, tool("screenshot screen"))
+shortcut("keys.screenshot_window", mod .. " + PRINT", nil, tool("screenshot window"))
+shortcut("keys.record", mod .. " + SHIFT + R", nil, tool("record region"))
+shortcut("keys.colorpicker", mod .. " + SHIFT + C", nil, tool("colorpicker"))
+shortcut("keys.ocr", mod .. " + SHIFT + T", nil, tool("ocr"))
+shortcut("keys.clipboard", mod .. " + CTRL + V", nil, tool("clipboard"))
+shortcut("keys.emoji", mod .. " + PERIOD", nil, tool("emoji"))
+-- the screenshot editor floats in the middle
+hl.window_rule({ name = "olymparch-satty", match = { class = "^com\\.gabm\\.satty$" }, float = true, center = true })
+-- ── end everyday tools
 -- Media keys (keys.media): volume through wpctl, play/pause/next/previous through olymparch-media (playerctl, or the
 -- shell's player). hypr.lua calls olymparch_media_keys(false) when Settings turns them off, so apps get the keys.
 local media_keys = {
@@ -146,6 +160,9 @@ end)
 hl.on("hyprland.start", function()
     hl.exec_cmd("sh -c '[ \"$(olymparch-settings get accessibility.screen_reader 2>/dev/null)\" = true ] && command -v orca >/dev/null && exec orca'")
 end)
+
+-- Clipboard history (Settings → Privacy): cliphist keeps text and images; the watcher exits at once while it is off
+hl.on("hyprland.start", function() hl.exec_cmd("olymparch-tool clip-watch") end)
 
 -- Games need no launch options: every new window is traced back to its process, and a game gets gamemode
 -- (and with it spillmodus: bar hidden, do not disturb). See olymparch-game-hook.
