@@ -12,9 +12,10 @@ import Quickshell.Io
 ShellRoot {
     id: root
     readonly property color bg: "#0a0a0e"
-    readonly property color line: "#3a3644"
-    readonly property color text: "#e8e6df"
-    readonly property color muted: "#9a96a3"
+    readonly property bool highContrast: Settings.get("accessibility.high_contrast") === true   // Settings → Accessibility
+    readonly property color line: highContrast ? "#8c8799" : "#3a3644"
+    readonly property color text: highContrast ? "#ffffff" : "#e8e6df"
+    readonly property color muted: highContrast ? "#dcd9e2" : "#9a96a3"
     readonly property color gold: "#d4a73a"
     readonly property color goldHi: "#f4d35e"
     readonly property color surface: "#15151c"

@@ -163,6 +163,9 @@ for f in list((root / "default/shell").glob("*.qml")) + list((root / "default/lo
             bad(f"{f.name}: reads setting {k}, which the schema doesn't have")
 # Text size (accessibility.text_size) and high contrast only work if every font and colour goes through the theme
 for f in (root / "default/shell").glob("*.qml"):
+    if f.name != "shell.qml" and re.search(r'"#(?:9a96a3|3a3644|e8e6df)"', f.read_text(), re.I):
+        bad(f"{f.name}: a fixed text/muted/line colour; use theme.text, theme.muted or theme.line so high contrast reaches it")
+for f in (root / "default/shell").glob("*.qml"):
     for m in re.finditer(r'pixelSize: *\d', f.read_text()):
         bad(f"{f.name}: a fixed font size ({m.group(0)}…); use theme.px(N) so Settings → Text size scales it")
 for s in settings:

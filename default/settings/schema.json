@@ -547,7 +547,7 @@
       "options": [ { "value": "100", "label": { "en": "100 %", "nb": "100 %" } }, { "value": "125", "label": { "en": "125 %", "nb": "125 %" } }, { "value": "150", "label": { "en": "150 %", "nb": "150 %" } } ],
       "label": { "en": "Text size", "nb": "Tekststørrelse" }, "description": { "en": "Bar, menus and popups", "nb": "Bar, menyer og popuper" },
       "apply": { "via": "shell", "file": "~/.config/olymparch/settings.json", "key": "accessibility.text_size" } },
-    { "key": "accessibility.high_contrast", "page": "accessibility", "level": "simple", "type": "bool", "default": false, "ready": false,
+    { "key": "accessibility.high_contrast", "page": "accessibility", "level": "simple", "type": "bool", "default": false, "ready": true,
       "label": { "en": "High contrast", "nb": "Høy kontrast" }, "description": { "en": "Brighter text and lines", "nb": "Lysere tekst og linjer" },
       "apply": { "via": "shell", "file": "~/.config/olymparch/settings.json", "key": "accessibility.high_contrast" } },
     { "key": "accessibility.reduced_motion", "page": "accessibility", "level": "simple", "type": "bool", "default": false, "ready": true,
