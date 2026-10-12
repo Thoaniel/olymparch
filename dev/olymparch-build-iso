@@ -1,0 +1,13 @@
+#!/bin/bash
+# Build the Olymparch ISO as root. Installed root-owned to /usr/local/sbin and run through a NOPASSWD sudo rule.
+# It takes no arguments, so the caller cannot choose paths: the profile is always ~hades/dev/olymparch/iso and
+# the ISO lands in ~hades/dev/olymparch/out.
+set -euo pipefail
+[ $# -eq 0 ] || { echo "olymparch-build-iso tar ingen argumenter" >&2; exit 2; }
+SRC=/home/hades/dev/olymparch
+WORK=/var/tmp/olymparch-work
+OUT=$SRC/out
+rm -rf -- /var/tmp/olymparch-work
+mkdir -p "$OUT"
+mkarchiso -v -r -w "$WORK" -o "$OUT" "$SRC/iso"
+chown -R hades:hades "$OUT"
