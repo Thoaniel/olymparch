@@ -1,0 +1,5 @@
+#%PAM-1.0
+# The Olymparch lock screen: the account password through Arch's normal login stack. The number of tries before
+# a pause is set in /etc/security/faillock.conf (Olymparch: 10 tries, then 2 minutes).
+auth       include    login
+account    include    login

@@ -63,7 +63,7 @@ printf 'KEYMAP=%s\n' "$KEYMAP" >/mnt/etc/vconsole.conf   # before mkinitcpio run
 pacstrap_opts=(-K)
 [ "${OLYMPARCH_HOST_CACHE:-0}" = 1 ] && pacstrap_opts+=(-c)   # tests: reuse the package cache mounted from the host
 pacstrap "${pacstrap_opts[@]}" /mnt base "$KERNEL" mkinitcpio btrfs-progs cryptsetup limine sudo networkmanager snapper \
-    hyprland quickshell foot adwaita-cursors ttf-jetbrains-mono ttf-nerd-fonts-symbols-mono libnotify polkit \
+    hyprland hypridle quickshell foot adwaita-cursors ttf-jetbrains-mono ttf-nerd-fonts-symbols-mono libnotify polkit \
     pipewire pipewire-pulse wireplumber xdg-desktop-portal-hyprland plymouth
 
 step "Oppsett"
@@ -94,6 +94,9 @@ step "Skrivebordet (Hyprland og skallet)"
 cp -r /usr/share/olymparch /mnt/usr/share/
 install -Dm755 /usr/lib/olymparch/launch-shell /mnt/usr/lib/olymparch/launch-shell
 install -Dm644 /usr/share/olymparch/foot/foot.ini /mnt/etc/xdg/foot/foot.ini
+install -Dm644 /usr/share/olymparch/idle/olymparch-lock.pam /mnt/etc/pam.d/olymparch-lock
+# 10 tries before a 2 minute pause (Arch's default is 3 tries, then 10 minutes, for lock, sudo and tty alike)
+sed -i -E 's/^#? *deny *=.*/deny = 10/; s/^#? *unlock_time *=.*/unlock_time = 120/' /mnt/etc/security/faillock.conf
 xkb=$KEYMAP
 case $KEYMAP in no-latin1) xkb=no ;; sv-latin1) xkb=se ;; dk-latin1) xkb=dk ;; de-latin1) xkb=de ;; fr-latin1) xkb=fr ;; uk) xkb=gb ;; esac
 home=/mnt/home/$USERNAME

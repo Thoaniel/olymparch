@@ -44,6 +44,7 @@ hl.config({
         disable_splash_rendering = true,
         vrr = 2,
         focus_on_activate = false,
+        allow_session_lock_restore = true,   -- a crashed lock screen can be restarted without unlocking
     },
 })
 
@@ -56,6 +57,7 @@ hl.animation({ leaf = "workspaces", enabled = true, speed = 4, bezier = "olymp",
 local mod = "SUPER"
 hl.bind(mod .. " + RETURN", hl.dsp.exec_cmd("foot"))
 hl.bind(mod .. " + SPACE", hl.dsp.global("olymparch:launcher"))
+hl.bind(mod .. " + L", hl.dsp.exec_cmd("olymparch-lock"))
 hl.bind(mod .. " + Q", hl.dsp.window.close())
 hl.bind(mod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mod .. " + SHIFT + M", hl.dsp.exit())
@@ -77,4 +79,5 @@ hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ to
 -- The shell (bar, wallpaper) starts with the session
 hl.on("hyprland.start", function()
     hl.exec_cmd("/usr/lib/olymparch/launch-shell")
+    hl.exec_cmd("sh -c 'f=$HOME/.config/hypr/hypridle.conf; [ -f \"$f\" ] || f=/usr/share/olymparch/idle/hypridle.conf; exec hypridle -c \"$f\"'")
 end)

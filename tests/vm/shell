@@ -16,13 +16,13 @@ QMP=$O/qmp.sock
 PW='olymp-test-123'
 trap 'kill "$QPID" 2>/dev/null' EXIT
 t0=$SECONDS
-vm boot.log -virtfs local,path="$PWD/default",mount_tag=olysrc,security_model=none,readonly=on,id=src \
+vm boot.log -virtfs local,path="$PWD",mount_tag=olysrc,security_model=none,readonly=on,id=src \
     -audiodev none,id=snd0 -device ich9-intel-hda -device hda-output,audiodev=snd0
 unlock_and_desktop "$PW"
 
 # Put the shell from the repo in place and restart it
 press meta_l+ret; sleep 2
-keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/shell/. /usr/share/olymparch/shell/ && sudo cp /mnt/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -Dm644 /mnt/foot/foot.ini /etc/xdg/foot/foot.ini && hyprctl reload >/dev/null; pkill -x quickshell; echo '<2>SHELL-UPDATED' | sudo tee /dev/kmsg; exit\n" 1
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/lock /mnt/default/idle /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -Dm644 /mnt/default/foot/foot.ini /etc/xdg/foot/foot.ini && sudo install -Dm644 /mnt/default/idle/olymparch-lock.pam /etc/pam.d/olymparch-lock && sudo install -m755 /mnt/system/bin/olymparch-lock /usr/bin/ && hyprctl reload >/dev/null; pkill -x quickshell; echo '<2>SHELL-UPDATED' | sudo tee /dev/kmsg; exit\n" 1
 keys "$PW\n" 1
 wait_for 'SHELL-UPDATED' 30 || finish "FAIL · fikk ikke kopiert skallet inn"
 sleep 5
@@ -45,6 +45,19 @@ keys "wpctl set-volume @DEFAULT_AUDIO_SINK@ 65%\n" 0.6
 shot volum "Volumvisningen: 65 %"
 keys "wpctl set-mute @DEFAULT_AUDIO_SINK@ 1\n" 0.6
 shot dempet "Dempet"
+
+# The lock screen: its own process. Wrong password first, then the right one.
+press meta_l+l; sleep 2
+shot las "Super+L: låseskjermen (stillbilde av tempelet, klokke, passordboks)"
+keys "feilpassord" 0.5
+shot las-skriver "Tegnene vises som gullfirkanter"
+press ret; sleep 4
+shot las-feil "Feil passord: boksen blir rød"
+keys "$PW\n" 4
+shot las-opp "Riktig passord: skrivebordet er tilbake"
+keys "pgrep -f share/olymparch/lock >/dev/null || echo '<2>UNLOCKED' | sudo tee /dev/kmsg\n" 1
+keys "$PW\n" 1
+wait_for 'UNLOCKED' 15 || finish "FAIL · låseskjermen slapp ikke etter riktig passord"
 
 # The shell's own log on the serial console, for debugging
 keys "sudo sh -c 'tail -n 40 /home/zeus/.local/state/olymparch/shell.log | while IFS= read -r l; do echo \"<2>QS: \$l\" > /dev/kmsg; done; echo \"<2>LOG-DONE\" > /dev/kmsg'\n" 1

@@ -1,0 +1,7 @@
+#!/bin/bash
+# Lock the screen with the Olymparch lock (its own small Quickshell process). Does nothing if already locked.
+state=${XDG_STATE_HOME:-$HOME/.local/state}/olymparch
+mkdir -p "$state"
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/olymparch-lock.lock"
+flock -n 9 || exit 0   # the lock is held for as long as the lock screen runs
+exec env QS_NO_RELOAD_POPUP=1 QS_DISABLE_FILE_WATCHER=1 quickshell -p /usr/share/olymparch/lock >>"$state/lock.log" 2>&1
