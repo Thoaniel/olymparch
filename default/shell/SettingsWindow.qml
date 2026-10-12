@@ -288,6 +288,8 @@ Scope {
                         Text {
                             visible: !search.text
                             anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width
+                            elide: Text.ElideMiddle   // at large text sizes: "⌕ Søk i … Ctrl+F" keeps the shortcut
                             text: I18n.t("settings.search", "⌕ Search everything · Ctrl+F")
                             font: search.font
                             color: win.theme.muted
