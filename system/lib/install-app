@@ -11,7 +11,6 @@ case $1 in
     # Settings rows that need a program Olymparch doesn't install (official Arch repositories only)
     nightlight) pkgs=(hyprsunset) ;;   # display.night_light
     tailscale) pkgs=(tailscale) ;;     # network.tailscale
-    firewall) pkgs=(nftables) ;;       # network.firewall
     *) echo "install-app: ukjent app" >&2; exit 2 ;;
 esac
 exec </dev/null 9>/run/olymparch-install-app.lock

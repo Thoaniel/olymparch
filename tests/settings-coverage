@@ -329,7 +329,7 @@ for s in settings:
             bad(f"{s['key']}: «unless» is for install rows (pkexec /usr/lib/olymparch/install-app APP)")
         if not any(o.get("needs") == s["unless"] for o in settings):
             bad(f"{s['key']}: installs {s['unless']}, but no setting needs it")
-for k, prog in (("display.night_light", "hyprsunset"), ("network.tailscale", "tailscale"), ("network.firewall", "nft")):
+for k, prog in (("display.night_light", "hyprsunset"), ("network.tailscale", "tailscale")):
     if keys.get(k, {}).get("needs") != prog or not any(o.get("unless") == prog for o in settings):
         bad(f"{k}: must need {prog} and have an «Install» row (unless: {prog})")
 with tempfile.TemporaryDirectory() as home:
@@ -354,6 +354,16 @@ proton = (root / "system/bin/olymparch-proton").read_text()
 orders = set(re.findall(r'^    "([a-z-]+)": \[', proton, re.M))
 if orders != {o["value"] for o in keys["games.crash_order"]["options"]}:
     bad("games.crash_order: the options must be exactly olymparch-proton's ORDERS")
+probe = ("import sys; from importlib.machinery import SourceFileLoader as L; "
+         "print(','.join(L('p', sys.argv[1]).load_module().crash_order()))")
+for v, want in (("ge-valve-experimental", "GE-Proton,default,proton_experimental"), ("rm -rf", "default,GE-Proton,proton_experimental")):
+    with tempfile.TemporaryDirectory() as home:
+        Path(home, "olymparch").mkdir()
+        Path(home, "olymparch/settings.json").write_text(json.dumps({"games.crash_order": v}))
+        r = subprocess.run([sys.executable, "-I", "-c", probe, str(root / "system/bin/olymparch-proton")], capture_output=True, text=True,
+                           env=dict(os.environ, XDG_CONFIG_HOME=home, OLYMPARCH_SHARE=home))
+        if r.stdout.strip() != want:
+            bad(f"olymparch-proton: games.crash_order {v!r} should try {want}, got {r.stdout.strip() or r.stderr.strip()}")
 
 # ── Norwegian for every string the shell shows
 nb = json.loads((root / "default/i18n/nb.json").read_text())

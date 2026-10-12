@@ -344,7 +344,7 @@ search display.colorspace
 shot dev-fargerom "Skjermer (avansert): fargerom Bred (BT.2020), HDR, hovedskjerm for spill = Virtual-1"
 close_settings
 keys "clear; olymparch-settings set display.colorspace@Virtual-1 srgb; clear\n" 2
-# night light, Tailscale and the firewall: hidden until installed, offered with one click (install-app), then on/off
+# night light and Tailscale: hidden until installed, offered with one click (install-app), then on/off
 check nightlight-offered 'command -v hyprsunset || (olymparch-settings missing | grep -q display.night_light && ! olymparch-settings missing | grep -q display.night_light_install)'
 keys "clear; olymparch-settings open display\n" 2.5
 search nattlys
@@ -365,18 +365,17 @@ search nattlys
 shot dev-nattlys-pa "Nattlys installert og på (hyprsunset kjører; varmere 20–07)"
 close_settings
 check nightlight-off 'olymparch-settings set display.night_light off && sleep 1 && ! pgrep -x hyprsunset'
-keys "clear; olymparch-settings run network.tailscale_install; olymparch-settings run network.firewall_install; echo '$PW' | sudo -S chmod 666 /dev/kmsg; echo '<2>INSTALLS-DONE' > /dev/kmsg; clear\n" 1
+keys "clear; olymparch-settings run network.tailscale_install; echo '$PW' | sudo -S chmod 666 /dev/kmsg; echo '<2>INSTALLS-DONE' > /dev/kmsg; clear\n" 1
 wait_for 'INSTALLS-DONE' 400
 check tailscale 'command -v tailscale && olymparch-settings set network.tailscale on && systemctl is-active -q tailscaled && olymparch-settings set network.tailscale off && ! systemctl is-active -q tailscaled'
-check firewall 'command -v nft && olymparch-settings set network.firewall on && systemctl is-active -q nftables && olymparch-settings set network.firewall off && ! systemctl is-active -q nftables'
 keys "clear; olymparch-settings open network\n" 2.5
 search tailscale
-shot dev-nett "Nett: Tailscale og brannmur installert med ett klikk, og av/på"
+shot dev-nett "Nett: Tailscale installert med ett klikk, og av/på"
 close_settings
 # volume per app: a silent stream shows up in the list, − turns it down; Game/Chat outputs come and go
 keys "clear; paplay --raw /dev/zero & p=\$!; sleep 2; clear\n" 3
 check per-app-list 'olymparch-settings items audio.per_app | grep -q paplay'
-check per-app-down 'id=$(olymparch-settings items audio.per_app | awk -F"\t" "/paplay/ {print \$1; exit}"); olymparch-settings pick audio.per_app "$id" down && wpctl get-volume "$id" | grep -q "0.95"'
+check per-app-down 'id=$(olymparch-settings items audio.per_app | grep paplay | cut -f1 | head -n 1); olymparch-settings pick audio.per_app "$id" down && wpctl get-volume "$id" | grep -q "0.95"'
 check per-app-refuses 'olymparch-settings pick audio.per_app "1;id" up; [ $? = 2 ]'
 keys "clear; olymparch-settings open audio\n" 2.5
 search audio.per_app
@@ -409,7 +408,7 @@ press ret; sleep 2
 shot dev-cpu "Strøm: CPU-grenser (driver, governor, boost, område)"
 close_settings
 # games: the order after a crash is what olymparch-proton walks
-check crash-order 'olymparch-settings set games.crash_order ge-valve-experimental && python3 -c "from importlib.machinery import SourceFileLoader as L; assert L(\"p\", \"/usr/bin/olymparch-proton\").load_module().crash_order()[0] == \"GE-Proton\"" && ! olymparch-settings set games.crash_order proton'
+check crash-order 'olymparch-settings set games.crash_order ge-valve-experimental && [ "$(olymparch-settings get games.crash_order)" = ge-valve-experimental ] && ! olymparch-settings set games.crash_order proton'
 keys "clear; olymparch-settings open games\n" 2.5
 search crash
 shot dev-krasj "Spill: rekkefølge ved krasj = GE → Valve → Experimental"
