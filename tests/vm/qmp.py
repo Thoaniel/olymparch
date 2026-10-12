@@ -68,6 +68,23 @@ if __name__ == "__main__":
         for down in (True, False):
             q.cmd("input-send-event", events=[{"type": "btn", "data": {"down": down, "button": "left"}}])
             time.sleep(0.1)
+    elif op == "drag":   # drag X0 Y0 X1 Y1 W H: press at X0,Y0, move in steps, let go at X1,Y1 (needs usb-tablet)
+        x0, y0, x1, y1, w, h = (int(v) for v in sys.argv[3:9])
+        def to(x, y):
+            q.cmd("input-send-event", events=[{"type": "abs", "data": {"axis": "x", "value": x * 32767 // (w - 1)}},
+                                              {"type": "abs", "data": {"axis": "y", "value": y * 32767 // (h - 1)}}])
+            time.sleep(0.05)
+        to(x0, y0)
+        time.sleep(0.3)
+        q.cmd("input-send-event", events=[{"type": "btn", "data": {"down": True, "button": "left"}}])
+        for i in range(1, 11):
+            to(x0 + (x1 - x0) * i // 10, y0 + (y1 - y0) * i // 10)
+        time.sleep(0.2)
+        q.cmd("input-send-event", events=[{"type": "btn", "data": {"down": False, "button": "left"}}])
+    elif op == "move":   # move X Y W H: the pointer only
+        x, y, w, h = (int(v) for v in sys.argv[3:7])
+        q.cmd("input-send-event", events=[{"type": "abs", "data": {"axis": "x", "value": x * 32767 // (w - 1)}},
+                                          {"type": "abs", "data": {"axis": "y", "value": y * 32767 // (h - 1)}}])
     elif op == "device_add":  # device_add DRIVER ID [BUS]
         args = {"driver": sys.argv[3], "id": sys.argv[4]}
         if len(sys.argv) > 5:

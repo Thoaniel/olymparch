@@ -980,6 +980,13 @@ appliers["gamechat"] = function(s, values, key)
     os.execute("systemctl --user restart pipewire.service pipewire-pulse.service wireplumber.service >/dev/null 2>&1")
 end
 
+-- ── clipboard history (privacy.clipboard_history, privacy.clipboard_max): olymparch-tool restarts the watcher with
+--    the new limit, or stops it and wipes the history. It reads both values from settings.json itself.
+appliers["clipboard"] = function(s, values, key)
+    if have("olymparch-tool") then os.execute("olymparch-tool clip-apply >/dev/null 2>&1") end
+end
+-- ── end clipboard history
+
 local function apply(key, values, override)
     local s = entry(key)
     local fn = appliers[s.apply.via] or die("no way to apply " .. s.apply.via)

@@ -1,0 +1,19 @@
+# Satty, the screenshot editor (olymparch-tool screenshot-edit; «Edit» in the screenshot notification).
+# Your own ~/.config/satty/config.toml wins over this one.
+[general]
+early-exit = false
+initial-tool = "arrow"
+copy-command = "wl-copy"
+annotation-size-factor = 1.5
+# Enter: copy and save over the screenshot, then close. Ctrl+S saves, Ctrl+C copies.
+actions-on-enter = ["save-to-clipboard", "save-to-file", "exit"]
+save-after-copy = false
+default-hide-toolbars = false
+
+[font]
+family = "JetBrains Mono"
+style = "Bold"
+
+# gold first (Olymparch), then the usual signal colours
+[color-palette]
+palette = ["#d4a73a", "#e0605e", "#4fb3e8", "#5ec27a", "#e8e6df", "#0a0a0e"]

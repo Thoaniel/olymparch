@@ -161,10 +161,17 @@ mkdir -p /mnt/etc
 printf 'KEYMAP=%s\n' "$KEYMAP" >/mnt/etc/vconsole.conf   # before mkinitcpio runs, so the LUKS prompt has the layout
 pacstrap_opts=(-K)
 [ "${OLYMPARCH_HOST_CACHE:-0}" = 1 ] && pacstrap_opts+=(-c)   # tests: reuse the package cache mounted from the host
+# ── everyday tools (olymparch-tool, olymparch-remind): screenshots + editor, screen recording (hardware encoding;
+#    wf-recorder for machines without an encoder), colour picker, OCR in English and Norwegian, clipboard history,
+#    typing emoji (and the font to show them)
+tools_pkgs=(wl-clipboard cliphist grim slurp satty hyprpicker gpu-screen-recorder wf-recorder
+    tesseract tesseract-data-eng tesseract-data-nor wtype noto-fonts-emoji)
+# ── end everyday tools
 pacstrap "${pacstrap_opts[@]}" /mnt base "$KERNEL" mkinitcpio btrfs-progs cryptsetup limine sudo networkmanager snapper \
     hyprland hypridle quickshell foot adwaita-cursors ttf-jetbrains-mono ttf-nerd-fonts-symbols-mono libnotify polkit \
     pipewire pipewire-pulse wireplumber xdg-desktop-portal-hyprland plymouth upower \
-    firefox thunar tumbler gvfs gvfs-mtp gvfs-gphoto2 thunar-volman imv mpv xdg-utils xdg-user-dirs udiskie udisks2 clamav pacman-contrib fakeroot
+    firefox thunar tumbler gvfs gvfs-mtp gvfs-gphoto2 thunar-volman imv mpv xdg-utils xdg-user-dirs udiskie udisks2 clamav pacman-contrib fakeroot \
+    "${tools_pkgs[@]}"
 
 # --- Hardware (olymparch-hw): the live system is the same machine, so its plan is the new system's plan.
 # Drivers, microcode and only the firmware this machine needs, the initramfs MODULES for a built-in keyboard,

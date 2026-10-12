@@ -116,6 +116,23 @@ Row {
     readonly property bool privacyIndicator: Settings.get("privacy.indicator") !== false
     Cell { visible: status.micInUse && status.privacyIndicator; icon: "\u{F036C}"; alert: true }
     Cell { visible: status.camInUse && status.privacyIndicator; icon: "\u{F0100}"; alert: true }
+    // ── screen recording (olymparch-tool record, Super+Shift+R): red with the time; a click stops it
+    Cell {
+        id: recCell
+        visible: Tools.recording
+        icon: "\u{F04DB}"   // a square: stop
+        property int secs: 0
+        label: `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`
+        labelChars: 5
+        alert: true
+        clickable: true
+        onClicked: Tools.stopRecording()
+        Timer {
+            running: Tools.recording
+            interval: 1000; repeat: true; triggeredOnStart: true
+            onTriggered: recCell.secs = Math.max(0, Math.round((Date.now() - Tools.recordingSince.getTime()) / 1000))
+        }
+    }
     Cell {
         visible: zeusCheck.installed && Settings.get("zeus.enabled") !== false
         icon: ""

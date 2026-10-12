@@ -167,4 +167,7 @@ ShellRoot {
     Media {}   // the media keys without playerctl (olymparch-media → qs ipc call media …)
     Osd { theme: root }
     SettingsWindow { theme: root }
+    // ── everyday tools (olymparch-tool): clipboard history (Super+Ctrl+V) and emoji (Super+period)
+    Clipboard { theme: root }
+    Emoji { theme: root }
 }
