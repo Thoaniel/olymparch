@@ -343,7 +343,7 @@
       "label": { "en": "Register automatically", "nb": "Registrer automatisk" }, "description": { "en": "At login: the server and the Olymparch skills are added to the agents that are installed. Off removes what was added", "nb": "Ved innlogging: serveren og Olymparch-ferdighetene legges til agentene som er installert. Av fjerner det som ble lagt til" },
       "apply": { "via": "mcp", "command": "olymparch-mcp apply" } },
     { "key": "ai.blocked_clients", "page": "ai", "level": "simple", "type": "list", "widget": "items", "default": [], "ready": true,
-      "label": { "en": "Clients", "nb": "Klienter" }, "description": { "en": "Agents that are registered or have connected; click one to block or allow it. The name is what the agent says it is", "nb": "Agenter som er registrert eller har koblet til; klikk en for å blokkere eller tillate den. Navnet er det agenten sier selv" },
+      "label": { "en": "Clients", "nb": "Klienter" }, "description": { "en": "Agents that have connected; click one to block or allow it. The name is what the agent says it is", "nb": "Agenter som har koblet til; klikk en for å blokkere eller tillate den. Navnet er det agenten sier selv" },
       "apply": { "via": "stored", "file": "~/.config/olymparch/settings.json", "key": "ai.blocked_clients" } },
     { "key": "ai.grants", "page": "ai", "level": "simple", "type": "list", "widget": "items", "default": [], "ready": true,
       "label": { "en": "Always allowed", "nb": "Alltid tillatt" }, "description": { "en": "What you answered «Always» to, per client and tool; click one to take it back", "nb": "Det du svarte «Alltid» på, per klient og verktøy; klikk en for å trekke den tilbake" },

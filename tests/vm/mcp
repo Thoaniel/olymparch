@@ -102,11 +102,11 @@ shot innstillinger-sok "Søk: «alltid tillatt»"
 press ret; sleep 0.8
 press ret; sleep 2
 shot innstillinger-trukket "Enter på vm-test@stdio → notification_send: trukket tilbake (listen er tom)"
-press ctrl+f; keys "logg" 1
+press ctrl+f; press ctrl+a; keys "logg" 1
 press ret; sleep 0.5
 press ret; sleep 3
 shot innstillinger-logg "Logg: siste kall med klient, verktøy, svar og resultat"
-press ctrl+f; keys "per verktøy" 1
+press ctrl+f; press ctrl+a; keys "per verktøy" 1
 press ret; sleep 1.5
 shot innstillinger-policy "Per verktøy (avansert): Spør / Alltid / Aldri"
 press esc; press meta_l+comma; sleep 2   # the shortcut closes Settings whatever has the keyboard

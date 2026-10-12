@@ -95,7 +95,7 @@ Scope {
                     readonly property color accent: sensitive ? mcp.theme.red : mcp.theme.gold
                     readonly property int remaining: Math.max(0, Math.ceil(mcp.seconds - (mcp.now - modelData.started) / 1000))
                     property bool armed: false
-                    Timer { interval: 900; running: true; onTriggered: card.armed = true }
+                    Timer { interval: 1200; running: true; onTriggered: card.armed = true }
                     width: cards.width
                     height: body.implicitHeight + 28
                     color: mcp.theme.bg
