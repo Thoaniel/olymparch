@@ -91,7 +91,8 @@ screenshot_edit() {
     [ -f "$file" ] || { echo "screenshot-edit: no such file: $file" >&2; exit 2; }
     local conf=/usr/share/olymparch/apps/satty.toml
     [ -f "$HOME/.config/satty/config.toml" ] && conf=$HOME/.config/satty/config.toml
-    GTK_THEME=${GTK_THEME:-Adwaita:dark} exec satty --config "$conf" --filename "$file" --output-filename "$file"
+    # dark like the rest (libadwaita ignores GTK_THEME)
+    ADW_DEBUG_COLOR_SCHEME=${ADW_DEBUG_COLOR_SCHEME:-prefer-dark} GTK_THEME=${GTK_THEME:-Adwaita:dark} exec satty --config "$conf" --filename "$file" --output-filename "$file"
 }
 
 # ── screen recording: one at a time; the state file holds the recorder's PID and the file

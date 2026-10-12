@@ -123,7 +123,7 @@ shortcut("keys.ocr", mod .. " + SHIFT + T", nil, tool("ocr"))
 shortcut("keys.clipboard", mod .. " + CTRL + V", nil, tool("clipboard"))
 shortcut("keys.emoji", mod .. " + PERIOD", nil, tool("emoji"))
 -- the screenshot editor floats in the middle
-hl.window_rule({ name = "olymparch-satty", match = { class = "^com\\.gabm\\.satty$" }, float = true, center = true })
+hl.window_rule({ name = "olymparch-satty", match = { class = "^com\\.gabm\\.satty$" }, float = true, center = true, size = "monitor_w*0.72 monitor_h*0.78" })
 -- ── end everyday tools
 -- Media keys (keys.media): volume through wpctl, play/pause/next/previous through olymparch-media (playerctl, or the
 -- shell's player). hypr.lua calls olymparch_media_keys(false) when Settings turns them off, so apps get the keys.

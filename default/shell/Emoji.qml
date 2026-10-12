@@ -39,10 +39,21 @@ Scope {
             return first.concat(all.filter(x => !recent.includes(x.e)));
         }
         const words = q.split(/\s+/);
-        const hits = all.filter(x => words.every(w => x.hay.includes(w)));
-        // names that start with the search first
-        const starts = x => x.en.toLowerCase().startsWith(words[0]) || x.nb.toLowerCase().startsWith(words[0]);
-        return hits.filter(starts).concat(hits.filter(x => !starts(x)));
+        // best first: the name is the search, then a whole word of a name, then a search word, then the rest;
+        // within each, the shorter (plainer) name first: «hjerte» gives ❤️ «rødt hjerte» before 💘 «hjerte med pil»
+        const score = x => {
+            const names = [x.en.toLowerCase(), x.nb.toLowerCase()];
+            if (names.includes(q)) return 0;
+            const whole = new RegExp(`(^|[\\s:,])${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[\\s:,])`);
+            const len = Math.min(x.nb.length || x.en.length, 40) / 100;
+            if (names.some(n => whole.test(n))) return 1 + len;
+            if (whole.test(x.hay)) return 2 + len;
+            return 3 + len;
+        };
+        return all.filter(x => words.every(w => x.hay.includes(w)))
+            .map((x, i) => ({ x: x, s: score(x), i: i }))
+            .sort((a, b) => a.s - b.s || a.i - b.i)
+            .map(o => o.x);
     }
     readonly property var current: shown[grid.currentIndex] || null
     function choose(i) {
@@ -70,8 +81,8 @@ Scope {
         Rectangle {
             id: panel
             readonly property int cols: 12
-            width: cols * picker.cell + 24
-            height: 64 + picker.cell * 6 + 12 + footer.height
+            width: cols * picker.cell + 28
+            height: 56 + picker.cell * 6 + 4 + footer.height   // six whole rows
             anchors.horizontalCenter: parent.horizontalCenter
             y: parent.height * 0.18
             color: picker.theme.surface

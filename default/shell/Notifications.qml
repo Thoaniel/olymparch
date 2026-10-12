@@ -41,6 +41,7 @@ Scope {
     NotificationServer {
         id: server
         keepOnReload: true
+        imageSupported: true   // images senders attach (the tools: a screenshot, a colour swatch)
         actionsSupported: true
         bodySupported: true
         onNotification: n => {
@@ -51,7 +52,7 @@ Scope {
             n.tracked = true;
             // offers with buttons («Install driver», «Undo» …) stay until answered, like critical ones
             // (a sender that sets its own timeout gets it even with buttons: the tools' «Edit» / «Open folder»)
-            const own = n.expireTimeout > 0 ? n.expireTimeout : 0;
+            const own = n.expireTimeout > 600 ? n.expireTimeout / 1000 : n.expireTimeout > 0 ? n.expireTimeout : 0;   // s (ms from some servers)
             if (!critical && (n.actions.length === 0 || own > 0)) {
                 const t = Qt.createQmlObject(`import QtQuick; Timer { interval: ${own > 0 ? Math.round(own * 1000) : Settings.get("notifications.duration") * 1000}; running: true }`, notes);
                 // the toast may be gone already (dismissed)

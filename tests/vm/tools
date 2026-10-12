@@ -29,7 +29,8 @@ python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/size.ppm"
 read -r W H < <(head -c 20 "$O/size.ppm" | tr -s '\n' ' ' | awk '{print $2, $3}')
 drag() { python3 -I tests/vm/qmp.py "$QMP" drag "$1" "$2" "$3" "$4" "$W" "$H"; sleep "${5:-1}"; }
 click() { python3 -I tests/vm/qmp.py "$QMP" click "$1" "$2" "$W" "$H"; sleep "${3:-1}"; }
-work() { python3 -I tests/vm/qmp.py "$QMP" move $((W / 4)) $((H / 2)) "$W" "$H"; sleep 0.5; }   # focus follows the mouse
+# the work terminal (left) gets the keyboard: the pointer there, and Super+Left
+work() { python3 -I tests/vm/qmp.py "$QMP" move $((W / 4)) $((H / 2)) "$W" "$H"; sleep 0.3; press meta_l+left; sleep 0.3; }
 ok=()
 fail=()
 check() {  # check NAME MARKER SECONDS: the VM echoed MARKER to the serial console
