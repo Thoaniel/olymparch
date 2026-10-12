@@ -14,9 +14,10 @@ hardware tests on real machines are done.
   hibernation on laptops.
 - **Boot** – a styled Limine menu and an animated Plymouth screen; unlocking the disk flows straight into the
   desktop.
-- **Desktop** – Hyprland, a bar, an app launcher (Super+Space), notifications with action buttons, a volume
-  display, its own lock screen (Super+L, and after 10 minutes idle) and an animated wallpaper that pauses when
-  windows cover it or a game runs.
+- **Desktop** – Hyprland, a bar (now playing, microphone/camera in use, network, volume, battery on laptops, do
+  not disturb, clock), an app launcher (Super+Space), notifications with action buttons, a volume display, its own
+  lock screen (Super+L, and after 10 minutes idle) and an animated wallpaper that pauses when windows cover it
+  or a game runs.
 - **Settings** (Super+comma) – one window for everything, with a simple and an advanced view. Every setting is
   remembered. The same settings are available on the command line: `olymparch-settings`.
 - **Snapshots** – btrfs + snapper. Every package change makes a snapshot, and the boot menu lists them, so a
@@ -26,7 +27,11 @@ hardware tests on real machines are done.
 - **Games** – Steam, Heroic and emulators as installer options; game mode and the right Proton version for every
   game automatically; MangoHud ready but hidden (Shift+F12).
 - **Events** – downloads are virus-checked, archives unpack with one click, USB disks mount with a notification,
-  a nearly full disk offers a cleanup that shows what it frees before anything is deleted.
+  phones and cameras show up in the file manager, sound moves to a headset when it is plugged in, a nearly full
+  disk offers a cleanup that shows what it frees before anything is deleted, and you are warned when something
+  runs too hot. Laptops switch to power saving below 20 %.
+- **Zeus** (optional) – the local AI assistant [Olympus](https://github.com/Thoaniel/olympus). The installer adds
+  it; the first login offers its setup, which asks before downloading a model.
 
 Hardware: AMD and Intel graphics on desktops and laptops. NVIDIA (including hybrid laptops) and laptops in
 general are beta. No dual boot in v1, and Secure Boot must be off.
@@ -54,7 +59,7 @@ general are beta. No dual boot in v1, and Secure Boot must be off.
 | `olymparch-settings` | Read and change settings |
 | `olymparch-hw` | Show detected hardware and offered drivers |
 | `olymparch-cleanup` | Free disk space, asking per item |
-| `olymparch-doctor` | Health check |
+| `olymparch doctor` | Health check |
 
 ## Repository
 
@@ -75,7 +80,8 @@ Everything runs as a normal user (no sudo): the tools come as verified Arch pack
 ```sh
 dev/fetch-tools          # once: QEMU, OVMF, archiso, …
 dev/build-iso            # → out/olymparch-*.iso
-tests/vm/install-disk    # install the ISO into a VM and boot it
+tests/ci-checks          # syntax, shellcheck, settings coverage, hardware rules (no VM)
+tests/vm/all             # every VM test, one VM at a time
 ```
 
 Other tests reuse an installed disk: `OLYMPARCH_BASE=<dir with disk.qcow2 + vars.fd> tests/vm/<test>`.
@@ -84,4 +90,6 @@ Each test writes screenshots, `steps.txt` and `result.txt` to `tests/vm/out/<tes
 
 ## Privacy
 
-No telemetry. Zeus runs locally and changes settings only after you approve. Bugs and ideas: GitHub Issues.
+No telemetry. Zeus runs locally and changes settings only after you approve. The camera indicator sees cameras
+used through PipeWire (browsers on Wayland, portals); an app that opens `/dev/video*` directly is not seen.
+Bugs and ideas: GitHub Issues.
