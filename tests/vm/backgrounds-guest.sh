@@ -33,6 +33,7 @@ user)
 remember)
     olymparch-theme set hades >/dev/null; olymparch-theme background set styx >/dev/null
     olymparch-theme set zeus >/dev/null; olymparch-theme background set summit >/dev/null
+    olymparch-settings reset appearance.background@athena >/dev/null   # never chosen: a theme starts on the temple
     olymparch-theme set athena >/dev/null; a0=$(olymparch-theme background current)
     olymparch-theme set hades >/dev/null; a=$(olymparch-theme background current)
     w=$(grep -o '"background": "[^"]*"' ~/.config/olymparch/theme/theme.json)
