@@ -1,0 +1,69 @@
+#!/bin/bash
+# «Zeus-appen» (one button in Settings → Zeus and in the menu): get the Zeus phone app ready on this PC, so the
+# phone offers the update the next time the app opens (Olympus serves ~/.olympus/app/zeus.apk + version.json).
+#   1. This PC can build it (the Olympus source, the Android SDK and your own signing key): it is built and published.
+#   2. Otherwise the newest signed release is downloaded from GitHub (Thoaniel/olympus) and checked.
+# The signing key never leaves your PC; Android itself refuses an update signed with another key.
+#   olymparch-zeus-app [build|download|status]
+set -euo pipefail
+case ${LANG:-} in nb*|nn*|no*) nb=1 ;; *) nb=0 ;; esac
+t() { if [ $nb = 1 ]; then printf '%s' "$2"; else printf '%s' "$1"; fi; }
+
+src=${OLYMPUS_SRC:-$HOME/dev/olympus}
+keydir=$HOME/.local/share/olympus-android
+dest=$HOME/.olympus/app
+repo=Thoaniel/olympus
+
+can_build() {
+    [ -x "$src/scripts/build_app.sh" ] && [ -f "$keydir/release.jks" ] && [ -f "$keydir/password" ] || return 1
+    local sdk=${ANDROID_HOME:-}
+    [ -n "$sdk" ] || sdk=$(sed -n 's/^sdk\.dir=//p' "$src/zeus-app/local.properties" 2>/dev/null)
+    [ -n "$sdk" ] && [ -d "$sdk/build-tools" ] && command -v java >/dev/null
+}
+
+current() { [ -f "$dest/version.json" ] && sed -n 's/.*"name": *"\([^"]*\)".*/\1/p' "$dest/version.json" || true; }
+
+build() {
+    echo "$(t "Building the Zeus app from $src …" "Bygger Zeus-appen fra $src …")"
+    nice -n 10 "$src/scripts/build_app.sh"
+}
+
+download() {
+    command -v curl >/dev/null || { echo "$(t "curl is missing" "curl mangler")" >&2; exit 1; }
+    local api tmp json name apk_url sum_url ver_url
+    api=https://api.github.com/repos/$repo/releases/latest
+    json=$(curl -fsSL --max-time 30 -H 'Accept: application/vnd.github+json' "$api") || {
+        echo "$(t "No released Zeus app on GitHub yet ($repo). Build it on the PC that has the signing key." \
+                  "Ingen utgitt Zeus-app på GitHub ennå ($repo). Bygg den på PC-en som har signeringsnøkkelen.")" >&2; exit 1; }
+    # a release carries zeus.apk, version.json and SHA256SUMS (made by the PC that signs it)
+    asset() { printf '%s' "$json" | tr ',' '\n' | sed -n "s|.*\"browser_download_url\": *\"\(https://github.com/$repo/releases/download/[^\"]*/$1\)\".*|\1|p" | head -n 1; }
+    apk_url=$(asset zeus.apk); ver_url=$(asset version.json); sum_url=$(asset SHA256SUMS)
+    [ -n "$apk_url" ] && [ -n "$ver_url" ] && [ -n "$sum_url" ] || {
+        echo "$(t "The newest release has no zeus.apk/version.json/SHA256SUMS." "Den nyeste utgivelsen mangler zeus.apk/version.json/SHA256SUMS.")" >&2; exit 1; }
+    mkdir -p "$dest"
+    tmp=$(mktemp -d "$dest/.download.XXXXXX")
+    trap '[ -n "${tmp:-}" ] && rm -rf -- "$tmp"' EXIT
+    for u in "$apk_url" "$ver_url" "$sum_url"; do
+        curl -fsSL --max-time 300 --max-filesize 200000000 -o "$tmp/${u##*/}" "$u"
+    done
+    (cd "$tmp" && grep -E ' \*?(zeus\.apk|version\.json)$' SHA256SUMS | sha256sum -c --quiet -) || {
+        echo "$(t "Checksum mismatch: nothing was changed." "Sjekksummen stemmer ikke: ingenting er endret.")" >&2; exit 1; }
+    grep -qE '^\{"code": *[0-9]+, *"name": *"[0-9A-Za-z._-]+"\}$' "$tmp/version.json" || {
+        echo "$(t "version.json is not valid." "version.json er ikke gyldig.")" >&2; exit 1; }
+    mv -f -- "$tmp/zeus.apk" "$dest/zeus.apk"
+    mv -f -- "$tmp/version.json" "$dest/version.json"
+    name=$(current)
+    echo "$(t "Zeus $name downloaded: the phone offers it the next time the app opens." \
+              "Zeus $name lastet ned: telefonen tilbyr den neste gang appen åpnes.")"
+}
+
+case ${1:-auto} in
+    auto) if can_build; then build; else download; fi ;;
+    build) can_build || { echo "$(t "This PC can't build the app (source, SDK or signing key missing)." "Denne PC-en kan ikke bygge appen (kildekode, SDK eller signeringsnøkkel mangler).")" >&2; exit 1; }; build ;;
+    download) download ;;
+    status)
+        name=$(current)
+        echo "$(t "On this PC: " "På denne PC-en: ")${name:-$(t none ingen)}"
+        if can_build; then echo "$(t "Can build: yes" "Kan bygge: ja")"; else echo "$(t "Can build: no (downloads the release instead)" "Kan bygge: nei (laster ned utgivelsen i stedet)")"; fi ;;
+    *) echo "usage: olymparch-zeus-app [build|download|status]" >&2; exit 2 ;;
+esac
