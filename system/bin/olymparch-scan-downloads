@@ -3,7 +3,9 @@
 # that can do harm, at low priority. A notification when something is found, and also when the check itself
 # fails, so a silent result always means "checked and clean".
 set -uo pipefail
-dir=$(xdg-user-dir DOWNLOAD 2>/dev/null || echo "$HOME/Downloads")
+# Same folder the path unit watches. xdg-user-dir answers $HOME itself when no folder is set up.
+dir=$(xdg-user-dir DOWNLOAD 2>/dev/null)
+[ -n "$dir" ] && [ "${dir%/}" != "${HOME%/}" ] || dir=$HOME/Downloads
 state=${XDG_STATE_HOME:-$HOME/.local/state}/olymparch/downloads.seen
 mkdir -p "${state%/*}"
 [ -e "$state" ] || touch -d @0 "$state"
