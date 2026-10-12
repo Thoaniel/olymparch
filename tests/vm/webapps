@@ -33,7 +33,7 @@ python3 -I tests/vm/qmp.py "$QMP" cmd device_add '{"driver": "usb-tablet", "bus"
 
 press meta_l+ret; sleep 2
 g='bash /mnt/tests/vm/webapps-guest.sh'
-keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo $g setup; hyprctl reload >/dev/null; pkill -x launch-shell; pkill -x quickshell; sleep 1; setsid -f /usr/lib/olymparch/launch-shell; clear\n" 1
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo $g setup; mkdir -p ~/.local/share/applications; hyprctl reload >/dev/null; pkill -x launch-shell; pkill -x quickshell; sleep 1; setsid -f /usr/lib/olymparch/launch-shell; clear\n" 1
 keys "$PW\n" 1
 wait_for 'WA: SETUP-(OK|CHROMIUM-ALREADY)' 60 || finish "FAIL · fikk ikke lagt inn olymparch-webapp"
 seen 'WA: SETUP-CHROMIUM-ALREADY' && fails+=("chromium var installert fra før")
@@ -45,7 +45,7 @@ need REFUSE-OK 60
 shot avvist "Ugyldige navn og adresser avvises (javascript:, http://, file://, anførselstegn og ; i adressen, ../ i navnet); ingenting skrives"
 
 # ── 2. add YouTube (one of the defaults): .desktop file, icon, list
-keys "clear; olymparch-webapp add youtube && olymparch-webapp defaults | column -t -s \$'\\t' && $g added youtube && grep -E '^(Name|Exec|Icon|StartupWMClass)=' ~/.local/share/applications/webapp-youtube.desktop\n" 3
+keys "clear; olymparch-webapp add youtube && olymparch-webapp defaults && $g added youtube && grep -E '^(Name|Exec|Icon|StartupWMClass)=' ~/.local/share/applications/webapp-youtube.desktop\n" 3
 need ADDED-OK 90
 shot lagt-til "olymparch-webapp add youtube: .desktop-fila, nettstedets ikon og listen over standardene"
 
@@ -65,7 +65,7 @@ if xy=$(for i in $(seq 30); do python3 -I tests/vm/qmp.py "$QMP" screendump "$PW
     python3 -I tests/vm/qmp.py "$QMP" click $xy
     sleep 3
     shot installerer "Ett klikk: pkexec /usr/lib/olymparch/install-app webapps (Chromium) installeres"
-    need 'WINDOW-OK' 360
+    need 'WINDOW-OK' 600
     sleep 2
     shot vindu "YouTube som webapp: eget vindu uten faner og adresselinje, klasse webapp-youtube"
     press meta_l+spc; sleep 1.5

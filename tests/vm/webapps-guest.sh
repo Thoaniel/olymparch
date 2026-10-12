@@ -53,13 +53,16 @@ added)
     [ $ok = 1 ] && mark "ADDED-OK"
     ;;
 window)
-    for _ in $(seq 150); do hyprctl clients | grep -q "class: webapp-$2" && break; sleep 2; done
+    # the window's class: webapp-ID on X11, chrome-SITE-webapp-ID on Wayland (= StartupWMClass in the .desktop file)
+    want=$(sed -n 's/^StartupWMClass=//p' "$apps/webapp-$2.desktop")
+    has() { hyprctl clients | grep -qE "class: (webapp-$2|$want)\$"; }
+    for _ in $(seq 150); do has && break; sleep 2; done
     sleep 8   # the page loads
-    hyprctl clients | awk '/^Window/ {w = $0} /class:|title:|floating:|fullscreen:/ {print w " " $0}' | grep -i -e webapp -e chrom |
+    hyprctl clients | awk '/^Window/ {w = $0} /class:|title:|floating:|fullscreen:|workspace:/ {print w " " $0}' | grep -i -e webapp -e chrom |
         while IFS= read -r l; do mark "CLIENT $l"; done
-    if hyprctl clients | grep -q "class: webapp-$2"; then
+    if has; then
         pgrep -af chromium | grep -q -- "--app=https://www.youtube.com/" && pgrep -af chromium | grep -q -- "--user-data-dir=$store/$2" &&
-            [ -d "$store/$2/Default" ] && mark "WINDOW-OK"
+            [ -d "$store/$2/webapp-$2" ] && mark "WINDOW-OK"
     else
         mark "NO-WINDOW"
     fi

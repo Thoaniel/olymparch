@@ -79,7 +79,7 @@ keys ":qa\n" 1
 
 # the launcher has the cloud-gaming web apps; GeForce NOW opens in its own window (a watcher in the terminal
 # reports the window's class, as the web app takes the keyboard)
-keys "clear; (for i in \$(seq 90); do hyprctl clients | grep -q 'class: webapp-geforce-now' && { echo '<2>CHK: GFN-WINDOW' >/dev/kmsg; break; }; sleep 2; done &) ; clear\n" 1
+keys "clear; (for i in \$(seq 90); do hyprctl clients | grep -qE 'class: (chrome-.*-)?webapp-geforce-now\$' && { echo '<2>CHK: GFN-WINDOW' >/dev/kmsg; break; }; sleep 2; done &) ; clear\n" 1
 press meta_l+spc; sleep 1.5
 keys "G" 1
 shot meny "Menyen: GeForce NOW (og de andre nye appene)"
@@ -89,7 +89,7 @@ wait_for 'CHK: GFN-WINDOW' 180 || fails+=(GFN-WINDOW)
 sleep 25   # the page loads
 shot geforce-now "GeForce NOW som webapp i eget vindu (klasse webapp-geforce-now)"
 press meta_l+q; sleep 2   # close the focused window (the web app), back to the terminal
-keys "clear; hyprctl clients | grep -c 'class: webapp-geforce-now'; pgrep -fc -- '--class=webapp-geforce-now'\n" 2
+keys "clear; hyprctl clients | grep -c 'webapp-geforce-now'; pgrep -fc -- '--class=webapp-geforce-now'\n" 2
 shot etter "Etter at webappen ble lukket"
 [ ${#fails[@]} = 0 ] && finish "PASS · installert med $OPTS: pakkene, ingenting ekstra, Neovim-oppsett, skallverktøy, skyspill-webapper, LocalSend hoppet over på $((SECONDS - t0)) s"
 finish "FAIL · ${fails[*]}"

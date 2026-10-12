@@ -153,6 +153,8 @@ install_shell_tools_hook() {  # always (tiny): fzf, zoxide and starship come on 
     install -Dm644 /usr/share/olymparch/shell-tools/olymparch-shell-tools.sh /mnt/etc/profile.d/olymparch-shell-tools.sh
     local line='[ -r /etc/profile.d/olymparch-shell-tools.sh ] && . /etc/profile.d/olymparch-shell-tools.sh   # Olymparch: shell tools'
     local f
+    # (and the folder for the user's own .desktop files, so the launcher watches it from the first login: web apps)
+    arch-chroot /mnt sudo -u "$USERNAME" mkdir -p "/home/$USERNAME/.local/share/applications"
     for f in /mnt/etc/skel/.bashrc "/mnt/home/$USERNAME/.bashrc"; do
         [ -f "$f" ] && ! grep -qF 'olymparch-shell-tools.sh' "$f" && printf '%s\n' "$line" >>"$f"
     done

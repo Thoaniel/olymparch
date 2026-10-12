@@ -190,6 +190,14 @@ site_icon() {  # site_icon URL OUT: the site's apple-touch-icon or biggest favic
 }
 
 # ── commands ──────────────────────────────────────────────────────────────────────────────────────────────────
+wm_class() {  # wm_class ID URL: the Wayland app ID Chromium gives the window: chrome-HOST_PATH-webapp-ID, where
+    # HOST_PATH is the host, «_» and the path (no query), with every character but letters, digits, . and - as «_»
+    local rest=${2#https://} host path
+    rest=${rest%%[?#]*}
+    host=${rest%%/*}; host=${host%%:*}   # (the port is not part of it)
+    path=/; [[ $rest == */* ]] && path=/${rest#*/}
+    printf 'chrome-%s-webapp-%s' "$(printf '%s_%s' "$host" "$path" | tr -c 'A-Za-z0-9.-' '_')" "$1"
+}
 desktop_of() { printf '%s/webapp-%s.desktop' "$APPS" "$1"; }
 ours() { [ -f "$1" ] && grep -qx 'X-Olymparch-WebApp=true' -- "$1"; }
 
@@ -207,6 +215,8 @@ cmd_add() {
     valid_id "$id" || die "$(L "bad name" "ugyldig navn")"
     file=$(desktop_of "$id")
     [ -e "$file" ] && ! ours "$file" && die "$(L "$file exists and is not a web app" "$file finnes og er ikke en webapp")"
+    local newdir=0
+    [ -d "$APPS" ] || newdir=1   # the launcher only watches folders that were there when it started
     mkdir -p -- "$APPS" "$STORE/icons" || exit 1
     iconfile=$STORE/icons/$id.png
     rm -f -- "$iconfile"
@@ -231,7 +241,7 @@ cmd_add() {
         echo "Comment=$(L "Web app" "Webapp"): ${url%%[?#]*}"
         echo "Exec=/usr/bin/olymparch-webapp launch $id $(exec_arg "$url")"
         echo "Icon=$iconfile"
-        echo "StartupWMClass=webapp-$id"
+        echo "StartupWMClass=$(wm_class "$id" "$url")"
         echo "Categories=$cat;"
         echo 'Terminal=false'
         echo 'X-Olymparch-WebApp=true'
@@ -240,6 +250,7 @@ cmd_add() {
     command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database -q "$APPS" 2>/dev/null
     echo "$(L "Added" "La til") $name ($url) → $file"
     [ "$iconfile" = "$GLOBE" ] && echo "  $(L "icon: the site gave none that checked out; using the globe" "ikon: nettstedet ga ingen som holdt mål; bruker globusen")"
+    (( newdir )) && echo "  $(L "the menu shows it after the next login (its folder is new)" "menyen viser den etter neste innlogging (mappen er ny)")"
     browser_bin >/dev/null || echo "  $(L "Chromium is not installed: the app offers it the first time it opens (or run: olymparch-webapp browser)" "Chromium er ikke installert: appen tilbyr det første gang den åpnes (eller kjør: olymparch-webapp browser)")"
     return 0
 }
@@ -304,7 +315,9 @@ cmd_launch() {
         b=$(browser_bin) || exit 1
     fi
     mkdir -p -- "$STORE/$id"
-    exec "$b" --app="$url" --class="webapp-$id" --user-data-dir="$STORE/$id" \
+    # --class names the window on X11; on Wayland Chromium names an --app window itself, as
+    # chrome-<site>-<profile folder>: the profile folder «webapp-ID» makes that end in -webapp-ID (see wm_class)
+    exec "$b" --app="$url" --class="webapp-$id" --user-data-dir="$STORE/$id" --profile-directory="webapp-$id" \
         --no-first-run --no-default-browser-check --password-store=basic
 }
 
