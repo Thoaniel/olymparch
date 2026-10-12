@@ -1,0 +1,58 @@
+#!/bin/bash
+# Fixture tests for olymparch-hw, no VM needed:
+#   - every fixture's `plan` (English, and Norwegian for one) against the golden output in tests/hw/golden
+#   - every rule matches at least one fixture and misses at least one
+#   - lint: unique rule IDs, every package exists (pacman -Si), the compiled udev rules are up to date
+#   tests/hw/run [--update]    --update rewrites the golden files instead of comparing
+set -uo pipefail
+cd "$(dirname "$0")/../.."
+update=0; [ "${1:-}" = --update ] && update=1
+export OLYMPARCH_HW_DATA=$PWD/default/hw LC_ALL=C LANG=C
+HW=$PWD/system/bin/olymparch-hw
+tmp=$(mktemp -d)
+trap 'rm -rf -- "$tmp"' EXIT
+fail=0
+ok() { printf '  ok    %s\n' "$1"; }
+bad() { printf '  FAIL  %s\n' "$1"; fail=1; }
+golden() {  # golden NAME < output
+    local g=tests/hw/golden/$1
+    if ((update)); then cat >"$g"; ok "$1 (updated)"; return; fi
+    if diff -u "$g" - >"$tmp/diff"; then ok "$1"; else bad "$1"; sed 's/^/        /' "$tmp/diff" | head -40; fi
+}
+
+echo "olymparch-hw: fixtures"
+declare -A HIT=() MISS=()
+mapfile -t ids < <(OLYMPARCH_SYSROOT=$tmp/none "$HW" explain | awk '/^[a-z0-9-]+  / {print $1}')
+for f in tests/hw/fixtures/*.fixture; do
+    name=$(basename "$f" .fixture)
+    tests/hw/expand "$f" "$tmp/$name" || { bad "$name: expand"; continue; }
+    OLYMPARCH_SYSROOT=$tmp/$name "$HW" plan 2>&1 | golden "$name.plan"
+    matched=" $(OLYMPARCH_SYSROOT=$tmp/$name "$HW" plan --list rules | paste -sd' ') "
+    # a rule that matched but lost its group still counts as matching
+    lost=$(OLYMPARCH_SYSROOT=$tmp/$name "$HW" explain | awk '/^[a-z0-9-]+  .*\[no \(/ {print $1}')
+    for id in "${ids[@]}"; do
+        if [[ $matched == *" $id "* ]] || grep -qx "$id" <<<"$lost"; then HIT[$id]+="$name "; else MISS[$id]+="$name "; fi
+    done
+done
+OLYMPARCH_SYSROOT=$tmp/intel-laptop LANG=nb_NO.UTF-8 LC_ALL=nb_NO.UTF-8 "$HW" plan 2>&1 | golden intel-laptop.plan.nb
+OLYMPARCH_SYSROOT=$tmp/hybrid-laptop "$HW" explain gpu-hybrid-prime 2>&1 | sed "s#$PWD/##" | golden hybrid-laptop.explain
+
+echo "olymparch-hw: every rule has a positive and a negative fixture"
+for id in "${ids[@]}"; do
+    if [ -n "${HIT[$id]:-}" ] && [ -n "${MISS[$id]:-}" ]; then ok "$id  + ${HIT[$id]% } / − ${MISS[$id]%% *}"
+    else bad "$id  matches: ${HIT[$id]:-none}  misses: ${MISS[$id]:-none}"; fi
+done
+
+echo "olymparch-hw: lint"
+if out=$("$HW" lint 2>&1); then ok "$out"; else bad "lint"; sed 's/^/        /' <<<"$out"; fi
+if ((update)); then "$HW" udev-rules >default/hw/90-olymparch-hw.rules; ok "udev rules (updated)"
+elif "$HW" udev-rules | diff -q - default/hw/90-olymparch-hw.rules >/dev/null; then ok "udev rules are up to date"
+else bad "default/hw/90-olymparch-hw.rules is stale: run tests/hw/run --update"; fi
+# the round trip: a fixture expanded and dumped again gives the same fixture
+OLYMPARCH_SYSROOT=$tmp/intel-laptop "$HW" dump | grep -v '^#' | sort >"$tmp/rt"
+if grep -v '^#' tests/hw/fixtures/intel-laptop.fixture | sort | diff -q - "$tmp/rt" >/dev/null; then ok "dump round trip"
+else bad "dump round trip"; grep -v '^#' tests/hw/fixtures/intel-laptop.fixture | sort | diff - "$tmp/rt" | head; fi
+
+echo
+((fail)) && { echo "FAIL"; exit 1; }
+echo "PASS"

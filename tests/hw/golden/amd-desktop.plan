@@ -1,0 +1,30 @@
+Olymparch hardware plan
+
+  Machine    desktop · Micro-Star International Co., Ltd. MS-7D96
+  CPU        Intel(R) Core(TM) i7-14700F (GenuineIntel)
+  Graphics   0000:03:00.0 1002:7550 (amdgpu, primary)
+
+Matched rules
+  gpu-amd                    AMD graphics: Vulkan (64- and 32-bit)
+                               packages: vulkan-radeon lib32-vulkan-radeon
+  ucode-intel                Intel CPU microcode
+                               packages: intel-ucode
+  wifi                       Wi-Fi: regulatory database and tools
+                               packages: wireless-regdb iw
+  bluetooth                  Bluetooth
+                               packages: bluez bluez-utils
+                               services: bluetooth.service
+  rgb                        RGB lighting: OpenRGB
+                               optional: openrgb
+
+Firmware
+  linux-firmware-intel       for iwlwifi
+  linux-firmware-amdgpu      for amdgpu
+  linux-firmware-realtek     for r8169
+  wireless-regdb             for regulatory.db (kernel log)
+
+To install (10)
+  vulkan-radeon lib32-vulkan-radeon intel-ucode wireless-regdb iw bluez bluez-utils
+  linux-firmware-intel linux-firmware-amdgpu linux-firmware-realtek
+Offered, not installed automatically
+  openrgb

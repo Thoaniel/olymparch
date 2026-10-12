@@ -1,0 +1,96 @@
+# Graphics. A display device is PCI class 03 (VGA, 3D controller and display controller alike).
+# Vulkan for 64- and 32-bit games; the 32-bit driver must be installed before Steam, or
+# lib32-vulkan-driver resolves to nvidia. GL and VA-API (AMD) come with mesa, which is always there.
+
+id=gpu-amd
+name=AMD graphics: Vulkan (64- and 32-bit)
+name.nb=AMD-grafikk: Vulkan (64- og 32-bit)
+support=supported
+modalias=pci:v00001002d*bc03*
+driver=amdgpu
+packages=vulkan-radeon lib32-vulkan-radeon
+when=install boot
+
+id=gpu-intel
+name=Intel graphics: Vulkan and video decoding
+name.nb=Intel-grafikk: Vulkan og videoavspilling
+support=beta
+modalias=pci:v00008086d*bc03*
+packages=vulkan-intel lib32-vulkan-intel intel-media-driver
+when=install boot
+
+# oneVPL runtime for Tiger Lake and newer (Xe): TGL, RKL, ADL, RPL, DG1, Arc (DG2, Battlemage), MTL/ARL, LNL, PTL
+id=gpu-intel-vpl
+name=Intel graphics: video encoding (oneVPL)
+name.nb=Intel-grafikk: videokoding (oneVPL)
+support=beta
+pci.range=8086:9a40-9aff:03
+pci.range=8086:4c80-4cff:03
+pci.range=8086:4600-46ff:03
+pci.range=8086:a780-a7ff:03
+pci.range=8086:4905-4909:03
+pci.range=8086:5690-56ff:03
+pci.range=8086:7d00-7dff:03
+pci.range=8086:6420-64ff:03
+pci.range=8086:e200-e2ff:03
+pci.range=8086:b080-b0ff:03
+packages=vpl-gpu-rt
+when=install boot
+
+# NVIDIA Turing (RTX 20 / GTX 16) and newer: the open kernel modules. Device IDs from 0x1e00 up.
+id=gpu-nvidia
+name=NVIDIA graphics: the NVIDIA driver (open kernel modules)
+name.nb=NVIDIA-grafikk: NVIDIA-driveren (åpne kjernemoduler)
+support=untested
+note=NVIDIA is not tested on Olymparch yet. The driver is built for every kernel (DKMS).
+note.nb=NVIDIA er ikke testet på Olymparch ennå. Driveren bygges for hver kjerne (DKMS).
+pci.range=10de:1e00-ffff:03
+group=nvidia-driver
+priority=60
+packages=nvidia-open-dkms nvidia-utils lib32-nvidia-utils {kernel}-headers
+initramfs-modules=nvidia nvidia_modeset nvidia_uvm nvidia_drm
+# nouveau's firmware (linux-firmware-nvidia, 100 MiB) is not needed once the NVIDIA driver takes over
+replaces-driver=nouveau
+when=install boot
+
+# Maxwell, Pascal and Volta: the open driver stays (nouveau + NVK). The 580xx driver is AUR-only.
+id=gpu-nvidia-legacy
+name=Older NVIDIA graphics: open driver (nouveau) with Vulkan
+name.nb=Eldre NVIDIA-grafikk: åpen driver (nouveau) med Vulkan
+support=untested
+note=GTX 900/1000 cards run at low clocks on the open driver, so games are slow. The desktop works.
+note.nb=GTX 900/1000-kort går på lav klokkefrekvens med den åpne driveren, så spill blir trege. Skrivebordet virker.
+pci.range=10de:1340-1dff:03
+group=nvidia-driver
+priority=40
+packages=vulkan-nouveau lib32-vulkan-nouveau
+when=install boot
+
+# A desktop with only an NVIDIA card: video decoding and the session settings Hyprland wants
+id=gpu-nvidia-desktop
+name=NVIDIA as the only graphics: video decoding and session settings
+name.nb=NVIDIA som eneste grafikk: videoavspilling og øktinnstillinger
+support=untested
+pci.range=10de:1e00-ffff:03
+!modalias=pci:v00008086d*bc03*
+!modalias=pci:v00001002d*bc03*
+packages=libva-nvidia-driver
+hypr-env=LIBVA_DRIVER_NAME=nvidia
+hypr-env=__GLX_VENDOR_LIBRARY_NAME=nvidia
+hypr-env=NVD_BACKEND=direct
+when=install boot
+
+# Hybrid laptops: the built-in GPU drives the screen, games may run on NVIDIA (prime-run %command%)
+id=gpu-hybrid-prime
+name=Hybrid graphics: NVIDIA for games (PRIME offload)
+name.nb=Hybridgrafikk: NVIDIA til spill (PRIME offload)
+support=beta
+note=The built-in GPU drives the screen. In Steam, set a game's launch options to: prime-run %command%
+note.nb=Den innebygde grafikken styrer skjermen. I Steam, sett startvalg for et spill til: prime-run %command%
+chassis=laptop
+pci.range=10de:1e00-ffff:03
+modalias=pci:v00008086d*bc03*
+modalias=pci:v00001002d*bc03*
+packages=nvidia-prime switcheroo-control
+services=switcheroo-control.service
+when=install boot

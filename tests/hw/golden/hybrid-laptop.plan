@@ -1,0 +1,46 @@
+Olymparch hardware plan
+
+  Machine    laptop · Example Gaming Blade 15 CML
+  CPU        Intel(R) Core(TM) i7-10750H CPU @ 2.60GHz (GenuineIntel)
+  Graphics   0000:00:02.0 8086:9bc4 (i915, primary)
+             0000:01:00.0 10de:1f15 (nouveau)
+
+Matched rules
+  gpu-intel                  Intel graphics: Vulkan and video decoding
+                               packages: vulkan-intel lib32-vulkan-intel intel-media-driver
+  gpu-nvidia                 NVIDIA graphics: the NVIDIA driver (open kernel modules)
+                               packages: nvidia-open-dkms nvidia-utils lib32-nvidia-utils linux-headers
+                               initramfs-modules: nvidia nvidia_modeset nvidia_uvm nvidia_drm
+  gpu-hybrid-prime           Hybrid graphics: NVIDIA for games (PRIME offload)
+                               packages: nvidia-prime switcheroo-control
+                               services: switcheroo-control.service
+  ucode-intel                Intel CPU microcode
+                               packages: intel-ucode
+  laptop-power               Laptop: power profiles and screen brightness
+                               packages: power-profiles-daemon brightnessctl
+  laptop-thermald            Intel laptop: thermal daemon
+                               packages: thermald
+                               services: thermald.service
+  wifi                       Wi-Fi: regulatory database and tools
+                               packages: wireless-regdb iw
+
+Firmware
+  linux-firmware-intel       for i915 iwlwifi
+
+To install (16)
+  vulkan-intel lib32-vulkan-intel intel-media-driver nvidia-open-dkms nvidia-utils lib32-nvidia-utils
+  linux-headers nvidia-prime switcheroo-control intel-ucode power-profiles-daemon brightnessctl
+  thermald wireless-regdb iw linux-firmware-intel
+
+Configuration
+  /etc/mkinitcpio.conf.d/20-olymparch-hw.conf
+    MODULES+=(nvidia nvidia_modeset nvidia_uvm nvidia_drm)
+
+Notes
+  gpu-intel: beta: should work, not yet tested on real machines
+  gpu-nvidia: not promised: installed, but not tested
+  gpu-nvidia: NVIDIA is not tested on Olymparch yet. The driver is built for every kernel (DKMS).
+  gpu-hybrid-prime: beta: should work, not yet tested on real machines
+  gpu-hybrid-prime: The built-in GPU drives the screen. In Steam, set a game's launch options to: prime-run %command%
+  laptop-power: beta: should work, not yet tested on real machines
+  laptop-thermald: beta: should work, not yet tested on real machines

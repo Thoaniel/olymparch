@@ -1,0 +1,31 @@
+Olymparch hardware plan
+
+  Machine    desktop · Example Builder Tower B450
+  CPU        AMD Ryzen 5 3600 6-Core Processor (AuthenticAMD)
+  Graphics   0000:07:00.0 10de:1b81 (nouveau, primary)
+
+Matched rules
+  gpu-nvidia-legacy          Older NVIDIA graphics: open driver (nouveau) with Vulkan
+                               packages: vulkan-nouveau lib32-vulkan-nouveau
+  ucode-amd                  AMD CPU microcode
+                               packages: amd-ucode
+  bluetooth                  Bluetooth
+                               packages: bluez bluez-utils
+                               services: bluetooth.service
+  xbox-dongle                Xbox wireless adapter: xone driver
+                               ourrepo: xone
+
+Firmware
+  linux-firmware-nvidia      for nouveau
+  linux-firmware-realtek     for rtl_bt/rtl8761bu_fw.bin (kernel log)
+
+To install (7)
+  vulkan-nouveau lib32-vulkan-nouveau amd-ucode bluez bluez-utils linux-firmware-nvidia
+  linux-firmware-realtek
+From the Olymparch repo (not available yet)
+  xone
+
+Notes
+  gpu-nvidia-legacy: not promised: installed, but not tested
+  gpu-nvidia-legacy: GTX 900/1000 cards run at low clocks on the open driver, so games are slow. The desktop works.
+  xbox-dongle: beta: should work, not yet tested on real machines

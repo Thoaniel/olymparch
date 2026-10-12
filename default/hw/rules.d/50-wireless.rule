@@ -1,0 +1,24 @@
+# Wi-Fi (PCI class 0280, or a bound wireless driver) and Bluetooth
+
+id=wifi
+name=Wi-Fi: regulatory database and tools
+name.nb=Wi-Fi: regelverksdatabase og verktøy
+modalias=pci:v*d*sv*sd*bc02sc80*
+driver=iwlwifi
+driver=rtw88_*
+driver=rtw89_*
+driver=mt7921e
+driver=mt7925e
+driver=ath1[01]k_pci
+driver=ath12k_pci
+packages=wireless-regdb iw
+
+id=bluetooth
+name=Bluetooth
+name.nb=Bluetooth
+modalias=usb:v*p*d*dcE0dsc01dp01*
+driver=btusb
+driver=hci_uart
+packages=bluez bluez-utils
+services=bluetooth.service
+when=install hotplug

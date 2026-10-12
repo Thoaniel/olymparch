@@ -1,0 +1,12 @@
+Olymparch hardware plan
+
+  Machine    virtual machine · QEMU Standard PC (Q35 + ICH9, 2009)
+  CPU        Intel(R) Core(TM) i7-14700F (GenuineIntel)
+  Graphics   0000:00:01.0 1af4:1050 (virtio-pci, primary)
+
+Matched rules
+  vm-qemu                    QEMU/KVM guest agent
+                               packages: qemu-guest-agent
+
+To install (1)
+  qemu-guest-agent

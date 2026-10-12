@@ -1,0 +1,19 @@
+# NVIDIA-only desktop: RTX 4070 next to an old GTX 1060 (both NVIDIA rules match; the open driver wins the
+# nvidia-driver group), Ryzen 7 5800X3D (no iGPU), a Thrustmaster T300RS wheel and an ASUS Aura RGB controller.
+# Some packages are already installed, as on a running system.
+dmi chassis_type 3
+dmi sys_vendor ASUS
+dmi product_name System Product Name
+dmi board_name ROG STRIX B550-F GAMING
+cpu vendor_id AuthenticAMD
+cpu model_name AMD Ryzen 7 5800X3D 8-Core Processor
+pkg linux-zen
+pkg mesa
+pkg amd-ucode
+dev pci 0000:0a:00.0 path=pci0000:00/0000:00:03.1/0000:0a:00.0 driver=nouveau module=nouveau class=030000 vd=10de:2786 boot_vga=1 modalias=pci:v000010DEd00002786sv00001043sd000088F2bc03sc00i00
+dev pci 0000:0b:00.0 path=pci0000:00/0000:00:03.2/0000:0b:00.0 driver=nouveau module=nouveau class=030000 vd=10de:1c03 boot_vga=0 modalias=pci:v000010DEd00001C03sv00001462sd00003282bc03sc00i00
+dev pci 0000:0c:00.3 path=pci0000:00/0000:00:08.1/0000:0c:00.3 driver=xhci_hcd module=xhci_pci builtin=1 class=0c0330 vd=1022:149c modalias=pci:v00001022d0000149Csv00001043sd000087C0bc0Csc03i30
+dev pci 0000:05:00.0 path=pci0000:00/0000:00:01.2/0000:05:00.0 driver=igc module=igc class=020000 vd=8086:15f3 modalias=pci:v00008086d000015F3sv00001043sd000087D2bc02sc00i00
+dev usb 3-2:1.0 path=pci0000:00/0000:00:08.1/0000:0c:00.3/usb3/3-2/3-2:1.0 driver=usbhid module=usbhid modalias=usb:v044FpB66Ed0101dc00dsc00dp00ic03isc00ip00in00
+dev usb 3-5:1.0 path=pci0000:00/0000:00:08.1/0000:0c:00.3/usb3/3-5/3-5:1.0 driver=usbhid module=usbhid modalias=usb:v0B05p18F3d0100dc00dsc00dp00ic03isc00ip00in00
+fw nouveau nvidia/ad104/gsp/booter_load-535.113.01.bin

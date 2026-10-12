@@ -1,0 +1,817 @@
+#!/bin/bash
+# olymparch-hw: find out what hardware this is (sysfs only) and what it needs, from data rules.
+#   olymparch-hw scan                      what was found
+#   olymparch-hw plan [--root DIR] [--list packages|optional|rules|initramfs|offers] [--summary]
+#   olymparch-hw explain [RULE]            why each rule matched or not
+#   olymparch-hw dump                      anonymised fixture of this machine, for bug reports and tests
+#   olymparch-hw apply [--root DIR] [--user NAME] [--when W] [RULE...]    as root (pkexec: hw-apply)
+#   olymparch-hw boot-check                as root, from olymparch-hw-boot.service
+#   olymparch-hw notify --boot | RULE      as the user: one notification with an Install button
+#   olymparch-hw udev-rules                the hotplug udev rules, compiled from the rules
+#   olymparch-hw lint                      check the rules (needs pacman -Si)
+# Rules are key=value data files in rules.d/*.rule; they are parsed, never sourced, and cannot run commands.
+# Every read goes through $OLYMPARCH_SYSROOT (a fixture). As root it is ignored: root sees the real machine.
+set -euo pipefail
+
+S=${OLYMPARCH_SYSROOT:-}
+[ "$(id -u)" = 0 ] && S=''
+DATA=${OLYMPARCH_HW_DATA:-/usr/share/olymparch/hw}
+LOCAL_RULES=/etc/olymparch/hw/rules.d
+ROOT=/                       # the system packages and files are checked against (apply/plan --root)
+LIB=/usr/lib/olymparch
+
+# --- messages: English by default, Norwegian (bokmål) when LANG=nb*
+NB=0
+case ${LC_ALL:-${LC_MESSAGES:-${LANG:-}}} in nb* | nn* | no*) NB=1 ;; esac
+declare -A EN=(
+    [plan]="Olymparch hardware plan" [machine]="Machine" [cpu]="CPU" [gpu]="Graphics" [none]="none"
+    [primary]="primary" [desktop]="desktop" [laptop]="laptop" [vm]="virtual machine"
+    [rules]="Matched rules" [fw]="Firmware" [for]="for" [install]="To install" [have]="Already installed"
+    [optional]="Offered, not installed automatically" [ourrepo]="From the Olymparch repo (not available yet)"
+    [files]="Configuration" [notes]="Notes" [nothing]="Nothing to install." [lost]="not used, %s wins"
+    [support_beta]="beta: should work, not yet tested on real machines"
+    [support_untested]="not promised: installed, but not tested"
+    [multilib]="32-bit packages need [multilib] in pacman.conf; skipped: %s"
+    [kbd]="Keyboard" [kbd_init]="modules needed at the disk password" [battery]="Battery" [yes]="yes" [no]="no" [devices]="Devices"
+    [needs_root]="apply must run as root (or through pkexec /usr/lib/olymparch/hw-apply)"
+    [unknown_rule]="no matching rule with id %s" [installing]="Installing: %s" [done]="Done."
+    [n_install]="Install" [n_later]="Not now" [n_installing]="Installing …" [n_ok]="Installed"
+    [n_fail]="Installation failed. See /var/log/olymparch-hw.log" [n_fw]="Missing firmware"
+    [n_fw_body]="The kernel asked for firmware that is not installed (%s)."
+    [n_repo]="The driver comes from the Olymparch repo, which is not available yet."
+    [n_gpu]="New graphics card found" [warn]="Warning" [kmsg]="kernel log"
+)
+declare -A NO=(
+    [plan]="Olymparch maskinvareplan" [machine]="Maskin" [cpu]="Prosessor" [gpu]="Grafikk" [none]="ingen"
+    [primary]="hoved" [desktop]="stasjonær" [laptop]="bærbar" [vm]="virtuell maskin"
+    [rules]="Regler som passer" [fw]="Fastvare" [for]="for" [install]="Installeres" [have]="Allerede installert"
+    [optional]="Tilbys, installeres ikke automatisk" [ourrepo]="Fra Olymparch-repoet (ikke tilgjengelig ennå)"
+    [files]="Oppsett" [notes]="Merknader" [nothing]="Ingenting å installere." [lost]="brukes ikke, %s vinner"
+    [support_beta]="beta: skal virke, men er ikke testet på ekte maskiner ennå"
+    [support_untested]="ikke lovet: installeres, men testes ikke"
+    [multilib]="32-bits pakker trenger [multilib] i pacman.conf; hoppet over: %s"
+    [kbd]="Tastatur" [kbd_init]="moduler som trengs ved diskpassordet" [battery]="Batteri" [yes]="ja" [no]="nei" [devices]="Enheter"
+    [needs_root]="apply må kjøres som root (eller via pkexec /usr/lib/olymparch/hw-apply)"
+    [unknown_rule]="ingen regel som passer, med id %s" [installing]="Installerer: %s" [done]="Ferdig."
+    [n_install]="Installer" [n_later]="Ikke nå" [n_installing]="Installerer …" [n_ok]="Installert"
+    [n_fail]="Installasjonen feilet. Se /var/log/olymparch-hw.log" [n_fw]="Fastvare mangler"
+    [n_fw_body]="Kjernen ba om fastvare som ikke er installert (%s)."
+    [n_repo]="Driveren kommer fra Olymparch-repoet, som ikke er tilgjengelig ennå."
+    [n_gpu]="Nytt skjermkort funnet" [warn]="Advarsel" [kmsg]="kjerneloggen"
+)
+t() { if ((NB)); then printf '%s' "${NO[$1]}"; else printf '%s' "${EN[$1]}"; fi; }
+die() { echo "olymparch-hw: $*" >&2; exit 1; }
+rd() { local v=''; [ -r "$S$1" ] && IFS= read -r v <"$S$1" 2>/dev/null; printf '%s' "$v"; }
+
+# --- facts ---------------------------------------------------------------------------------------------
+# DEV_*: one entry per device with a modalias (pci, usb interfaces, hid, i2c, sdio, spi, bound platform devices)
+DEV_BUS=() DEV_ID=() DEV_ALIAS=() DEV_DRV=() DEV_MOD=() DEV_CLASS=() DEV_VD=() DEV_VGA=()
+declare -A DMI=() LOADABLE=()
+CPU_VENDOR='' CPU_NAME='' VM=no BATTERY=no CHASSIS=desktop KBD_MODS=''
+loadable() {  # a module that can go into the initramfs (built-ins have no initstate)
+    [ -n "${LOADABLE[$1]+x}" ] || { if [ -e "$S/sys/module/$1/initstate" ]; then LOADABLE[$1]=1; else LOADABLE[$1]=0; fi; }
+    [ "${LOADABLE[$1]}" = 1 ]
+}
+collect() {
+    local bus d alias drv mod l
+    for bus in pci usb hid i2c sdio spi platform; do
+        for d in "$S/sys/bus/$bus/devices"/*; do
+            [ -r "$d/modalias" ] || continue
+            drv='' mod=''
+            if [ -L "$d/driver" ]; then
+                l=$(readlink "$d/driver"); drv=${l##*/}
+                if [ -L "$d/driver/module" ]; then l=$(readlink "$d/driver/module"); mod=${l##*/}; fi
+            fi
+            [ "$bus" = platform ] && [ -z "$drv" ] && continue
+            IFS= read -r alias <"$d/modalias" || true
+            DEV_BUS+=("$bus") DEV_ID+=("${d##*/}") DEV_ALIAS+=("$alias") DEV_DRV+=("$drv") DEV_MOD+=("$mod")
+            if [ "$bus" = pci ]; then
+                local c v dv b=''
+                IFS= read -r c <"$d/class"; IFS= read -r v <"$d/vendor"; IFS= read -r dv <"$d/device"
+                [ -r "$d/boot_vga" ] && IFS= read -r b <"$d/boot_vga"
+                DEV_CLASS+=("${c#0x}") DEV_VD+=("${v#0x}:${dv#0x}") DEV_VGA+=("$b")
+            else
+                DEV_CLASS+=('') DEV_VD+=('') DEV_VGA+=('')
+            fi
+        done
+    done
+    local k
+    for k in chassis_type sys_vendor product_name product_family board_vendor board_name bios_vendor; do
+        DMI[$k]=$(rd "/sys/class/dmi/id/$k")
+    done
+    if [ -r "$S/proc/cpuinfo" ]; then
+        CPU_VENDOR=$(awk -F': *' '/^vendor_id/ {print $2; exit}' "$S/proc/cpuinfo")
+        CPU_NAME=$(awk -F': *' '/^model name/ {print $2; exit}' "$S/proc/cpuinfo")
+        grep -qE '^flags.* hypervisor( |$)' "$S/proc/cpuinfo" && VM=yes
+    fi
+    case ${DMI[sys_vendor]} in QEMU | innotek* | VMware* | Xen | Parallels*) VM=yes ;; esac
+    for d in "$S/sys/class/power_supply"/*; do
+        [ "$(cat "$d/type" 2>/dev/null)" = Battery ] && BATTERY=yes
+    done
+    case ${DMI[chassis_type]} in 8 | 9 | 10 | 14 | 30 | 31 | 32) CHASSIS=laptop ;; esac
+    [ "$VM" = yes ] && CHASSIS=vm
+    internal_keyboard
+}
+
+# Modules an internal keyboard needs before the disk password: the drivers of every sysfs ancestor of each
+# built-in keyboard (I2C-HID, Intel THC, LPSS, ...) plus the pinctrl drivers, which are not ancestors.
+internal_keyboard() {
+    local i p words last mods='' m l top=$S/sys/devices
+    for i in "$S/sys/class/input"/input*; do
+        [ -r "$i/capabilities/key" ] || continue
+        read -ra words <"$i/capabilities/key"
+        last=00000000${words[${#words[@]} - 1]}
+        (( (16#${last: -8} & 16#fffffffe) == 16#fffffffe )) || continue     # keys 1-31: a real keyboard
+        p=$(readlink -f "$i")
+        case $p in */usb[0-9]* | */bluetooth/* | */virtual/* | */uhid/*) continue ;; esac
+        while [ "${#p}" -gt "${#top}" ]; do
+            if [ -L "$p/driver/module" ]; then
+                l=$(readlink "$p/driver/module"); m=${l##*/}
+                loadable "$m" && [[ " $mods " != *" $m "* ]] && mods+=" $m"
+            fi
+            p=${p%/*}
+        done
+    done
+    if [ -n "$mods" ]; then
+        local j
+        for ((j = 0; j < ${#DEV_ID[@]}; j++)); do
+            m=${DEV_MOD[$j]}
+            [[ $m == pinctrl_* ]] && loadable "$m" && [[ " $mods " != *" $m "* ]] && mods+=" $m"
+        done
+    fi
+    KBD_MODS=${mods# }
+}
+
+# --- rules -----------------------------------------------------------------------------------------------
+RULE_IDS=()
+declare -A R=() RFILE=()
+MATCH_KEYS='modalias driver chassis cpu.vendor pci.range battery vm keyboard'
+ACTION_KEYS='packages optional ourrepo replaces-driver modules-load modprobe cmdline initramfs-modules udev-file groups user-unit hypr-env services'
+META_KEYS='id name name.nb note note.nb support priority group when'
+valid_key() {
+    local k=${1#!}
+    [[ " $MATCH_KEYS $ACTION_KEYS $META_KEYS " == *" $k "* ]] || [[ $k == dmi.* ]]
+}
+rule_files() {
+    local f
+    for f in "$DATA"/rules.d/*.rule; do [ -f "$f" ] && echo "$f"; done
+    if [ -z "$S" ] && [ "${OLYMPARCH_HW_NO_LOCAL:-0}" != 1 ]; then
+        for f in "$LOCAL_RULES"/*.rule; do [ -f "$f" ] && echo "$f"; done
+    fi
+    return 0
+}
+load_rules() {
+    local f line k v id='' n
+    while IFS= read -r f; do
+        id='' n=0
+        while IFS= read -r line || [ -n "$line" ]; do
+            n=$((n + 1))
+            line=${line%$'\r'}
+            [[ $line =~ ^[[:space:]]*(#|$) ]] && continue
+            [[ $line == *=* ]] || { echo "olymparch-hw: $f:$n: not key=value" >&2; continue; }
+            k=${line%%=*} v=${line#*=}
+            k=${k%"${k##*[![:space:]]}"} v=${v#"${v%%[![:space:]]*}"}
+            if [ "$k" = id ]; then
+                id=$v
+                [ -n "${RFILE[$id]+x}" ] && echo "olymparch-hw: $f:$n: id $id is already used in ${RFILE[$id]}" >&2
+                RULE_IDS+=("$id"); RFILE[$id]=$f
+                R[$id|keys]=''
+                continue
+            fi
+            [ -n "$id" ] || { echo "olymparch-hw: $f:$n: $k before id=" >&2; continue; }
+            valid_key "$k" || { echo "olymparch-hw: $f:$n: unknown key $k" >&2; continue; }
+            [[ " ${R[$id|keys]} " == *" $k "* ]] || R[$id|keys]+=" $k"
+            R[$id|$k]+="${R[$id|$k]+$'\n'}$v"
+        done <"$f"
+    done < <(rule_files)
+}
+rget() { printf '%s' "${R[$1|$2]-}"; }
+words() { rget "$1" "$2" | tr '\n' ' ' | xargs -r; }   # space-separated values as one line
+
+# match one condition value; prints the evidence (device id) on success
+match_one() {
+    local key=$1 pat=$2 j
+    case $key in
+        modalias)
+            for ((j = 0; j < ${#DEV_ID[@]}; j++)); do
+                # shellcheck disable=SC2053
+                [[ ${DEV_ALIAS[$j]} == $pat ]] && { echo "${DEV_BUS[$j]} ${DEV_ID[$j]}"; return 0; }
+            done ;;
+        driver)
+            for ((j = 0; j < ${#DEV_ID[@]}; j++)); do
+                # shellcheck disable=SC2053
+                [ -n "${DEV_DRV[$j]}" ] && [[ ${DEV_DRV[$j]} == $pat ]] && { echo "${DEV_BUS[$j]} ${DEV_ID[$j]} (${DEV_DRV[$j]})"; return 0; }
+            done ;;
+        pci.range)
+            local ven=${pat%%:*} rest=${pat#*:} cls='' lo hi dev
+            [[ $rest == *:* ]] && { cls=${rest#*:}; rest=${rest%%:*}; }
+            lo=$((16#${rest%-*})) hi=$((16#${rest#*-}))
+            for ((j = 0; j < ${#DEV_ID[@]}; j++)); do
+                [ "${DEV_BUS[$j]}" = pci ] && [ "${DEV_VD[$j]%%:*}" = "${ven,,}" ] || continue
+                [[ ${DEV_CLASS[$j]} == "$cls"* ]] || continue
+                dev=$((16#${DEV_VD[$j]#*:}))
+                ((dev >= lo && dev <= hi)) && { echo "pci ${DEV_ID[$j]} ${DEV_VD[$j]}"; return 0; }
+            done ;;
+        dmi.*)
+            # shellcheck disable=SC2053
+            [[ ${DMI[${key#dmi.}]-} == $pat ]] && { echo "dmi ${key#dmi.}=${DMI[${key#dmi.}]}"; return 0; } ;;
+        chassis) [ "$CHASSIS" = "$pat" ] && { echo "chassis $CHASSIS"; return 0; } ;;
+        cpu.vendor) [ "$CPU_VENDOR" = "$pat" ] && { echo "cpu $CPU_VENDOR"; return 0; } ;;
+        battery) [ "$BATTERY" = "$pat" ] && { echo "battery $BATTERY"; return 0; } ;;
+        vm) [ "$VM" = "$pat" ] && { echo "vm $VM"; return 0; } ;;
+        keyboard) [ "$pat" = internal ] && [ -n "$KBD_MODS" ] && { echo "keyboard $KBD_MODS"; return 0; } ;;
+    esac
+    return 1
+}
+
+# MATCHED: rules whose every key holds (values of one key are OR, keys are AND, !key negates).
+# Rules in the same group compete: the highest priority wins, the others are LOST.
+MATCHED=()
+declare -A WHY=() LOST=()
+evaluate() {
+    local id k v ok ev hit
+    for id in "${RULE_IDS[@]}"; do
+        ok=1 WHY[$id]=''
+        for k in ${R[$id|keys]}; do
+            [[ " $MATCH_KEYS " == *" ${k#!} "* ]] || [[ ${k#!} == dmi.* ]] || continue
+            hit=''
+            while IFS= read -r v; do
+                if ev=$(match_one "${k#!}" "$v"); then hit="$v → $ev"; break; fi
+            done <<<"${R[$id|$k]}"
+            if [[ $k == !* ]]; then
+                if [ -n "$hit" ]; then ok=0; WHY[$id]+="✗ $k=${hit}"$'\n'; else WHY[$id]+="✓ $k: $(rget "$id" "$k" | paste -sd' ')"$'\n'; fi
+            else
+                if [ -n "$hit" ]; then WHY[$id]+="✓ $k=${hit}"$'\n'; else ok=0; WHY[$id]+="✗ $k: $(rget "$id" "$k" | paste -sd' ')"$'\n'; fi
+            fi
+        done
+        ((ok)) && MATCHED+=("$id")
+    done
+    # groups
+    local a b ga pa pb
+    for a in "${MATCHED[@]}"; do
+        ga=$(rget "$a" group); [ -n "$ga" ] || continue
+        pa=$(rget "$a" priority); pa=${pa:-50}
+        for b in "${MATCHED[@]}"; do
+            [ "$a" != "$b" ] && [ "$(rget "$b" group)" = "$ga" ] || continue
+            pb=$(rget "$b" priority); pb=${pb:-50}
+            ((pb > pa)) && LOST[$a]=$b
+        done
+    done
+}
+active() {  # matched, not lost, and (with $WHEN) meant for that moment
+    local id
+    for id in "${MATCHED[@]}"; do
+        [ -n "${LOST[$id]+x}" ] && continue
+        if [ -n "${WHEN:-}" ]; then
+            local w; w=$(rget "$id" when); w=${w:-install boot}
+            [[ " $w " == *" $WHEN "* ]] || continue
+        fi
+        echo "$id"
+    done
+}
+rname() {
+    local v=''
+    ((NB)) && v=$(rget "$1" name.nb)
+    [ -n "$v" ] || v=$(rget "$1" name)
+    printf '%s' "${v:-$1}"
+}
+rnote() {
+    local v=''
+    ((NB)) && v=$(rget "$1" note.nb)
+    [ -n "$v" ] || v=$(rget "$1" note)
+    printf '%s' "$v"
+}
+
+# --- installed packages, kernels, firmware ----------------------------------------------------------------
+declare -A INSTALLED=()
+KERNELS=()
+MULTILIB=1
+load_installed() {
+    local p
+    if [ -n "$S" ]; then
+        [ -r "$S/.hw/pkgs" ] && while IFS= read -r p; do [ -n "$p" ] && INSTALLED[$p]=1; done <"$S/.hw/pkgs"
+    elif [ -d "$ROOT/var/lib/pacman/local" ]; then
+        while IFS= read -r p; do INSTALLED[$p]=1; done < <(pacman --dbpath "$ROOT/var/lib/pacman" -Qq 2>/dev/null)
+        grep -q '^\[multilib\]' "$ROOT/etc/pacman.conf" 2>/dev/null || MULTILIB=0
+    fi
+    for p in linux linux-lts linux-zen linux-hardened linux-rt; do [ -n "${INSTALLED[$p]+x}" ] && KERNELS+=("$p"); done
+    [ ${#KERNELS[@]} -gt 0 ] || KERNELS=(linux)
+    return 0
+}
+expand_pkgs() {  # {kernel}-headers → one per installed kernel
+    local p k
+    for p in "$@"; do
+        if [[ $p == *'{kernel}'* ]]; then for k in "${KERNELS[@]}"; do echo "${p//\{kernel\}/$k}"; done; else echo "$p"; fi
+    done
+}
+fw_map() {  # stdin: firmware paths → "path package" (the longest prefix firmware.map knows)
+    awk 'NR == FNR { if ($1 !~ /^#/) map[$1] = $2; next }
+         { p = $0; sub(/\.(zst|xz)$/, "", p); f = p
+           while (1) { if (p in map) { print f, map[p]; break }; if (index(p, "/") == 0) break; sub(/\/[^\/]*$/, "", p) } }' \
+        "$DATA/firmware.map" -
+}
+modinfo_fw() {
+    if [ -n "$S" ]; then [ -r "$S/.hw/modinfo/$1" ] && cat "$S/.hw/modinfo/$1"; return 0; fi
+    modinfo -F firmware "$1" 2>/dev/null || true
+}
+FW_PKGS=()
+declare -A FW_FOR=()
+firmware() {  # the split firmware packages the bound drivers ask for (not those a rule replaces)
+    local j m p seen=' ' id
+    for id in $(active); do for m in $(words "$id" replaces-driver); do seen+="$m "; done; done
+    for ((j = 0; j < ${#DEV_ID[@]}; j++)); do
+        m=${DEV_MOD[$j]}
+        [ -n "$m" ] && [[ $seen != *" $m "* ]] || continue
+        seen+="$m "
+        while read -r p; do
+            [ -n "${FW_FOR[$p]+x}" ] || FW_PKGS+=("$p")
+            [[ " ${FW_FOR[$p]-} " == *" $m "* ]] || FW_FOR[$p]+="${FW_FOR[$p]:+ }$m"
+        done < <(modinfo_fw "$m" | fw_map | awk '!seen[$2]++ {print $2}')
+    done
+    return 0
+}
+kernel_log() {
+    if [ -n "$S" ]; then [ -r "$S/.hw/kmsg" ] && cat "$S/.hw/kmsg"; return 0; fi
+    journalctl -k -b -o cat --no-pager 2>/dev/null || dmesg 2>/dev/null || true
+}
+missing_fw() {  # "Direct firmware load for X failed" → "package file" for packages that are not installed
+    local f p
+    while read -r f p; do
+        [ -z "${INSTALLED[$p]+x}" ] && echo "$p $f"
+    done < <(kernel_log | sed -nE 's/.*Direct firmware load for ([^ ]+) failed.*/\1/p' | sort -u | fw_map) | sort -u -k1,1
+}
+
+# --- the plan --------------------------------------------------------------------------------------------
+# PKG_NEW / PKG_HAVE: what the active rules plus firmware need; OPT / REPO: offered only
+PKG_NEW=() PKG_HAVE=() PKG_SKIP=() OPT=() REPO=()
+build_plan() {  # build_plan [ID...]: only those rules (and their optional packages) when IDs are given
+    local ids=("$@") id p all=() want_fw=1 explicit=0
+    if [ ${#ids[@]} -gt 0 ]; then
+        explicit=1 want_fw=0
+        local x
+        for x in "${ids[@]}"; do [ "$x" = firmware ] || [[ $x == fw-* ]] && want_fw=1; done
+    else
+        mapfile -t ids < <(active)
+    fi
+    for id in "${ids[@]}"; do
+        [ "$id" = firmware ] || [[ $id == fw-* ]] && continue
+        for p in $(expand_pkgs $(words "$id" packages)); do all+=("$p"); done
+        for p in $(words "$id" optional); do
+            if ((explicit)); then all+=("$p"); else OPT+=("$p"); fi
+        done
+        for p in $(words "$id" ourrepo); do REPO+=("$p"); done
+    done
+    if ((want_fw)); then
+        local only=''
+        for id in "${ids[@]}"; do [[ $id == fw-* ]] && only+=" ${id#fw-}"; done
+        for p in "${FW_PKGS[@]}" $(missing_fw | cut -d" " -f1); do
+            [ -z "$only" ] || [[ "$only " == *" $p "* ]] && all+=("$p")
+        done
+        [ -n "$only" ] && for p in $only; do all+=("$p"); done
+    fi
+    local seen=' '
+    for p in "${all[@]}"; do
+        [[ $seen == *" $p "* ]] && continue
+        seen+="$p "
+        if [ -n "${INSTALLED[$p]+x}" ]; then PKG_HAVE+=("$p")
+        elif [[ $p == lib32-* ]] && ((!MULTILIB)); then PKG_SKIP+=("$p")
+        else PKG_NEW+=("$p"); fi
+    done
+    return 0
+}
+gen_files() {  # print "path<TAB>content-line" for the configuration the given rules want
+    local id v m
+    for id in "$@"; do
+        while IFS= read -r v; do [ -n "$v" ] && printf 'etc/modprobe.d/olymparch-hw.conf\t%s\n' "$v"; done <<<"$(rget "$id" modprobe)"
+        for v in $(words "$id" modules-load); do printf 'etc/modules-load.d/olymparch-hw.conf\t%s\n' "$v"; done
+        for v in $(words "$id" cmdline); do printf 'etc/olymparch/cmdline.d/hw.conf\t%s\n' "$v"; done
+        while IFS= read -r v; do [ -n "$v" ] && printf 'etc/olymparch/hw/hypr-env\t%s\n' "$v"; done <<<"$(rget "$id" hypr-env)"
+        for v in $(words "$id" initramfs-modules); do
+            if [ "$v" = @internal-keyboard ]; then for m in $KBD_MODS; do printf 'etc/mkinitcpio.conf.d/20-olymparch-hw.conf\t%s\n' "$m"; done
+            else printf 'etc/mkinitcpio.conf.d/20-olymparch-hw.conf\t%s\n' "$v"; fi
+        done
+    done | awk -F'\t' '!seen[$0]++'
+}
+render() {  # render FILE < lines: the file content for one generated file
+    local f=$1
+    echo "# Written by olymparch-hw from the hardware rules. Changes are overwritten."
+    case $f in
+        */20-olymparch-hw.conf) printf 'MODULES+=(%s)\n' "$(paste -sd' ')" ;;
+        */cmdline.d/hw.conf) paste -sd' ' ;;
+        *) cat ;;
+    esac
+}
+GEN_FILES='etc/modprobe.d/olymparch-hw.conf etc/modules-load.d/olymparch-hw.conf etc/olymparch/cmdline.d/hw.conf etc/olymparch/hw/hypr-env etc/mkinitcpio.conf.d/20-olymparch-hw.conf'
+
+machine_line() {
+    local what
+    case $CHASSIS in laptop) what=$(t laptop) ;; vm) what=$(t vm) ;; *) what=$(t desktop) ;; esac
+    printf '%s · %s %s' "$what" "${DMI[sys_vendor]:-?}" "${DMI[product_name]:-}"
+}
+gpu_lines() {
+    local j any=0 extra
+    for ((j = 0; j < ${#DEV_ID[@]}; j++)); do
+        [ "${DEV_BUS[$j]}" = pci ] && [[ ${DEV_CLASS[$j]} == 03* ]] || continue
+        any=1 extra=''
+        [ "${DEV_VGA[$j]}" = 1 ] && extra=", $(t primary)"
+        printf '%s %s (%s%s)\n' "${DEV_ID[$j]}" "${DEV_VD[$j]}" "${DEV_DRV[$j]:-?}" "$extra"
+    done
+    ((any)) || t none
+}
+
+cmd_plan() {
+    local list='' summary=0
+    while [ $# -gt 0 ]; do
+        case $1 in
+            --root) ROOT=$2; shift ;;
+            --list) list=$2; shift ;;
+            --summary) summary=1 ;;
+            --when) WHEN=$2; shift ;;
+            *) die "plan: unknown option $1" ;;
+        esac
+        shift
+    done
+    load_installed; firmware; build_plan
+    local id
+    case $list in
+        packages) printf '%s\n' "${PKG_NEW[@]}" | sed '/^$/d'; return ;;
+        optional) printf '%s\n' "${OPT[@]}" | sed '/^$/d'; return ;;
+        rules) active; return ;;
+        initramfs) gen_files $(active) | awk -F'\t' '$1 ~ /mkinitcpio/ {print $2}'; return ;;
+        '') ;;
+        *) die "plan --list: packages, optional, rules or initramfs" ;;
+    esac
+    local ind='  '
+    ((summary)) || { t plan; echo; echo; }
+    printf '%s%-10s %s\n' "$ind" "$(t machine)" "$(machine_line)"
+    printf '%s%-10s %s\n' "$ind" "$(t cpu)" "${CPU_NAME:-?} ($CPU_VENDOR)"
+    local first=1 l
+    while IFS= read -r l; do
+        if ((first)); then printf '%s%-10s %s\n' "$ind" "$(t gpu)" "$l"; first=0; else printf '%s%-10s %s\n' "$ind" '' "$l"; fi
+    done < <(gpu_lines)
+    echo
+    echo "$(t rules)"
+    local warn=()
+    for id in "${MATCHED[@]}"; do
+        if [ -n "${LOST[$id]+x}" ]; then
+            printf '  %-26s %s  [%s]\n' "$id" "$(rname "$id")" "$(printf "$(t lost)" "${LOST[$id]}")"
+            continue
+        fi
+        printf '  %-26s %s\n' "$id" "$(rname "$id")"
+        local w
+        for w in packages optional ourrepo initramfs-modules services; do
+            local v; v=$(words "$id" "$w")
+            [ "$v" = @internal-keyboard ] && v=$KBD_MODS
+            [ -n "$v" ] && printf '  %-26s   %s: %s\n' '' "$w" "$(expand_pkgs $v | paste -sd' ')"
+        done
+        case $(rget "$id" support) in beta) warn+=("$id: $(t support_beta)") ;; untested) warn+=("$id: $(t support_untested)") ;; esac
+        local n; n=$(rnote "$id"); [ -n "$n" ] && warn+=("$id: $n")
+    done
+    local kfw; kfw=$(missing_fw)
+    if [ ${#FW_PKGS[@]} -gt 0 ] || [ -n "$kfw" ]; then
+        echo; echo "$(t fw)"
+        local p f
+        for p in "${FW_PKGS[@]}"; do printf '  %-26s %s %s\n' "$p" "$(t for)" "${FW_FOR[$p]}"; done
+        while read -r p f; do
+            [ -n "$p" ] && [ -z "${FW_FOR[$p]+x}" ] && printf '  %-26s %s %s (%s)\n' "$p" "$(t for)" "$f" "$(t kmsg)"
+        done <<<"$kfw"
+    fi
+    echo
+    if [ ${#PKG_NEW[@]} -gt 0 ]; then echo "$(t install) (${#PKG_NEW[@]})"; printf '%s\n' "${PKG_NEW[@]}" | fmt -w 100 | sed 's/^/  /'
+    else echo "$(t nothing)"; fi
+    [ ${#PKG_HAVE[@]} -gt 0 ] && { echo "$(t have)"; printf '%s\n' "${PKG_HAVE[@]}" | fmt -w 100 | sed 's/^/  /'; }
+    [ ${#OPT[@]} -gt 0 ] && { echo "$(t optional)"; printf '%s\n' "${OPT[@]}" | fmt -w 100 | sed 's/^/  /'; }
+    [ ${#REPO[@]} -gt 0 ] && { echo "$(t ourrepo)"; printf '%s\n' "${REPO[@]}" | fmt -w 100 | sed 's/^/  /'; }
+    [ ${#PKG_SKIP[@]} -gt 0 ] && warn+=("$(printf "$(t multilib)" "${PKG_SKIP[*]}")")
+    if ((!summary)); then
+        local files; files=$(gen_files $(active))
+        if [ -n "$files" ]; then
+            echo; echo "$(t files)"
+            local f
+            for f in $GEN_FILES; do
+                grep -q "^$f"$'\t' <<<"$files" || continue
+                printf '  /%s\n' "$f"
+                awk -F'\t' -v f="$f" '$1 == f {print $2}' <<<"$files" | render "$f" | tail -n +2 | sed 's/^/    /'
+            done
+        fi
+    fi
+    if [ ${#warn[@]} -gt 0 ]; then echo; echo "$(t notes)"; printf '  %s\n' "${warn[@]}"; fi
+    return 0
+}
+
+cmd_scan() {
+    load_installed; firmware
+    printf '%-10s %s (DMI chassis %s)\n' "$(t machine)" "$(machine_line)" "${DMI[chassis_type]:-?}"
+    printf '%-10s %s (%s)\n' "$(t cpu)" "${CPU_NAME:-?}" "$CPU_VENDOR"
+    local first=1 l j
+    while IFS= read -r l; do
+        if ((first)); then printf '%-10s %s\n' "$(t gpu)" "$l"; first=0; else printf '%-10s %s\n' '' "$l"; fi
+    done < <(gpu_lines)
+    printf '%-10s %s\n' "$(t battery)" "$( [ "$BATTERY" = yes ] && t yes || t no)"
+    printf '%-10s %s\n' "$(t kbd)" "$(t kbd_init): ${KBD_MODS:-$(t none)}"
+    echo; echo "$(t devices)"
+    for ((j = 0; j < ${#DEV_ID[@]}; j++)); do
+        [ -n "${DEV_DRV[$j]}" ] || [ "${DEV_BUS[$j]}" = pci ] || continue
+        printf '  %-8s %-24s %-12s %s\n' "${DEV_BUS[$j]}" "${DEV_ID[$j]:0:24}" "${DEV_DRV[$j]:--}" "${DEV_ALIAS[$j]:0:48}"
+    done
+    if [ ${#FW_PKGS[@]} -gt 0 ]; then
+        echo; echo "$(t fw)"
+        local p
+        for p in "${FW_PKGS[@]}"; do printf '  %-26s %s %s\n' "$p" "$(t for)" "${FW_FOR[$p]}"; done
+    fi
+}
+
+cmd_explain() {
+    local only=${1:-} id
+    for id in "${RULE_IDS[@]}"; do
+        [ -z "$only" ] || [ "$only" = "$id" ] || continue
+        local state=no
+        [[ " ${MATCHED[*]} " == *" $id "* ]] && state=yes
+        [ -n "${LOST[$id]+x}" ] && state="no ($(printf "$(t lost)" "${LOST[$id]}"))"
+        printf '%s  %s  [%s]\n' "$id" "$(rname "$id")" "$state"
+        printf '%s' "${WHY[$id]}" | sed 's/^/    /'
+        printf '    (%s)\n' "${RFILE[$id]}"
+    done
+}
+
+# dump: a fixture of this machine. Only what the rules look at: modalias, drivers, PCI IDs, DMI model,
+# CPU vendor/model, keyboards' sysfs paths and the firmware names. No serials, UUIDs, MACs or host names.
+cmd_dump() {
+    local j d k
+    echo "# olymparch-hw fixture 1 · $(date +%F)"
+    for k in chassis_type sys_vendor product_name product_family board_vendor board_name; do
+        [ -n "${DMI[$k]}" ] && echo "dmi $k ${DMI[$k]}"
+    done
+    echo "cpu vendor_id $CPU_VENDOR"
+    echo "cpu model_name $CPU_NAME"
+    [ "$VM" = yes ] && echo "cpu flags hypervisor"
+    for d in "$S/sys/class/power_supply"/*; do [ -r "$d/type" ] && echo "power ${d##*/} $(<"$d/type")"; done
+    for ((j = 0; j < ${#DEV_ID[@]}; j++)); do
+        local b=${DEV_BUS[$j]} p
+        d="$S/sys/bus/$b/devices/${DEV_ID[$j]}"
+        p=$(readlink -f "$d"); p=${p#"$S"/sys/devices/}
+        printf 'dev %s %s path=%s' "$b" "${DEV_ID[$j]}" "$p"
+        [ -n "${DEV_DRV[$j]}" ] && printf ' driver=%s' "${DEV_DRV[$j]}"
+        [ -n "${DEV_MOD[$j]}" ] && { printf ' module=%s' "${DEV_MOD[$j]}"; loadable "${DEV_MOD[$j]}" || printf ' builtin=1'; }
+        [ "$b" = pci ] && printf ' class=%s vd=%s' "${DEV_CLASS[$j]}" "${DEV_VD[$j]}"
+        [ -n "${DEV_VGA[$j]}" ] && printf ' boot_vga=%s' "${DEV_VGA[$j]}"
+        printf ' modalias=%s\n' "${DEV_ALIAS[$j]}"
+    done
+    # keyboards with every ancestor that has a driver (for the initramfs rule)
+    local i words last p m l nodes=' '
+    for i in "$S/sys/class/input"/input*; do
+        [ -r "$i/capabilities/key" ] || continue
+        read -ra words <"$i/capabilities/key"; last=00000000${words[${#words[@]} - 1]}
+        (( (16#${last: -8} & 16#fffffffe) == 16#fffffffe )) || continue
+        p=$(readlink -f "$i"); p=${p#"$S"/sys/devices/}
+        printf 'kbd %s path=%s\n' "${i##*/}" "$p"
+        local q=$S/sys/devices/$p
+        while [ "${#q}" -gt "${#S}" ] && [ "$q" != "$S/sys/devices" ]; do
+            if [ -L "$q/driver" ] && [[ " ${DEV_ID[*]} " != *" ${q##*/} "* ]] && [[ $nodes != *" $q "* ]]; then
+                nodes+="$q "
+                l=$(readlink "$q/driver"); m=''
+                [ -L "$q/driver/module" ] && { m=$(readlink "$q/driver/module"); m=${m##*/}; }
+                printf 'node path=%s driver=%s%s%s\n' "${q#"$S"/sys/devices/}" "${l##*/}" "${m:+ module=$m}" "$( [ -n "$m" ] && ! loadable "$m" && echo ' builtin=1')"
+            fi
+            q=${q%/*}
+        done
+    done
+    # firmware: one file per package each module asks for (enough to map it)
+    local seen=' '
+    for ((j = 0; j < ${#DEV_ID[@]}; j++)); do
+        m=${DEV_MOD[$j]}
+        [ -n "$m" ] && [[ $seen != *" $m "* ]] || continue
+        seen+="$m "
+        modinfo_fw "$m" | fw_map | awk -v m="$m" '!seen[$2]++ {print "fw", m, $1}'
+    done
+    kernel_log | sed -nE 's/.*(Direct firmware load for [^ ]+ failed.*)/kmsg \1/p' | sort -u
+}
+
+# --- changing the system (root) ----------------------------------------------------------------------------
+APPLIED=()
+state_dir() { echo "${ROOT%/}/var/lib/olymparch/hw"; }
+write_files() {  # regenerate every generated file from the applied rules that still match; 0 if initramfs changed
+    local files f dst tmp changed=1
+    local keep=() id
+    for id in "${APPLIED[@]}"; do [[ " ${MATCHED[*]} " == *" $id "* ]] && [ -z "${LOST[$id]+x}" ] && keep+=("$id"); done
+    files=$(gen_files "${keep[@]}")
+    for f in $GEN_FILES; do
+        dst=${ROOT%/}/$f
+        if grep -q "^$f"$'\t' <<<"$files"; then
+            tmp=$(awk -F'\t' -v f="$f" '$1 == f {print $2}' <<<"$files" | render "$f")
+            if [ ! -f "$dst" ] || [ "$(cat "$dst")" != "$tmp" ]; then
+                mkdir -p "${dst%/*}"; printf '%s\n' "$tmp" >"$dst"
+                [[ $f == *mkinitcpio* ]] && changed=0
+            fi
+        elif [ -f "$dst" ]; then
+            rm -f -- "$dst"
+            [[ $f == *mkinitcpio* ]] && changed=0
+        fi
+    done
+    # udev files, services, user units, groups: added, never removed automatically
+    local v
+    for id in "${keep[@]}"; do
+        for v in $(words "$id" udev-file); do
+            [[ $v =~ ^[A-Za-z0-9._-]+$ ]] && [ -f "$DATA/udev/$v" ] && install -Dm644 "$DATA/udev/$v" "${ROOT%/}/etc/udev/rules.d/$v"
+        done
+        for v in $(words "$id" services); do systemctl --root="$ROOT" enable "$v" >/dev/null 2>&1 || echo "olymparch-hw: could not enable $v" >&2; done
+        for v in $(words "$id" user-unit); do systemctl --root="$ROOT" --global enable "$v" >/dev/null 2>&1 || true; done
+        if [ -n "${USER_NAME:-}" ]; then
+            for v in $(words "$id" groups); do
+                if [ "$ROOT" = / ]; then usermod -aG "$v" "$USER_NAME"; else arch-chroot "$ROOT" usermod -aG "$v" "$USER_NAME"; fi
+            done
+        fi
+    done
+    return $changed
+}
+read_applied() {
+    APPLIED=()
+    local f; f=$(state_dir)/applied
+    [ -r "$f" ] && mapfile -t APPLIED <"$f"
+    return 0
+}
+cmd_apply() {
+    local ids=() WHEN=${WHEN:-}
+    USER_NAME=''
+    while [ $# -gt 0 ]; do
+        case $1 in
+            --root) ROOT=$2; shift ;;
+            --user) USER_NAME=$2; shift ;;
+            --when) WHEN=$2; shift ;;
+            --) shift; ids+=("$@"); break ;;
+            -*) die "apply: unknown option $1" ;;
+            *) ids+=("$1") ;;
+        esac
+        shift
+    done
+    [ "$(id -u)" = 0 ] || die "$(t needs_root)"
+    [ -z "$USER_NAME" ] && [ -n "${PKEXEC_UID:-}" ] && USER_NAME=$(id -nu "$PKEXEC_UID" 2>/dev/null || true)
+    load_installed; firmware
+    local id act; act=" $(active | paste -sd' ') "
+    for id in "${ids[@]}"; do
+        [ "$id" = firmware ] && continue
+        if [[ $id == fw-* ]]; then
+            [[ " $(missing_fw | cut -d" " -f1 | paste -sd" ") ${FW_PKGS[*]} " == *" ${id#fw-} "* ]] || die "$(printf "$(t unknown_rule)" "$id")"
+            continue
+        fi
+        [[ $act == *" $id "* ]] || die "$(printf "$(t unknown_rule)" "$id")"
+    done
+    build_plan "${ids[@]}"
+    if [ ${#PKG_NEW[@]} -gt 0 ]; then
+        printf "$(t installing)\n" "${PKG_NEW[*]}"
+        if [ "$ROOT" = / ]; then pacman -S --needed --noconfirm "${PKG_NEW[@]}"
+        else arch-chroot "$ROOT" pacman -S --needed --noconfirm "${PKG_NEW[@]}"; fi
+    fi
+    [ ${#PKG_SKIP[@]} -gt 0 ] && printf "$(t multilib)\n" "${PKG_SKIP[*]}" >&2
+    read_applied
+    local new=("${ids[@]}")
+    [ ${#ids[@]} -gt 0 ] || mapfile -t new < <(active)
+    for id in "${new[@]}"; do [[ " ${APPLIED[*]} " == *" $id "* ]] || [[ $id == fw-* ]] || [ "$id" = firmware ] || APPLIED+=("$id"); done
+    mkdir -p "$(state_dir)"
+    printf '%s\n' "${APPLIED[@]}" >"$(state_dir)/applied"
+    if write_files && [ "$ROOT" = / ]; then mkinitcpio -P; fi
+    t done; echo
+}
+
+# boot-check: GPU fingerprint against the last boot, missing firmware, rules with packages that are missing.
+# Writes /run/olymparch/hw/offers (one rule id per line) for the user's notification unit.
+cmd_boot_check() {
+    [ "$(id -u)" = 0 ] || die "$(t needs_root)"
+    load_installed; firmware
+    local st; st=$(state_dir); mkdir -p "$st" /run/olymparch/hw
+    local fp j
+    fp=$(for ((j = 0; j < ${#DEV_ID[@]}; j++)); do
+        [ "${DEV_BUS[$j]}" = pci ] && [[ ${DEV_CLASS[$j]} == 03* ]] && echo "${DEV_VD[$j]}:${DEV_VGA[$j]:-0}"
+    done | sort | paste -sd' ')
+    local old=''; [ -r "$st/gpu" ] && old=$(<"$st/gpu")
+    : >/run/olymparch/hw/offers
+    if [ -n "$old" ] && [ "$old" != "$fp" ]; then
+        echo "olymparch-hw: graphics changed: $old → $fp"
+        echo "gpu-changed" >>/run/olymparch/hw/offers
+        read_applied
+        if write_files; then mkinitcpio -P; fi
+    fi
+    echo "$fp" >"$st/gpu"
+    local id
+    WHEN=boot
+    for id in $(active); do
+        PKG_NEW=() PKG_HAVE=() PKG_SKIP=() OPT=() REPO=()
+        build_plan "$id"
+        [ ${#PKG_NEW[@]} -gt 0 ] && echo "$id" >>/run/olymparch/hw/offers
+    done
+    local p
+    for p in $(missing_fw | cut -d" " -f1); do echo "fw-$p" >>/run/olymparch/hw/offers; done
+    chmod 644 /run/olymparch/hw/offers
+    cat /run/olymparch/hw/offers
+}
+
+# notify: one notification per offer, with an Install button (pkexec hw-apply ID). Never installs on its own.
+wait_notifications() {
+    local i
+    for ((i = 0; i < 120; i++)); do
+        busctl --user status org.freedesktop.Notifications >/dev/null 2>&1 && return 0
+        sleep 1
+    done
+    return 1
+}
+offer() {  # offer ID TITLE BODY
+    local id=$1 title=$2 body=$3 ign=${XDG_STATE_HOME:-$HOME/.local/state}/olymparch/hw-ignored a
+    [ -r "$ign" ] && grep -qx "$id" "$ign" && return 0
+    a=$(notify-send -a Olymparch -i drive-harddisk -A install="$(t n_install)" -A later="$(t n_later)" --wait "$title" "$body" || true)
+    case $a in
+        install)
+            notify-send -a Olymparch "$title" "$(t n_installing)" -t 4000 || true
+            if pkexec "$LIB/hw-apply" "$id"; then notify-send -a Olymparch "$title" "$(t n_ok)" || true
+            else notify-send -a Olymparch -u critical "$title" "$(t n_fail)" || true; fi ;;
+        later) mkdir -p "${ign%/*}"; echo "$id" >>"$ign" ;;
+    esac
+}
+cmd_notify() {
+    local what=${1:-}
+    [ -n "$what" ] || die "notify --boot | RULE"
+    wait_notifications || exit 0
+    if [ "$what" = --boot ]; then
+        [ -r /run/olymparch/hw/offers ] || exit 0
+        local id
+        while IFS= read -r id; do
+            case $id in
+                gpu-changed) ;;
+                fw-*) offer "$id" "$(t n_fw)" "$(printf "$(t n_fw_body)" "${id#fw-}")" ;;
+                *) [ -n "${RFILE[$id]+x}" ] && offer "$id" "$(rname "$id")" "$(words "$id" packages | sed "s/{kernel}/${KERNELS[0]:-linux}/g")" ;;
+            esac
+        done </run/olymparch/hw/offers
+        return 0
+    fi
+    # a hotplug event for one rule: only if it now matches and something is missing
+    [[ $what =~ ^[a-z0-9][a-z0-9-]*$ ]] && [ -n "${RFILE[$what]+x}" ] || exit 0
+    [[ " $(active | paste -sd' ') " == *" $what "* ]] || exit 0
+    local repo; repo=$(words "$what" ourrepo)
+    if [ -n "$repo" ]; then
+        notify-send -a Olymparch "$(rname "$what")" "$(t n_repo) ($repo)" || true
+        return 0
+    fi
+    build_plan "$what"
+    [ ${#PKG_NEW[@]} -gt 0 ] || exit 0
+    offer "$what" "$(rname "$what")" "${PKG_NEW[*]}"
+}
+
+cmd_udev_rules() {
+    local id v
+    echo "# Hotplug: a device that a hardware rule knows starts olymparch-hw-notify@RULE in the user's session."
+    echo "# Generated by olymparch-hw udev-rules; do not edit. Slow work never runs here (no RUN+=)."
+    echo 'ACTION!="add", GOTO="olymparch_hw_end"'
+    echo 'ENV{MODALIAS}=="", GOTO="olymparch_hw_end"'
+    for id in "${RULE_IDS[@]}"; do
+        [[ " $(rget "$id" when) " == *" hotplug "* ]] || continue
+        while IFS= read -r v; do
+            [ -n "$v" ] && printf 'ENV{MODALIAS}=="%s", TAG+="systemd", ENV{SYSTEMD_USER_WANTS}+="olymparch-hw-notify@%s.service"\n' "$v" "$id"
+        done <<<"$(rget "$id" modalias)"
+    done
+    echo 'LABEL="olymparch_hw_end"'
+}
+
+cmd_lint() {
+    local id p err=0 seen=' ' k
+    for id in "${RULE_IDS[@]}"; do
+        [[ $id =~ ^[a-z0-9][a-z0-9-]*$ ]] || { echo "bad id: $id"; err=1; }
+        [[ $seen == *" $id "* ]] && { echo "duplicate id: $id"; err=1; }
+        seen+="$id "
+        [ -n "$(rget "$id" name)" ] && [ -n "$(rget "$id" name.nb)" ] || { echo "$id: needs name= and name.nb="; err=1; }
+        local has=0
+        for k in ${R[$id|keys]}; do [[ " $MATCH_KEYS " == *" ${k#!} "* || ${k#!} == dmi.* ]] && has=1; done
+        ((has)) || { echo "$id: no match key"; err=1; }
+        while IFS= read -r p; do
+            [ -z "$p" ] || [[ $p =~ ^(pci|usb):v[0-9A-F*?] ]] || [[ ! $p =~ ^(pci|usb): ]] || { echo "$id: modalias must use upper-case hex: $p"; err=1; }
+        done <<<"$(rget "$id" modalias)"
+        for p in $(expand_pkgs $(words "$id" packages) $(words "$id" optional)); do
+            pacman -Si "$p" >/dev/null 2>&1 || { echo "$id: package not found: $p"; err=1; }
+        done
+        for p in $(words "$id" when); do [[ $p =~ ^(install|boot|hotplug)$ ]] || { echo "$id: bad when=$p"; err=1; }; done
+        for p in $(words "$id" udev-file); do [ -f "$DATA/udev/$p" ] || { echo "$id: missing udev file $p"; err=1; }; done
+    done
+    for p in $(awk '!/^#/ {print $2}' "$DATA/firmware.map" | sort -u); do
+        pacman -Si "$p" >/dev/null 2>&1 || { echo "firmware.map: package not found: $p"; err=1; }
+    done
+    ((err)) && return 1
+    echo "lint ok: ${#RULE_IDS[@]} rules"
+}
+
+cmd=${1:-help}
+shift || true
+case $cmd in
+    scan | plan | explain | dump | apply | boot-check | notify | udev-rules | lint) ;;
+    *) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; [ "$cmd" = help ] || [ "$cmd" = --help ]; exit ;;
+esac
+load_rules
+if [ "$cmd" != udev-rules ] && [ "$cmd" != lint ]; then collect; evaluate; fi
+case $cmd in
+    scan) cmd_scan ;;
+    plan) cmd_plan "$@" ;;
+    explain) cmd_explain "$@" ;;
+    dump) cmd_dump ;;
+    apply) cmd_apply "$@" ;;
+    boot-check) cmd_boot_check ;;
+    notify) load_installed; cmd_notify "$@" ;;
+    udev-rules) cmd_udev_rules ;;
+    lint) load_installed; cmd_lint ;;
+esac

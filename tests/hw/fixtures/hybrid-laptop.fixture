@@ -1,0 +1,19 @@
+# Hybrid gaming laptop: Comet Lake iGPU (drives the screen) + RTX 2060 mobile (3D controller, nouveau on the
+# live ISO), plain HD Audio, Intel Wi-Fi, PS/2 keyboard (atkbd is built in, so nothing extra for the initramfs).
+dmi chassis_type 10
+dmi sys_vendor Example Gaming
+dmi product_name Blade 15 CML
+cpu vendor_id GenuineIntel
+cpu model_name Intel(R) Core(TM) i7-10750H CPU @ 2.60GHz
+power BAT1 Battery
+dev pci 0000:00:02.0 path=pci0000:00/0000:00:02.0 driver=i915 module=i915 class=030000 vd=8086:9bc4 boot_vga=1 modalias=pci:v00008086d00009BC4sv00001A58sd00002009bc03sc00i00
+dev pci 0000:00:14.3 path=pci0000:00/0000:00:14.3 driver=iwlwifi module=iwlwifi class=028000 vd=8086:06f0 modalias=pci:v00008086d000006F0sv00008086sd00000034bc02sc80i00
+dev pci 0000:00:1f.3 path=pci0000:00/0000:00:1f.3 driver=snd_hda_intel module=snd_hda_intel class=040300 vd=8086:06c8 modalias=pci:v00008086d000006C8sv00001A58sd00002009bc04sc03i00
+dev pci 0000:01:00.0 path=pci0000:00/0000:00:01.0/0000:01:00.0 driver=nouveau module=nouveau class=030200 vd=10de:1f15 boot_vga=0 modalias=pci:v000010DEd00001F15sv00001A58sd00002009bc03sc02i00
+dev pci 0000:01:00.1 path=pci0000:00/0000:00:01.0/0000:01:00.1 driver=snd_hda_intel module=snd_hda_intel class=040300 vd=10de:10f9 modalias=pci:v000010DEd000010F9sv00001A58sd00002009bc04sc03i00
+dev platform i8042 path=platform/i8042 driver=i8042 module=i8042 builtin=1 modalias=platform:i8042
+kbd input3 path=platform/i8042/serio0/input/input3
+node path=platform/i8042/serio0 driver=atkbd module=atkbd builtin=1
+fw i915 i915/kbl_dmc_ver1_04.bin
+fw iwlwifi iwlwifi-QuZ-a0-hr-b0-77.ucode
+fw nouveau nvidia/tu106/gr/fecs_bl.bin

@@ -1,0 +1,43 @@
+Olymparch hardware plan
+
+  Machine    desktop · ASUS System Product Name
+  CPU        AMD Ryzen 7 5800X3D 8-Core Processor (AuthenticAMD)
+  Graphics   0000:0a:00.0 10de:2786 (nouveau, primary)
+             0000:0b:00.0 10de:1c03 (nouveau)
+
+Matched rules
+  gpu-nvidia                 NVIDIA graphics: the NVIDIA driver (open kernel modules)
+                               packages: nvidia-open-dkms nvidia-utils lib32-nvidia-utils linux-zen-headers
+                               initramfs-modules: nvidia nvidia_modeset nvidia_uvm nvidia_drm
+  gpu-nvidia-legacy          Older NVIDIA graphics: open driver (nouveau) with Vulkan  [not used, gpu-nvidia wins]
+  gpu-nvidia-desktop         NVIDIA as the only graphics: video decoding and session settings
+                               packages: libva-nvidia-driver
+  ucode-amd                  AMD CPU microcode
+                               packages: amd-ucode
+  rgb                        RGB lighting: OpenRGB
+                               optional: openrgb
+  thrustmaster-wheel         Thrustmaster wheel: force feedback (hid-tmff2)
+                               ourrepo: hid-tmff2
+
+To install (5)
+  nvidia-open-dkms nvidia-utils lib32-nvidia-utils linux-zen-headers libva-nvidia-driver
+Already installed
+  amd-ucode
+Offered, not installed automatically
+  openrgb
+From the Olymparch repo (not available yet)
+  hid-tmff2
+
+Configuration
+  /etc/olymparch/hw/hypr-env
+    LIBVA_DRIVER_NAME=nvidia
+    __GLX_VENDOR_LIBRARY_NAME=nvidia
+    NVD_BACKEND=direct
+  /etc/mkinitcpio.conf.d/20-olymparch-hw.conf
+    MODULES+=(nvidia nvidia_modeset nvidia_uvm nvidia_drm)
+
+Notes
+  gpu-nvidia: not promised: installed, but not tested
+  gpu-nvidia: NVIDIA is not tested on Olymparch yet. The driver is built for every kernel (DKMS).
+  gpu-nvidia-desktop: not promised: installed, but not tested
+  thrustmaster-wheel: beta: should work, not yet tested on real machines

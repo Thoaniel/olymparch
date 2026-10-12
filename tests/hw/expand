@@ -1,0 +1,69 @@
+#!/bin/bash
+# Turn a fixture (the text `olymparch-hw dump` writes) into a small sysroot that looks like sysfs:
+#   tests/hw/expand FIXTURE DIR
+# Lines: dmi KEY VALUE · cpu vendor_id|model_name|flags VALUE · power NAME TYPE · pkg NAME
+#        dev BUS ID path=P [driver=D module=M builtin=1 class=C vd=V:D boot_vga=B] modalias=A
+#        kbd INPUT path=P · node path=P driver=D [module=M builtin=1] · fw MODULE FILE · kmsg TEXT
+set -euo pipefail
+fix=$1 T=$2
+rm -rf -- "$T"
+mkdir -p "$T/sys/devices" "$T/sys/class/dmi/id" "$T/sys/class/input" "$T/sys/class/power_supply" "$T/proc" "$T/.hw/modinfo"
+: >"$T/.hw/kmsg"
+: >"$T/.hw/pkgs"
+cpu_vendor='' cpu_name='' cpu_flags='fpu'
+
+bind() {  # bind DEVDIR BUS DRIVER MODULE BUILTIN
+    local d=$1 bus=$2 drv=$3 mod=$4 builtin=$5 dd
+    dd=$T/sys/bus/$bus/drivers/$drv
+    mkdir -p "$dd"
+    ln -sfn "$dd" "$d/driver"
+    if [ -n "$mod" ]; then
+        mkdir -p "$T/sys/module/$mod"
+        [ "$builtin" = 1 ] || : >"$T/sys/module/$mod/initstate"
+        ln -sfn "$T/sys/module/$mod" "$dd/module"
+    fi
+}
+
+while IFS= read -r line || [ -n "$line" ]; do
+    [[ $line =~ ^[[:space:]]*(#|$) ]] && continue
+    read -r kind a rest <<<"$line"
+    case $kind in
+        dmi) printf '%s\n' "$rest" >"$T/sys/class/dmi/id/$a" ;;
+        cpu)
+            case $a in
+                vendor_id) cpu_vendor=$rest ;;
+                model_name) cpu_name=$rest ;;
+                flags) cpu_flags+=" $rest" ;;
+            esac ;;
+        power) mkdir -p "$T/sys/class/power_supply/$a"; echo "$rest" >"$T/sys/class/power_supply/$a/type" ;;
+        pkg) echo "$a" >>"$T/.hw/pkgs" ;;
+        fw) echo "$rest" >>"$T/.hw/modinfo/$a" ;;
+        kmsg) echo "$a $rest" >>"$T/.hw/kmsg" ;;
+        dev | node | kbd)
+            declare -A f=()
+            for kv in $rest; do f[${kv%%=*}]=${kv#*=}; done
+            [ "$kind" = node ] && f[path]=${a#path=} && for kv in $a; do f[${kv%%=*}]=${kv#*=}; done
+            d=$T/sys/devices/${f[path]}
+            mkdir -p "$d"
+            if [ "$kind" = dev ]; then
+                mkdir -p "$T/sys/bus/$a/devices"
+                ln -sfn "$d" "$T/sys/bus/$a/devices/$(read -r id _ <<<"$rest"; echo "$id")"
+                printf '%s\n' "${f[modalias]}" >"$d/modalias"
+                if [ -n "${f[vd]:-}" ]; then
+                    echo "0x${f[class]}" >"$d/class"; echo "0x${f[vd]%:*}" >"$d/vendor"; echo "0x${f[vd]#*:}" >"$d/device"
+                fi
+                [ -n "${f[boot_vga]:-}" ] && echo "${f[boot_vga]}" >"$d/boot_vga"
+                [ -n "${f[driver]:-}" ] && bind "$d" "$a" "${f[driver]}" "${f[module]:-}" "${f[builtin]:-0}"
+            elif [ "$kind" = node ]; then
+                bind "$d" node "${f[driver]}" "${f[module]:-}" "${f[builtin]:-0}"
+            else
+                mkdir -p "$d/capabilities"
+                echo 120013 >"$d/capabilities/ev"
+                echo "1000000000007 ff9f207ac14057ff febeffdfffefffff fffffffffffffffe" >"$d/capabilities/key"
+                ln -sfn "$d" "$T/sys/class/input/$a"
+            fi
+            unset f ;;
+        *) echo "expand: unknown line: $line" >&2; exit 1 ;;
+    esac
+done <"$fix"
+printf 'processor\t: 0\nvendor_id\t: %s\nmodel name\t: %s\nflags\t\t: %s\n' "$cpu_vendor" "$cpu_name" "$cpu_flags" >"$T/proc/cpuinfo"

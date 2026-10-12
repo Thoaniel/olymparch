@@ -1,0 +1,5 @@
+gpu-hybrid-prime  Hybrid graphics: NVIDIA for games (PRIME offload)  [yes]
+    ✓ chassis=laptop → chassis laptop
+    ✓ pci.range=10de:1e00-ffff:03 → pci 0000:01:00.0 10de:1f15
+    ✓ modalias=pci:v00008086d*bc03* → pci 0000:00:02.0
+    (default/hw/rules.d/10-gpu.rule)

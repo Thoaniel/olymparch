@@ -1,0 +1,15 @@
+# CPU microcode, loaded early by the mkinitcpio microcode hook. Not in virtual machines.
+
+id=ucode-amd
+name=AMD CPU microcode
+name.nb=Mikrokode for AMD-prosessor
+cpu.vendor=AuthenticAMD
+vm=no
+packages=amd-ucode
+
+id=ucode-intel
+name=Intel CPU microcode
+name.nb=Mikrokode for Intel-prosessor
+cpu.vendor=GenuineIntel
+vm=no
+packages=intel-ucode
