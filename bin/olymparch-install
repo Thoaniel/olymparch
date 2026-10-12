@@ -309,7 +309,7 @@ step "$(L "Boot menu (Limine) and snapshots" "Oppstartsmeny (Limine) og øyeblik
 uuid=$(blkid -s UUID -o value "$ROOT")
 mkdir -p /mnt/boot/EFI/BOOT /mnt/etc/olymparch
 cp /mnt/usr/share/limine/BOOTX64.EFI /mnt/boot/EFI/BOOT/BOOTX64.EFI
-install -m755 /usr/share/olymparch/system/bin/* /mnt/usr/bin/
+find /usr/share/olymparch/system/bin -maxdepth 1 -type f -exec install -m755 -t /mnt/usr/bin/ {} +
 # Settings: the narrow pkexec helper for the few rows that change /etc (lid, connectivity check, Bluetooth mode)
 install -Dm755 /usr/share/olymparch/system/lib/settings-apply /mnt/usr/lib/olymparch/settings-apply
 install -Dm644 /usr/share/olymparch/system/polkit/org.olymparch.settings.policy /mnt/usr/share/polkit-1/actions/org.olymparch.settings.policy

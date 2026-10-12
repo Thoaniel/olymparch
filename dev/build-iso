@@ -38,6 +38,8 @@ for size in 1920x1080 2560x1440; do
     mkdir -p "$share/wallpaper/$h"
     cp build/wallpaper/"$h"/frame-*.png "$share/wallpaper/$h/"
 done
+# no Python byte-code from local test runs on the ISO
+find "$share" -name __pycache__ -type d -prune -exec rm -rf -- {} +
 # archiso gives every file mode 644 unless it is listed in file_permissions
 for f in bin/olymparch-*; do
     printf 'file_permissions+=(["/usr/local/bin/%s"]="0:0:755")\n' "${f##*/}" >>profile/profiledef.sh
