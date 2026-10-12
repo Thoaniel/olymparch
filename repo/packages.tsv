@@ -1,0 +1,8 @@
+# Packages in Olymparch's own pacman repo [olymparch]: built from the AUR at a pinned commit, signed in CI.
+# Moving a pin is a reviewed change: read the PKGBUILD diff on aur.archlinux.org before committing a new hash.
+# name                      aur commit
+xone-dongle-firmware        df056c2b70d7b62d8a9be241f61272ac4cb3080d
+xone-dkms                   130e1c4a2a6cc9f327a69ce20ccc829d118718c6
+hid-tmff2-dkms              1be99a51a7eb09efef2f92872d6f85c34dfae340
+proton-ge-custom-bin        4b40426d5adc7963eed75aa86245f03cdc341950
+heroic-games-launcher-bin   40726b60b3555f359a463701eadd41264f59e633

@@ -1,0 +1,44 @@
+#!/bin/bash
+# Build Olymparch's pacman repo [olymparch] from repo/packages.tsv, in order (later packages may depend on
+# earlier ones). Runs in an Arch Linux container in CI as root; the builds themselves run as an unprivileged user.
+#
+#   repo/build OUTDIR [GPG_KEY_ID]
+#
+# With a key, every package and the database are signed.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+out=$(realpath -m "${1:?usage: repo/build OUTDIR [GPG_KEY_ID]}")
+key=${2:-}
+[ "$(id -u)" = 0 ] || { echo "repo/build runs as root in the CI container (it creates a build user)" >&2; exit 2; }
+mkdir -p "$out"
+id builder >/dev/null 2>&1 || useradd -m builder
+echo 'builder ALL=(ALL) NOPASSWD: /usr/bin/pacman' >/etc/sudoers.d/builder
+work=$(mktemp -d)
+chown builder: "$work"
+# packages built earlier in this run satisfy later dependencies (xone-dkms needs xone-dongle-firmware)
+grep -q '^\[olymparch-local\]' /etc/pacman.conf ||
+    printf '\n[olymparch-local]\nSigLevel = Optional TrustAll\nServer = file://%s\n' "$out" >>/etc/pacman.conf
+[ -f "$out/olymparch.db.tar.zst" ] || repo-add -q "$out/olymparch.db.tar.zst"
+while read -r name commit; do
+    [[ -z $name || $name == \#* ]] && continue
+    [[ $name =~ ^[a-z0-9][a-z0-9._+-]*$ && $commit =~ ^[0-9a-f]{40}$ ]] || { echo "bad line: $name $commit" >&2; exit 1; }
+    echo "==> $name @ ${commit:0:12}"
+    d=$work/$name
+    sudo -u builder git clone -q "https://aur.archlinux.org/$name.git" "$d"
+    sudo -u builder git -C "$d" -c advice.detachedHead=false checkout -q "$commit"
+    pacman -Sy >/dev/null
+    (cd "$d" && sudo -u builder env PKGDEST="$d/pkg" makepkg --syncdeps --noconfirm --needed --clean --nocheck >/dev/null)
+    for p in "$d"/pkg/*.pkg.tar.zst; do
+        cp "$p" "$out/"
+        f=$out/${p##*/}
+        [ -n "$key" ] && gpg --batch --yes --detach-sign --local-user "$key" --output "$f.sig" "$f"
+        repo-add -q ${key:+--sign --key "$key"} "$out/olymparch.db.tar.zst" "$f"
+    done
+done <repo/packages.tsv
+rm -rf -- "$work"
+# GitHub release assets cannot be symlinks: the plain names pacman asks for are copies
+for f in olymparch.db olymparch.files; do
+    cp -f "$out/$f.tar.zst" "$out/$f"
+    [ -f "$out/$f.tar.zst.sig" ] && cp -f "$out/$f.tar.zst.sig" "$out/$f.sig"
+done
+ls -l "$out"

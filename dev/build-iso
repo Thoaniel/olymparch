@@ -8,6 +8,10 @@ mkdir -p cache out
 rm -rf -- work profile
 # Build from a staged copy of the profile, so the olymparch-* commands come from bin/ without being copied into git
 cp -r iso profile
+# Packages downloaded for earlier builds are reused (the second cache is this checkout's, so it works for anyone)
+sed -i "s|^CacheDir = /var/cache/pacman/pkg/$|&\\nCacheDir = $PWD/cache/|" profile/pacman.conf
+# Python with Pillow for the art generators: uv on a dev machine, the system's python-pillow in CI
+py() { if command -v uv >/dev/null; then uv run -q --no-project --with pillow python "$@"; else python "$@"; fi; }
 install -Dm755 -t profile/airootfs/usr/local/bin bin/olymparch-*
 # Olymparch defaults (Hyprland config, shell, wallpaper) for the installer to copy onto the new system
 share=profile/airootfs/usr/share/olymparch
@@ -15,7 +19,7 @@ mkdir -p "$share"
 cp -r default/hypr default/shell default/lock default/idle default/branding default/foot default/i18n default/systemd default/apps default/games system "$share/"
 # Boot screen (Plymouth theme for every pixel size) and the Limine wallpapers, made by art/bootart.py
 rm -rf -- build/plymouth
-uv run -q --no-project --with pillow python art/bootart.py build/plymouth >/dev/null
+py art/bootart.py build/plymouth >/dev/null
 mkdir -p "$share/plymouth" "$share/limine"
 cp default/plymouth/olymparch.plymouth build/plymouth/olymparch.script build/plymouth/s*.png "$share/plymouth/"
 cp -r default/plymouth/units default/plymouth/olymparch-mkinitcpio-install "$share/plymouth/"
@@ -29,7 +33,7 @@ printf 'file_permissions+=(["/usr/lib/olymparch/launch-shell"]="0:0:755")\n' >>p
 for size in 1920x1080 2560x1440; do
     w=${size%x*} h=${size#*x}
     if [ -s "build/wallpaper/$h/frame-47.png" ]; then :; else
-        uv run -q --no-project --with pillow python art/torch.py "build/wallpaper/$h" "$w" "$h" 48 >/dev/null
+        py art/torch.py "build/wallpaper/$h" "$w" "$h" 48 >/dev/null
     fi
     mkdir -p "$share/wallpaper/$h"
     cp build/wallpaper/"$h"/frame-*.png "$share/wallpaper/$h/"

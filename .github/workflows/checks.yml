@@ -1,0 +1,13 @@
+name: checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - run: pacman -Syu --noconfirm --needed shellcheck python lua git
+      - uses: actions/checkout@v4
+      - run: tests/ci-checks

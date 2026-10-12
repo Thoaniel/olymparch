@@ -1,0 +1,15 @@
+#!/bin/bash
+# The checks that need no VM: syntax of every script, shellcheck errors, and the data-driven test suites.
+# Run by .github/workflows/checks.yml, and locally before a commit.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+fail=0
+check() { if "$@"; then :; else echo "FAIL: $*" >&2; fail=1; fi; }
+mapfile -t scripts < <(grep -rlE '^#!/bin/(ba)?sh' bin system default dev repo tests 2>/dev/null | grep -v '/out/')
+for f in "${scripts[@]}"; do check bash -n "$f"; done
+command -v shellcheck >/dev/null && check shellcheck -S error "${scripts[@]}"
+while IFS= read -r f; do check python3 -c 'import ast, sys; ast.parse(open(sys.argv[1]).read(), sys.argv[1])' "$f"; done < <(grep -rlE '^#!/usr/bin/(env )?python3' bin system tests 2>/dev/null; ls art/*.py tests/vm/*.py)
+command -v luac >/dev/null && for f in default/hypr/*.lua; do check luac -p -- "$f"; done
+for t in tests/settings-coverage tests/hw/run; do [ -x "$t" ] && check "$t"; done
+[ $fail = 0 ] && echo "ci-checks: all OK"
+exit $fail

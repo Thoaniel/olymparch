@@ -1,0 +1,44 @@
+# The installer ISO. A tag v* (e.g. v2026.11) makes a stable release after the monthly hardware test;
+# "edge" is rebuilt every Monday and on demand from main, as a pre-release.
+name: iso
+on:
+  push:
+    tags: ['v*']
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: iso-${{ github.ref }}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
+    steps:
+      - run: pacman -Syu --noconfirm --needed archiso git github-cli python python-pillow
+      - uses: actions/checkout@v4
+      - run: dev/build-iso
+      - name: Checksums and signature
+        env:
+          KEY: ${{ secrets.OLYMPARCH_SIGNING_KEY }}
+        run: |
+          cd out
+          sha256sum -- *.iso >SHA256SUMS
+          if [ -n "$KEY" ]; then
+              printf '%s\n' "$KEY" | gpg --batch --import
+              for f in *.iso SHA256SUMS; do gpg --batch --detach-sign "$f"; done
+          fi
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config --global --add safe.directory "$PWD"
+          if [ "${GITHUB_REF_TYPE}" = tag ]; then
+              gh release create "$GITHUB_REF_NAME" out/* --title "Olymparch $GITHUB_REF_NAME" --generate-notes
+          else
+              gh release delete edge --yes --cleanup-tag 2>/dev/null || true
+              gh release create edge out/* --prerelease --target "$GITHUB_SHA" --title "Olymparch edge" \
+                  --notes "Built from main ($GITHUB_SHA). Untested on real hardware: use a stable release unless you are testing."
+          fi

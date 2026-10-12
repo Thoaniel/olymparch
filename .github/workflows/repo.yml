@@ -1,0 +1,40 @@
+# Builds the [olymparch] pacman repo from repo/packages.tsv and publishes it as the assets of the release
+# "repo-x86_64". Installed systems use: Server = https://github.com/<owner>/olymparch/releases/download/repo-x86_64
+# Secret OLYMPARCH_SIGNING_KEY: the ASCII-armoured private signing key (no passphrase; only this workflow sees it).
+name: repo
+on:
+  push:
+    branches: [main]
+    paths: [repo/**]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: repo
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - run: pacman -Syu --noconfirm --needed git github-cli
+      - uses: actions/checkout@v4
+      - name: Signing key
+        env:
+          KEY: ${{ secrets.OLYMPARCH_SIGNING_KEY }}
+        run: |
+          [ -n "$KEY" ] || { echo "OLYMPARCH_SIGNING_KEY is not set" >&2; exit 1; }
+          printf '%s\n' "$KEY" | gpg --batch --import
+          echo "KEYID=$(gpg --batch --list-secret-keys --with-colons | awk -F: '/^fpr/ {print $10; exit}')" >>"$GITHUB_ENV"
+      - run: repo/build out "$KEYID"
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config --global --add safe.directory "$PWD"
+          gh release view repo-x86_64 >/dev/null 2>&1 ||
+            gh release create repo-x86_64 --title "Package repo (x86_64)" --notes "pacman repo [olymparch]" --latest=false
+          gh release upload repo-x86_64 out/* --clobber
+          # drop packages that are no longer in the database
+          keep=$(ls out)
+          gh release view repo-x86_64 --json assets --jq '.assets[].name' | while read -r a; do
+            grep -qxF "$a" <<<"$keep" || gh release delete-asset repo-x86_64 "$a" --yes
+          done

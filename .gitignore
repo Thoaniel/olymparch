@@ -7,3 +7,4 @@ tests/vm/out/
 profile/
 build/
 .claude/
+__pycache__/
