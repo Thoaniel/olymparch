@@ -158,6 +158,7 @@ wait_for 'CHK-keys-new-works-(OK|NO)' 20; seen 'CHK-keys-new-works-OK' || fails+
 keys "sleep 4; c keys-old-gone '[ \$(hyprctl clients | grep -c \"class: foot\") -eq 1 ]'\n" 0.3
 press meta_l+ret; sleep 5
 wait_for 'CHK-keys-old-gone-(OK|NO)' 20; seen 'CHK-keys-old-gone-OK' || fails+=(keys-old-gone)
+press ctrl+c; sleep 0.5   # the unbound Super+Enter reached the terminal: clear the line
 check keys-conflict-cli '! olymparch-settings set keys.workspace "SUPER + SHIFT" && olymparch-settings set keys.workspace "SUPER + ALT"'
 keys "clear; sleep 3; c keys-workspace 'hyprctl activeworkspace | grep -q \"ID 4 \"'\n" 0.3
 press meta_l+alt+4; sleep 4
@@ -167,6 +168,7 @@ press meta_l+alt+1; sleep 1.5
 keys "clear; sleep 3; c keys-old-workspace-gone 'hyprctl activeworkspace | grep -q \"ID 1 \"'\n" 0.3
 press meta_l+4; sleep 4
 wait_for 'CHK-keys-old-workspace-gone-(OK|NO)' 20; seen 'CHK-keys-old-workspace-gone-OK' || fails+=(keys-old-workspace-gone)
+press ctrl+c; sleep 0.5
 press meta_l+1; sleep 1
 press meta_l+comma; sleep 1.5
 search hurtigtast
@@ -232,6 +234,18 @@ check disk-limit 'olymparch-settings set events.on_full 75 && systemctl --user s
 keys "clear; olymparch-settings open events\n" 2.5
 shot hendelser "Hendelser: viruskontroll, diskgrense 75 %, varmevarsel"
 close_settings
+
+# ── Games: MangoHud shown with an FPS cap (the file olymparch-launch-steam hands to MangoHud), shader cache size
+check mangohud 'olymparch-settings set games.mangohud shown && olymparch-settings set games.fps_cap 141 && grep -q "^fps_limit=141" ~/.config/olymparch/MangoHud.conf && ! grep -q "^no_display" ~/.config/olymparch/MangoHud.conf && grep -q "^gpu_color" ~/.config/olymparch/MangoHud.conf'
+check mangohud-hidden 'olymparch-settings set games.mangohud hidden && grep -q "^no_display" ~/.config/olymparch/MangoHud.conf && grep -q "^fps_limit=141" ~/.config/olymparch/MangoHud.conf'
+check shader-cache 'olymparch-settings set games.shader_cache 20 && grep -q "^MESA_SHADER_CACHE_MAX_SIZE=20G" ~/.config/environment.d/olymparch-games.conf'
+keys "clear; olymparch-settings set settings.advanced on; olymparch-settings open games\n" 2.5
+shot spill "Spill (avansert): MangoHud vist, FPS-tak 141, shader-cache 20 GB"
+close_settings
+# the shell's font follows Settings → Appearance → Font
+keys "clear; olymparch-settings set appearance.font 'DejaVu Serif'; sleep 1.5\n" 2
+shot skrift "Skrift satt til DejaVu Serif: baren følger med"
+keys "clear; olymparch-settings reset appearance.font; olymparch-settings set settings.advanced off; clear\n" 1.5
 
 # ── Headset switch: module-switch-on-connect loaded by default, gone when off (also after a restart), back when on
 check headset-default 'pactl list modules short | grep -q switch-on-connect'

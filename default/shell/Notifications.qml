@@ -10,11 +10,12 @@ Scope {
     id: notes
     required property var theme
     property bool dnd: false   // shell.qml: Settings → do not disturb (also the bell in the bar), or spillmodus
+    property bool silent: false   // a game runs and Settings says none: even critical ones wait (kept, shown after)
     readonly property string position: Settings.get("notifications.position")
     readonly property bool top: position.startsWith("top")
     readonly property bool left: position.endsWith("left")
     readonly property var shown: server.trackedNotifications.values
-        .filter(n => !dnd || n.urgency === NotificationUrgency.Critical)
+        .filter(n => !silent && (!dnd || n.urgency === NotificationUrgency.Critical))
         .slice(-Settings.get("notifications.max_visible")).reverse()
 
     NotificationServer {

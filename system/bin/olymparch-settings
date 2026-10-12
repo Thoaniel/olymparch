@@ -607,6 +607,32 @@ appliers["dropin"] = function(s, values, key)
     write(dir .. "/olymparch-settings.conf", ("# Written by olymparch-settings (%s)\n[Service]\nEnvironment=%s=%d\n"):format(s.key, s.apply.key, n))
     os.execute("systemctl --user daemon-reload >/dev/null 2>&1")
 end
+-- MangoHud for games started through olymparch-launch-steam: Olymparch's MangoHud.conf with your choices, in
+-- ~/.config/olymparch/MangoHud.conf (your own ~/.config/MangoHud/MangoHud.conf, if you have one, still wins).
+-- «off» is read by olymparch-launch-steam, which then starts Steam without MangoHud. From the next Steam start.
+appliers["mangohud"] = function(s, values)
+    local mode = value_of(values, "games.mangohud")
+    local cap = math.tointeger(value_of(values, "games.fps_cap")) or 0
+    local base = read("/usr/share/olymparch/games/MangoHud.conf") or "toggle_hud=Shift_L+F12\nfps\nframetime\n"
+    local out = { "# Written by olymparch-settings (Settings → Games) from /usr/share/olymparch/games/MangoHud.conf" }
+    for line in base:gmatch("[^\n]+") do
+        if not line:match("^no_display%s*$") and not line:match("^fps_limit") and not line:match("^#") then out[#out + 1] = line end
+    end
+    if mode ~= "shown" then out[#out + 1] = "no_display" end
+    if cap > 0 then out[#out + 1] = ("fps_limit=%d"):format(cap) end
+    write(CONFIG .. "/olymparch/MangoHud.conf", table.concat(out, "\n") .. "\n")
+end
+-- session variables for games (from the next login): ~/.config/environment.d/olymparch-games.conf
+appliers["envd"] = function(s, values)
+    local gb = math.tointeger(value_of(values, "games.shader_cache")) or 10
+    write(CONFIG .. "/environment.d/olymparch-games.conf",
+        ("# Written by olymparch-settings (Settings → Games)\nMESA_SHADER_CACHE_MAX_SIZE=%dG\n__GL_SHADER_DISK_CACHE_SIZE=%d\n"):format(gb, gb * 1024 * 1024 * 1024))
+end
+appliers["brightness"] = function(s, values, key)   -- the built-in screen (laptops)
+    if have("brightnessctl") then
+        os.execute(("brightnessctl -q set %d%% >/dev/null 2>&1"):format(math.tointeger(value_of(values, key)) or 100))
+    end
+end
 -- headset switch: /etc/pipewire/pipewire-pulse.conf.d/50-olymparch-switch-on-connect.conf loads the module unless
 -- olymparch.switch-on-connect is false; this drop-in says so. pactl changes the running server too.
 appliers["headset"] = function(s, values, key)

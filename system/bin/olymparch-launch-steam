@@ -10,9 +10,13 @@ if ! pgrep -u "$(id -u)" -x steam >/dev/null; then
 fi
 setsid -f olymparch-game watch </dev/null >/dev/null 2>&1
 user_conf=${XDG_CONFIG_HOME:-$HOME/.config}/MangoHud/MangoHud.conf
-if [ ! -f "$user_conf" ] && [ -f /usr/share/olymparch/games/MangoHud.conf ]; then
+settings_conf=${XDG_CONFIG_HOME:-$HOME/.config}/olymparch/MangoHud.conf   # Settings → Games (shown, FPS cap)
+if [ ! -f "$user_conf" ] && [ -f "$settings_conf" ]; then
+    export MANGOHUD_CONFIGFILE=$settings_conf
+elif [ ! -f "$user_conf" ] && [ -f /usr/share/olymparch/games/MangoHud.conf ]; then
     export MANGOHUD_CONFIGFILE=/usr/share/olymparch/games/MangoHud.conf
 fi
+mangohud=$(olymparch-settings get games.mangohud 2>/dev/null || echo hidden)
 mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/olymparch/mangohud"
-if command -v mangohud >/dev/null; then exec mangohud /usr/bin/steam "$@"; fi
+if [ "$mangohud" != off ] && command -v mangohud >/dev/null; then exec mangohud /usr/bin/steam "$@"; fi
 exec /usr/bin/steam "$@"
