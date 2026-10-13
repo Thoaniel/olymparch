@@ -1,6 +1,6 @@
 // The System panel (under the clock): how the PC is doing right now — CPU, graphics card, memory and the
 // temperatures as small live graphs (sampled every 1.5 s, only while the panel is open), what uses the most CPU (your
-// own processes can be ended after a second click), the space on every disk, how long the PC has been on, do not disturb,
+// own processes can be ended after a second click), the space on every disk, how long the PC has been on, game mode (on by itself in games, or by hand), do not disturb,
 // and the health check (olymparch-doctor), updates waiting, Roll back and Settings. Data: /proc, /sys, ps, df, and
 // olymparch-sysinfo --json for the health check and updates.
 import QtQuick
@@ -178,7 +178,7 @@ Dropdown {
     }
     PanelLine { theme: p.theme; heading: true; label: p.t("system.care", "Care") }
     PanelLine { theme: p.theme; visible: p.info.updates !== undefined && p.info.updates !== null; label: p.t("system.updates", "Updates"); value: p.info.updates > 0 ? String(p.info.updates) : p.t("system.none", "none") }
-    // do not disturb by hand; game mode itself follows the games (gamemoded), so it is shown, not switched
+    // game mode (by hand; gamemoded switches it for games) and do not disturb
     property bool dnd: false
     property bool gaming: false
     Process {
@@ -189,9 +189,15 @@ Dropdown {
     Process { id: gmSet; onExited: { gmState.running = false; gmState.running = true; } }
     PanelAction {
         theme: p.theme
+        icon: "\u{F0297}"
+        label: p.gaming ? p.t("system.gamemode_off", "Turn game mode off") : p.t("system.gamemode_on", "Game mode")
+        hint: p.t("system.gamemode_hint", "local AI off, background jobs wait")
+        onActivated: { gmSet.command = ["qs", "ipc", "-p", "/usr/share/olymparch/shell", "call", "olymparch", "gamemode", p.gaming ? "off" : "on"]; gmSet.running = true; }
+    }
+    PanelAction {
+        theme: p.theme
         icon: p.dnd ? "\u{F009B}" : "\u{F009A}"
         label: p.dnd ? p.t("system.dnd_off", "Turn do not disturb off") : p.t("system.dnd_on", "Do not disturb")
-        hint: p.gaming ? p.t("system.gaming", "a game is running") : p.t("system.gamemode_auto", "game mode: on by itself in games")
         onActivated: { gmSet.command = ["qs", "ipc", "-p", "/usr/share/olymparch/shell", "call", "olymparch", "dnd", p.dnd ? "off" : "on"]; gmSet.running = true; }
     }
     PanelAction { theme: p.theme; icon: ""; label: p.t("system.doctor", "Check the system"); hint: "olymparch-doctor"; onActivated: { Panels.close("system"); Quickshell.execDetached(["foot", "-H", "olymparch-doctor"]); } }

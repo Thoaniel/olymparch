@@ -2,7 +2,8 @@
 // Olymparch shell: the animated temple wallpaper, the bar (BarStatus: media, mic/camera, network, volume, battery,
 // do not disturb, clock), the menu (Super+Space), notifications, the volume OSD and Settings (Super+comma).
 // What can be changed is read from Settings (settings.json) and follows it live.
-// Spillmodus (GameMode.qml) hides the bar and turns on do not disturb while a game runs.
+// Spillmodus (GameMode.qml) frees the PC for a game (local AI off, background jobs wait) and keeps notifications
+// quiet as Settings → Games says. The bar hides whenever a window is fullscreen.
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
@@ -136,7 +137,9 @@ ShellRoot {
                 PanelWindow {
                     required property var modelData
                     screen: modelData
-                    visible: Settings.get("appearance.bar") !== false && !gameMode.active
+                    // hidden while a window is fullscreen on this screen (a game, a film); game mode itself leaves the bar alone
+                    readonly property var hyprMonitor: Hyprland.monitorFor(modelData)
+                    visible: Settings.get("appearance.bar") !== false && !(hyprMonitor && hyprMonitor.activeWorkspace && hyprMonitor.activeWorkspace.hasFullscreen)
                     WlrLayershell.namespace: "olymparch-bar"
                     anchors { top: true; left: true; right: true }
                     implicitHeight: 34

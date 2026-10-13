@@ -267,7 +267,7 @@
       "apply": { "via": "action", "command": "olymparch-hw explain" } },
 
     { "key": "games.gamemode", "page": "games", "level": "simple", "type": "bool", "default": true, "ready": true,
-      "label": { "en": "gamemode + game mode", "nb": "gamemode + spillmodus" }, "description": { "en": "Every game that is found gets gamemode, and the bar hides while it runs", "nb": "Hvert spill som blir funnet får gamemode, og baren skjules mens det kjører" },
+      "label": { "en": "gamemode + game mode", "nb": "gamemode + spillmodus" }, "description": { "en": "Every game that is found gets gamemode, and while it runs the local AI is turned off and background jobs wait", "nb": "Hvert spill som blir funnet får gamemode, og mens det kjører er lokal AI av og bakgrunnsjobber venter" },
       "apply": { "via": "stored", "file": "~/.config/olymparch/settings.json", "key": "games.gamemode" } },
     { "key": "games.add", "page": "games", "level": "simple", "type": "action", "ready": true, "output": true,
       "label": { "en": "Games outside Steam", "nb": "Spill utenfor Steam" }, "description": { "en": "The programs counted as games; Super+Shift+G adds the focused one", "nb": "Programmene som regnes som spill; Super+Shift+G legger til det i fokus" },

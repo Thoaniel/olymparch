@@ -4,4 +4,6 @@ After=graphical-session.target
 
 [Service]
 Type=oneshot
+# not while a game runs (game mode); the timer tries again next time
+ExecCondition=/bin/sh -c '! test -e "%t/olymparch/gaming"'
 ExecStart=/usr/bin/olymparch-update-check
