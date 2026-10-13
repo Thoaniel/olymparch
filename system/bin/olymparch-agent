@@ -51,9 +51,12 @@ STATUSES = ("working", "waiting", "done", "error", "stopped")
 IDLE_WAITING = 90   # tmux runner: no new output for this long while it still runs = probably waiting for you
 
 
+# the shared language rule (/usr/lib/olymparch/lang.sh): Norwegian for nb, nn or no in ${OLYMPARCH_LANG:-$LANG}
+NB = (os.environ.get("OLYMPARCH_LANG") or os.environ.get("LANG") or "")[:2] in ("nb", "nn", "no")
+
+
 def L(en, nb):
-    lang = os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG") or ""
-    return nb if re.match(r"n[bno]", lang) else en
+    return nb if NB else en
 
 
 def die(msg, code=2):

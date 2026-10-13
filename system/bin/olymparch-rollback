@@ -5,15 +5,11 @@
 # The snapshot's own kernel goes back into /boot with it (kernels are kept per version in /boot/olymparch/k by
 # olymparch-boot): without that, the restored system would start a newer kernel whose drivers it does not have.
 set -euo pipefail
-# the user's language: LANG, else the system's (sudo may not pass LANG on)
-lang=${LANG:-}
-[ -n "$lang" ] || lang=$(sed -n 's/^LANG=//p' /etc/locale.conf 2>/dev/null | head -n 1)
-nb=0
-case $lang in nb* | no* | nn*) nb=1 ;; esac
-L() { if ((nb)); then printf '%s' "$2"; else printf '%s' "$1"; fi; }
+# messages in English, or Norwegian for nb/nn/no (the shared rule: /usr/lib/olymparch/lang.sh)
+. /usr/lib/olymparch/lang.sh 2>/dev/null || . "${BASH_SOURCE[0]%/*}/../lib/lang.sh" 2>/dev/null || L() { printf '%s' "$1"; }
 n=${1:-}
 if [ -z "$n" ] && [ -t 0 ]; then
-    [ "$(id -u)" = 0 ] || exec sudo LANG="$lang" "$0"
+    [ "$(id -u)" = 0 ] || exec sudo "$0"
     snapper list || true
     echo
     read -r -p "$(L "Number of the snapshot that becomes the system (empty = cancel): " "Nummer på øyeblikksbildet som skal bli systemet (tomt = avbryt): ")" n
@@ -24,7 +20,7 @@ if [ -z "$n" ] && [ -t 0 ]; then
     exit "$rc"
 fi
 [[ $n =~ ^[0-9]+$ ]] || { L "usage: olymparch-rollback N   (see: snapper list)" "bruk: olymparch-rollback N   (se: snapper list)" >&2; echo >&2; exit 2; }
-[ "$(id -u)" = 0 ] || exec sudo LANG="$lang" "$0" "$@"
+[ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
 dev=$(findmnt -no SOURCE /.snapshots | sed 's/\[.*//')   # / is an overlay when booted from a snapshot
 top=$(mktemp -d)
 trap 'umount "$top" 2>/dev/null; rmdir "$top"' EXIT

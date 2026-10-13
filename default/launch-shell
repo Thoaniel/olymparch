@@ -2,6 +2,8 @@
 # Start the Olymparch shell and restart it if it crashes (at most 5 times a minute, then a pause and a
 # notification). Started once from Hyprland's start event.
 shell=/usr/share/olymparch/shell
+# messages in English, or Norwegian for nb/nn/no (the shared rule: /usr/lib/olymparch/lang.sh)
+. /usr/lib/olymparch/lang.sh 2>/dev/null || . /usr/share/olymparch/system/lib/lang.sh 2>/dev/null || L() { printf '%s' "$1"; }
 log=${XDG_STATE_HOME:-$HOME/.local/state}/olymparch/shell.log
 mkdir -p "${log%/*}"
 # Development: ~/.config/olymparch/dev-shell can hold the path of a shell folder of your own (a checkout's
@@ -21,7 +23,8 @@ while true; do
     recent=0
     for t in "${starts[@]}"; do (( now - t < 60 )) && recent=$((recent + 1)); done
     if (( recent >= 5 )); then
-        notify-send -u critical "Skallet krasjer" "Prøver igjen om ett minutt. Se $log" 2>/dev/null
+        notify-send -u critical "$(L "The shell keeps crashing" "Skallet krasjer")" \
+            "$(L "Trying again in a minute. See $log" "Prøver igjen om ett minutt. Se $log")" 2>/dev/null
         sleep 60
         starts=()
     else

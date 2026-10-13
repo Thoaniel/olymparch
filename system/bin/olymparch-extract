@@ -1,14 +1,16 @@
 #!/bin/bash
 # Extract an archive into a folder next to it (the default app for archives).
 set -euo pipefail
+# messages in English, or Norwegian for nb/nn/no (the shared rule: /usr/lib/olymparch/lang.sh)
+. /usr/lib/olymparch/lang.sh 2>/dev/null || . "${BASH_SOURCE[0]%/*}/../lib/lang.sh" 2>/dev/null || L() { printf '%s' "$1"; }
 for f in "$@"; do
     base=${f%.*}; base=${base%.tar}
     dest=$base; n=1
     while [ -e "$dest" ]; do dest="$base ($n)"; n=$((n + 1)); done
     mkdir -p -- "$dest"
     if bsdtar -xf "$f" -C "$dest"; then
-        notify-send -a Olymparch "Pakket ut" "${f##*/} → ${dest##*/}"
+        notify-send -a Olymparch "$(L "Extracted" "Pakket ut")" "${f##*/} → ${dest##*/}"
     else
-        notify-send -u critical -a Olymparch "Kunne ikke pakke ut" "${f##*/}"
+        notify-send -u critical -a Olymparch "$(L "Could not extract" "Kunne ikke pakke ut")" "${f##*/}"
     fi
 done

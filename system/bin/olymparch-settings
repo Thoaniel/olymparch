@@ -31,6 +31,21 @@ local HOME = os.getenv("HOME") or "."
 local CONFIG = os.getenv("XDG_CONFIG_HOME") or (HOME .. "/.config")
 local RUNTIME = os.getenv("XDG_RUNTIME_DIR") or (HOME .. "/.local/state/olymparch")   -- never a shared /tmp
 local SELF = arg[0]
+-- The one language rule (as /usr/lib/olymparch/lang.sh): Norwegian when ${OLYMPARCH_LANG:-$LANG} starts with nb, nn
+-- or no; with no LANG at all (sudo, a pacman hook) the LANG= line in /etc/locale.conf; English otherwise.
+local NB
+do
+    local lang = os.getenv("OLYMPARCH_LANG")
+    if not lang or lang == "" then lang = os.getenv("LANG") end
+    if not lang or lang == "" then
+        local f = io.open("/etc/locale.conf")
+        if f then
+            for line in f:lines() do lang = line:match("^LANG=[\"']?([^\"']*)") or lang end
+            f:close()
+        end
+    end
+    NB = (lang or ""):match("^n[bno]") ~= nil
+end
 
 local function script_dir() return (SELF:match("^(.*)/[^/]*$") or ".") end
 local ZEUS_COMMIT = "f3730588c6355c6e12caae962def88419c27f997"   -- the Olympus release the installer uses too
@@ -1167,7 +1182,7 @@ local function save_combination(values)
 end
 
 local function notify_new_combination()
-    local nb = (os.getenv("LANG") or ""):match("^n[bno]")
+    local nb = NB
     local title = nb and "Ny skjermkombinasjon" or "New monitor combination"
     local body = nb and "Åpne Skjermer for å ordne den. Oppsettet huskes til neste gang de samme skjermene kobles til."
         or "Open Displays to arrange it. The layout is remembered for the next time these monitors are connected."
@@ -1226,7 +1241,7 @@ end
 ---------------------------------------------------------------------------------------------------- commands
 local cmd = arg[1]
 local function label(s)
-    local lang = (os.getenv("LANG") or ""):match("^n[bno]") and "nb" or "en"
+    local lang = NB and "nb" or "en"
     return s.label[lang] or s.label.en
 end
 
@@ -1248,7 +1263,7 @@ elseif cmd == "set" then
     if s.apply.key == "bind" then
         local o, c = shortcut_conflict(s, v, values)
         if o then
-            local nb = (os.getenv("LANG") or ""):match("^n[bno]")
+            local nb = NB
             die((nb and "%s er allerede «%s» (%s)" or "%s is already «%s» (%s)"):format(c:upper(), label(o), o.key), 4)
         end
         local mine = {}   -- … nor the keys of a shortcut of your own
@@ -1392,7 +1407,7 @@ elseif cmd == "profiles" then
 elseif (cmd == "items" or cmd == "pick") and (arg[2] or ""):match("^ai%.") then
     local key = arg[2]
     if not LIST_ITEM[key] then die(key .. " has no list", 2) end
-    local nb = (os.getenv("LANG") or ""):match("^n[bno]")
+    local nb = NB
     local function T(en, no) return nb and no or en end
     local values = load_values()
     local list = values[key] or {}
@@ -1593,7 +1608,7 @@ elseif cmd == "items" or cmd == "pick" then
     -- ── own shortcuts (pick removes one) and the apps that have notified (pick mutes or allows one). A fifth
     --   column is the text on the row's button.
     elseif key == "keyboard.custom_keys" or key == "notifications.apps" then
-        local nb = (os.getenv("LANG") or ""):match("^n[bno]")
+        local nb = NB
         local values = load_values()
         local list = values[key] or {}
         local function save(new)
@@ -1687,7 +1702,7 @@ elseif cmd == "items" or cmd == "pick" then
 elseif cmd == "add" then
     local key, text = arg[2], arg[3]
     if key ~= "keyboard.custom_keys" or not text then die("usage: add keyboard.custom_keys 'KEYS = COMMAND'", 2) end
-    local nb = (os.getenv("LANG") or ""):match("^n[bno]")
+    local nb = NB
     local keys_, command = text:match("^([^=]+)=(.*)$")
     local combo = keys_ and combo_text((keys_:gsub("^%s+", ""):gsub("%s+$", "")))
     command = command and command:gsub("^%s+", ""):gsub("%s+$", "")
@@ -1725,7 +1740,7 @@ elseif cmd == "report" then
     local body = "## What happened\n\n\n## What I expected\n\n\n## Steps\n\n1. \n\n## System (olymparch-settings about)\n\n```\n" .. about .. "\n```\n"
     local url = REPORT_URL .. "?title=" .. enc("Bug: ") .. "&body=" .. enc(body)
     os.execute("setsid -f xdg-open " .. sh_quote(url) .. " >/dev/null 2>&1 </dev/null")
-    local nb = (os.getenv("LANG") or ""):match("^n[bno]")
+    local nb = NB
     print(nb and "Åpnet i nettleseren: les saken, og send den selv hvis du vil." or "Opened in the browser: read the issue, and send it yourself if you want to.")
     print("")
     print(about)
@@ -1812,8 +1827,7 @@ elseif cmd == "choices" then
 --   settings.json or the command line reaches a shell; paths found on disk are quoted.
 elseif cmd == "view" then
     local name = arg[2] or die("usage: view NAME", 2)
-    local lang = os.getenv("OLYMPARCH_LANG") or os.getenv("LC_ALL") or os.getenv("LC_MESSAGES") or os.getenv("LANG") or ""
-    local nb = lang:match("^n[bno]") ~= nil
+    local nb = NB
     local function L(en, no) return nb and no or en end
     local function out(s) s = (s or ""):gsub("%s+$", ""); if s ~= "" then print(s) end end
     local steam = HOME .. "/.local/share/Steam"
@@ -2027,16 +2041,20 @@ elseif cmd == "view" then
 elseif cmd == "zeus-install" or cmd == "zeus-setup" then
     local oly = HOME .. "/.local/bin/olympus"
     local present = io.open(oly) ~= nil
-    local function pause() io.write("\nEnter …"); io.read() end
+    local function L(en, no) return NB and no or en end
+    local function pause() io.write(L("\nPress Enter …", "\nTrykk Enter …")); io.read() end
     if cmd == "zeus-setup" then
-        if not present then print("Zeus er ikke installert: Innstillinger → Zeus → Installer Zeus"); pause(); os.exit(1) end
+        if not present then print(L("Zeus is not installed: Settings → Zeus → Install Zeus", "Zeus er ikke installert: Innstillinger → Zeus → Installer Zeus")); pause(); os.exit(1) end
         os.exit(os.execute(sh_quote(oly) .. " setup") and 0 or 1)
     end
-    if present then print("Zeus er allerede installert (" .. oly .. ")"); pause(); os.exit(0) end
-    if not have("uv") then print("uv mangler (olymparch update installerer det)"); pause(); os.exit(1) end
-    print("Installerer Zeus bare for deg (~/.local/bin/olympus). Ingen AI-modell lastes ned.")
+    if present then print(L("Zeus is already installed (", "Zeus er allerede installert (") .. oly .. ")"); pause(); os.exit(0) end
+    if not have("uv") then print(L("uv is missing (olymparch update installs it)", "uv mangler (olymparch update installerer det)")); pause(); os.exit(1) end
+    print(L("Installing Zeus just for you (~/.local/bin/olympus). No AI model is downloaded.",
+            "Installerer Zeus bare for deg (~/.local/bin/olympus). Ingen AI-modell lastes ned."))
     local ok = os.execute("uv tool install " .. sh_quote("git+https://github.com/Thoaniel/olympus@" .. ZEUS_COMMIT))
-    print(ok and "\nFerdig. «Sett opp» velger modell; ingenting lastes ned uten å spørre deg." or "\nInstallasjonen feilet.")
+    print(ok and L("\nDone. «Set up» picks a model; nothing is downloaded without asking you.",
+                   "\nFerdig. «Sett opp» velger modell; ingenting lastes ned uten å spørre deg.")
+             or L("\nThe installation failed.", "\nInstallasjonen feilet."))
     pause()
     os.exit(ok and 0 or 1)
 
@@ -2044,7 +2062,7 @@ elseif cmd == "zeus-install" or cmd == "zeus-setup" then
 elseif cmd == "zeus-keys" then
     -- Olympus asks for every key itself (hidden input) and keeps it in ~/.olympus/auth.json (0600): no key passes
     -- through Settings, settings.json, a log or a command line.
-    local nb = (os.getenv("LANG") or ""):match("^n[bno]") ~= nil
+    local nb = NB
     local function L(en, no) return nb and no or en end
     local function pause() io.write(L("\nEnter …", "\nEnter …")); io.read() end
     if not olympus_present() then print(L("Zeus is not installed: Settings → Zeus → Install Zeus", "Zeus er ikke installert: Innstillinger → Zeus → Installer Zeus")); pause(); os.exit(1) end
@@ -2077,7 +2095,7 @@ elseif cmd == "zeus-keys" then
 
 elseif cmd == "zeus-open" then
     if not olympus_present() then
-        local nb = (os.getenv("LANG") or ""):match("^n[bno]")
+        local nb = NB
         os.execute("notify-send -a Olymparch Zeus " .. sh_quote(nb and "Zeus er ikke installert: Innstillinger → Zeus" or "Zeus is not installed: Settings → Zeus") .. " >/dev/null 2>&1")
         os.exit(1)
     end

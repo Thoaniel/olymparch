@@ -468,6 +468,8 @@ uuid=$(blkid -s UUID -o value "$ROOT")
 mkdir -p /mnt/boot/EFI/BOOT /mnt/etc/olymparch
 cp /mnt/usr/share/limine/BOOTX64.EFI /mnt/boot/EFI/BOOT/BOOTX64.EFI
 find /usr/share/olymparch/system/bin -maxdepth 1 -type f -exec install -m755 -t /mnt/usr/bin/ {} +
+# the one language rule the system commands share (sourced: English, or Norwegian for nb/nn/no)
+install -Dm644 /usr/share/olymparch/system/lib/lang.sh /mnt/usr/lib/olymparch/lang.sh
 # a personal ISO (dev/build-iso with OLYMPARCH_PERSONAL) brings the owner's own additions, laid over the new system
 # file by file, owned by root, 755 for programs and 644 for the rest; folders are made 755 and existing ones keep
 # their modes; links, devices and setuid/setgid bits are never carried over

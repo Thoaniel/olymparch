@@ -9,14 +9,15 @@
 # The link is untrusted (any web page can hand one over): it is checked here and only ever passed as one argument,
 # never through a shell.
 set -uo pipefail
-L() { case ${LANG:-} in nb* | nn* | no*) printf '%s' "$2" ;; *) printf '%s' "$1" ;; esac; }
+# messages in English, or Norwegian for nb/nn/no (the shared rule: /usr/lib/olymparch/lang.sh)
+. /usr/lib/olymparch/lang.sh 2>/dev/null || . "${BASH_SOURCE[0]%/*}/../lib/lang.sh" 2>/dev/null || L() { printf '%s' "$1"; }
 say() { echo "olymparch-open-torrent: $*" >&2; }
 bad() {
     say "refused: $1"
     notify-send -a Olymparch "$(L "Not a torrent" "Ikke en torrent")" "$(L "Olymparch did not open it: $1" "Olymparch åpnet den ikke: $2")"
     exit 2
 }
-[ $# = 1 ] || { echo "bruk: olymparch-open-torrent MAGNETLENKE | FIL.torrent" >&2; exit 2; }
+[ $# = 1 ] || { echo "$(L "usage: olymparch-open-torrent MAGNET-LINK | FILE.torrent" "bruk: olymparch-open-torrent MAGNETLENKE | FIL.torrent")" >&2; exit 2; }
 arg=$1
 
 # ── what is it, and is it what it says?

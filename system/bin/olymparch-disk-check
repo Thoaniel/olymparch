@@ -1,7 +1,11 @@
 #!/bin/bash
 # Daily (and at login): when / is 90 % full, offer a cleanup that shows what it frees first.
+# messages in English, or Norwegian for nb/nn/no (the shared rule: /usr/lib/olymparch/lang.sh)
+. /usr/lib/olymparch/lang.sh 2>/dev/null || . "${BASH_SOURCE[0]%/*}/../lib/lang.sh" 2>/dev/null || L() { printf '%s' "$1"; }
 use=$(df --output=pcent / | tail -n 1 | tr -dc 0-9)
 (( use >= ${OLYMPARCH_DISK_LIMIT:-90} )) || exit 0
-action=$(notify-send -u critical -a Olymparch -w --action=clean="Rydd opp" "Disken er ${use} % full" \
-    "Rydd opp viser hva som kan fjernes, og hvor mye det frigjør, før noe slettes.")
-[ "$action" = clean ] && exec foot -T "Olymparch: rydd opp" olymparch-cleanup
+action=$(notify-send -u critical -a Olymparch -w --action=clean="$(L "Clean up" "Rydd opp")" \
+    "$(L "The disk is ${use} % full" "Disken er ${use} % full")" \
+    "$(L "Clean up shows what can be removed, and how much it frees, before anything is deleted." \
+         "Rydd opp viser hva som kan fjernes, og hvor mye det frigjør, før noe slettes.")")
+[ "$action" = clean ] && exec foot -T "$(L "Olymparch: clean up" "Olymparch: rydd opp")" olymparch-cleanup

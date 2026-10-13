@@ -40,6 +40,9 @@ ShellRoot {
     readonly property string picture: /^\/[^\0]*$/.test(themeData.image || "") && (themeData.image || "").indexOf("..") < 0 ? themeData.image : ""
     // ── end Theme
     readonly property string mono: "JetBrains Mono"
+    // the shared language rule (as I18n.qml and /usr/lib/olymparch/lang.sh): Norwegian for nb, nn or no in
+    // ${OLYMPARCH_LANG:-$LANG}, English otherwise; the date uses that language, not the system locale
+    readonly property bool nb: /^n[bno]/.test(Quickshell.env("OLYMPARCH_LANG") || Quickshell.env("LANG") || "")
     property string password: ""
     property bool checking: false
     property bool failed: false
@@ -107,7 +110,7 @@ ShellRoot {
                 }
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: Qt.formatDateTime(clock.date, "dddd d. MMMM").toUpperCase()
+                    text: Qt.locale(root.nb ? "nb_NO" : "en_GB").toString(clock.date, root.nb ? "dddd d. MMMM" : "dddd d MMMM").toUpperCase()
                     font { family: root.mono; pixelSize: 16; letterSpacing: 4 }
                     color: root.muted
                 }
@@ -145,7 +148,7 @@ ShellRoot {
                     Text {
                         anchors.centerIn: parent
                         visible: root.password.length === 0
-                        text: root.failed ? "Feil passord" : ""
+                        text: root.failed ? (root.nb ? "Feil passord" : "Wrong password") : ""
                         font { family: root.mono; pixelSize: 13 }
                         color: root.red
                     }

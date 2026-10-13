@@ -1,26 +1,28 @@
 #!/bin/bash
 # Show what can be freed, with sizes, and remove only what you say yes to.
 set -uo pipefail
+# messages in English, or Norwegian for nb/nn/no (the shared rule: /usr/lib/olymparch/lang.sh)
+. /usr/lib/olymparch/lang.sh 2>/dev/null || . "${BASH_SOURCE[0]%/*}/../lib/lang.sh" 2>/dev/null || L() { printf '%s' "$1"; }
 human() { numfmt --to=iec --suffix=B "${1:-0}" 2>/dev/null || echo "$1 B"; }
 size() { du -sb "$@" 2>/dev/null | awk '{s += $1} END {print s + 0}'; }
-ask() { read -r -p "  Fjern? [j/N] " a; [[ $a == [jJyY]* ]]; }
-echo "Olymparch: rydd opp"
+ask() { read -r -p "  $(L "Remove? [y/N]" "Fjern? [j/N]") " a; [[ $a == [jJyY]* ]]; }
+echo "$(L "Olymparch: clean up" "Olymparch: rydd opp")"
 echo
 pkg=$(size /var/cache/pacman/pkg)
-echo "1. Gamle pakker i pacman-bufferen: $(human "$pkg") (de to siste versjonene beholdes)"
+echo "1. $(L "Old packages in the pacman cache" "Gamle pakker i pacman-bufferen"): $(human "$pkg") ($(L "the two latest versions are kept" "de to siste versjonene beholdes"))"
 ask && sudo paccache -rk2 && sudo paccache -ruk0
 jr=$(journalctl --disk-usage 2>/dev/null | grep -oE '[0-9.]+[KMGT]' | head -n 1)
-echo "2. Systemloggen: ${jr:-?} (beholder de siste 2 ukene)"
+echo "2. $(L "The system log" "Systemloggen"): ${jr:-?} ($(L "keeps the last 2 weeks" "beholder de siste 2 ukene"))"
 ask && sudo journalctl --vacuum-time=2weeks
 cache=$(size "$HOME/.cache")
-echo "3. Midlertidige filer i ~/.cache: $(human "$cache")"
+echo "3. $(L "Temporary files in ~/.cache" "Midlertidige filer i ~/.cache"): $(human "$cache")"
 ask && find "$HOME/.cache" -mindepth 1 -maxdepth 1 ! -name 'olymparch' -exec rm -rf -- {} +
 shader=$(size "$HOME"/.local/share/Steam/steamapps/shadercache "$HOME"/Games/steamapps/shadercache)
-echo "4. Shader-cache for spill: $(human "$shader") (bygges på nytt, første oppstart av hvert spill blir litt tregere)"
+echo "4. $(L "Shader cache for games" "Shader-cache for spill"): $(human "$shader") ($(L "rebuilt; the first start of each game gets a little slower" "bygges på nytt, første oppstart av hvert spill blir litt tregere"))"
 ask && rm -rf -- "$HOME/.local/share/Steam/steamapps/shadercache" "$HOME/Games/steamapps/shadercache"
 trash=$(size "$HOME/.local/share/Trash")
-echo "5. Papirkurven: $(human "$trash")"
+echo "5. $(L "The trash" "Papirkurven"): $(human "$trash")"
 ask && rm -rf -- "$HOME/.local/share/Trash/files" "$HOME/.local/share/Trash/info"
 echo
-df -h / | tail -n 1 | awk '{print "Ledig nå: " $4 " (" $5 " brukt)"}'
-read -r -p "Trykk Enter for å lukke."
+df -h / | tail -n 1 | awk -v free="$(L "Free now" "Ledig nå")" -v used="$(L "used" "brukt")" '{print free ": " $4 " (" $5 " " used ")"}'
+read -r -p "$(L "Press Enter to close." "Trykk Enter for å lukke.")"

@@ -23,9 +23,11 @@ LOCAL_RULES=/etc/olymparch/hw/rules.d
 ROOT=/                       # the system packages and files are checked against (apply/plan --root)
 LIB=/usr/lib/olymparch
 
-# --- messages: English by default, Norwegian (bokmål) when LANG=nb* (or OLYMPARCH_LANG=nb)
+# --- messages: the shared rule (/usr/lib/olymparch/lang.sh; on the ISO the copy next to this script): Norwegian
+# (bokmål) when ${OLYMPARCH_LANG:-$LANG} starts with nb, nn or no, English otherwise
+. /usr/lib/olymparch/lang.sh 2>/dev/null || . "${BASH_SOURCE[0]%/*}/../lib/lang.sh" 2>/dev/null || OLYMPARCH_LANG=en
 NB=0
-case ${OLYMPARCH_LANG:-${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}} in nb* | nn* | no*) NB=1 ;; esac
+[ "$OLYMPARCH_LANG" = nb ] && NB=1
 declare -A EN=(
     [plan]="Olymparch hardware plan" [machine]="Machine" [cpu]="CPU" [gpu]="Graphics" [none]="none"
     [primary]="primary" [notloaded]="not loaded" [desktop]="desktop" [laptop]="laptop" [vm]="virtual machine"

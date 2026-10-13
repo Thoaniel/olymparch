@@ -39,7 +39,22 @@ local MAX_BACKGROUNDS = 16
 local PALETTE = { "bg", "surface", "raised", "line", "text", "muted", "accent", "accentHi", "danger" }
 local MAX_FRAMES = 48
 
-local nb = (os.getenv("LANG") or ""):match("^n[bno]") ~= nil
+-- The one language rule (as /usr/lib/olymparch/lang.sh): Norwegian when ${OLYMPARCH_LANG:-$LANG} starts with nb, nn
+-- or no; with no LANG at all the LANG= line in /etc/locale.conf; English otherwise.
+local NB
+do
+    local lang = os.getenv("OLYMPARCH_LANG")
+    if not lang or lang == "" then lang = os.getenv("LANG") end
+    if not lang or lang == "" then
+        local f = io.open("/etc/locale.conf")
+        if f then
+            for line in f:lines() do lang = line:match("^LANG=[\"']?([^\"']*)") or lang end
+            f:close()
+        end
+    end
+    NB = (lang or ""):match("^n[bno]") ~= nil
+end
+local nb = NB
 local function L(en, no) return nb and no or en end
 local function die(msg, code) io.stderr:write("olymparch-theme: " .. msg .. "\n"); os.exit(code or 1) end
 local function sh_quote(s) return "'" .. tostring(s):gsub("'", "'\\''") .. "'" end

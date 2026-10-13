@@ -3,6 +3,8 @@
 # that can do harm, at low priority. A notification when something is found, and also when the check itself
 # fails, so a silent result always means "checked and clean".
 set -uo pipefail
+# messages in English, or Norwegian for nb/nn/no (the shared rule: /usr/lib/olymparch/lang.sh)
+. /usr/lib/olymparch/lang.sh 2>/dev/null || . "${BASH_SOURCE[0]%/*}/../lib/lang.sh" 2>/dev/null || L() { printf '%s' "$1"; }
 # Same folder the path unit watches. xdg-user-dir answers $HOME itself when no folder is set up.
 dir=$(xdg-user-dir DOWNLOAD 2>/dev/null)
 [ -n "$dir" ] && [ "${dir%/}" != "${HOME%/}" ] || dir=$HOME/Downloads
@@ -21,20 +23,20 @@ mapfile -t new < <(find "$dir" -maxdepth 1 -type f -newer "$state" ! -name '.*' 
 [ ${#new[@]} -gt 0 ] || { mv -f -- "$mark" "$state"; exit 0; }
 
 warn_unchecked() {
-    notify-send -u critical -a Olymparch "Nedlastingen ble ikke virussjekket" \
-        "$1 Filene er ikke sjekket: ${new[*]##*/}"
+    notify-send -u critical -a Olymparch "$(L "The download was not virus checked" "Nedlastingen ble ikke virussjekket")" \
+        "$1 $(L "These files are not checked" "Filene er ikke sjekket"): ${new[*]##*/}"
     exit 1
 }
-command -v clamscan >/dev/null || warn_unchecked "ClamAV er ikke installert."
+command -v clamscan >/dev/null || warn_unchecked "$(L "ClamAV is not installed." "ClamAV er ikke installert.")"
 out=$(nice -n 19 ionice -c 3 clamscan --no-summary --infected -- "${new[@]}" 2>&1)
 code=$?
 # clamscan: 0 = clean, 1 = something found, anything else = the check failed (no database, unreadable file …)
 case $code in
     0) ;;
     1) while IFS= read -r f; do
-           notify-send -u critical -a Olymparch "Virus funnet i en nedlasting" \
-               "${f##*/} ser farlig ut. Ikke åpne den. Den ligger i ${f%/*}."
+           notify-send -u critical -a Olymparch "$(L "Virus found in a download" "Virus funnet i en nedlasting")" \
+               "$(L "${f##*/} looks dangerous. Do not open it. It is in ${f%/*}." "${f##*/} ser farlig ut. Ikke åpne den. Den ligger i ${f%/*}.")"
        done < <(sed -n 's/: .* FOUND$//p' <<<"$out") ;;
-    *) warn_unchecked "Virussjekken feilet (kode $code)." ;;
+    *) warn_unchecked "$(L "The virus check failed (code $code)." "Virussjekken feilet (kode $code).")" ;;
 esac
 mv -f -- "$mark" "$state"

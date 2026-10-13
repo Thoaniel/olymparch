@@ -53,8 +53,8 @@ TOOL_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}")  # compat tool names go
 
 
 # ---- i18n: English in the code, other languages from /usr/share/olymparch/i18n/<lang>.json -------------------
-def _lang():
-    lang = os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG") or ""
+def _lang():   # the shared rule (/usr/lib/olymparch/lang.sh): nb for nb, nn or no in ${OLYMPARCH_LANG:-$LANG}
+    lang = os.environ.get("OLYMPARCH_LANG") or os.environ.get("LANG") or ""
     return "nb" if lang[:2] in ("nb", "no", "nn") else "en"
 
 

@@ -1,5 +1,6 @@
 pragma Singleton
-// English by default; Norwegian (bokmål) when LANG starts with nb or no. Strings live in
+// English by default; Norwegian (bokmål) when ${OLYMPARCH_LANG:-$LANG} starts with nb, nn or no (the same rule as
+// /usr/lib/olymparch/lang.sh and the commands). Strings live in
 // /usr/share/olymparch/i18n/<lang>.json (the i18n folder next to the shell); a missing key falls back to the English text given in the code.
 //   Text { text: I18n.t("launcher.search", "Search apps …") }
 import QtQuick
@@ -9,7 +10,7 @@ import Quickshell.Io
 Singleton {
     id: i18n
     readonly property string lang: {
-        const l = Quickshell.env("LANG") || "";
+        const l = Quickshell.env("OLYMPARCH_LANG") || Quickshell.env("LANG") || "";
         return (l.startsWith("nb") || l.startsWith("no") || l.startsWith("nn")) ? "nb" : "en";
     }
     property var dict: ({})

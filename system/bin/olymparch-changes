@@ -2,9 +2,11 @@
 # What the last update brought: the packages pacman upgraded, installed or removed in its last run
 # (from /var/log/pacman.log, read-only). Shown by Settings → Updates → «Siste endringer».
 set -uo pipefail
+# messages in English, or Norwegian for nb/nn/no (the shared rule: /usr/lib/olymparch/lang.sh)
+. /usr/lib/olymparch/lang.sh 2>/dev/null || . "${BASH_SOURCE[0]%/*}/../lib/lang.sh" 2>/dev/null || L() { printf '%s' "$1"; }
 log=${OLYMPARCH_PACMAN_LOG:-/var/log/pacman.log}
-[ -r "$log" ] || { echo "Ingen pacman-logg ($log)."; exit 0; }
+[ -r "$log" ] || { echo "$(L "No pacman log ($log)." "Ingen pacman-logg ($log).")"; exit 0; }
 # the last transaction: from its last "transaction started" to the end
 start=$(grep -n '\[ALPM\] transaction started' "$log" | tail -n 1 | cut -d: -f1)
-[ -n "$start" ] || { echo "Ingen oppdateringer i loggen ennå."; exit 0; }
+[ -n "$start" ] || { echo "$(L "No updates in the log yet." "Ingen oppdateringer i loggen ennå.")"; exit 0; }
 tail -n "+$start" "$log" | sed -nE 's/^\[([0-9T:-]+)[^]]*\] \[ALPM\] (upgraded|installed|removed|downgraded) (.*)$/\1  \2 \3/p'
