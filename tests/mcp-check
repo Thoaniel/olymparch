@@ -560,6 +560,10 @@ try:
     for hostile in ("a" * 50000, "token" * 10000, ("password_" * 100 + "\n") * 2000, "-" * 20000 + "secret" + "_" * 20000):
         ns["capped"](hostile)
     ok(_t.monotonic() - t0 < 2.0, f"masking hostile logs took {_t.monotonic() - t0:.1f} s")
+    # the cuts never leave part of a secret: a long line cut inside a key, and the start cut between a name and its value
+    key = "gsk_" + "Q" * 40
+    ok("QQQQ" not in ns["redact"]("x " * 997 + key), "a key cut at the end of a long line leaked")
+    ok("hunter2" not in ns["capped"]("password=" + "hunter2hunter2\n" + "y" * 50, limit=60), "a value cut from its name leaked")
     # fixes go to root only through the helpers' fixed words
     ok('"pkexec", "/usr/lib/olymparch/settings-apply", "restart", a["service"]' in src and
        "restart:network | restart:bluetooth" in (ROOT / "system/lib/settings-apply").read_text(), "system_service_restart: fixed words only")

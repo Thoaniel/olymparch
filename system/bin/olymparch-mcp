@@ -433,14 +433,22 @@ def redact(t):
             if m.group(g):
                 return m.group(g) + "***"
         return "***"
-    return "\n".join(SECRETS_IN_TEXT.sub(mask, line if len(line) <= 2000 else line[:2000] + " …")
-                     for line in t.split("\n"))
+    def cut(line):   # a long line: its first 2000 characters, minus the word the cut went through (half a key
+        if len(line) <= 2000:   # would no longer look like one)
+            return line
+        head = line[:2000]
+        return (head.rsplit(None, 1)[0] if " " in head.strip() else "") + " …"
+    return "\n".join(SECRETS_IN_TEXT.sub(mask, cut(line)) for line in t.split("\n"))
 
 
 def capped(t, limit=12000):
     """The end of t, at most `limit` characters, masked: cut first (so masking works on little), then masked."""
-    head = "" if len(t) <= limit else L(f"… (only the last {limit} characters)\n", f"… (bare de siste {limit} tegnene)\n")
-    return head + redact(t[-limit:])
+    if len(t) <= limit:
+        return redact(t)
+    # whole lines only: the cut must not leave a value whose name («password=») was on the cut-off part
+    tail = t[-limit:]
+    tail = tail.split("\n", 1)[1] if "\n" in tail else ""
+    return L(f"… (only the last {limit} characters)\n", f"… (bare de siste {limit} tegnene)\n") + redact(tail)
 
 
 def hypr_reports():
