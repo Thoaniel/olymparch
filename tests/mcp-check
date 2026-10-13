@@ -545,7 +545,11 @@ try:
     for raw, secret in (("key gsk_abcdefghijklmnopqrstuv1 end", "gsk_abcdefghijklmnopqrstuv1"),
                         ("Authorization: Bearer abc.def-ghi_jklmnop123", "abc.def-ghi_jklmnop123"),
                         ("password=hunter2222 ok", "hunter2222"), ('api_key: "sk-proj-ABCDEFGHIJKLMNOPQRSTUV"', "ABCDEFGHIJKLMNOPQRSTUV"),
-                        ("AIzaSyA1234567890abcdefghijklmnopqrstu", "AIzaSyA1234567890"), ("xoxb-1234567890-abcdefghij", "1234567890-abc")):
+                        ("AIzaSyA1234567890abcdefghijklmnopqrstu", "AIzaSyA1234567890"), ("xoxb-1234567890-abcdefghij", "1234567890-abc"),
+                        ('{"token": "tk_live_9f8e7d6c5b"}', "tk_live_9f8e7d6c5b"), ("GET /cb?code=1&access_token=abcdef123456 HTTP", "abcdef123456"),
+                        ("Authorization: Basic dXNlcjpwYXNzd29yZA==", "dXNlcjpwYXNzd29yZA"), ("Cookie: sid=s3cr3tvalue; theme=dark", "s3cr3tvalue"),
+                        ("connecting to https://me:hunter2@example.org/x", "hunter2"), ("OPENAI_API_KEY=abc123def456", "abc123def456"),
+                        ("client_secret: 'zzzz-yyyy-xxxx'", "zzzz-yyyy-xxxx")):
         ok(secret not in ns["redact"](raw), f"redact left a secret in: {raw}")
     ok(ns["redact"]("an ordinary line: 42 errors in pipewire") == "an ordinary line: 42 errors in pipewire", "redact changed a plain line")
     # fixes go to root only through the helpers' fixed words

@@ -412,18 +412,25 @@ def t_hw(a, s):
 CACHE = os.environ.get("XDG_CACHE_HOME") or os.path.join(HOME, ".cache")
 SHELL_LOG = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.join(HOME, ".local/state"), "olymparch/shell.log")
 SECRETS_IN_TEXT = re.compile(
+    # well-known key formats wherever they appear
     r"(?i)\b(sk-(?:ant|or-v1|proj)?-?[A-Za-z0-9_-]{16,}|gsk_[A-Za-z0-9]{16,}|AIza[0-9A-Za-z_-]{30,}|gh[pousr]_[A-Za-z0-9]{20,}"
-    r"|xox[abpr]-[A-Za-z0-9-]{10,}|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,})"
-    r"|(bearer\s+)[A-Za-z0-9._~+/=-]{12,}"
-    r"|((?:password|passwd|passphrase|secret|token|api[_-]?key)\s*[=:]\s*)[\"']?[^\s\"',;]{4,}")
+    r"|github_pat_[A-Za-z0-9_]{20,}|xox[abpr]-[A-Za-z0-9-]{10,}|glpat-[A-Za-z0-9_-]{16,}|hf_[A-Za-z0-9]{20,}"
+    r"|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{8,})"
+    # Authorization: Bearer / Basic …, and cookies
+    r"|((?:bearer|basic)\s+)[A-Za-z0-9._~+/=-]{8,}"
+    r"|((?:set-)?cookie:\s*)[^\n]+"
+    # NAME=value, NAME: value, "NAME": "value", ?NAME=value&… for names that hold secrets
+    r"|((?:[a-z0-9_-]*(?:password|passwd|passphrase|secret|token|api[_-]?key|access[_-]?key|auth|credential|session[_-]?id)[a-z0-9_-]*)"
+    r"[\"']?\s*[=:]\s*[\"']?)(?:(?:bearer|basic|token)\s+)?[^\s\"'&,;}]{3,}"
+    # a password in a URL: scheme://user:pass@host
+    r"|(://[^/\s:@]+:)[^@\s/]+(?=@)")
 
 
 def redact(t):
     def mask(m):
-        if m.group(2):
-            return m.group(2) + "***"
-        if m.group(3):
-            return m.group(3) + "***"
+        for g in (2, 3, 4, 5):
+            if m.group(g):
+                return m.group(g) + "***"
         return "***"
     return SECRETS_IN_TEXT.sub(mask, t)
 
