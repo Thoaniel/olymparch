@@ -1,8 +1,7 @@
 
-  Olymparch installer
+  Olymparch installer — command line
 
-  Install Olymparch:   olymparch-setup                    (the wizard; Norwegian on the first screen)
-  Unattended:          olymparch-install --answers FILE
-  Wi-Fi:               nmtui or iwctl
-  Keyboard layout:     loadkeys no
+  Start the installer:   olymparch-setup
+  Wi-Fi:                 nmtui
+  Keyboard layout:       loadkeys no   (or de-latin1, fr-latin1, uk …)
 

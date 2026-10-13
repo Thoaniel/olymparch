@@ -49,6 +49,7 @@ ldns
 less
 lftp
 libfido2
+libnewt
 libusb-compat
 linux
 linux-atm
@@ -71,6 +72,7 @@ mtools
 nano
 nbd
 ndisc6
+networkmanager
 nfs-utils
 nilfs-utils
 nmap
@@ -125,4 +127,3 @@ xdg-utils
 xfsprogs
 xl2tpd
 zsh
-libnewt

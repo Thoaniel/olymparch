@@ -333,6 +333,11 @@ printf '%s:%s\n' "$USERNAME" "$PASSWORD" | arch-chroot /mnt chpasswd
 echo '%wheel ALL=(ALL:ALL) ALL' >/mnt/etc/sudoers.d/10-wheel
 chmod 440 /mnt/etc/sudoers.d/10-wheel
 arch-chroot /mnt systemctl enable NetworkManager >/dev/null 2>&1
+# the network the installer used (Wi-Fi with its password): online at the first login without typing it again
+if compgen -G '/etc/NetworkManager/system-connections/*.nmconnection' >/dev/null; then
+    install -d -m700 /mnt/etc/NetworkManager/system-connections
+    install -m600 /etc/NetworkManager/system-connections/*.nmconnection /mnt/etc/NetworkManager/system-connections/
+fi
 
 step "$(L "The desktop (Hyprland and the shell)" "Skrivebordet (Hyprland og skallet)")"
 cp -r /usr/share/olymparch /mnt/usr/share/

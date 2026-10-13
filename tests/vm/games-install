@@ -32,7 +32,7 @@ trap 'kill "$QPID" 2>/dev/null' EXIT
 t0=$SECONDS
 
 # --- 1. install from the live ISO, with the host's package cache
-vm live.log -cdrom "$ISO" -boot d -fw_cfg name=opt/olymparch/answers,file="$O/answers.env" \
+vm live.log -cdrom "$ISO" -boot d -fw_cfg name=opt/olymparch/manual,string=1 -fw_cfg name=opt/olymparch/answers,file="$O/answers.env" \
     -virtfs local,path="$PWD/cache",mount_tag=pkgcache,security_model=none,id=c0
 wait_for 'login:' 120 || { shot live-feil "Live-miljøet kom ikke opp"; finish "FAIL · live-miljøet startet ikke"; }
 sleep 4

@@ -33,7 +33,7 @@ qemu-system-x86_64 -L "$OLYMPARCH_QEMU_DATA" -machine q35,accel=kvm -cpu host -s
     -drive if=pflash,format=raw,readonly=on,file="$OLYMPARCH_OVMF_CODE" \
     -drive if=pflash,format=raw,file="$O/vars.fd" \
     -drive id=d0,if=none,format=qcow2,file="$O/disk.qcow2" -device nvme,serial=OLYWIZ01,drive=d0 \
-    -cdrom "$ISO" -boot d -nic user,model=virtio-net-pci -device virtio-vga -display none \
+    -cdrom "$ISO" -boot d -fw_cfg name=opt/olymparch/manual,string=1 -nic user,model=virtio-net-pci -device virtio-vga -display none \
     -virtfs local,path="$PWD/cache",mount_tag=pkgcache,security_model=none,id=c0 \
     -serial file:"$O/$LOG" -qmp unix:"$QMP",server=on,wait=off -no-reboot &
 QPID=$!

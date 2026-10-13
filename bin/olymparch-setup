@@ -15,7 +15,7 @@ W=72
 declare -A EN=(
     [lang]="Language"
     [kbd]="Keyboard layout"
-    [kbd_test]="Type these characters to check the layout, then press Enter:\n\n  æ ø å @ \$ { } |\n\n(Only checks; nothing is saved.)"
+    [kbd_test]="Type these characters to check the layout, then press Enter:\n\n  %s\n\n(Only checks; nothing is saved.)"
     [kbd_bad]="Those characters did not come out as expected. Pick the layout again?"
     [tz_region]="Time zone: region"
     [tz_city]="Time zone: city"
@@ -60,14 +60,14 @@ declare -A EN=(
     [summary]="Ready to install:\n\n  Disk:      %s (%s)\n  User:      %s\n  Keyboard:  %s\n  Time zone: %s\n  Options:   %s\n\nThe disk is erased when you press Install."
     [install]="Install"
     [cancel]="Cancel"
-    [rk]="Your recovery key:\n\n  %s\n  %s\n\nIt unlocks the disk if you forget your password. Write it down or take a photo of it, and keep it somewhere safe: it is not stored anywhere else.\n\nRemove the installation medium and press OK to restart."
+    [rk]="Your recovery key:\n\n  %s\n  %s\n\nIt unlocks the disk if you forget your password. Write it down or take a photo of it, and keep it somewhere safe: it is not stored anywhere else.\n\nPress OK: the PC shuts down. Then remove the USB stick and turn the PC on again — Olymparch starts."
     [failed]="The installation failed. The messages above say where."
     [cancelled]="Installation cancelled. Nothing was written."
 )
 declare -A NB=(
     [lang]="Språk"
     [kbd]="Tastaturoppsett"
-    [kbd_test]="Skriv disse tegnene for å sjekke oppsettet, og trykk Enter:\n\n  æ ø å @ \$ { } |\n\n(Bare en sjekk, ingenting lagres.)"
+    [kbd_test]="Skriv disse tegnene for å sjekke oppsettet, og trykk Enter:\n\n  %s\n\n(Bare en sjekk, ingenting lagres.)"
     [kbd_bad]="Tegnene kom ikke ut som forventet. Velge oppsett på nytt?"
     [tz_region]="Tidssone: region"
     [tz_city]="Tidssone: by"
@@ -112,7 +112,7 @@ declare -A NB=(
     [summary]="Klar til å installere:\n\n  Disk:       %s (%s)\n  Bruker:     %s\n  Tastatur:   %s\n  Tidssone:   %s\n  Valg:       %s\n\nDisken slettes når du trykker Installer."
     [install]="Installer"
     [cancel]="Avbryt"
-    [rk]="Gjenopprettingsnøkkelen din:\n\n  %s\n  %s\n\nDen låser opp disken hvis du glemmer passordet. Skriv den ned eller ta bilde av den, og ta vare på den: den lagres ingen andre steder.\n\nTa ut installasjonsmediet og trykk OK for å starte på nytt."
+    [rk]="Gjenopprettingsnøkkelen din:\n\n  %s\n  %s\n\nDen låser opp disken hvis du glemmer passordet. Skriv den ned eller ta bilde av den, og ta vare på den: den lagres ingen andre steder.\n\nTrykk OK: PC-en slår seg av. Ta så ut USB-pinnen og slå PC-en på igjen — Olymparch starter."
     [failed]="Installasjonen feilet. Meldingene over viser hvor."
     [cancelled]="Installasjonen er avbrutt. Ingenting er skrevet."
 )
@@ -133,8 +133,19 @@ while true; do
         us "English (US)" no "Norsk" sv-latin1 "Svenska" dk-latin1 "Dansk" fi "Suomi" de-latin1 "Deutsch" \
         fr-latin1 "Français" uk "English (UK)" es "Español" it "Italiano") || bail
     loadkeys "$KEYMAP" 2>/dev/null
-    typed=$(wt --title "$(t kbd)" --inputbox "$(printf "$(t kbd_test)")" 14 $W) || bail
-    [ "$typed" = "æøå@\${}|" ] || [ "$typed" = "æ ø å @ \$ { } |" ] && break
+    # characters that sit in different places on this layout (a wrong layout gives other ones)
+    case $KEYMAP in
+        no | dk-latin1) chars='æ ø å @ $ { } |' ;;
+        sv-latin1 | fi) chars='å ä ö @ $ { } |' ;;
+        de-latin1) chars='ä ö ü ß @ { } |' ;;
+        fr-latin1) chars='é è à ç @ { } |' ;;
+        es) chars='ñ ç @ { } |' ;;
+        it) chars='à è ò ù @ |' ;;
+        uk) chars='@ " # ~ \ |' ;;
+        *) chars='@ " # ~ \ |' ;;
+    esac
+    typed=$(wt --title "$(t kbd)" --inputbox "$(printf "$(t kbd_test)" "$chars")" 14 $W) || bail
+    [ "$typed" = "${chars// /}" ] || [ "$typed" = "$chars" ] && break
     wt --title "$(t kbd)" --yesno "$(t kbd_bad)" 8 $W || break
 done
 
@@ -149,7 +160,7 @@ TIMEZONE=$region/$city
 # 4. Network
 until curl -sfI --max-time 6 https://archlinux.org >/dev/null 2>&1; do
     wt --title Network --yesno "$(printf "$(t net_none)")" 10 $W || bail
-    nmtui-connect 2>/dev/null || iwctl
+    nmtui-connect   # the Wi-Fi networks near you; pick one and type its password
 done
 
 # 4b. Hardware: what olymparch-hw found and what it will install, with a warning for untested hardware.
@@ -249,4 +260,5 @@ key=$(cat "$KEYFILE")
 [ "${OLYMPARCH_TEST:-0}" = 1 ] && echo '<2>RECOVERY-KEY-SHOWN' >/dev/kmsg
 whiptail --backtitle "$BT" --title Olymparch --msgbox "$(printf "$(t rk)" "${key:0:35}" "${key:36}")" 18 $W
 rm -f -- "$KEYFILE"
-[ "${OLYMPARCH_TEST:-0}" = 1 ] || systemctl reboot
+# off, not a restart: a restart with the stick still in would start the installer again
+[ "${OLYMPARCH_TEST:-0}" = 1 ] || systemctl poweroff
