@@ -35,6 +35,26 @@ Singleton {
         running: true
         onExited: code => agents.available = code === 0
     }
+    // a notification when a task starts waiting for you, or ends (done / error); the notification daemon's own
+    // rules apply (do not disturb, games). Nothing is said for what was already so when the shell started.
+    property var seen: null
+    onTasksChanged: {
+        const now = {};
+        for (const t of tasks) now[t.id] = t.status;
+        if (seen !== null) {
+            for (const t of tasks) {
+                if (seen[t.id] === t.status || !["waiting", "done", "error"].includes(t.status)) continue;
+                const a = list.find(x => x.id === t.agent);
+                const who = a ? a.name : t.agent;
+                const title = t.status === "waiting" ? I18n.t("agents.notify.waiting", "%1 is waiting for you").replace("%1", who)
+                            : t.status === "done" ? I18n.t("agents.notify.done", "%1 is done").replace("%1", who)
+                            : I18n.t("agents.notify.error", "%1 stopped with an error").replace("%1", who);
+                const body = String(t.dir || "").replace(Quickshell.env("HOME"), "~") + (t.last ? "\n" + t.last : "");
+                Quickshell.execDetached(["notify-send", "-a", "Olymparch", "-u", t.status === "waiting" ? "normal" : "low", title, body]);
+            }
+        }
+        seen = now;
+    }
     function run(args) { Quickshell.execDetached(["olymparch-agent"].concat(args)); }
     function open(id) { run(["open", id]); }
     function logs(id) { run(["logs", id]); }

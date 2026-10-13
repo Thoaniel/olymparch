@@ -234,5 +234,7 @@ ShellRoot {
     ThemePicker { theme: root }   // Super+Ctrl+Shift+Space
     // ── AI agents (olymparch-mcp): the approval card for what an agent wants to change; none while a game runs
     McpApproval { theme: root; gameActive: gameMode.active }
+    // ── Zeus: its approval card when the Zeus panel is not open (never in a game, never the keyboard)
+    ZeusApproval { theme: root; gameActive: gameMode.active }
     BackgroundPicker { theme: root }   // Super+Ctrl+Space
 }
