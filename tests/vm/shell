@@ -57,6 +57,18 @@ red_mic=$(python3 -I tests/vm/pixels.py "$O/bar-mic.ppm" 640 0 1280 34 | sed -E 
 keys "kill %1; clear\n" 2
 shot mikrofon-av "Opptaket er stoppet: mikrofonen er borte fra linjen"
 
+# The bar and fullscreen: a window that is really fullscreen hides the bar on its screen; a maximized one does not
+bar_seen() { python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/bar-fs.ppm"; [ "$(python3 -I tests/vm/bar-gold.py "$O/bar-fs.ppm" 0)" != none ]; }
+keys "clear; foot --fullscreen sh -c 'sleep 6' & sleep 2\n" 1.5
+shot fullskjerm "Et vindu i fullskjerm: baren er borte"
+bar_seen && fs_hidden=0 || fs_hidden=1
+sleep 5
+keys "clear; foot --maximized sh -c 'sleep 6' & sleep 2\n" 1.5
+shot maksimert "Et maksimert vindu: baren står"
+bar_seen && max_bar=1 || max_bar=0
+sleep 5
+keys "clear\n" 1
+
 # The lock screen: its own process. Wrong password first, then the right one.
 press meta_l+l; sleep 2
 shot las "Super+L: låseskjermen (stillbilde av tempelet, klokke, passordboks)"
@@ -78,4 +90,5 @@ grep -aoE 'QS: .*' "$O/$LOG" | sed 's/\x1b\[[0-9;]*m//g' >"$O/shell-log.txt"
 # only what happened after the shell's last start counts
 errors=$(awk '/Launching config/ {n = 0} /ERROR|TypeError|ReferenceError/ {n++} END {print n + 0}' "$O/shell-log.txt")
 mic_ok=$(( ${red_mic:-0} > ${red_before:-0} + 20 ))
-finish "$([ "$errors" = 0 ] && [ $mic_ok = 1 ] && echo PASS || echo FAIL) · skallet: meny, varsler, volum og mikrofon i linjen (røde piksler ${red_before:-?} → ${red_mic:-?}; $errors feil i skall-loggen) på $((SECONDS - t0)) s"
+fs_ok=$(( ${fs_hidden:-0} == 1 && ${max_bar:-0} == 1 ))
+finish "$([ "$errors" = 0 ] && [ $mic_ok = 1 ] && [ $fs_ok = 1 ] && echo PASS || echo FAIL) · skallet: meny, varsler, volum og mikrofon i linjen (røde piksler ${red_before:-?} → ${red_mic:-?}), baren borte i fullskjerm ${fs_hidden:-?} og synlig maksimert ${max_bar:-?}; $errors feil i skall-loggen; på $((SECONDS - t0)) s"

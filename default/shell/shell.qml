@@ -140,9 +140,14 @@ ShellRoot {
                 PanelWindow {
                     required property var modelData
                     screen: modelData
-                    // hidden while a window is fullscreen on this screen (a game, a film); game mode itself leaves the bar alone
+                    // hidden while a window is really fullscreen on this screen (a game, a film), not when one is only
+                    // maximized (Hyprland's fullscreen mode is a bit mask: 1 maximized, 2 fullscreen); game mode itself
+                    // leaves the bar alone
                     readonly property var hyprMonitor: Hyprland.monitorFor(modelData)
-                    visible: Settings.get("appearance.bar") !== false && !(hyprMonitor && hyprMonitor.activeWorkspace && hyprMonitor.activeWorkspace.hasFullscreen)
+                    readonly property var hyprWorkspace: hyprMonitor ? hyprMonitor.activeWorkspace : null
+                    readonly property bool fullscreenHere: !!hyprWorkspace && hyprWorkspace.hasFullscreen
+                        && hyprWorkspace.toplevels.values.some(t => t.lastIpcObject && (t.lastIpcObject.fullscreen & 2) === 2)
+                    visible: Settings.get("appearance.bar") !== false && !fullscreenHere
                     WlrLayershell.namespace: "olymparch-bar"
                     anchors { top: true; left: true; right: true }
                     implicitHeight: 34
@@ -225,6 +230,11 @@ ShellRoot {
     }
 
     GameMode { id: gameMode }
+    // the windows' fullscreen mode (lastIpcObject) is read again when it changes, for the bar above
+    Connections {
+        target: Hyprland
+        function onRawEvent(event) { if (event.name === "fullscreen" || event.name === "activewindowv2") Hyprland.refreshToplevels(); }
+    }
     // the bar panels' own hotkeys (Zeus' Super+Z goes through olymparch-settings zeus-open)
     GlobalShortcut { appid: "olymparch"; name: "panel-agents"; description: "The Agents panel"; onPressed: Panels.toggle("agents", "") }
     Launcher { id: launcher; theme: root }

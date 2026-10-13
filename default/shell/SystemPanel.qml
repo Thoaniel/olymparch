@@ -73,7 +73,7 @@ Dropdown {
     Process {
         id: lists
         command: ["sh", "-c", "ps -eo pid=,user:32=,pcpu=,rss=,comm= --sort=-pcpu | head -6 | sed 's/^/p /'; " +
-                  "df -B1 --output=source,target,size,used,pcent -x tmpfs -x devtmpfs -x efivarfs -x overlay -x squashfs 2>/dev/null | tail -n +2 | sed 's/^/d /'"]
+                  "timeout 3 df -l -B1 --output=source,size,used,pcent,target -x tmpfs -x devtmpfs -x efivarfs -x overlay -x squashfs 2>/dev/null | tail -n +2 | sed 's/^/d /'"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const pr = [], seen = {}, dk = [];
@@ -82,7 +82,7 @@ Dropdown {
                     if (f[0] === "p" && f.length >= 6) pr.push({ pid: f[1], user: f[2], cpu: Math.round(Number(f[3])), mem: Math.round(Number(f[4]) / 1024), name: f.slice(5).join(" ") });
                     else if (f[0] === "d" && f.length >= 6) {
                         // btrfs shows one line per subvolume: keep one per device, the shortest mount point
-                        const d = { src: f[1], mount: f[2], size: Number(f[3]), used: Number(f[4]), pct: parseInt(f[5]) };
+                        const d = { src: f[1], size: Number(f[2]), used: Number(f[3]), pct: parseInt(f[4]), mount: f.slice(5).join(" ") };
                         if (!seen[d.src] || d.mount.length < seen[d.src].mount.length) seen[d.src] = d;
                     }
                 }
@@ -138,12 +138,11 @@ Dropdown {
     PanelLine { theme: p.theme; heading: true; label: p.t("system.care", "Care") }
     PanelLine { theme: p.theme; visible: p.info.updates !== undefined && p.info.updates !== null; label: p.t("system.updates", "Updates"); value: p.info.updates > 0 ? String(p.info.updates) : p.t("system.none", "none") }
     // game mode (by hand; gamemoded switches it for games) and do not disturb
-    property bool dnd: false
     property bool gaming: false
     Process {
         id: gmState
         command: ["qs", "ipc", "-p", "/usr/share/olymparch/shell", "call", "olymparch", "status"]
-        stdout: StdioCollector { onStreamFinished: { try { const j = JSON.parse(text.trim()); p.dnd = !!j.dnd; p.gaming = !!j.gamemode; } catch (e) {} } }
+        stdout: StdioCollector { onStreamFinished: { try { p.gaming = !!JSON.parse(text.trim()).gamemode; } catch (e) {} } }
     }
     Process { id: gmSet; onExited: { gmState.running = false; gmState.running = true; } }
     PanelAction {
@@ -153,11 +152,11 @@ Dropdown {
         hint: p.t("system.gamemode_hint", "local AI off, background jobs wait")
         onActivated: { gmSet.command = ["qs", "ipc", "-p", "/usr/share/olymparch/shell", "call", "olymparch", "gamemode", p.gaming ? "off" : "on"]; gmSet.running = true; }
     }
-    PanelAction {
+    PanelAction {   // do not disturb: the same switch as the bell (Settings → Notifications)
         theme: p.theme
-        icon: p.dnd ? "\u{F009B}" : "\u{F009A}"
-        label: p.dnd ? p.t("system.dnd_off", "Turn do not disturb off") : p.t("system.dnd_on", "Do not disturb")
-        onActivated: { gmSet.command = ["qs", "ipc", "-p", "/usr/share/olymparch/shell", "call", "olymparch", "dnd", p.dnd ? "off" : "on"]; gmSet.running = true; }
+        icon: p.theme.dndSetting ? "\u{F009B}" : "\u{F009A}"
+        label: p.theme.dndSetting ? p.t("system.dnd_off", "Turn do not disturb off") : p.t("system.dnd_on", "Do not disturb")
+        onActivated: p.theme.toggleDnd()
     }
     PanelAction { theme: p.theme; icon: ""; label: p.t("system.doctor", "Check the system"); hint: "olymparch-doctor"; onActivated: { Panels.close("system"); Quickshell.execDetached(["foot", "-H", "olymparch-doctor"]); } }
     PanelAction { theme: p.theme; visible: p.info.updates > 0; icon: ""; label: p.t("system.update", "Update now"); onActivated: { Panels.close("system"); Quickshell.execDetached(["foot", "-H", "olymparch", "update"]); } }

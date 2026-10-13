@@ -6,6 +6,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Networking
+import Quickshell.Bluetooth
 
 Dropdown {
     id: p
@@ -113,8 +114,7 @@ Dropdown {
         onActivated: {
             const on = Networking.wifiEnabled;
             Networking.wifiEnabled = !on;
-            act.command = ["sh", "-c", on ? "command -v bluetoothctl >/dev/null && bluetoothctl power off; true" : "command -v bluetoothctl >/dev/null && bluetoothctl power on; true"];
-            act.running = true;
+            if (Bluetooth.defaultAdapter) Bluetooth.defaultAdapter.enabled = !on;   // no adapter: nothing to switch
         }
     }
     PanelAction { theme: p.theme; icon: ""; label: p.t("net.settings", "Network and VPN settings"); onActivated: { Panels.close("network"); Quickshell.execDetached(["olymparch-settings", "open", "network"]); } }

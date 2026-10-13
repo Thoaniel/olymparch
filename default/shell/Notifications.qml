@@ -30,6 +30,16 @@ Scope {
     readonly property var shown: hovering && kept.length > 0 ? kept : live
     property var arrived: ({})   // id → Date, for «3 min» on the toast
     property bool replying: false   // a card's answer field has been clicked: the toasts take the keyboard until sent
+    function recheck() {
+        notes.hovering = column.children.some(c => c.hovered === true);
+        notes.replying = column.children.some(c => c.replying === true);
+    }
+    // while you write an answer: a click anywhere else gives the keyboard back
+    HyprlandFocusGrab {
+        active: notes.replying
+        windows: [toastWindow]
+        onCleared: column.children.forEach(c => { if (c.replying === true) c.replying = false; })
+    }
     // how long each one stays (ms, 0 = until answered), by id: set when it comes, run by its card while it is shown
     property var durations: ({})
 
@@ -104,6 +114,7 @@ Scope {
     }
 
     PanelWindow {
+        id: toastWindow
         // the monitor you work on (where the mouse and keyboard are), else the first
         screen: Quickshell.screens.find(x => Hyprland.focusedMonitor && x.name === Hyprland.focusedMonitor.name) || Quickshell.screens[0]
         visible: notes.shown.length > 0
@@ -124,7 +135,9 @@ Scope {
             width: parent.width
             spacing: 8
             Repeater {
-                model: notes.shown
+                // a ScriptModel keeps each card when the list changes (a plain array rebuilds them all: the time would
+                // start over, the slide-in replay and a half-written answer vanish)
+                model: ScriptModel { values: notes.shown }
                 delegate: NotifyCard {
                     required property int index
                     theme: notes.theme
@@ -135,7 +148,8 @@ Scope {
                     onHoveredChanged: notes.hovering = column.children.some(c => c.hovered === true)
                     onCloseAll: notes.waiting.slice().forEach(n => n.dismiss())
                     onReplyingChanged: notes.replying = column.children.some(c => c.replying === true)
-                    Component.onDestruction: if (replying) notes.replying = false
+                    // a card closed under the mouse sends no «left»: look again once it is gone
+                    Component.onDestruction: Qt.callLater(notes.recheck)
                 }
             }
             Text {   // more are waiting behind the ones shown: a click opens the bell's list

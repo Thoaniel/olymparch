@@ -33,44 +33,51 @@ Dropdown {
     }
     Repeater {
         model: NotifyHistory.items.slice(0, 8)
-        delegate: Column {
+        delegate: Item {
             id: entry
             required property var modelData
             readonly property var win: NotifyHistory.windowOf(modelData)
             x: p.theme.px(18); width: p.panelWidth - 2 - 2 * x
-            spacing: 1
-            bottomPadding: p.theme.px(6)
+            implicitHeight: lines.implicitHeight
+            height: implicitHeight
             // a click goes to the app's window (when it is open)
             MouseArea {
-                width: parent.width; height: parent.height
+                anchors.fill: parent
                 enabled: !!entry.win
                 hoverEnabled: true
                 cursorShape: entry.win ? Qt.PointingHandCursor : Qt.ArrowCursor
                 onClicked: { Panels.close("notifications"); entry.win.activate(); }
             }
-            Text {
+            Column {
+                id: lines
                 width: parent.width
-                text: Qt.formatTime(modelData.time, "HH:mm") + "  " + (modelData.app || "?") + (modelData.held ? "  · " + p.t("notes.held", "held back") : "")
-                elide: Text.ElideRight
-                font { family: p.theme.mono; pixelSize: p.theme.px(11); letterSpacing: 0.5 }
-                color: modelData.critical ? p.theme.red : p.theme.muted
-            }
-            Text {
-                width: parent.width
-                text: modelData.summary
-                elide: Text.ElideRight
-                font { family: p.theme.mono; pixelSize: p.theme.px(13); bold: true }
-                color: p.theme.text
-            }
-            Text {
-                visible: !!modelData.body
-                width: parent.width
-                text: modelData.body
-                maximumLineCount: 2
-                wrapMode: Text.Wrap
-                elide: Text.ElideRight
-                font { family: p.theme.mono; pixelSize: p.theme.px(12) }
-                color: p.theme.muted
+                spacing: 1
+                bottomPadding: p.theme.px(6)
+                readonly property var modelData: entry.modelData
+                Text {
+                    width: parent.width
+                    text: Qt.formatTime(modelData.time, "HH:mm") + "  " + (modelData.app || "?") + (modelData.held ? "  · " + p.t("notes.held", "held back") : "")
+                    elide: Text.ElideRight
+                    font { family: p.theme.mono; pixelSize: p.theme.px(11); letterSpacing: 0.5 }
+                    color: modelData.critical ? p.theme.red : p.theme.muted
+                }
+                Text {
+                    width: parent.width
+                    text: modelData.summary
+                    elide: Text.ElideRight
+                    font { family: p.theme.mono; pixelSize: p.theme.px(13); bold: true }
+                    color: p.theme.text
+                }
+                Text {
+                    visible: !!modelData.body
+                    width: parent.width
+                    text: modelData.body
+                    maximumLineCount: 2
+                    wrapMode: Text.Wrap
+                    elide: Text.ElideRight
+                    font { family: p.theme.mono; pixelSize: p.theme.px(12) }
+                    color: p.theme.muted
+                }
             }
         }
     }

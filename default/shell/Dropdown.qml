@@ -3,16 +3,17 @@
 // `qs ipc call panel toggle NAME` all open the same one. A click outside or Esc closes it.
 // Calm on purpose: a heading, a status line, a few lines and clear actions (PanelAction) — no boxes in boxes.
 // Keyboard like the menu: ↑/↓ (and Tab) move between actions, Enter or Space chooses, Esc closes.
-// An overlay layer over the bar's monitor whose input region is only the panel itself (mask): clicks beside it go
-// straight to the windows under it, so the rest of the desktop stays usable. It asks for the keyboard on demand:
-// Hyprland gives it the keyboard when it opens, and when you click or type in another window the panel loses it
-// and closes. (A popup with a focus grab got no keyboard when opened by a hotkey or IPC.)
+// An overlay layer over the bar's monitor whose input region is only the panel itself (mask), so it never covers
+// the desktop. While it is open a Hyprland focus grab holds the keyboard for the panel and the bar (moving the mouse
+// over a window does not take it away, as «follow mouse» would), and a click anywhere else ends the grab and closes
+// the panel, like a menu. A click on another bar item still reaches the bar and switches panels.
 //   Dropdown { name: "zeus"; anchorItem: zeusCell; screenName: modelData.name; theme: root
 //              icon: ""; title: "Zeus"; status: "Idle · gemma4"
 //              PanelAction { label: "Turn AI off"; onActivated: … } }
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Hyprland
 
 PanelWindow {
     id: dd
@@ -56,14 +57,12 @@ PanelWindow {
     }
     onWidthChanged: if (visible) place()
 
-    // another window took the keyboard (you clicked or typed there): the panel steps aside
-    readonly property bool hasKeyboard: frame.Window.active
-    property bool hadKeyboard: false
-    onHasKeyboardChanged: {
-        if (hasKeyboard) hadKeyboard = true;
-        else if (visible && hadKeyboard) Panels.close(dd.name);
+    // the keyboard stays with the panel (and the bar) while it is open; a click outside both closes it
+    HyprlandFocusGrab {
+        active: dd.visible
+        windows: [dd, dd.anchorItem ? dd.anchorItem.QsWindow.window : null].filter(w => w)
+        onCleared: if (dd.visible) Panels.close(dd.name)
     }
-    onVisibleChanged: if (!visible) hadKeyboard = false
 
     property Item initialFocus: null     // where the keyboard starts (else the first action)
     function focusFirst() {

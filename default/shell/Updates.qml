@@ -22,7 +22,10 @@ Singleton {
             "[ -e \"${XDG_RUNTIME_DIR:-/nonexistent}/olymparch/gaming\" ] && [ \"$1\" = sync ] && exit 0; " +
             "export CHECKUPDATES_DB=\"${XDG_CACHE_HOME:-$HOME/.cache}/olymparch/checkup-db\"; " +
             // offline only once a sync has made the copy: before that pacman would leave an empty local/ that breaks it
-            "if [ \"$1\" = sync ]; then checkupdates; elif [ -d \"$CHECKUPDATES_DB/sync\" ]; then checkupdates --nosync; else exit 0; fi 2>/dev/null | grep -c . ; true",
+            // checkupdates: 0 = updates listed, 2 = none, anything else = it failed (offline): then nothing is printed
+            // and the count stays as it was
+            "if [ \"$1\" = sync ]; then out=$(checkupdates 2>/dev/null); elif [ -d \"$CHECKUPDATES_DB/sync\" ]; then out=$(checkupdates --nosync 2>/dev/null); else exit 0; fi; " +
+            "rc=$?; [ $rc = 0 ] && printf '%s\\n' \"$out\" | grep -c .; [ $rc = 2 ] && echo 0; true",
             "sh", u.sync ? "sync" : "nosync"]
         stdout: StdioCollector { onStreamFinished: { const n = parseInt(text.trim()); if (!isNaN(n)) u.count = n; } }
     }

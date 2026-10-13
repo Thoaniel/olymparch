@@ -10,7 +10,9 @@ Singleton {
     id: w
     readonly property string place: String(Settings.get("appearance.weather_place") || "").trim()
     readonly property bool enabled: /^-?\d{1,2}(\.\d+)?\s*,\s*-?\d{1,3}(\.\d+)?$/.test(place)
-    property var now: null              // { temp, wind, symbol, later: [{ hour, temp }] }
+    property var now: null              // { temp, wind, symbol, later: [{ hour, temp }], at }
+    // a reading older than two hours (offline since) is not shown as the weather now
+    Timer { running: !!w.now; interval: 10 * 60 * 1000; repeat: true; onTriggered: if (w.now && Date.now() - w.now.at > 2 * 3600 * 1000) w.now = null }
     onPlaceChanged: refresh()
     function refresh() {
         if (!enabled) { now = null; return; }
@@ -28,7 +30,7 @@ Singleton {
                     const ts = JSON.parse(text).properties.timeseries;
                     const d = t0 => t0.data.instant.details;
                     const sym = t0 => ((t0.data.next_1_hours || t0.data.next_6_hours || {}).summary || {}).symbol_code || "";
-                    w.now = { temp: Math.round(d(ts[0]).air_temperature), wind: Math.round(d(ts[0]).wind_speed), symbol: sym(ts[0]),
+                    w.now = { at: Date.now(), temp: Math.round(d(ts[0]).air_temperature), wind: Math.round(d(ts[0]).wind_speed), symbol: sym(ts[0]),
                               later: [3, 6, 9, 12].filter(i => ts[i]).map(i => ({ hour: new Date(ts[i].time).getHours(), temp: Math.round(d(ts[i]).air_temperature) })) };
                 } catch (e) { /* keep the last reading */ }
             }

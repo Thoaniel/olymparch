@@ -30,8 +30,12 @@ Singleton {
         id: live
         command: ["sh", "-c",
             "head -1 /proc/stat; grep -E '^(MemTotal|MemAvailable):' /proc/meminfo; " +
-            "for c in /sys/class/drm/card*/device; do [ -r $c/gpu_busy_percent ] && { echo gpu $(cat $c/gpu_busy_percent $c/mem_info_vram_used $c/mem_info_vram_total 2>/dev/null); break; }; done; " +
-            "for h in /sys/class/hwmon/hwmon*; do n=$(cat $h/name 2>/dev/null); for f in $h/temp*_input; do [ -r $f ] && echo t $n $(cat $f); done; done 2>/dev/null; " +
+            // the graphics card with the most VRAM (the dedicated one, not a Ryzen iGPU next to it)
+            "best=; max=0; for c in /sys/class/drm/card*/device; do [ -r $c/gpu_busy_percent ] || continue; v=$(cat $c/mem_info_vram_total 2>/dev/null || echo 0); [ \"$v\" -gt \"$max\" ] 2>/dev/null && { max=$v; best=$c; }; [ -z \"$best\" ] && best=$c; done; " +
+            "[ -n \"$best\" ] && echo gpu $(cat $best/gpu_busy_percent $best/mem_info_vram_used $best/mem_info_vram_total 2>/dev/null); " +
+            // only the CPU and GPU sensors (never disks: reading drivetemp could keep a hard disk from spinning down)
+            "for h in /sys/class/hwmon/hwmon*; do read -r n <$h/name 2>/dev/null || continue; case $n in amdgpu|nouveau|nvidia|xe|i915|k10temp|coretemp|zenpower|cpu_thermal|acpitz) ;; *) continue ;; esac; " +
+            "for f in $h/temp*_input; do [ -r $f ] && read -r v <$f && echo t $n $v; done; done 2>/dev/null; " +
             "echo up $(cut -d' ' -f1 /proc/uptime)"]
         stdout: StdioCollector {
             onStreamFinished: {
