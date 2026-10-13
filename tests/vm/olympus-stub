@@ -20,5 +20,32 @@ case "$1" in
     config) [ "$2" = get ] && echo gemma4-26b-a4b ;;
     auth) echo "${3:-anthropic}: ingen nøkkel" ;;
     zeus | status) echo "Zeus (test stub): $1"; sleep 60 ;;
+    bar)   # `olympus bar` (the shell's Zeus item and panel): JSON lines, the scenario from ~/.olympus-stub-bar
+        sc=${OLYMPUS_STUB_BAR:-$(cat "$HOME/.olympus-stub-bar" 2>/dev/null || echo idle)}   # idle | chat | approval | off
+        state=idle ai=true approvals='[]'
+        case $sc in
+            approval) state=approval
+                approvals='[{"id":"a1","tool":"shell","reason":"kjører en kommando","danger":false,"preview":"$ df -h /home\n(viser ledig plass på hjemmedisken)"}]' ;;
+            off) state=off ai=false ;;
+        esac
+        bar() { printf '{"type":"bar","connected":true,"ai":%s,"model":"gemma4-26b-a4b","provider":"lokal","cloud":false,"answering":"gemma4-26b-a4b","state":"%s","approvals":%s,"plan":null,"media":null,"downloads":null,"phones":null,"last_error":null}\n' "$ai" "$1" "$2"; }
+        printf '{"type":"bridge","status":"connected","detail":"stub"}\n'
+        bar "$state" "$approvals"
+        if [ "$sc" != idle ] && [ "$sc" != off ]; then
+            printf '%s\n' '{"type":"history","session":"s1","items":[{"kind":"user","text":"Hvor mye plass har jeg igjen?"},{"kind":"agent","text":"Jeg sjekker hjemmedisken for deg.","model":"gemma4-26b-a4b","tools":["df"]}]}'
+        fi
+        [ "$sc" = chat ] && printf '%s\n' '{"type":"user","text":"Og hva er det som tar mest plass?"}' '{"type":"agent_start","model":"gemma4-26b-a4b"}' \
+            '{"type":"tool","id":"t1","name":"du","detail":"~ (dybde 1)"}' '{"type":"tool_result","id":"t1","ok":true,"summary":"7 mapper"}' \
+            '{"type":"chunk","text":"Mest plass tar **~/Spill** (212 GB) og **~/.olympus/models** (14 GB). Vil du at jeg skal se nærmere på spillene?"}' '{"type":"agent_end"}'
+        while IFS= read -r line; do
+            echo "$line" >>"$HOME/olympus-bar.log"
+            rid=$(printf '%s' "$line" | sed -n 's/.*"rid": *\([0-9]*\).*/\1/p')
+            case $line in
+                */api/v1/models*) printf '{"type":"http","rid":%s,"status":200,"json":{"current":"gemma4-26b-a4b","cloud":false,"choices":[{"id":"gemma4-26b-a4b","label":"gemma4-26b-a4b · lokal","cloud":false,"provider":"lokal","cost":"gratis","size":"14.2 GB"},{"id":"groq/openai/gpt-oss-120b","label":"Groq: openai/gpt-oss-120b","cloud":true,"provider":"Groq","cost":"gratisnivå"},{"id":"claude-code/sonnet","label":"Claude Code: sonnet","cloud":true,"provider":"Claude Code","cost":"betalt · abonnement"}]},"error":null}\n' "${rid:-0}" ;;
+                *'"cmd":"approve"'* | *'"cmd":"deny"'* | *'"cmd":"always"'*) bar idle '[]'; printf '{"type":"approval_done","id":"a1"}\n' ;;
+                *'"cmd":'*) printf '{"type":"cmd","rid":%s,"ok":true,"result":null,"error":null}\n' "${rid:-null}" ;;
+                *'"type":"http"'*) printf '{"type":"http","rid":%s,"status":200,"json":{},"error":null}\n' "${rid:-0}" ;;
+            esac
+        done ;;
 esac
 exit 0

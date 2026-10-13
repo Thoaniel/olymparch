@@ -59,7 +59,7 @@ Scope {
             "keys.menu": t("Apps: search and start", "Apper: søk og start"),
             "keys.olymparch_menu": t("Olymparch menu", "Olymparch-menyen"),
             "keys.add_game": t("Mark this window as a game", "Merk vinduet som spill"),
-            "zeus.hotkey": t("Zeus", "Zeus")
+            "zeus.hotkey": t("Zeus panel", "Zeus-panelet")
         };
         if (special[e.key]) return special[e.key];
         const l = tr(e.label).replace(/^(Shortcut|Hurtigtast): */, "");

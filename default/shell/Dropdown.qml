@@ -1,6 +1,6 @@
 // A dropdown panel under a bar item (B1): the frame every bar panel uses. At most one is open (Panels.qml holds
 // which), on the monitor it was opened from; the bar item, the menu's «Panels» level, a hotkey and
-// `qs ipc call panel toggle NAME` all open the same one. Click outside or Esc closes it.
+// `qs ipc call panel toggle NAME` all open the same one. Click outside (Hyprland's focus grab) or Esc closes it.
 // Calm on purpose: a heading, a status line, a few lines and clear actions (PanelAction) — no boxes in boxes.
 // Keyboard like the menu: ↑/↓ (and Tab) move between actions, Enter or Space chooses, Esc closes.
 //   Dropdown { name: "zeus"; anchorItem: zeusCell; screenName: modelData.name; theme: root
@@ -8,6 +8,7 @@
 //              PanelAction { label: "Turn AI off"; onActivated: … } }
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 
 PopupWindow {
     id: dd
@@ -32,16 +33,24 @@ PopupWindow {
     onWantedChanged: { visible = wanted; if (wanted) { Qt.callLater(focusFirst); opened(); } }
     // closed from outside (a click elsewhere: the compositor ends the popup)
     onVisibleChanged: if (!visible && wanted) Panels.close(name)
+    // Keyboard focus, and a click anywhere else closes it. Hyprland's focus grab, not an xdg popup grab: that one
+    // needs a fresh click, so a panel opened by a hotkey, the menu or IPC would close at once.
+    HyprlandFocusGrab {
+        windows: [dd]
+        active: dd.visible
+        onCleared: Panels.close(dd.name)
+    }
 
     anchor.item: anchorItem
     anchor.rect.x: anchorItem.width - implicitWidth   // right edges line up; it slides left/right to stay on screen
     anchor.rect.y: anchorItem.height
-    grabFocus: true
     implicitWidth: panelWidth
     implicitHeight: frame.height
     color: "transparent"
 
+    property Item initialFocus: null     // where the keyboard starts (else the first action)
     function focusFirst() {
+        if (initialFocus && initialFocus.visible) { initialFocus.forceActiveFocus(); return; }
         const first = frame.nextItemInFocusChain(true);
         if (first && first !== frame) first.forceActiveFocus(); else frame.forceActiveFocus();
     }

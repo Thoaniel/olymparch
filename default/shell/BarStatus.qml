@@ -12,6 +12,7 @@ import Quickshell.Services.UPower
 Row {
     id: status
     required property var theme
+    property string screenName: ""   // this bar's monitor: its panels open here
     property string clockFormat: "ddd d MMM  HH:mm"   // day and month in the session's language (shell.qml sets it)
     TextMetrics { id: digits; font { family: status.theme.mono; pixelSize: status.theme.px(13) } text: "0" }
     spacing: 4   // the cells have 6 px padding of their own: 16 px between icons
@@ -57,6 +58,7 @@ Row {
         property color labelTint: status.theme.text
         property bool clickable: false
         property bool alert: false        // a solid red block (microphone, camera, battery nearly empty)
+        property bool dot: false          // a small dot on the icon's corner: something waits for you
         property int labelChars: 0        // > 0: fixed width in characters, so changing numbers do not shift the bar
         property int maxLabelWidth: 200
         readonly property bool hot: hover.containsMouse && clickable
@@ -83,6 +85,12 @@ Row {
                 font { family: "Symbols Nerd Font Mono"; pixelSize: status.theme.px(15) }
                 color: cell.alert ? status.theme.bg : cell.hot ? status.theme.goldHi : cell.tint
                 anchors.verticalCenter: parent.verticalCenter
+                Rectangle {
+                    visible: cell.dot
+                    width: 6; height: 6; radius: 3
+                    color: status.theme.goldHi
+                    x: parent.width - 2; y: -1
+                }
             }
             Text {
                 visible: cell.label.length > 0
@@ -133,14 +141,33 @@ Row {
             onTriggered: recCell.secs = Math.max(0, Math.round((Date.now() - Tools.recordingSince.getTime()) / 1000))
         }
     }
+    // ── Zeus (Zeus.qml, `olympus bar`): what it is doing and who answers; a click opens its panel (ZeusPanel.qml)
     Cell {
-        visible: zeusCheck.installed && Settings.get("zeus.enabled") !== false
-        icon: ""
-        label: "Zeus"
-        tint: status.theme.gold
+        id: zeusCell
+        visible: Zeus.enabled
+        readonly property bool waiting: Zeus.state === "approval"
+        readonly property bool off: !Zeus.connected || Zeus.ai === false
+        icon: "\uf0e7"
+        label: off ? I18n.t("zeus.bar.off", "Zeus off")
+             : waiting ? I18n.t("zeus.bar.waiting", "Zeus · waiting")
+             : Zeus.state === "thinking" ? I18n.t("zeus.bar.thinking", "Zeus · thinking")
+             : Zeus.cloud ? "Zeus · " + Zeus.provider : "Zeus"
+        dot: waiting
+        tint: off ? status.theme.muted : status.theme.gold
+        labelTint: off ? status.theme.muted : waiting ? status.theme.goldHi : status.theme.text
+        maxLabelWidth: status.theme.px(260)
         clickable: true
-        onClicked: Quickshell.execDetached(["sh", "-c", 'exec foot -e "$HOME/.local/bin/olympus" zeus'])
+        onClicked: Panels.toggle("zeus", status.screenName)
+        // thinking: the cell breathes; waiting for you: a gold dot on the bolt
+        SequentialAnimation on opacity {
+            running: Zeus.state === "thinking" && !zeusCell.off
+            loops: Animation.Infinite
+            NumberAnimation { to: 0.55; duration: 700 }
+            NumberAnimation { to: 1; duration: 700 }
+            onStopped: zeusCell.opacity = 1
+        }
     }
+    ZeusPanel { theme: status.theme; anchorItem: zeusCell; screenName: status.screenName }
     Cell {
         icon: !status.netDevice ? (status.hasWifi ? "\u{F092D}" : "\u{F0319}")
             : status.wifiStrength < 0 ? "\u{F0318}"
@@ -186,12 +213,4 @@ Row {
         color: status.theme.text
     }
 
-    // Zeus is optional: the module shows only when Olympus is installed for the user (checked once)
-    Process {
-        id: zeusCheck
-        property bool installed: false
-        command: ["sh", "-c", 'test -x "$HOME/.local/bin/olympus"']
-        running: true
-        onExited: code => installed = code === 0
-    }
 }

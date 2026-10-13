@@ -194,6 +194,7 @@ ShellRoot {
                     BarStatus {
                         id: barStatus
                         theme: root
+                        screenName: modelData.name
                         clockFormat: (Settings.get("appearance.clock_format") === "12h" ? "ddd d%1 MMM  h:mm AP" : "ddd d%1 MMM  HH:mm")
                             .arg(Qt.locale().name.startsWith("nb") || Qt.locale().name.startsWith("nn") ? "." : "")
                         anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
