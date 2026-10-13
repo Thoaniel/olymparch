@@ -3,9 +3,10 @@
 // `qs ipc call panel toggle NAME` all open the same one. A click outside or Esc closes it.
 // Calm on purpose: a heading, a status line, a few lines and clear actions (PanelAction) — no boxes in boxes.
 // Keyboard like the menu: ↑/↓ (and Tab) move between actions, Enter or Space chooses, Esc closes.
-// Built like the menu (Menu.qml): a transparent overlay layer over the bar's monitor that takes the keyboard while
-// open and closes on a click outside the panel. (A popup with a focus grab got no keyboard when opened by a hotkey
-// or IPC, and a click on the wallpaper did not close it.)
+// An overlay layer over the bar's monitor whose input region is only the panel itself (mask): clicks beside it go
+// straight to the windows under it, so the rest of the desktop stays usable. It asks for the keyboard on demand:
+// Hyprland gives it the keyboard when it opens, and when you click or type in another window the panel loses it
+// and closes. (A popup with a focus grab got no keyboard when opened by a hotkey or IPC.)
 //   Dropdown { name: "zeus"; anchorItem: zeusCell; screenName: modelData.name; theme: root
 //              icon: ""; title: "Zeus"; status: "Idle · gemma4"
 //              PanelAction { label: "Turn AI off"; onActivated: … } }
@@ -39,7 +40,8 @@ PanelWindow {
     screen: Quickshell.screens.find(s => s.name === dd.screenName) || null
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "olymparch-panel"
-    WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    mask: Region { item: frame }
     exclusionMode: ExclusionMode.Ignore
     anchors { top: true; bottom: true; left: true; right: true }
     color: "transparent"
@@ -54,8 +56,14 @@ PanelWindow {
     }
     onWidthChanged: if (visible) place()
 
-    // a click anywhere outside the panel closes it
-    MouseArea { anchors.fill: parent; onClicked: Panels.close(dd.name) }
+    // another window took the keyboard (you clicked or typed there): the panel steps aside
+    readonly property bool hasKeyboard: frame.Window.active
+    property bool hadKeyboard: false
+    onHasKeyboardChanged: {
+        if (hasKeyboard) hadKeyboard = true;
+        else if (visible && hadKeyboard) Panels.close(dd.name);
+    }
+    onVisibleChanged: if (!visible) hadKeyboard = false
 
     property Item initialFocus: null     // where the keyboard starts (else the first action)
     function focusFirst() {
