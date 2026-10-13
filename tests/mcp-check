@@ -552,6 +552,14 @@ try:
                         ("client_secret: 'zzzz-yyyy-xxxx'", "zzzz-yyyy-xxxx")):
         ok(secret not in ns["redact"](raw), f"redact left a secret in: {raw}")
     ok(ns["redact"]("an ordinary line: 42 errors in pipewire") == "an ordinary line: 42 errors in pipewire", "redact changed a plain line")
+    # no slow patterns (ReDoS): hostile lines are masked quickly
+    ns["L"] = lambda en, nb: en
+    exec(src[src.index("def capped"):src.index("def hypr_reports")], ns)
+    import time as _t
+    t0 = _t.monotonic()
+    for hostile in ("a" * 50000, "token" * 10000, ("password_" * 100 + "\n") * 2000, "-" * 20000 + "secret" + "_" * 20000):
+        ns["capped"](hostile)
+    ok(_t.monotonic() - t0 < 2.0, f"masking hostile logs took {_t.monotonic() - t0:.1f} s")
     # fixes go to root only through the helpers' fixed words
     ok('"pkexec", "/usr/lib/olymparch/settings-apply", "restart", a["service"]' in src and
        "restart:network | restart:bluetooth" in (ROOT / "system/lib/settings-apply").read_text(), "system_service_restart: fixed words only")
