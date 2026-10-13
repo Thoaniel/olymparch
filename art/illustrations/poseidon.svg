@@ -373,17 +373,54 @@
   <g filter="url(#foamy)">
     <path d="M300 702 C380 652 470 634 560 642 C700 646 880 694 1040 774 C1140 824 1220 862 1300 892 C1220 900 1130 874 1030 830
       C880 762 700 720 560 718 C470 718 390 738 300 780 Z" fill="url(#lipSheet)"/>
-    <path d="M300 780 C390 738 470 718 560 718 C700 720 880 762 1030 830 C1130 874 1220 900 1300 892" fill="none" stroke="#e8fffb"
-          stroke-width="5" opacity="0.75"/>
-    <path d="M320 694 C400 650 480 638 560 646 C700 650 880 698 1040 778" fill="none" stroke="#e8fffb" stroke-width="2.4" opacity="0.5"/>
   </g>
-  <!-- the left end of the wave tapers into whitewater -->
-  <g filter="url(#surf)">
-    <path d="M330 690 C280 720 250 780 236 850 C222 920 206 990 170 1060 C230 1060 280 1030 300 980 C320 920 310 850 330 790
-      C340 760 350 720 330 690 Z" fill="#d8fbf5" opacity="0.75"/>
-    <path d="M300 760 C250 790 220 850 200 920 C190 960 170 1010 140 1050 C180 1046 210 1020 226 980 C246 920 260 840 300 790 Z"
-          fill="#bff8f0" opacity="0.5"/>
+  <!-- the lip's breaking edge: a soft inner glow and an uneven fringe of foam clumps, with gaps -->
+  <path d="M300 776 C390 734 470 714 560 714 C700 716 880 758 1030 826 C1130 870 1220 896 1300 888" fill="none" stroke="#bff8f0"
+        stroke-width="18" opacity="0.32" filter="url(#glowM)"/>
+  <g fill="#e8fffb" filter="url(#surf)">
+    <ellipse cx="305" cy="777" rx="8.4" ry="3.9" opacity="0.66"/> <ellipse cx="314" cy="776" rx="16.8" ry="7.7" opacity="0.65"/> <ellipse cx="322" cy="775" rx="6.0" ry="3.1" opacity="0.48"/> <ellipse cx="339" cy="766" rx="10.6" ry="3.9" opacity="0.85"/>
+    <ellipse cx="350" cy="763" rx="15.5" ry="3.9" opacity="0.85"/> <circle cx="348" cy="779" r="1.4" opacity="0.57"/> <ellipse cx="377" cy="747" rx="9.3" ry="4.2" opacity="0.86"/> <ellipse cx="386" cy="748" rx="9.9" ry="3.4" opacity="0.49"/>
+    <ellipse cx="392" cy="746" rx="5.7" ry="2.8" opacity="0.52"/> <circle cx="402" cy="774" r="1.6" opacity="0.68"/> <ellipse cx="410" cy="742" rx="18.3" ry="7.0" opacity="0.68"/> <ellipse cx="417" cy="737" rx="9.5" ry="2.8" opacity="0.63"/>
+    <ellipse cx="438" cy="731" rx="11.9" ry="4.7" opacity="0.82"/> <ellipse cx="443" cy="734" rx="5.5" ry="3.0" opacity="0.67"/> <ellipse cx="452" cy="731" rx="17.0" ry="4.4" opacity="0.68"/> <ellipse cx="472" cy="728" rx="9.2" ry="5.4" opacity="0.57"/>
+    <circle cx="465" cy="739" r="1.5" opacity="0.58"/> <ellipse cx="487" cy="721" rx="10.0" ry="2.5" opacity="0.70"/> <circle cx="479" cy="745" r="2.5" opacity="0.43"/> <ellipse cx="494" cy="725" rx="33.8" ry="10.3" opacity="0.75"/>
+    <circle cx="496" cy="745" r="2.0" opacity="0.77"/> <ellipse cx="517" cy="717" rx="12.2" ry="3.2" opacity="0.53"/> <ellipse cx="525" cy="718" rx="10.7" ry="3.7" opacity="0.48"/> <ellipse cx="535" cy="720" rx="16.0" ry="5.5" opacity="0.86"/>
+    <circle cx="538" cy="740" r="1.9" opacity="0.69"/> <ellipse cx="557" cy="720" rx="19.3" ry="5.9" opacity="0.46"/> <circle cx="556" cy="737" r="2.9" opacity="0.63"/> <ellipse cx="565" cy="721" rx="19.3" ry="6.6" opacity="0.63"/>
+    <circle cx="559" cy="741" r="1.7" opacity="0.43"/> <ellipse cx="574" cy="716" rx="17.9" ry="6.9" opacity="0.49"/> <ellipse cx="585" cy="722" rx="13.4" ry="4.4" opacity="0.50"/> <ellipse cx="593" cy="717" rx="13.4" ry="3.0" opacity="0.48"/>
+    <ellipse cx="612" cy="719" rx="9.6" ry="3.8" opacity="0.57"/> <ellipse cx="624" cy="725" rx="12.8" ry="5.2" opacity="0.48"/> <circle cx="631" cy="744" r="1.8" opacity="0.42"/> <ellipse cx="636" cy="727" rx="23.1" ry="9.3" opacity="0.63"/>
+    <circle cx="646" cy="740" r="2.8" opacity="0.41"/> <ellipse cx="649" cy="728" rx="12.9" ry="4.2" opacity="0.63"/> <circle cx="644" cy="744" r="2.4" opacity="0.63"/> <ellipse cx="660" cy="725" rx="11.4" ry="4.4" opacity="0.46"/>
+    <circle cx="657" cy="753" r="2.9" opacity="0.43"/> <ellipse cx="677" cy="730" rx="21.1" ry="7.4" opacity="0.55"/> <ellipse cx="694" cy="734" rx="32.6" ry="11.1" opacity="0.68"/> <ellipse cx="699" cy="735" rx="7.7" ry="2.8" opacity="0.47"/>
+    <circle cx="693" cy="745" r="2.7" opacity="0.80"/> <ellipse cx="718" cy="737" rx="18.3" ry="5.3" opacity="0.61"/> <circle cx="715" cy="753" r="1.7" opacity="0.65"/> <ellipse cx="732" cy="736" rx="6.9" ry="3.2" opacity="0.69"/>
+    <ellipse cx="738" cy="738" rx="6.7" ry="2.3" opacity="0.76"/> <circle cx="735" cy="763" r="2.0" opacity="0.64"/> <ellipse cx="751" cy="745" rx="8.2" ry="2.7" opacity="0.79"/> <ellipse cx="760" cy="741" rx="13.0" ry="3.1" opacity="0.76"/>
+    <ellipse cx="778" cy="744" rx="32.4" ry="9.9" opacity="0.81"/> <ellipse cx="785" cy="753" rx="10.8" ry="4.3" opacity="0.49"/> <ellipse cx="802" cy="756" rx="14.7" ry="6.4" opacity="0.69"/> <ellipse cx="815" cy="755" rx="23.5" ry="6.7" opacity="0.77"/>
+    <ellipse cx="847" cy="762" rx="20.1" ry="4.3" opacity="0.51"/> <ellipse cx="852" cy="768" rx="23.0" ry="6.0" opacity="0.85"/> <ellipse cx="889" cy="774" rx="34.7" ry="10.5" opacity="0.88"/> <ellipse cx="899" cy="778" rx="25.9" ry="7.8" opacity="0.48"/>
+    <ellipse cx="911" cy="786" rx="12.7" ry="3.1" opacity="0.56"/> <circle cx="901" cy="807" r="2.1" opacity="0.51"/> <ellipse cx="929" cy="787" rx="22.8" ry="6.4" opacity="0.78"/> <circle cx="920" cy="802" r="2.7" opacity="0.68"/>
+    <ellipse cx="934" cy="792" rx="29.3" ry="6.6" opacity="0.64"/> <circle cx="929" cy="806" r="2.3" opacity="0.57"/> <ellipse cx="949" cy="801" rx="21.2" ry="8.2" opacity="0.47"/> <ellipse cx="956" cy="800" rx="12.5" ry="5.5" opacity="0.79"/>
+    <circle cx="954" cy="825" r="2.5" opacity="0.57"/> <ellipse cx="968" cy="803" rx="27.0" ry="11.9" opacity="0.74"/> <ellipse cx="982" cy="809" rx="6.9" ry="2.2" opacity="0.54"/> <ellipse cx="997" cy="813" rx="12.9" ry="5.7" opacity="0.50"/>
+    <ellipse cx="1000" cy="821" rx="15.7" ry="5.9" opacity="0.89"/> <circle cx="1000" cy="834" r="2.8" opacity="0.57"/> <ellipse cx="1010" cy="824" rx="14.2" ry="4.4" opacity="0.74"/> <ellipse cx="1027" cy="831" rx="11.4" ry="5.5" opacity="0.82"/>
+    <circle cx="1032" cy="856" r="1.9" opacity="0.72"/> <ellipse cx="1032" cy="834" rx="10.7" ry="5.0" opacity="0.69"/> <ellipse cx="1061" cy="842" rx="7.1" ry="2.1" opacity="0.70"/> <circle cx="1068" cy="861" r="2.6" opacity="0.75"/>
+    <ellipse cx="1083" cy="857" rx="11.4" ry="2.9" opacity="0.76"/> <ellipse cx="1090" cy="852" rx="12.3" ry="3.1" opacity="0.70"/> <ellipse cx="1097" cy="858" rx="8.6" ry="3.9" opacity="0.82"/> <ellipse cx="1110" cy="859" rx="23.9" ry="6.2" opacity="0.49"/>
+    <ellipse cx="1146" cy="871" rx="13.4" ry="3.4" opacity="0.86"/> <circle cx="1152" cy="900" r="1.8" opacity="0.55"/> <ellipse cx="1150" cy="876" rx="20.2" ry="6.1" opacity="0.63"/> <ellipse cx="1164" cy="876" rx="13.1" ry="5.4" opacity="0.78"/>
+    <ellipse cx="1180" cy="886" rx="11.7" ry="4.2" opacity="0.62"/> <ellipse cx="1201" cy="884" rx="10.0" ry="3.6" opacity="0.45"/> <ellipse cx="1220" cy="894" rx="17.0" ry="7.1" opacity="0.73"/> <circle cx="1222" cy="905" r="1.5" opacity="0.72"/>
+    <ellipse cx="1266" cy="894" rx="8.3" ry="2.9" opacity="0.64"/> <ellipse cx="1270" cy="896" rx="5.5" ry="1.8" opacity="0.52"/> <ellipse cx="1281" cy="895" rx="6.1" ry="2.2" opacity="0.45"/> <ellipse cx="1299" cy="896" rx="15.0" ry="4.4" opacity="0.54"/>
   </g>
+  <!-- spray falling forward and down off the left end of the lip, in clumps and droplets; the trough below stays dark -->
+  <path d="M310 780 C270 820 240 880 220 960 C214 990 220 1010 236 1000 C262 960 284 880 318 800 Z" fill="#bff8f0" opacity="0.18" filter="url(#glowM)"/>
+  <g filter="url(#surf)" fill="#d8fbf5">
+    <path d="M300 776 C286 790 280 812 290 826 C304 818 316 800 314 784 Z" opacity="0.8"/>
+    <ellipse cx="272" cy="842" rx="22" ry="14" opacity="0.7" transform="rotate(-30 272 842)"/>
+    <ellipse cx="250" cy="884" rx="16" ry="11" opacity="0.6" transform="rotate(-40 250 884)"/>
+    <ellipse cx="286" cy="896" rx="11" ry="8" opacity="0.5"/>
+    <ellipse cx="232" cy="930" rx="12" ry="8" opacity="0.5" transform="rotate(-50 232 930)"/>
+    <ellipse cx="262" cy="952" rx="8" ry="6" opacity="0.4"/>
+    <ellipse cx="214" cy="978" rx="8" ry="6" opacity="0.35"/>
+  </g>
+  <g fill="#e8fffb">
+    <circle cx="300" cy="860" r="3" opacity="0.7"/><circle cx="244" cy="852" r="2.6" opacity="0.6"/><circle cx="278" cy="922" r="2.4" opacity="0.55"/>
+    <circle cx="226" cy="902" r="2" opacity="0.5"/><circle cx="252" cy="990" r="2" opacity="0.4"/><circle cx="206" cy="950" r="1.8" opacity="0.4"/>
+    <circle cx="290" cy="976" r="1.6" opacity="0.35"/><circle cx="236" cy="1016" r="1.6" opacity="0.3"/><circle cx="318" cy="826" r="2.2" opacity="0.6"/>
+  </g>
+  <!-- the trough under the falling spray, kept dark -->
+  <ellipse cx="250" cy="1060" rx="170" ry="34" fill="#010a0e" opacity="0.55" filter="url(#glowM)"/>
   <!-- spray torn off the crest and blown back by the wind, lit -->
   <g filter="url(#cloudSoft)" opacity="0.5">
     <path d="M300 670 C360 610 450 580 540 584 C640 590 740 620 860 660 C760 650 660 634 560 636 C470 640 380 664 300 670 Z" fill="#bff8f0"/>
