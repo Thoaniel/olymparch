@@ -1,0 +1,487 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Olymparch · Athena: the little owl on an olive branch at blue hour; behind it the Parthenon on the Acropolis under
+     the full moon, the lamps of Athens below; her shield and spear rest in the foreground. Light: the moon (silver),
+     upper left; warm accents from the temple and the city. 2560×1440, everything that matters inside x 140…2420.
+     Drawn by hand for Olymparch; MIT. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2560" height="1440" viewBox="0 0 2560 1440">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#06080a"/>
+      <stop offset="0.3" stop-color="#0d1316"/>
+      <stop offset="0.55" stop-color="#1a2528"/>
+      <stop offset="0.75" stop-color="#2e3a36"/>
+      <stop offset="1" stop-color="#3c4536"/>
+    </linearGradient>
+    <radialGradient id="moonHalo" cx="600" cy="480" r="900" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d8ddcb" stop-opacity="0.45"/>
+      <stop offset="0.12" stop-color="#b9c4a8" stop-opacity="0.24"/>
+      <stop offset="0.4" stop-color="#6a7a68" stop-opacity="0.1"/>
+      <stop offset="1" stop-color="#1a2224" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="moon" cx="0.42" cy="0.4" r="0.65">
+      <stop offset="0" stop-color="#fbfcf4"/>
+      <stop offset="0.6" stop-color="#e2e6d4"/>
+      <stop offset="1" stop-color="#b8c0a6"/>
+    </radialGradient>
+    <linearGradient id="far" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3e4a46"/>
+      <stop offset="1" stop-color="#2a3330"/>
+    </linearGradient>
+    <linearGradient id="hill" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5a6254"/>
+      <stop offset="0.3" stop-color="#343a30"/>
+      <stop offset="1" stop-color="#161a14"/>
+    </linearGradient>
+    <linearGradient id="city" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1f2620"/>
+      <stop offset="1" stop-color="#121611"/>
+    </linearGradient>
+    <linearGradient id="marble" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#e4e7d8"/>
+      <stop offset="0.5" stop-color="#a9ae9a"/>
+      <stop offset="1" stop-color="#5d6355"/>
+    </linearGradient>
+    <radialGradient id="templeGlow" cx="1080" cy="780" r="260" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f0b070" stop-opacity="0.22"/>
+      <stop offset="0.4" stop-color="#e2735f" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#e2735f" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d2219"/>
+      <stop offset="1" stop-color="#0a0c08"/>
+    </linearGradient>
+    <linearGradient id="bark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5a5848"/>
+      <stop offset="0.45" stop-color="#2c2b22"/>
+      <stop offset="1" stop-color="#121209"/>
+    </linearGradient>
+    <linearGradient id="owlBody" x1="0" y1="0" x2="1" y2="0.2">
+      <stop offset="0" stop-color="#8e8a74"/>
+      <stop offset="0.35" stop-color="#5a5444"/>
+      <stop offset="1" stop-color="#1e1b15"/>
+    </linearGradient>
+    <linearGradient id="owlWing" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7a7260"/>
+      <stop offset="1" stop-color="#2e2a22"/>
+    </linearGradient>
+    <radialGradient id="disc" cx="0.4" cy="0.4" r="0.7">
+      <stop offset="0" stop-color="#d6d2bc"/>
+      <stop offset="1" stop-color="#8a846e"/>
+    </radialGradient>
+    <radialGradient id="iris" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fff2a8"/>
+      <stop offset="0.7" stop-color="#e8c64a"/>
+      <stop offset="1" stop-color="#9a7a20"/>
+    </radialGradient>
+    <radialGradient id="shield" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#5e5634"/>
+      <stop offset="0.45" stop-color="#2e2a1a"/>
+      <stop offset="1" stop-color="#12110a"/>
+    </radialGradient>
+    <linearGradient id="topShade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#040506" stop-opacity="0.9"/>
+      <stop offset="0.5" stop-color="#040506" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#040506" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="cornerShade" cx="2560" cy="0" r="1150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#030404" stop-opacity="0.8"/>
+      <stop offset="0.6" stop-color="#030404" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#030404" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vignette" cx="0.5" cy="0.55" r="0.78">
+      <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.6"/>
+    </radialGradient>
+
+    <filter id="cloud" x="-15%" y="-30%" width="130%" height="160%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.0035 0.012" numOctaves="5" seed="14" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="120" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.6 0 0 0 -0.6" result="m"/>
+      <feComposite in="d" in2="m" operator="in" result="c"/>
+      <feGaussianBlur in="c" stdDeviation="3"/>
+    </filter>
+    <filter id="rock" x="-5%" y="-8%" width="110%" height="116%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.01 0.03" numOctaves="4" seed="23" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="22" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="reliefRock" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.02" numOctaves="6" seed="41" result="h"/>
+      <feDiffuseLighting in="h" surfaceScale="10" diffuseConstant="1" lighting-color="#fff" result="l">
+        <feDistantLight azimuth="215" elevation="35"/>
+      </feDiffuseLighting>
+      <feComponentTransfer in="l" result="lt">
+        <feFuncR type="linear" slope="0.9" intercept="0.3"/><feFuncG type="linear" slope="0.9" intercept="0.3"/>
+        <feFuncB type="linear" slope="0.9" intercept="0.3"/>
+      </feComponentTransfer>
+      <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.1" k2="0" k3="0" k4="0"/>
+    </filter>
+    <filter id="reliefBark" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.05 0.012" numOctaves="4" seed="8" result="h"/>
+      <feDiffuseLighting in="h" surfaceScale="10" diffuseConstant="1" lighting-color="#fff" result="l">
+        <feDistantLight azimuth="215" elevation="40"/>
+      </feDiffuseLighting>
+      <feComponentTransfer in="l" result="lt">
+        <feFuncR type="linear" slope="1.2" intercept="0.15"/><feFuncG type="linear" slope="1.2" intercept="0.15"/>
+        <feFuncB type="linear" slope="1.2" intercept="0.15"/>
+      </feComponentTransfer>
+      <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.1" k2="0" k3="0" k4="0"/>
+    </filter>
+    <filter id="feather" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.16 0.22" numOctaves="2" seed="5" result="h"/>
+      <feDiffuseLighting in="h" surfaceScale="1.6" diffuseConstant="1" lighting-color="#fff" result="l">
+        <feDistantLight azimuth="215" elevation="45"/>
+      </feDiffuseLighting>
+      <feComponentTransfer in="l" result="lt">
+        <feFuncR type="linear" slope="0.5" intercept="0.62"/><feFuncG type="linear" slope="0.5" intercept="0.62"/>
+        <feFuncB type="linear" slope="0.5" intercept="0.62"/>
+      </feComponentTransfer>
+      <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.1" k2="0" k3="0" k4="0"/>
+    </filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"/></filter>
+    <filter id="glowS" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter>
+    <filter id="haze" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="28"/></filter>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2"/></filter>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="1" seed="2"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0.05 0"/>
+    </filter>
+
+    <!-- an olive leaf: dark upper side, a silver underside along one edge -->
+    <g id="leaf">
+      <path d="M0 0 C22 -11 62 -12 96 0 C62 10 22 10 0 0 Z" fill="#3e4a2c"/>
+      <path d="M0 0 C22 -11 62 -12 96 0 C62 -3 24 -3 0 0 Z" fill="#a9b39a"/>
+      <path d="M4 0 L90 0" stroke="#1c2214" stroke-width="1.5" opacity="0.6"/>
+    </g>
+    <g id="leafMid">
+      <path d="M0 0 C22 -12 62 -13 96 0 C62 11 22 11 0 0 Z" fill="#2e3822"/>
+      <path d="M0 0 C22 -12 62 -13 96 0 C62 -5 24 -5 0 0 Z" fill="#6a7656"/>
+    </g>
+    <g id="leafDark">
+      <path d="M0 0 C22 -11 62 -12 96 0 C62 10 22 10 0 0 Z" fill="#1c2216"/>
+      <path d="M0 0 C22 -11 62 -12 96 0 C62 -3 24 -3 0 0 Z" fill="#4c5a40"/>
+    </g>
+    <g id="olive">
+      <ellipse cx="0" cy="0" rx="11" ry="15" fill="#2a2030"/>
+      <ellipse cx="-4" cy="-5" rx="3" ry="4" fill="#c4c8d4" opacity="0.8"/>
+    </g>
+    <g id="oliveG">
+      <ellipse cx="0" cy="0" rx="11" ry="15" fill="#5a6a30"/>
+      <ellipse cx="-4" cy="-5" rx="3" ry="4" fill="#d8ddcb" opacity="0.7"/>
+    </g>
+    <g id="spray">
+      <path d="M0 0 C40 -6 90 -20 150 -26 C190 -30 220 -28 250 -24" fill="none" stroke="#2c2b22" stroke-width="5" stroke-linecap="round"/>
+      <use xlink:href="#leaf" transform="translate(30 -4) rotate(-60) scale(0.9)"/>
+      <use xlink:href="#leafMid" transform="translate(40 -6) rotate(40) scale(0.85)"/>
+      <use xlink:href="#leafMid" transform="translate(80 -14) rotate(-50)"/>
+      <use xlink:href="#leaf" transform="translate(92 -16) rotate(30) scale(0.95)"/>
+      <use xlink:href="#leafMid" transform="translate(134 -24) rotate(-40) scale(0.9)"/>
+      <use xlink:href="#leafMid" transform="translate(146 -26) rotate(24) scale(0.85)"/>
+      <use xlink:href="#leaf" transform="translate(186 -28) rotate(-28) scale(0.8)"/>
+      <use xlink:href="#leafMid" transform="translate(196 -28) rotate(16) scale(0.75)"/>
+      <use xlink:href="#leafMid" transform="translate(246 -24) rotate(-6) scale(0.7)"/>
+    </g>
+    <g id="sprayDark">
+      <path d="M0 0 C40 -6 90 -20 150 -26 C190 -30 220 -28 250 -24" fill="none" stroke="#141510" stroke-width="5" stroke-linecap="round"/>
+      <use xlink:href="#leafDark" transform="translate(30 -4) rotate(-60) scale(0.9)"/>
+      <use xlink:href="#leafDark" transform="translate(40 -6) rotate(40) scale(0.85)"/>
+      <use xlink:href="#leafDark" transform="translate(80 -14) rotate(-50)"/>
+      <use xlink:href="#leafDark" transform="translate(92 -16) rotate(30) scale(0.95)"/>
+      <use xlink:href="#leafDark" transform="translate(134 -24) rotate(-40) scale(0.9)"/>
+      <use xlink:href="#leafDark" transform="translate(146 -26) rotate(24) scale(0.85)"/>
+      <use xlink:href="#leafDark" transform="translate(186 -28) rotate(-28) scale(0.8)"/>
+      <use xlink:href="#leafDark" transform="translate(246 -24) rotate(-6) scale(0.7)"/>
+    </g>
+    <g id="column">
+      <rect x="0" y="0" width="16" height="100" fill="url(#marble)"/>
+      <rect x="-2" y="-5" width="20" height="6" fill="#d8ddcb"/>
+    </g>
+  </defs>
+
+  <!-- ── sky, moon, thin cloud -->
+  <rect width="2560" height="1440" fill="url(#sky)"/>
+  <rect width="2560" height="1440" fill="url(#moonHalo)"/>
+  <g fill="#d8ddcb">
+    <circle cx="210" cy="380" r="1.6" opacity="0.7"/><circle cx="330" cy="560" r="1.2" opacity="0.5"/>
+    <circle cx="880" cy="340" r="1.5" opacity="0.6"/><circle cx="1180" cy="420" r="1.3" opacity="0.6"/>
+    <circle cx="1420" cy="350" r="1.8" opacity="0.7"/><circle cx="1560" cy="520" r="1.2" opacity="0.5"/>
+    <circle cx="1720" cy="410" r="1.5" opacity="0.55"/><circle cx="1030" cy="560" r="1.1" opacity="0.4"/>
+    <circle cx="1300" cy="600" r="1.4" opacity="0.5"/><circle cx="140" cy="620" r="1.3" opacity="0.5"/>
+    <circle cx="1880" cy="560" r="1.2" opacity="0.4"/><circle cx="760" cy="640" r="1" opacity="0.4"/>
+  </g>
+  <circle cx="600" cy="480" r="120" fill="#d8ddcb" opacity="0.18" filter="url(#glow)"/>
+  <circle cx="600" cy="480" r="74" fill="url(#moon)"/>
+  <g fill="#9aa290" opacity="0.35">
+    <ellipse cx="578" cy="462" rx="18" ry="14"/><ellipse cx="626" cy="500" rx="22" ry="12"/><ellipse cx="596" cy="514" rx="9" ry="7"/>
+  </g>
+  <g filter="url(#cloud)" opacity="0.85">
+    <path d="M180 540 C320 515 480 520 640 535 C780 545 900 540 1020 555 C900 575 760 570 620 572 C470 574 320 565 180 540 Z" fill="#5a6458"/>
+    <path d="M1380 600 C1500 585 1640 590 1780 600 C1880 608 1960 615 2020 625 C1900 640 1760 632 1620 630 C1520 628 1440 618 1380 600 Z" fill="#283230"/>
+  </g>
+  <ellipse cx="610" cy="548" rx="260" ry="10" fill="#e4e7d8" opacity="0.35" filter="url(#glowS)"/>
+
+  <!-- ── far hills (Hymettus) in the haze -->
+  <g filter="url(#rock)">
+    <path d="M-60 900 L120 870 L300 880 L420 850 L560 865 L700 845 L820 860 L980 850 L1180 838 L1340 820 L1460 800
+      L1600 770 L1720 760 L1860 775 L2000 760 L2140 790 L2300 800 L2460 830 L2620 840 L2620 1440 L-60 1440 Z" fill="url(#far)"/>
+  </g>
+  <rect x="-60" y="760" width="2700" height="180" fill="#5a6658" opacity="0.18" filter="url(#haze)"/>
+
+  <!-- ── the Acropolis: flat-topped rock with cliffs, lit from the moon on the left -->
+  <g filter="url(#reliefRock)">
+    <g filter="url(#rock)">
+      <path d="M380 1100 L430 1010 L470 990 L520 930 L560 905 L610 880 L660 872 L700 850 L1360 846 L1400 862 L1450 870
+        L1500 900 L1540 940 L1600 960 L1660 1010 L1720 1040 L1760 1100 Z" fill="url(#hill)"/>
+      <path d="M470 990 L520 930 L560 905 L610 880 L660 872 L700 850 L760 850 L700 900 L650 960 L600 1000 L540 1060 L480 1080 Z"
+            fill="#c9cfb8" opacity="0.22"/>
+      <path d="M700 850 L1360 846 L1360 860 L700 864 Z" fill="#d8ddcb" opacity="0.4"/>
+      <path d="M430 1010 L470 990 L520 930 L560 905 L610 880 L660 872 L700 850" fill="none" stroke="#d8ddcb" stroke-width="4" opacity="0.5"/>
+      <!-- the retaining walls under the temple -->
+      <path d="M720 850 L740 900 L1300 900 L1340 852 Z" fill="#7a806c" opacity="0.6"/>
+      <g stroke="#262a20" stroke-width="2" opacity="0.6">
+        <path d="M740 870 L1320 870 M745 885 L1310 885"/>
+      </g>
+    </g>
+  </g>
+  <!-- the Propylaia on the west end -->
+  <g>
+    <rect x="730" y="808" width="90" height="42" fill="#8a907a"/>
+    <rect x="730" y="808" width="10" height="42" fill="#d8ddcb" opacity="0.7"/>
+    <path d="M725 808 L775 788 L825 808 Z" fill="#a6ac96"/>
+    <g fill="#2e3228"><rect x="752" y="818" width="8" height="32"/><rect x="772" y="818" width="8" height="32"/><rect x="792" y="818" width="8" height="32"/></g>
+  </g>
+
+  <!-- ── the Parthenon, its front lit by moonlight, a warm lamp inside -->
+  <rect width="2560" height="1440" fill="url(#templeGlow)"/>
+  <g>
+    <!-- stylobate -->
+    <rect x="880" y="830" width="400" height="10" fill="#c9cfb8"/>
+    <rect x="872" y="838" width="416" height="10" fill="#9aa08a"/>
+    <rect x="864" y="846" width="432" height="8" fill="#6a705e"/>
+    <!-- cella in shadow, warm light between the columns -->
+    <rect x="896" y="728" width="368" height="104" fill="#1a1a14"/>
+    <rect x="990" y="750" width="180" height="80" fill="#c8885a" opacity="0.3" filter="url(#glow)"/>
+    <rect x="1040" y="760" width="80" height="70" fill="#ffd8a0" opacity="0.45" filter="url(#glowS)"/>
+    <!-- eight columns -->
+    <use xlink:href="#column" x="892" y="730"/><use xlink:href="#column" x="942" y="730"/>
+    <use xlink:href="#column" x="992" y="730"/><use xlink:href="#column" x="1042" y="730"/>
+    <use xlink:href="#column" x="1102" y="730"/><use xlink:href="#column" x="1152" y="730"/>
+    <use xlink:href="#column" x="1202" y="730"/><use xlink:href="#column" x="1252" y="730"/>
+    <g fill="#3a3e32" opacity="0.6">
+      <rect x="902" y="730" width="2" height="100"/><rect x="952" y="730" width="2" height="100"/>
+      <rect x="1002" y="730" width="2" height="100"/><rect x="1052" y="730" width="2" height="100"/>
+      <rect x="1112" y="730" width="2" height="100"/><rect x="1162" y="730" width="2" height="100"/>
+      <rect x="1212" y="730" width="2" height="100"/><rect x="1262" y="730" width="2" height="100"/>
+    </g>
+    <!-- entablature, frieze, pediment -->
+    <rect x="884" y="708" width="392" height="18" fill="#b6bca6"/>
+    <rect x="884" y="708" width="392" height="4" fill="#e4e7d8"/>
+    <rect x="884" y="694" width="392" height="14" fill="#8a907a"/>
+    <g fill="#5d6355">
+      <rect x="896" y="696" width="6" height="10"/><rect x="930" y="696" width="6" height="10"/><rect x="964" y="696" width="6" height="10"/>
+      <rect x="998" y="696" width="6" height="10"/><rect x="1032" y="696" width="6" height="10"/><rect x="1066" y="696" width="6" height="10"/>
+      <rect x="1100" y="696" width="6" height="10"/><rect x="1134" y="696" width="6" height="10"/><rect x="1168" y="696" width="6" height="10"/>
+      <rect x="1202" y="696" width="6" height="10"/><rect x="1236" y="696" width="6" height="10"/><rect x="1262" y="696" width="6" height="10"/>
+    </g>
+    <path d="M876 694 L1080 640 L1284 694 Z" fill="#a9ae9a"/>
+    <path d="M900 690 L1080 648 L1260 690 Z" fill="#4e5446"/>
+    <path d="M876 694 L1080 640 L1088 642 L894 694 Z" fill="#eef0e4" opacity="0.8"/>
+    <!-- figures in the pediment, just hinted -->
+    <g fill="#8a907a" opacity="0.7">
+      <path d="M1040 688 L1050 664 L1062 662 L1068 688 Z"/><path d="M1092 688 L1098 660 L1110 664 L1118 688 Z"/>
+      <path d="M980 688 L992 674 L1004 688 Z"/><path d="M1160 688 L1170 672 L1182 688 Z"/>
+    </g>
+  </g>
+
+  <!-- ── Athens below the rock: dark roofs, a few warm lamps -->
+  <g filter="url(#rock)">
+    <path d="M-60 1080 L60 1060 L120 1070 L200 1050 L300 1062 L380 1040 L460 1058 L560 1046 L640 1066 L760 1058 L860 1074
+      L980 1062 L1100 1078 L1220 1064 L1340 1080 L1460 1066 L1580 1084 L1700 1070 L1820 1086 L1960 1072 L2100 1090 L2240 1076
+      L2380 1092 L2620 1080 L2620 1440 L-60 1440 Z" fill="url(#city)"/>
+  </g>
+  <g fill="#161a14">
+    <rect x="160" y="1056" width="70" height="40"/><rect x="250" y="1048" width="56" height="48"/><path d="M246 1048 L278 1030 L310 1048 Z"/>
+    <rect x="470" y="1058" width="90" height="40"/><rect x="580" y="1050" width="60" height="48"/>
+    <rect x="760" y="1064" width="80" height="40"/><path d="M756 1064 L800 1044 L844 1064 Z"/><rect x="960" y="1068" width="70" height="40"/>
+    <rect x="1130" y="1070" width="90" height="40"/><rect x="1240" y="1062" width="50" height="48"/><rect x="1330" y="1072" width="70" height="40"/>
+    <rect x="1480" y="1076" width="80" height="40"/><rect x="380" y="1066" width="60" height="40"/>
+  </g>
+  <g fill="#f0b070">
+    <circle cx="210" cy="1090" r="3" opacity="0.8"/><circle cx="350" cy="1080" r="2.5" opacity="0.7"/>
+    <circle cx="520" cy="1086" r="3" opacity="0.85"/><circle cx="690" cy="1094" r="2.5" opacity="0.6"/>
+    <circle cx="820" cy="1100" r="3" opacity="0.75"/><circle cx="1010" cy="1096" r="2.5" opacity="0.7"/>
+    <circle cx="1180" cy="1104" r="3" opacity="0.8"/><circle cx="1370" cy="1100" r="2.5" opacity="0.6"/>
+    <circle cx="1530" cy="1110" r="3" opacity="0.7"/><circle cx="1260" cy="1120" r="2" opacity="0.5"/>
+    <circle cx="640" cy="1112" r="2" opacity="0.5"/><circle cx="430" cy="1106" r="2" opacity="0.6"/>
+  </g>
+  <g fill="#f0b070" opacity="0.3" filter="url(#glowS)">
+    <circle cx="520" cy="1086" r="12"/><circle cx="820" cy="1100" r="12"/><circle cx="1180" cy="1104" r="12"/><circle cx="210" cy="1090" r="10"/>
+  </g>
+  <rect x="-60" y="1080" width="2700" height="80" fill="#3a4434" opacity="0.25" filter="url(#haze)"/>
+
+  <!-- ── foreground ground, dark, with grass tufts -->
+  <path d="M-60 1440 L-60 1230 C200 1205 420 1220 640 1240 C860 1260 1080 1250 1300 1268 C1500 1284 1700 1270 1900 1290
+    C2100 1305 2300 1290 2620 1300 L2620 1440 Z" fill="url(#ground)"/>
+  <g stroke="#2e3626" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.9">
+    <path d="M820 1262 L812 1226 M830 1262 L838 1220 M842 1264 L858 1232 M1240 1270 L1232 1236 M1252 1270 L1262 1230
+      M1600 1282 L1590 1250 M1612 1282 L1624 1244 M180 1222 L170 1190 M192 1222 L204 1186"/>
+  </g>
+
+  <!-- ── Athena's shield, resting on the ground, her spear leaning against it -->
+  <g>
+    <path d="M250 1440 L770 700" stroke="#2a2618" stroke-width="12" stroke-linecap="round"/>
+    <path d="M250 1440 L770 700" stroke="#a9a07a" stroke-width="3" opacity="0.5" transform="translate(-4 -2)"/>
+    <path d="M770 700 L806 640 L786 712 Z M760 716 L806 640 L752 702 Z" fill="#c9cfb8"/>
+    <path d="M770 700 L806 640 L778 708 Z" fill="#eef0e4"/>
+  </g>
+  <ellipse cx="440" cy="1420" rx="260" ry="26" fill="#000" opacity="0.55" filter="url(#glowS)"/>
+  <g transform="translate(420 1330) rotate(-14)">
+    <ellipse cx="0" cy="0" rx="236" ry="250" fill="#14140c"/>
+    <ellipse cx="0" cy="0" rx="226" ry="240" fill="url(#shield)"/>
+    <ellipse cx="0" cy="0" rx="226" ry="240" fill="none" stroke="#6e6238" stroke-width="16" opacity="0.5"/>
+    <path d="M-196 -120 A226 240 0 0 1 40 -238" fill="none" stroke="#e8dcaa" stroke-width="3" opacity="0.85"/>
+    <path d="M-210 -60 A226 240 0 0 1 -140 -190" fill="none" stroke="#fff8d8" stroke-width="2" opacity="0.6"/>
+    <ellipse cx="0" cy="0" rx="200" ry="212" fill="none" stroke="#1c1a10" stroke-width="4" opacity="0.7"/>
+    <ellipse cx="0" cy="0" rx="196" ry="208" fill="none" stroke="#8a7c48" stroke-width="1.5" opacity="0.5"/>
+    <!-- the owl of Athens in bronze relief: shadow below right, the shape, its lit upper-left edge -->
+    <g transform="translate(0 6)">
+      <path id="emblem" d="M0 -116 C38 -116 62 -90 60 -58 C76 -30 78 18 58 58 C42 90 20 106 0 106 C-20 106 -42 90 -58 58
+        C-78 18 -76 -30 -60 -58 C-62 -90 -38 -116 0 -116 Z" fill="#0e0d08" opacity="0.8" transform="translate(5 6)"/>
+      <path d="M0 -116 C38 -116 62 -90 60 -58 C76 -30 78 18 58 58 C42 90 20 106 0 106 C-20 106 -42 90 -58 58
+        C-78 18 -76 -30 -60 -58 C-62 -90 -38 -116 0 -116 Z" fill="#5e5430"/>
+      <path d="M-58 58 C-78 18 -76 -30 -60 -58 C-62 -90 -38 -116 0 -116 C20 -116 36 -110 46 -100" fill="none" stroke="#c8b878" stroke-width="3" opacity="0.8"/>
+      <!-- folded wing and its scallops -->
+      <path d="M-50 -20 C-56 20 -46 60 -20 86 C-30 50 -32 10 -24 -20 Z" fill="#4a4226"/>
+      <g fill="none" stroke="#8a7c48" stroke-width="2" opacity="0.8">
+        <path d="M-14 -6 q8 8 16 0 q8 8 16 0 q8 8 16 0 M-20 14 q8 8 16 0 q8 8 16 0 q8 8 16 0 M-18 34 q8 8 16 0 q8 8 16 0 q8 8 16 0
+          M-12 54 q8 8 16 0 q8 8 16 0"/>
+      </g>
+      <!-- eyes and beak in relief -->
+      <circle cx="-24" cy="-66" r="20" fill="#3e3820"/><circle cx="24" cy="-66" r="20" fill="#3e3820"/>
+      <circle cx="-24" cy="-66" r="20" fill="none" stroke="#b8a868" stroke-width="2.5"/><circle cx="24" cy="-66" r="20" fill="none" stroke="#b8a868" stroke-width="2.5"/>
+      <circle cx="-24" cy="-66" r="8" fill="#a89858"/><circle cx="24" cy="-66" r="8" fill="#a89858"/>
+      <path d="M-5 -50 L5 -50 L0 -36 Z" fill="#a89858"/>
+      <!-- the olive sprig beside it, as on the coins -->
+      <path d="M70 -90 C90 -70 100 -40 96 -10" fill="none" stroke="#8a7c48" stroke-width="3"/>
+      <g fill="#7a6e40"><ellipse cx="86" cy="-70" rx="14" ry="5" transform="rotate(-50 86 -70)"/><ellipse cx="98" cy="-42" rx="14" ry="5" transform="rotate(-70 98 -42)"/>
+        <ellipse cx="80" cy="-50" rx="12" ry="4.5" transform="rotate(40 80 -50)"/></g>
+    </g>
+  </g>
+
+  <!-- ── the olive tree: trunk on the right edge, a long branch reaching left -->
+  <g filter="url(#reliefBark)">
+    <path d="M2380 1440 C2400 1300 2360 1200 2400 1100 C2430 1020 2420 940 2460 860 C2490 790 2470 700 2500 600 C2520 520
+      2510 420 2540 300 L2640 300 L2640 1440 Z" fill="url(#bark)"/>
+    <path d="M2440 1090 C2330 1080 2220 1060 2110 1068 C2000 1078 1900 1066 1800 1082 C1700 1098 1610 1092 1520 1108
+      C1450 1120 1400 1118 1340 1128 C1400 1090 1460 1076 1530 1062 C1630 1040 1730 1026 1830 1010 C1950 990 2070 994 2190 988
+      C2300 984 2380 990 2440 980 Z" fill="url(#bark)"/>
+    <path d="M2200 1070 C2240 1110 2260 1160 2250 1230 C2236 1170 2210 1120 2170 1080 Z" fill="#2a291f"/>
+    <path d="M1840 1004 C1800 960 1760 930 1700 910 C1720 930 1750 960 1790 1010 Z" fill="#3a382c"/>
+    <path d="M2100 1000 C2080 940 2060 900 2020 860 C2040 900 2060 950 2070 1010 Z" fill="#3a382c"/>
+  </g>
+  <path d="M2420 984 C2300 986 2200 988 2100 994 C1960 998 1840 1010 1740 1026 C1640 1042 1540 1058 1440 1080"
+        fill="none" stroke="#c9cfb8" stroke-width="3" opacity="0.4"/>
+  <!-- leaves and fruit, in two depths: dark sprays behind, moonlit ones in front -->
+  <g>
+    <use xlink:href="#sprayDark" transform="translate(1830 1010) rotate(-150) scale(1.1)"/>
+    <use xlink:href="#sprayDark" transform="translate(2080 994) rotate(-115) scale(1.2)"/>
+    <use xlink:href="#sprayDark" transform="translate(2300 986) rotate(-100) scale(1.3)"/>
+    <use xlink:href="#sprayDark" transform="translate(2460 820) rotate(-150) scale(1.2)"/>
+    <use xlink:href="#sprayDark" transform="translate(2470 700) rotate(-170) scale(1.1)"/>
+    <use xlink:href="#sprayDark" transform="translate(1620 1060) rotate(-200) scale(1.0)"/>
+    <use xlink:href="#spray" transform="translate(1700 1050) rotate(-165) scale(1.05)"/>
+    <use xlink:href="#spray" transform="translate(1520 1080) rotate(160) scale(1.0)"/>
+    <use xlink:href="#spray" transform="translate(1360 1124) rotate(-185) scale(0.9)"/>
+    <use xlink:href="#spray" transform="translate(1600 1094) rotate(140) scale(0.95)"/>
+    <use xlink:href="#spray" transform="translate(2180 1060) rotate(110) scale(1.1)"/>
+    <use xlink:href="#spray" transform="translate(2340 1080) rotate(95) scale(1.0)"/>
+    <use xlink:href="#spray" transform="translate(2120 1000) rotate(-130) scale(0.95)"/>
+    <use xlink:href="#spray" transform="translate(1440 1112) rotate(120) scale(0.8)"/>
+  </g>
+  <g>
+    <use xlink:href="#olive" transform="translate(1530 1150)"/><use xlink:href="#olive" transform="translate(1554 1160)"/>
+    <use xlink:href="#olive" transform="translate(1540 1178)"/>
+    <use xlink:href="#oliveG" transform="translate(1660 1128)"/><use xlink:href="#olive" transform="translate(2190 1120)"/>
+    <use xlink:href="#olive" transform="translate(2214 1132)"/><use xlink:href="#oliveG" transform="translate(1410 1150)"/>
+    <use xlink:href="#olive" transform="translate(2330 1150)"/><use xlink:href="#oliveG" transform="translate(2350 1162)"/>
+  </g>
+
+  <!-- ── the owl, on the branch, rim-lit by the moon on its left -->
+  <g transform="translate(1900 1004) scale(0.92)">
+    <ellipse cx="6" cy="10" rx="120" ry="18" fill="#000" opacity="0.4" filter="url(#glowS)"/>
+    <g filter="url(#feather)">
+      <!-- tail and body -->
+      <path d="M-30 -10 L-20 40 L20 40 L30 -10 Z" fill="#3a352a"/>
+      <path d="M-100 -60 C-118 -140 -108 -210 -76 -250 C-44 -280 44 -280 76 -250 C108 -210 118 -140 100 -60 C84 -6 -84 -6 -100 -60 Z"
+            fill="url(#owlBody)"/>
+      <!-- pale breast, shadowed right flank -->
+      <path d="M-70 -200 C-80 -140 -70 -80 -40 -40 C-10 -26 30 -30 56 -50 C80 -100 76 -170 60 -210 C20 -232 -40 -230 -70 -200 Z" fill="#b4ae94" opacity="0.3" filter="url(#glowS)"/>
+      <path d="M60 -240 C100 -200 110 -120 96 -60 C84 -30 60 -20 40 -18 C70 -60 80 -150 60 -240 Z" fill="#141210" opacity="0.5"/>
+      <!-- breast: rows of pale scalloped feathers with dark chevron tips -->
+      <g fill="none" stroke="#c4bea4" stroke-width="2.2" opacity="0.55"><path d="M-44 -186 Q-36 -177 -28 -186 M-20 -186 Q-12 -177 -4 -186 M4 -186 Q12 -177 20 -186 M28 -186 Q36 -177 44 -186 M-56 -158 Q-48 -149 -40 -158 M-32 -158 Q-24 -149 -16 -158 M-8 -158 Q0 -149 8 -158 M16 -158 Q24 -149 32 -158 M40 -158 Q48 -149 56 -158 M-44 -130 Q-36 -121 -28 -130 M-20 -130 Q-12 -121 -4 -130 M4 -130 Q12 -121 20 -130 M28 -130 Q36 -121 44 -130 M-56 -102 Q-48 -93 -40 -102 M-32 -102 Q-24 -93 -16 -102 M-8 -102 Q0 -93 8 -102 M16 -102 Q24 -93 32 -102 M40 -102 Q48 -93 56 -102 M-44 -74 Q-36 -65 -28 -74 M-20 -74 Q-12 -65 -4 -74 M4 -74 Q12 -65 20 -74 M28 -74 Q36 -65 44 -74"/></g>
+      <g fill="none" stroke="#2e2a20" stroke-width="3.2" stroke-linecap="round" opacity="0.75"><path d="M-55 -200 Q-48 -188 -41 -200 M-31 -200 Q-24 -188 -17 -200 M-7 -200 Q0 -188 7 -200 M17 -200 Q24 -188 31 -200 M41 -200 Q48 -188 55 -200 M-67 -172 Q-60 -160 -53 -172 M-43 -172 Q-36 -160 -29 -172 M-19 -172 Q-12 -160 -5 -172 M5 -172 Q12 -160 19 -172 M29 -172 Q36 -160 43 -172 M53 -172 Q60 -160 67 -172 M-55 -144 Q-48 -132 -41 -144 M-31 -144 Q-24 -132 -17 -144 M-7 -144 Q0 -132 7 -144 M17 -144 Q24 -132 31 -144 M41 -144 Q48 -132 55 -144 M-67 -116 Q-60 -104 -53 -116 M-43 -116 Q-36 -104 -29 -116 M-19 -116 Q-12 -104 -5 -116 M5 -116 Q12 -104 19 -116 M29 -116 Q36 -104 43 -116 M53 -116 Q60 -104 67 -116 M-55 -88 Q-48 -76 -41 -88 M-31 -88 Q-24 -76 -17 -88 M-7 -88 Q0 -76 7 -88 M17 -88 Q24 -76 31 -88 M41 -88 Q48 -76 55 -88 M-43 -60 Q-36 -48 -29 -60 M-19 -60 Q-12 -48 -5 -60 M5 -60 Q12 -48 19 -60 M29 -60 Q36 -48 43 -60"/></g>
+      <!-- folded wings over the flanks: coverts in scallops, primaries at the tips -->
+      <path d="M-50 -236 C-84 -246 -114 -230 -124 -196 C-134 -150 -130 -90 -112 -30 L-100 -6 L-90 -26 L-80 -6 L-72 -30 C-68 -100 -70 -170 -50 -236 Z" fill="url(#owlWing)"/>
+      <path d="M50 -236 C84 -246 114 -230 124 -196 C134 -150 130 -90 112 -30 L100 -6 L90 -26 L80 -6 L72 -30 C68 -100 70 -170 50 -236 Z" fill="#2a261e"/>
+      <g fill="none" stroke="#2a251c" stroke-width="2.4" opacity="0.85"><path d="M-116 -196 q9 10 18 0 M-98 -196 q9 10 18 0 M-107 -174 q9 10 18 0 M-89 -174 q9 10 18 0 M-116 -152 q9 10 18 0 M-98 -152 q9 10 18 0 M-107 -130 q9 10 18 0 M-89 -130 q9 10 18 0 M-116 -108 q9 10 18 0 M-98 -108 q9 10 18 0 M-107 -86 q9 10 18 0 M-89 -86 q9 10 18 0 M-116 -64 q9 10 18 0 M-98 -64 q9 10 18 0 M-107 -42 q9 10 18 0 M-89 -42 q9 10 18 0"/></g>
+      <g fill="none" stroke="#1a1712" stroke-width="2.4" opacity="0.7"><path d="M80 -196 q9 10 18 0 M98 -196 q9 10 18 0 M89 -174 q9 10 18 0 M107 -174 q9 10 18 0 M80 -152 q9 10 18 0 M98 -152 q9 10 18 0 M89 -130 q9 10 18 0 M107 -130 q9 10 18 0 M80 -108 q9 10 18 0 M98 -108 q9 10 18 0 M89 -86 q9 10 18 0 M107 -86 q9 10 18 0 M80 -64 q9 10 18 0 M98 -64 q9 10 18 0 M89 -42 q9 10 18 0 M107 -42 q9 10 18 0"/></g>
+      <g fill="#d6d2bc" opacity="0.7">
+        <circle cx="-100" cy="-190" r="3.2"/><circle cx="-108" cy="-150" r="3.2"/><circle cx="-104" cy="-108" r="3"/><circle cx="-92" cy="-130" r="2.6"/>
+        <circle cx="96" cy="-170" r="2.6" opacity="0.4"/><circle cx="102" cy="-120" r="2.6" opacity="0.4"/>
+      </g>
+      <!-- head -->
+      <ellipse cx="0" cy="-300" rx="100" ry="84" fill="url(#owlBody)"/>
+      <g fill="#d6d2bc" opacity="0.7">
+        <circle cx="-60" cy="-350" r="4"/><circle cx="-30" cy="-366" r="4"/><circle cx="0" cy="-372" r="4"/>
+        <circle cx="30" cy="-366" r="4"/><circle cx="60" cy="-350" r="4" opacity="0.5"/><circle cx="-80" cy="-320" r="3.5"/>
+        <circle cx="-44" cy="-344" r="3"/><circle cx="16" cy="-352" r="3"/><circle cx="46" cy="-340" r="3" opacity="0.5"/>
+      </g>
+      <!-- facial disc -->
+      <path d="M-82 -296 C-80 -336 -40 -342 -4 -320 C-4 -300 -6 -280 -10 -262 C-40 -250 -76 -262 -82 -296 Z" fill="#7a735e"/>
+      <path d="M82 -296 C80 -336 40 -342 4 -320 C4 -300 6 -280 10 -262 C40 -250 76 -262 82 -296 Z" fill="#5a5444"/>
+      <path d="M70 -360 C100 -330 104 -290 92 -250 C80 -240 70 -244 66 -250 C84 -290 84 -330 70 -360 Z" fill="#141210" opacity="0.5"/>
+    </g>
+    <!-- brows, eyes, beak -->
+    <path d="M-70 -324 C-50 -338 -20 -338 -4 -318 C-24 -328 -50 -330 -70 -324 Z" fill="#d8d4c0"/>
+    <path d="M70 -324 C50 -338 20 -338 4 -318 C24 -328 50 -330 70 -324 Z" fill="#a8a490"/>
+    <!-- fine feather rings around the eyes -->
+    <g fill="none" stroke="#3a3428" stroke-width="1.6" opacity="0.7">
+      <circle cx="-38" cy="-298" r="26"/><circle cx="-38" cy="-298" r="32"/><circle cx="-38" cy="-298" r="38"/>
+      <circle cx="38" cy="-298" r="26"/><circle cx="38" cy="-298" r="32"/><circle cx="38" cy="-298" r="38"/>
+    </g>
+    <circle cx="-38" cy="-298" r="19" fill="#120f08"/>
+    <circle cx="38" cy="-298" r="19" fill="#120f08"/>
+    <circle cx="-38" cy="-298" r="15" fill="url(#iris)"/>
+    <circle cx="38" cy="-298" r="15" fill="url(#iris)"/>
+    <circle cx="-37" cy="-297" r="8" fill="#050402"/>
+    <circle cx="39" cy="-297" r="8" fill="#050402"/>
+    <circle cx="-42" cy="-302" r="2.2" fill="#fff" opacity="0.9"/>
+    <circle cx="34" cy="-302" r="2" fill="#fff" opacity="0.7"/>
+    <path d="M-7 -280 L7 -280 L0 -262 Z" fill="#a8a07e"/>
+    <path d="M-7 -280 L0 -280 L0 -262 Z" fill="#d8d0b0"/>
+    <!-- rim of moonlight on the left -->
+    <path d="M-84 -240 C-110 -230 -124 -200 -128 -170 C-132 -130 -126 -80 -112 -34" fill="none" stroke="#eef0e4" stroke-width="3.5" opacity="0.7"/>
+    <path d="M-88 -340 C-100 -318 -102 -294 -94 -268" fill="none" stroke="#eef0e4" stroke-width="4" opacity="0.75"/>
+    <path d="M-60 -376 C-30 -388 10 -388 40 -378" fill="none" stroke="#eef0e4" stroke-width="3" opacity="0.5"/>
+    <!-- talons -->
+    <g fill="#b8b090">
+      <path d="M-40 -14 L-46 6 L-38 6 Z M-28 -14 L-30 8 L-22 6 Z M28 -14 L30 8 L22 6 Z M40 -14 L46 6 L38 6 Z"/>
+    </g>
+  </g>
+
+  <!-- ── foreground framing: out-of-focus olive leaves at the lower corners -->
+  <g filter="url(#soft)">
+    <use xlink:href="#sprayDark" transform="translate(2620 1440) rotate(-160) scale(2.2)"/>
+    <use xlink:href="#sprayDark" transform="translate(2620 1350) rotate(-190) scale(1.8)"/>
+    <use xlink:href="#sprayDark" transform="translate(900 1460) rotate(-30) scale(1.6)"/>
+  </g>
+  <!-- ── a few moths / motes in the moonlight, very sparse -->
+  <g fill="#d8ddcb" opacity="0.5">
+    <circle cx="1560" cy="880" r="2"/><circle cx="1640" cy="820" r="1.6"/><circle cx="1480" cy="940" r="1.4"/>
+  </g>
+
+  <!-- ── finish -->
+  <rect width="2560" height="300" fill="url(#topShade)"/>
+  <rect width="2560" height="1440" fill="url(#cornerShade)"/>
+  <rect width="2560" height="1440" fill="url(#vignette)"/>
+  <rect width="2560" height="1440" filter="url(#grain)"/>
+</svg>

@@ -39,5 +39,8 @@
     "#cca8d0",
     "#9ec4c4",
     "#ffffff"
+  ],
+  "backgrounds": [
+    { "id": "battlefield", "name": { "en": "Battlefield at sunset", "nb": "Slagmark i solnedgang" } }
   ]
 }

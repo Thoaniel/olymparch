@@ -1,0 +1,363 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Olymparch · Hades: the river Styx in the underworld cavern. Charon poles his boat toward the far shore, where
+     Cerberus waits before the faint gates of Hades; asphodel grows on the near bank. Key light: Charon's lantern
+     (ember orange), against the cold violet glow of the far halls. 2560×1440, everything that matters inside
+     x 140…2420. Drawn by hand for Olymparch; MIT. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2560" height="1440" viewBox="0 0 2560 1440">
+  <defs>
+    <linearGradient id="deep" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#030203"/>
+      <stop offset="0.4" stop-color="#0c0710"/>
+      <stop offset="0.58" stop-color="#22163a"/>
+      <stop offset="0.7" stop-color="#1a1028"/>
+      <stop offset="1" stop-color="#070507"/>
+    </linearGradient>
+    <radialGradient id="farGlow" cx="1330" cy="790" r="760" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#c8a8ff" stop-opacity="0.55"/>
+      <stop offset="0.18" stop-color="#a97ff0" stop-opacity="0.35"/>
+      <stop offset="0.5" stop-color="#5a3c90" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#1b111d" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="lanternGlow" cx="1250" cy="930" r="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffd2a0" stop-opacity="0.55"/>
+      <stop offset="0.12" stop-color="#f07a45" stop-opacity="0.38"/>
+      <stop offset="0.45" stop-color="#a8402a" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#3d1a14" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="farRock" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a2a58"/>
+      <stop offset="1" stop-color="#22183a"/>
+    </linearGradient>
+    <linearGradient id="midWall" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#170e1f"/>
+      <stop offset="0.5" stop-color="#22152f"/>
+      <stop offset="1" stop-color="#110a17"/>
+    </linearGradient>
+    <linearGradient id="nearWall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#050306"/>
+      <stop offset="0.6" stop-color="#110b14"/>
+      <stop offset="1" stop-color="#1b111d"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8a6ac8"/>
+      <stop offset="0.06" stop-color="#4a3478"/>
+      <stop offset="0.3" stop-color="#1e1430"/>
+      <stop offset="1" stop-color="#08060c"/>
+    </linearGradient>
+    <linearGradient id="shore" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#241830"/>
+      <stop offset="0.3" stop-color="#150e1c"/>
+      <stop offset="1" stop-color="#0a070d"/>
+    </linearGradient>
+    <linearGradient id="bank" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1c1220"/>
+      <stop offset="1" stop-color="#060407"/>
+    </linearGradient>
+    <linearGradient id="hull" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5a3428"/>
+      <stop offset="0.3" stop-color="#2a1612"/>
+      <stop offset="1" stop-color="#0c0607"/>
+    </linearGradient>
+    <linearGradient id="robe" x1="1" y1="0" x2="0" y2="0">
+      <stop offset="0" stop-color="#3a2030"/>
+      <stop offset="0.35" stop-color="#150c16"/>
+      <stop offset="1" stop-color="#08050a"/>
+    </linearGradient>
+    <linearGradient id="topShade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#020102" stop-opacity="0.92"/>
+      <stop offset="0.5" stop-color="#020102" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#020102" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="cornerShade" cx="2560" cy="0" r="1150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#020102" stop-opacity="0.8"/>
+      <stop offset="0.6" stop-color="#020102" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#020102" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vignette" cx="0.5" cy="0.55" r="0.78">
+      <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.6"/>
+    </radialGradient>
+
+    <filter id="cloudSoft" x="-15%" y="-40%" width="130%" height="180%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.003 0.012" numOctaves="4" seed="9" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="140" xChannelSelector="R" yChannelSelector="G"/>
+      <feGaussianBlur stdDeviation="12"/>
+    </filter>
+    <filter id="mist" x="-15%" y="-30%" width="130%" height="160%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.0035 0.014" numOctaves="5" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="120" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.4 0 0 0 -0.5" result="m"/>
+      <feComposite in="d" in2="m" operator="in" result="c"/>
+      <feGaussianBlur in="c" stdDeviation="4"/>
+    </filter>
+    <filter id="rock" x="-5%" y="-8%" width="110%" height="116%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.02" numOctaves="4" seed="21" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="34" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <!-- cave rock lit by the lantern: a noise height-field with a point light at the lantern -->
+    <filter id="reliefCave" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.006 0.016" numOctaves="6" seed="41" result="h"/>
+      <feDiffuseLighting in="h" surfaceScale="14" diffuseConstant="1" lighting-color="#fff" result="l">
+        <fePointLight x="1250" y="930" z="320"/>
+      </feDiffuseLighting>
+      <feComponentTransfer in="l" result="lt">
+        <feFuncR type="linear" slope="1.3" intercept="0.05"/><feFuncG type="linear" slope="1.3" intercept="0.05"/>
+        <feFuncB type="linear" slope="1.3" intercept="0.05"/>
+      </feComponentTransfer>
+      <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.15" k2="0" k3="0" k4="0"/>
+    </filter>
+    <filter id="reliefFar" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.014 0.006" numOctaves="5" seed="12" result="h"/>
+      <feDiffuseLighting in="h" surfaceScale="10" diffuseConstant="1" lighting-color="#fff" result="l">
+        <fePointLight x="1330" y="760" z="300"/>
+      </feDiffuseLighting>
+      <feComponentTransfer in="l" result="lt">
+        <feFuncR type="linear" slope="1.1" intercept="0.2"/><feFuncG type="linear" slope="1.1" intercept="0.2"/>
+        <feFuncB type="linear" slope="1.1" intercept="0.2"/>
+      </feComponentTransfer>
+      <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.1" k2="0" k3="0" k4="0"/>
+    </filter>
+    <filter id="ripples" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.09" numOctaves="3" seed="8" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 0.8  0 0 0 0 1  3.5 0 0 0 -1.75"/>
+      <feComposite in2="SourceGraphic" operator="in"/>
+    </filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"/></filter>
+    <filter id="glowM" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9"/></filter>
+    <filter id="glowS" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4"/></filter>
+    <filter id="haze" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="30"/></filter>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="1" seed="2"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0.05 0"/>
+    </filter>
+
+    <!-- a dog's head on its neck, muzzle to the left; origin at the base of the neck -->
+    <path id="dogHead" d="M18 10 C14 -14 6 -34 -6 -50 L-4 -80 L-16 -58 L-22 -84 L-30 -60 C-40 -62 -52 -60 -62 -56
+      L-84 -50 L-90 -44 L-86 -37 L-64 -34 L-76 -27 L-50 -23 C-40 -15 -28 -3 -20 10 Z"/>
+    <g id="dogEye"><circle cx="-48" cy="-50" r="6" fill="#f07a45" opacity="0.5" filter="url(#glowS)"/><circle cx="-48" cy="-50" r="2.6" fill="#ff9a5a"/></g>
+    <!-- asphodel: a pale six-pointed star flower -->
+    <path id="flower" d="M0 -9 L2.2 -3.6 L7.8 -4.5 L4.4 0 L7.8 4.5 L2.2 3.6 L0 9 L-2.2 3.6 L-7.8 4.5 L-4.4 0 L-7.8 -4.5 L-2.2 -3.6 Z"/>
+    <g id="asphodel">
+      <path d="M0 0 C2 -60 -4 -120 4 -190" stroke="#3a2c40" stroke-width="3" fill="none"/>
+      <path d="M0 -20 C-30 -40 -40 -70 -46 -100 M2 -10 C24 -40 34 -60 40 -86" stroke="#2a2030" stroke-width="3" fill="none"/>
+      <g fill="#a894c4" opacity="0.75">
+        <use xlink:href="#flower" x="4" y="-192"/><use xlink:href="#flower" x="-6" y="-176" transform="rotate(12 -6 -176)"/>
+        <use xlink:href="#flower" x="10" y="-166"/><use xlink:href="#flower" x="-2" y="-152"/>
+        <use xlink:href="#flower" x="8" y="-140" transform="rotate(20 8 -140)"/><use xlink:href="#flower" x="-6" y="-128"/>
+      </g>
+      <g fill="#7a5a92" opacity="0.8">
+        <circle cx="4" cy="-192" r="2"/><circle cx="-6" cy="-176" r="2"/><circle cx="10" cy="-166" r="2"/>
+        <circle cx="-2" cy="-152" r="2"/><circle cx="8" cy="-140" r="2"/><circle cx="-6" cy="-128" r="2"/>
+      </g>
+    </g>
+  </defs>
+
+  <!-- ── the deep and the cold glow of the far halls -->
+  <rect width="2560" height="1440" fill="url(#deep)"/>
+  <rect width="2560" height="1440" fill="url(#farGlow)"/>
+
+  <!-- ── far spires and the gates of Hades on the horizon -->
+  <g filter="url(#reliefFar)">
+    <g filter="url(#rock)">
+      <path d="M700 840 L760 760 L790 780 L830 690 L860 720 L900 640 L930 690 L980 700 L1010 760 L1060 770 L1100 812
+        L1180 822 L1180 900 L700 900 Z" fill="url(#farRock)"/>
+      <path d="M1480 822 L1540 790 L1580 720 L1620 740 L1660 650 L1700 690 L1740 600 L1780 660 L1830 680 L1880 760 L1940 780
+        L2000 840 L2000 900 L1480 900 Z" fill="url(#farRock)"/>
+    </g>
+  </g>
+  <g opacity="0.85">
+    <!-- the gate: two pylons and a lintel, columns in a row, all faint in the haze -->
+    <path d="M1250 822 L1250 700 L1240 690 L1420 690 L1410 700 L1410 822 Z" fill="#2e2048"/>
+    <rect x="1270" y="712" width="120" height="110" fill="#c8a8ff" opacity="0.32"/>
+    <g fill="#2a1c42">
+      <rect x="1288" y="712" width="10" height="110"/><rect x="1314" y="712" width="10" height="110"/>
+      <rect x="1338" y="712" width="10" height="110"/><rect x="1362" y="712" width="10" height="110"/>
+    </g>
+    <path d="M1230 690 L1330 650 L1430 690 Z" fill="#33244e"/>
+    <rect x="1190" y="760" width="40" height="62" fill="#2a1c42"/><rect x="1430" y="760" width="40" height="62" fill="#2a1c42"/>
+  </g>
+  <ellipse cx="1330" cy="770" rx="220" ry="90" fill="#c8a8ff" opacity="0.25" filter="url(#haze)"/>
+
+  <!-- ── middle walls of the cavern, lit violet from the far end and amber from the lantern -->
+  <g filter="url(#reliefCave)">
+    <g filter="url(#rock)">
+      <path fill-rule="evenodd" fill="url(#midWall)" d="M-60 -60 L2620 -60 L2620 1500 L-60 1500 Z
+        M480 980 C470 900 520 820 600 760 C640 700 700 660 760 600 C840 540 960 500 1080 480 C1180 450 1280 470 1380 460
+        C1500 450 1620 480 1720 520 C1820 560 1900 620 1960 700 C2020 760 2080 840 2120 920 C2140 960 2150 1000 2160 1040
+        L1480 1040 L1200 1040 Z"/>
+      <!-- stalactites over the opening -->
+      <path fill="url(#midWall)" d="M880 540 L900 610 L920 530 Z M1010 500 L1030 590 L1046 495 Z M1180 470 L1196 560 L1212 468 Z
+        M1420 462 L1432 530 L1450 462 Z M1600 480 L1620 560 L1640 488 Z M1760 530 L1772 600 L1792 540 Z"/>
+    </g>
+  </g>
+  <!-- ── the Styx: a dark mirror widening toward us -->
+  <path d="M960 832 C1100 826 1400 824 1680 832 C1760 870 1840 930 1900 1000 C1980 1090 2160 1200 2300 1300 C2380 1360 2440 1400
+    2470 1440 L110 1440 C260 1330 420 1240 560 1160 C720 1070 800 1000 860 920 C900 870 930 846 960 832 Z" fill="url(#water)"/>
+  <path d="M960 832 C1100 826 1400 824 1680 832 C1760 870 1840 930 1900 1000 C1980 1090 2160 1200 2300 1300 C2380 1360 2440 1400
+    2470 1440 L110 1440 C260 1330 420 1240 560 1160 C720 1070 800 1000 860 920 C900 870 930 846 960 832 Z" fill="#fff" filter="url(#ripples)" opacity="0.07"/>
+  <!-- the far glow and the gate mirrored -->
+  <g filter="url(#glowM)" opacity="0.6">
+    <rect x="1270" y="830" width="120" height="90" fill="#c8a8ff" opacity="0.35"/>
+    <ellipse cx="1330" cy="850" rx="200" ry="22" fill="#c8a8ff" opacity="0.4"/>
+  </g>
+
+  <g filter="url(#reliefFar)"><g filter="url(#rock)">
+    <path d="M-60 900 L200 884 L380 868 L520 872 L660 852 L800 846 L900 838 L960 832 L948 846 L920 852 L900 874 L874 884 L862 912 L830 936 L816 964 L780 984 L760 1010 L716 1030
+      L700 1056 L650 1076 L620 1104 L570 1124 L548 1156 L490 1180 L450 1214 L390 1236 L350 1270 L290 1296 L250 1334 L190 1360
+      L150 1400 L110 1440 L-60 1440 Z" fill="url(#shore)"/>
+  </g></g>
+  <g fill="none" stroke="#9a7ad8" stroke-width="2.5" opacity="0.22" stroke-linejoin="round">
+    <path d="M948 846 L920 852 L900 874 L874 884 L862 912 L830 936 L816 964 L780 984 L760 1010 L716 1030 L700 1056 L650 1076
+      L620 1104 L570 1124 L548 1156 L490 1180 L450 1214 L390 1236 L350 1270 L290 1296 L250 1334 L190 1360"/>
+    <path d="M1700 840 L1720 856 L1760 870 L1770 900 L1810 920 L1820 950 L1856 970 L1870 1004 L1900 1024 L1920 1060 L1950 1076
+      L1980 1110 L2020 1130 L2050 1166 L2110 1190 L2140 1226 L2200 1246 L2230 1280 L2290 1302"/>
+  </g>
+  <!-- low rocks breaking the far waterline -->
+  <g filter="url(#rock)" fill="#140d1a">
+    <path d="M960 840 L990 818 L1030 812 L1070 824 L1110 834 L1140 846 L960 850 Z"/>
+    <path d="M1520 842 L1550 822 L1600 814 L1640 820 L1690 838 Z"/>
+    <path d="M1180 846 L1196 836 L1222 838 L1236 848 Z"/>
+  </g>
+  <path d="M990 818 L1030 812 L1070 824" fill="none" stroke="#c8a8ff" stroke-width="2" opacity="0.4"/>
+  <path d="M1550 822 L1600 814 L1640 820" fill="none" stroke="#c8a8ff" stroke-width="2" opacity="0.4"/>
+  <!-- far shore with Cerberus, backlit by the violet glow -->
+  <g filter="url(#reliefFar)"><g filter="url(#rock)">
+    <path d="M1660 832 L1700 812 L1730 796 L1760 790 L1800 786 L1840 798 L1900 812 L1980 840 L2080 870 L2200 920
+      L2340 990 L2500 1060 L2620 1100 L2620 1500 L2470 1440 L2440 1404 L2400 1390 L2370 1356 L2320 1340 L2290 1302 L2230 1280 L2200 1246
+      L2140 1226 L2110 1190 L2050 1166 L2020 1130 L1980 1110 L1950 1076 L1920 1060 L1900 1024 L1870 1004 L1856 970 L1820 950
+      L1810 920 L1770 900 L1760 870 L1720 856 L1700 840 Z"
+      fill="url(#shore)"/>
+  </g></g>
+  <!-- the ledge Cerberus keeps -->
+  <g filter="url(#reliefFar)"><g filter="url(#rock)">
+    <path d="M1640 830 L1660 800 L1700 786 L1760 780 L1830 784 L1900 780 L1960 792 L1990 812 L2000 846 L1640 850 Z" fill="#1c1326"/>
+  </g></g>
+  <path d="M1660 800 L1700 786 L1760 780 L1830 784 L1900 780 L1960 792" fill="none" stroke="#b896f4" stroke-width="2.2" opacity="0.45"/>
+  <ellipse cx="1806" cy="792" rx="150" ry="9" fill="#050307" opacity="0.8" filter="url(#glowS)"/>
+  <g transform="translate(1800 790) scale(1.2)">
+    <path fill="#0a070d" d="M-84 0 L-64 0 L-60 -20 L-56 -54 L-46 -56 L-42 -20 L-44 0 L-26 0 L-28 -22 L-30 -58
+      C-10 -62 20 -60 44 -56 L56 -48 L64 -28 L58 -12 L60 0 L76 0 L76 -14 L82 -34 L90 -44 L98 -30 L94 -12 L96 0 L112 0
+      L110 -14 L114 -40 L116 -66 C118 -84 114 -98 104 -106 C124 -116 140 -136 144 -164 C150 -170 156 -160 152 -150
+      C146 -124 130 -108 114 -98 C80 -112 30 -122 -24 -136 C-56 -132 -80 -112 -80 -78 L-70 -62 Z"/>
+    <path d="M114 -98 C80 -112 30 -122 -24 -136" fill="none" stroke="#c8a8ff" stroke-width="2.2" opacity="0.6"/>
+    <path d="M144 -164 C150 -170 156 -160 152 -150 C146 -124 130 -108 114 -98" fill="none" stroke="#c8a8ff" stroke-width="1.8" opacity="0.55"/>
+    <path d="M116 -66 L114 -40 L110 -14" fill="none" stroke="#c8a8ff" stroke-width="1.6" opacity="0.4"/>
+    <g fill="#0a070d" stroke="#b896f4" stroke-width="1.6" stroke-opacity="0.3">
+      <use xlink:href="#dogHead" transform="translate(-6 -152) rotate(34) scale(0.94)"/>
+      <use xlink:href="#dogHead" transform="translate(-36 -124) rotate(-1) scale(1.04)"/>
+      <use xlink:href="#dogHead" transform="translate(-68 -88) rotate(-34) scale(0.92)"/>
+    </g>
+    <use xlink:href="#dogEye" transform="translate(-6 -152) rotate(34) scale(0.94)"/>
+    <use xlink:href="#dogEye" transform="translate(-36 -124) rotate(-1) scale(1.04)"/>
+    <use xlink:href="#dogEye" transform="translate(-68 -88) rotate(-34) scale(0.92)"/>
+  </g>
+
+  <!-- mist lying on the river -->
+  <g filter="url(#mist)" opacity="0.7">
+    <path d="M760 846 C900 820 1100 836 1300 826 C1500 816 1700 840 1900 836 C2000 834 2060 842 2100 852 C1950 870 1750 864
+      1550 872 C1350 880 1150 864 950 872 C860 876 800 866 760 846 Z" fill="#a88ad8" opacity="0.8"/>
+    <path d="M700 880 C900 850 1100 870 1300 860 C1500 850 1700 880 1900 870 C2050 862 2150 880 2250 900 C2100 930 1900 920
+      1700 930 C1500 940 1300 920 1100 930 C900 940 780 920 700 880 Z" fill="#8a6ac8"/>
+    <path d="M300 1060 C600 1020 900 1050 1200 1040 C1500 1030 1800 1060 2100 1050 C2300 1044 2450 1060 2560 1080 C2300 1110
+      2000 1100 1700 1110 C1400 1120 1100 1100 800 1110 C600 1116 420 1100 300 1060 Z" fill="#5a4088" opacity="0.7"/>
+  </g>
+
+  <!-- ── lantern light on everything nearby -->
+  <rect width="2560" height="1440" fill="url(#lanternGlow)"/>
+
+  <!-- ── Charon's boat -->
+  <g>
+    <!-- reflection -->
+    <g opacity="0.35" filter="url(#glowS)">
+      <path d="M600 1092 C700 1112 1000 1118 1150 1094 L1210 1130 C1150 1150 1000 1160 820 1158 C700 1154 640 1130 600 1092 Z" fill="#0c0607"/>
+    </g>
+    <g filter="url(#glow)">
+      <ellipse cx="1246" cy="1170" rx="34" ry="150" fill="#f07a45" opacity="0.5"/>
+    </g>
+    <g fill="none" stroke="#ffb07a" stroke-linecap="round" opacity="0.75">
+      <path d="M1232 1112 q8 -3 16 0 t16 0" stroke-width="3"/><path d="M1220 1136 q10 -4 20 0 t20 0 t14 0" stroke-width="2.6"/>
+      <path d="M1240 1162 q6 -3 12 0" stroke-width="2.4"/><path d="M1226 1190 q8 -3 16 0 t16 0" stroke-width="2.2"/>
+      <path d="M1246 1222 q5 -2 10 0" stroke-width="2"/><path d="M1232 1256 q7 -3 14 0 t12 0" stroke-width="1.8"/>
+      <path d="M1250 1294 q4 -2 8 0" stroke-width="1.6"/>
+    </g>
+    <!-- hull -->
+    <path d="M590 1050 L604 1064 C700 1086 1000 1090 1150 1070 C1180 1066 1200 1050 1214 1022 L1222 1026 C1210 1066 1180 1098
+      1140 1110 C1000 1132 760 1130 680 1110 C640 1100 610 1080 590 1050 Z" fill="url(#hull)"/>
+    <path d="M604 1064 C700 1086 1000 1090 1150 1070 C1180 1066 1200 1050 1214 1022" fill="none" stroke="#f0a070" stroke-width="3" opacity="0.75"/>
+    <path d="M700 1098 C860 1112 1020 1110 1150 1094" fill="none" stroke="#000" stroke-width="2" opacity="0.5"/>
+    <!-- the lantern on its crook at the prow -->
+    <path d="M1206 1040 C1214 990 1220 950 1214 910 C1210 886 1222 870 1244 872 C1262 874 1268 890 1262 902" fill="none"
+          stroke="#1a0e0c" stroke-width="7" stroke-linecap="round"/>
+    <path d="M1214 1000 C1220 960 1222 930 1218 906" fill="none" stroke="#f0a070" stroke-width="2" opacity="0.6"/>
+    <line x1="1262" y1="902" x2="1262" y2="916" stroke="#1a0e0c" stroke-width="3"/>
+    <circle cx="1262" cy="944" r="120" fill="#f07a45" opacity="0.3" filter="url(#glow)"/>
+    <circle cx="1262" cy="944" r="44" fill="#ffb070" opacity="0.6" filter="url(#glowM)"/>
+    <path d="M1248 916 L1276 916 L1282 928 L1280 960 L1274 968 L1250 968 L1244 960 L1242 928 Z" fill="#2a1410"/>
+    <path d="M1250 930 L1274 930 L1274 958 L1250 958 Z" fill="#ffe2b8"/>
+    <path d="M1262 930 L1262 958" stroke="#2a1410" stroke-width="3"/>
+    <circle cx="1262" cy="944" r="10" fill="#fff4e0"/>
+    <!-- Charon, hooded, at the stern, with his pole -->
+    <g transform="translate(690 1070) scale(1.2)">
+      <path d="M100 -300 L-60 140" stroke="#140a0a" stroke-width="7" stroke-linecap="round"/>
+      <path d="M100 -300 L66 -206" stroke="#e08a58" stroke-width="2.2" opacity="0.7"/>
+      <path d="M-40 0 C-36 -50 -40 -110 -30 -160 C-26 -190 -20 -210 -8 -228 C2 -244 20 -252 40 -248 C52 -244 58 -232 56 -218
+        C50 -210 46 -200 46 -190 C52 -170 60 -150 58 -120 C60 -80 64 -40 70 0 Z" fill="url(#robe)"/>
+      <!-- folds -->
+      <g fill="none" stroke="#000" stroke-opacity="0.55" stroke-width="3">
+        <path d="M-10 -150 C-14 -100 -18 -50 -14 0"/><path d="M20 -140 C18 -90 22 -40 26 0"/>
+      </g>
+      <!-- the sleeve forward to the pole, a bony hand -->
+      <path d="M16 -186 C30 -176 42 -164 50 -152 L40 -142 C30 -152 20 -162 8 -168 Z" fill="#1e1016"/>
+      <path d="M44 -158 C50 -158 54 -152 52 -146 L44 -144 Z" fill="#c9a78c" opacity="0.8"/>
+      <!-- lantern light along his front -->
+      <path d="M40 -248 C52 -244 58 -232 56 -218 C50 -210 46 -200 46 -190 C52 -170 60 -150 58 -120 C60 -80 64 -40 70 0"
+            fill="none" stroke="#f07a45" stroke-width="3.2" opacity="0.7"/>
+      <path d="M40 -238 C52 -232 54 -216 48 -206 C40 -204 34 -212 34 -224 Z" fill="#000"/>
+      <circle cx="46" cy="-220" r="1.8" fill="#ff9a5a"/><circle cx="40" cy="-219" r="1.5" fill="#ff9a5a" opacity="0.8"/>
+    </g>
+  </g>
+
+  <!-- ── the near cave mouth: our side of the dark, rock lit by the lantern -->
+  <g filter="url(#reliefCave)">
+    <g filter="url(#rock)">
+      <path fill-rule="evenodd" fill="url(#nearWall)" d="M-60 -60 L2620 -60 L2620 1500 L-60 1500 Z
+        M150 1500 C160 1340 140 1180 210 1040 C260 940 360 900 400 800 C440 680 470 580 560 480 C680 360 860 300 1060 290
+        C1240 280 1380 250 1560 280 C1720 306 1860 380 1980 470 C2060 530 2120 600 2150 680 C2170 740 2250 780 2300 860
+        C2360 960 2380 1080 2400 1200 C2410 1300 2420 1400 2420 1500 Z"/>
+      <path fill="url(#nearWall)" d="M560 470 L586 590 L604 476 Z M700 380 L716 470 L736 370 Z M820 330 L832 450 L852 322 Z M980 296 L996 380 L1014 292 Z
+        M1100 288 L1112 350 L1126 286 Z M1340 262 L1352 396 L1372 260 Z M1520 276 L1532 346 L1552 282 Z
+        M1700 302 L1716 440 L1740 312 Z M1860 380 L1876 470 L1898 394 Z M2060 540 L2076 640 L2096 560 Z"/>
+    </g>
+  </g>
+  <!-- ── near bank, bottom right, with asphodel -->
+  <g filter="url(#rock)">
+    <path d="M1900 1500 L1960 1380 L2040 1330 L2140 1300 L2260 1280 L2400 1270 L2620 1260 L2620 1500 Z" fill="url(#bank)"/>
+    <path d="M-60 1500 L-60 1300 L60 1290 L160 1320 L260 1370 L340 1440 L360 1500 Z" fill="url(#bank)"/>
+  </g>
+  <g>
+    <use xlink:href="#asphodel" transform="translate(2050 1360) scale(1.1)"/>
+    <use xlink:href="#asphodel" transform="translate(2130 1330) scale(1.3) rotate(4)"/>
+    <use xlink:href="#asphodel" transform="translate(2210 1320) scale(0.95) rotate(-6)"/>
+    <use xlink:href="#asphodel" transform="translate(2290 1300) scale(1.2)"/>
+    <use xlink:href="#asphodel" transform="translate(2370 1300) scale(0.9) rotate(8)"/>
+    <use xlink:href="#asphodel" transform="translate(110 1330) scale(1.05) rotate(-4)"/>
+    <use xlink:href="#asphodel" transform="translate(190 1360) scale(0.85) rotate(6)"/>
+  </g>
+
+  <!-- ── a few embers drifting up from the water -->
+  <g fill="#f07a45">
+    <circle cx="1180" cy="860" r="2.5" opacity="0.8"/><circle cx="1320" cy="820" r="2" opacity="0.7"/>
+    <circle cx="1100" cy="780" r="2" opacity="0.55"/><circle cx="1400" cy="900" r="3" opacity="0.6"/>
+    <circle cx="980" cy="900" r="2" opacity="0.5"/><circle cx="1500" cy="760" r="2" opacity="0.4"/>
+    <circle cx="1220" cy="700" r="1.8" opacity="0.4"/><circle cx="860" cy="820" r="2.2" opacity="0.45"/>
+  </g>
+  <g fill="#f07a45" filter="url(#glowS)" opacity="0.6">
+    <circle cx="1180" cy="860" r="6"/><circle cx="1400" cy="900" r="7"/><circle cx="1320" cy="820" r="5"/>
+  </g>
+
+  <!-- ── finish -->
+  <rect width="2560" height="300" fill="url(#topShade)"/>
+  <rect width="2560" height="1440" fill="url(#cornerShade)"/>
+  <rect width="2560" height="1440" fill="url(#vignette)"/>
+  <rect width="2560" height="1440" filter="url(#grain)"/>
+</svg>

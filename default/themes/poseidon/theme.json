@@ -39,5 +39,8 @@
     "#b2addc",
     "#84c9d0",
     "#ffffff"
+  ],
+  "backgrounds": [
+    { "id": "tempest", "name": { "en": "The sea in storm", "nb": "Havet i storm" } }
   ]
 }

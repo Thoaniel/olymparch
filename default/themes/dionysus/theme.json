@@ -39,5 +39,8 @@
     "#cd9cd6",
     "#9fb8ca",
     "#ffffff"
+  ],
+  "backgrounds": [
+    { "id": "vineyard", "name": { "en": "Vineyard at dusk", "nb": "Vingård i skumringen" } }
   ]
 }

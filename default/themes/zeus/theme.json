@@ -39,5 +39,8 @@
     "#c9a9e3",
     "#93cad4",
     "#ffffff"
+  ],
+  "backgrounds": [
+    { "id": "storm", "name": { "en": "Storm over Olympus", "nb": "Uvær over Olympen" } }
   ]
 }

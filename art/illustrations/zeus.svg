@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Olymparch · Zeus: storm over the summit of Olympus. A bolt falls from the underside of the storm onto the temple on
+     the peak; the eagle soars on the left over a sea of cloud. Light: the bolt (gold-white), upper middle-right.
+     2560×1440, everything that matters inside x 140…2420 (16:10 crop). Drawn by hand for Olymparch; MIT. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2560" height="1440" viewBox="0 0 2560 1440">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#05050c"/>
+      <stop offset="0.3" stop-color="#0c0d22"/>
+      <stop offset="0.55" stop-color="#1c1b3c"/>
+      <stop offset="0.75" stop-color="#33294c"/>
+      <stop offset="1" stop-color="#4a3650"/>
+    </linearGradient>
+    <radialGradient id="flash" cx="1620" cy="620" r="1000" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f4d35e" stop-opacity="0.42"/>
+      <stop offset="0.22" stop-color="#d4a73a" stop-opacity="0.2"/>
+      <stop offset="0.55" stop-color="#5a4466" stop-opacity="0.1"/>
+      <stop offset="1" stop-color="#1a1828" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="strike" cx="1700" cy="740" r="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff4cc" stop-opacity="0.85"/>
+      <stop offset="0.25" stop-color="#f4d35e" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#d4a73a" stop-opacity="0"/>
+    </radialGradient>
+    <!-- the storm: dark crown, warm lit belly -->
+    <linearGradient id="storm" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#07070b"/>
+      <stop offset="0.55" stop-color="#151422"/>
+      <stop offset="0.85" stop-color="#2c2738"/>
+      <stop offset="1" stop-color="#4a3c42"/>
+    </linearGradient>
+    <radialGradient id="belly" cx="1500" cy="470" r="620" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f1cf72"/>
+      <stop offset="0.25" stop-color="#b48a4a"/>
+      <stop offset="0.6" stop-color="#4a3c48"/>
+      <stop offset="1" stop-color="#211e2c"/>
+    </radialGradient>
+    <linearGradient id="far" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4a4054"/>
+      <stop offset="1" stop-color="#2e2a3a"/>
+    </linearGradient>
+    <linearGradient id="mid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a2634"/>
+      <stop offset="1" stop-color="#1a1822"/>
+    </linearGradient>
+    <linearGradient id="massif" x1="0" y1="0" x2="1" y2="0.3">
+      <stop offset="0" stop-color="#26222e"/>
+      <stop offset="0.45" stop-color="#17151d"/>
+      <stop offset="1" stop-color="#0c0b10"/>
+    </linearGradient>
+    <linearGradient id="litFace" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#f4d35e" stop-opacity="0.85"/>
+      <stop offset="0.35" stop-color="#b98a3e" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#3a3044" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="seaTop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8a7466"/>
+      <stop offset="0.25" stop-color="#4e4352"/>
+      <stop offset="0.7" stop-color="#252230"/>
+      <stop offset="1" stop-color="#141319"/>
+    </linearGradient>
+    <linearGradient id="ledge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1a1820"/>
+      <stop offset="1" stop-color="#08080b"/>
+    </linearGradient>
+    <linearGradient id="topShade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#040406" stop-opacity="0.9"/>
+      <stop offset="0.5" stop-color="#040406" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#040406" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="cornerShade" cx="2560" cy="0" r="1150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#030305" stop-opacity="0.8"/>
+      <stop offset="0.6" stop-color="#030305" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#030305" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vignette" cx="0.5" cy="0.55" r="0.78">
+      <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.6"/>
+    </radialGradient>
+
+    <!-- cloud body: noise eats into the shape for a painted, broken edge -->
+    <filter id="cloud" x="-15%" y="-30%" width="130%" height="160%" filterUnits="objectBoundingBox">
+      <feTurbulence type="fractalNoise" baseFrequency="0.0035 0.008" numOctaves="5" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="120" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.6 0 0 0 -0.55" result="m"/>
+      <feComposite in="d" in2="m" operator="in" result="c"/>
+      <feGaussianBlur in="c" stdDeviation="2"/>
+    </filter>
+    <filter id="cloudSoft" x="-15%" y="-40%" width="130%" height="180%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.003 0.007" numOctaves="4" seed="9" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="140" xChannelSelector="R" yChannelSelector="G"/>
+      <feGaussianBlur stdDeviation="9"/>
+    </filter>
+    <!-- rock: large-scale wander of a ridge line, then fine crumble -->
+    <filter id="rock" x="-5%" y="-8%" width="110%" height="116%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.02" numOctaves="4" seed="21" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="34" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="strata" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.004 0.06" numOctaves="3" seed="5" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.02  0 0 0 0 0.02  0 0 0 0 0.03  0 0 -3 0 1.25"/>
+      <feComposite in2="SourceGraphic" operator="in"/>
+    </filter>
+    <!-- relief: a noise height-field lit from the key light, multiplied into the painted colour (rock, cloud) -->
+    <filter id="reliefRock" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.006" numOctaves="6" seed="31" result="h"/>
+      <feDiffuseLighting in="h" surfaceScale="16" diffuseConstant="1" lighting-color="#fff" result="l">
+        <feDistantLight azimuth="210" elevation="38"/>
+      </feDiffuseLighting>
+      <feComponentTransfer in="l" result="lt">
+        <feFuncR type="linear" slope="1.25" intercept="0.08"/><feFuncG type="linear" slope="1.25" intercept="0.08"/>
+        <feFuncB type="linear" slope="1.25" intercept="0.08"/>
+      </feComponentTransfer>
+      <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.15" k2="0" k3="0" k4="0"/>
+    </filter>
+    <filter id="reliefCloud" x="-10%" y="-40%" width="120%" height="180%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.004 0.009" numOctaves="4" seed="17" result="h"/>
+      <feGaussianBlur in="h" stdDeviation="3" result="hb"/>
+      <feDiffuseLighting in="hb" surfaceScale="16" diffuseConstant="1" lighting-color="#fff" result="l">
+        <feDistantLight azimuth="250" elevation="40"/>
+      </feDiffuseLighting>
+      <feComponentTransfer in="l" result="lt">
+        <feFuncR type="linear" slope="0.8" intercept="0.4"/><feFuncG type="linear" slope="0.8" intercept="0.4"/>
+        <feFuncB type="linear" slope="0.8" intercept="0.4"/>
+      </feComponentTransfer>
+      <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.2" k2="0" k3="0" k4="0"/>
+    </filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"/></filter>
+    <filter id="glowS" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter>
+    <filter id="haze" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="28"/></filter>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="1" seed="2"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0.05 0"/>
+    </filter>
+
+    <!-- the golden eagle in three-quarter view, gliding toward the strike with its wings raised: far wing, body,
+         near wing; light from the right (the bolt) -->
+    <linearGradient id="eNear" x1="-40" y1="-60" x2="-260" y2="-300" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5a3e26"/>
+      <stop offset="0.45" stop-color="#2e2014"/>
+      <stop offset="1" stop-color="#0e0907"/>
+    </linearGradient>
+    <linearGradient id="eFar" x1="80" y1="-40" x2="20" y2="-340" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2a1d14"/>
+      <stop offset="1" stop-color="#0c0806"/>
+    </linearGradient>
+    <linearGradient id="eBody" x1="200" y1="-20" x2="-200" y2="40" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5a3e24"/>
+      <stop offset="0.4" stop-color="#2c1e14"/>
+      <stop offset="1" stop-color="#100b08"/>
+    </linearGradient>
+    <linearGradient id="eNape" x1="190" y1="-20" x2="110" y2="-10" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d9a84c"/>
+      <stop offset="1" stop-color="#8a6230" stop-opacity="0"/>
+    </linearGradient>
+    <!-- feather texture: fine strokes along the vanes (not the rock noise) -->
+    <pattern id="vanes" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(-52)">
+      <path d="M0 4.5 H9" stroke="#000" stroke-width="1.1" stroke-opacity="0.35"/>
+    </pattern>
+    <path id="eFarWing" d="M70 -30 C72 -90 84 -150 102 -200 C108 -232 102 -262 88 -290 Q78 -360 60 -376 Q64 -330 66 -300
+      Q46 -352 28 -364 Q36 -326 44 -292 Q20 -330 2 -344 Q14 -310 20 -282 Q-4 -310 -20 -320 Q-10 -292 0 -268
+      Q-22 -284 -38 -290 Q-48 -230 -40 -150 Q-34 -80 -20 -30 Z"/>
+    <path id="eNearWing" d="M40 -24 C22 -100 -8 -168 -58 -228 C-88 -264 -118 -298 -150 -330 Q-150 -400 -172 -434
+      Q-178 -380 -176 -340 Q-196 -394 -214 -414 Q-212 -366 -202 -330 Q-232 -370 -250 -384 Q-238 -344 -224 -318
+      Q-256 -340 -274 -348 Q-258 -320 -242 -300 Q-272 -310 -290 -308 Q-272 -288 -252 -282 Q-280 -272 -294 -264
+      Q-270 -250 -246 -244 Q-262 -226 -238 -222 Q-238 -196 -210 -192 Q-206 -164 -180 -158 Q-172 -128 -146 -122
+      Q-136 -92 -110 -86 Q-98 -56 -72 -52 Q-60 -22 -40 -16 Q-10 10 20 0 Z"/>
+    <path id="eBodyP" d="M150 -30 C168 -34 184 -28 192 -18 L214 -12 C226 -9 229 4 216 9 L213 2 C206 4 199 4 192 3
+      C186 11 174 18 156 22 C120 40 70 58 10 60 C-40 62 -90 54 -130 42 L-150 48 L-236 66 L-250 46 L-242 26 L-150 22
+      C-100 6 -40 -16 20 -26 C70 -34 110 -38 150 -30 Z"/>
+  </defs>
+
+  <!-- ── sky and the flash behind everything -->
+  <rect width="2560" height="1440" fill="url(#sky)"/>
+  <rect width="2560" height="1440" fill="url(#flash)"/>
+
+  <!-- ── far ranges in the haze; the left ones rise out of the cloud sea -->
+  <g filter="url(#rock)">
+    <path d="M-60 1010 L60 960 L130 975 L210 905 L260 920 L330 860 L380 880 L430 845 L470 860 L540 815 L600 850 L650 838
+      L720 880 L790 870 L860 915 L930 905 L1010 950 L1100 945 L1180 990 L1260 1000 L1400 1050 L1400 1440 L-60 1440 Z" fill="url(#far)" opacity="0.85"/>
+    <path d="M2020 960 L2090 915 L2140 930 L2200 880 L2250 895 L2310 845 L2350 860 L2420 820 L2480 850 L2620 830 L2620 1440
+      L2020 1440 Z" fill="url(#far)" opacity="0.7"/>
+    <path d="M-60 1060 L40 1030 L120 1045 L190 990 L250 1005 L330 960 L400 985 L470 950 L560 990 L650 975 L740 1015
+      L830 1000 L930 1050 L1020 1040 L1120 1090 L1300 1120 L1300 1440 L-60 1440 Z" fill="url(#mid)"/>
+  </g>
+  <!-- cold light on the far ridges' left flanks -->
+  <g filter="url(#haze)" opacity="0.5">
+    <ellipse cx="560" cy="870" rx="260" ry="40" fill="#6a5a70"/>
+    <ellipse cx="2300" cy="880" rx="200" ry="40" fill="#4a4258"/>
+  </g>
+
+  <!-- ── Olympus -->
+  <g transform="translate(0 70)">
+  <g filter="url(#reliefRock)" transform="translate(1700 1370) scale(1.25 1.06) translate(-1700 -1370)">
+  <g filter="url(#rock)">
+    <path id="olympus" d="M940 1440 L1010 1270 L1060 1250 L1110 1190 L1150 1180 L1195 1120 L1240 1108 L1275 1050 L1320 1035 L1350 985
+      L1385 962 L1410 905 L1440 880 L1462 892 L1490 912 L1520 900 L1555 858 L1590 842 L1612 812 L1640 798 L1786 798
+      L1812 818 L1842 848 L1872 842 L1905 866 L1938 838 L1962 812 L1990 826 L2026 872 L2070 912 L2110 958 L2160 972
+      L2215 1028 L2290 1056 L2360 1110 L2450 1140 L2620 1200 L2620 1440 Z" fill="url(#massif)"/>
+    <use xlink:href="#olympus" filter="url(#strata)" opacity="0.5"/>
+    <!-- faces turned toward the strike -->
+    <path d="M1010 1270 L1060 1250 L1110 1190 L1150 1180 L1195 1120 L1240 1108 L1275 1050 L1320 1035 L1350 985 L1385 962
+      L1410 905 L1440 880 L1430 930 L1396 990 L1352 1040 L1330 1100 L1280 1140 L1240 1210 L1170 1250 L1120 1320 Z"
+      fill="url(#litFace)" opacity="0.7"/>
+    <path d="M1490 912 L1520 900 L1555 858 L1590 842 L1612 812 L1640 798 L1680 800 L1640 840 L1600 880 L1580 940
+      L1540 990 L1520 1060 L1480 1110 L1470 1020 Z" fill="url(#litFace)"/>
+    <path d="M1905 866 L1938 838 L1962 812 L1958 860 L1930 910 L1910 980 L1880 940 Z" fill="url(#litFace)" opacity="0.65"/>
+    <!-- gullies in shadow and lit ribs -->
+    <g fill="none" stroke-linecap="round">
+      <path d="M1700 810 L1688 880 L1712 950 L1676 1040 L1700 1140 L1660 1260" stroke="#07060a" stroke-width="12" opacity="0.7"/>
+      <path d="M1820 830 L1846 910 L1830 990 L1880 1080 L1870 1200" stroke="#07060a" stroke-width="10" opacity="0.6"/>
+      <path d="M2000 840 L2030 930 L2080 1000 L2090 1100" stroke="#07060a" stroke-width="9" opacity="0.55"/>
+      <path d="M1620 820 L1590 900 L1560 980 L1540 1080" stroke="#f0c860" stroke-width="5" opacity="0.4"/>
+      <path d="M1430 900 L1400 980 L1350 1050 L1320 1130" stroke="#d8ad55" stroke-width="4" opacity="0.32"/>
+      <path d="M1950 830 L1930 900 L1915 960" stroke="#d8ad55" stroke-width="3" opacity="0.3"/>
+      <path d="M1480 1000 L1452 1080 L1470 1150 L1430 1240" stroke="#c99a48" stroke-width="4" opacity="0.3"/>
+      <path d="M1250 1120 L1220 1190 L1180 1250" stroke="#b88a44" stroke-width="3" opacity="0.28"/>
+    </g>
+  </g>
+  </g>
+  <!-- the ridge that faces the strike, rimmed in gold -->
+  <g transform="translate(1700 1370) scale(1.25 1.06) translate(-1700 -1370)" fill="none" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M1240 1108 L1275 1050 L1320 1035 L1350 985 L1385 962 L1410 905 L1440 880" stroke="#f4d35e" stroke-width="6" opacity="0.35" filter="url(#glowS)"/>
+    <path d="M1240 1108 L1275 1050 L1320 1035 L1350 985 L1385 962 L1410 905 L1440 880" stroke="#f0cc64" stroke-width="2.2" opacity="0.55"/>
+    <path d="M1490 912 L1520 900 L1555 858 L1590 842 L1612 812 L1640 798" stroke="#f4d35e" stroke-width="8" opacity="0.45" filter="url(#glowS)"/>
+    <path d="M1490 912 L1520 900 L1555 858 L1590 842 L1612 812 L1640 798" stroke="#ffe7a0" stroke-width="2.5" opacity="0.75"/>
+    <path d="M1905 866 L1938 838 L1962 812" stroke="#f0cc64" stroke-width="2" opacity="0.45"/>
+  </g>
+
+  <!-- ── the temple on the summit, its front lit by the strike -->
+  <g transform="translate(0 -34)">
+    <path d="M1628 800 L1798 800 L1806 812 L1620 812 Z" fill="#1f1c25"/>
+    <rect x="1636" y="788" width="154" height="14" fill="#2c2833"/>
+    <rect x="1640" y="784" width="146" height="5" fill="#d9b252" opacity="0.6"/>
+    <g fill="#36313f">
+      <rect x="1646" y="730" width="11" height="56"/><rect x="1670" y="730" width="11" height="56"/>
+      <rect x="1694" y="730" width="11" height="56"/><rect x="1720" y="730" width="11" height="56"/>
+      <rect x="1744" y="730" width="11" height="56"/><rect x="1768" y="730" width="11" height="56"/>
+    </g>
+    <g fill="#f4d35e" opacity="0.75">
+      <rect x="1646" y="730" width="4" height="56"/><rect x="1670" y="730" width="4" height="56"/>
+      <rect x="1694" y="730" width="4" height="56"/><rect x="1720" y="730" width="3" height="56"/>
+      <rect x="1744" y="730" width="2" height="56"/><rect x="1768" y="730" width="2" height="56"/>
+    </g>
+    <rect x="1638" y="718" width="150" height="13" fill="#3a3542"/>
+    <path d="M1634 718 L1713 680 L1792 718 Z" fill="#4a4048"/>
+    <path d="M1634 718 L1713 680 L1719 683 L1650 718 Z" fill="#f4d35e" opacity="0.65"/>
+    <path d="M1660 712 L1713 690 L1766 712 Z" fill="#1e1b24"/>
+  </g>
+  </g>
+
+  <!-- ── the storm: crown, belly lit from within, a few torn shelves -->
+  <g filter="url(#cloudSoft)">
+    <path d="M-120 -60 L2700 -60 L2700 330 C2560 360 2420 340 2290 380 C2150 420 2020 400 1900 430 C1800 455 1700 440 1600 470
+      C1500 500 1400 470 1300 480 C1180 495 1080 450 960 440 C820 430 700 400 560 400 C400 400 260 360 120 360 C40 360 -40 350
+      -120 340 Z" fill="url(#storm)"/>
+  </g>
+  <g filter="url(#cloud)">
+    <path d="M920 470 C1000 430 1120 410 1220 420 C1300 380 1420 370 1520 400 C1620 380 1740 400 1820 430 C1900 440 1960 470
+      1990 500 C1900 520 1800 505 1720 520 C1620 540 1520 520 1420 535 C1300 550 1180 530 1080 520 C1010 515 950 500 920 470 Z"
+      fill="url(#belly)"/>
+    <path d="M300 420 C420 390 560 400 680 430 C760 440 820 470 860 500 C760 520 640 500 540 500 C440 500 360 470 300 420 Z"
+          fill="#2e2938" opacity="0.9"/>
+    <path d="M2060 450 C2160 420 2300 420 2420 440 C2480 450 2540 470 2580 490 C2460 510 2320 500 2200 500 C2120 495 2080 475
+      2060 450 Z" fill="#1a1824" opacity="0.9"/>
+  </g>
+  <!-- lit undersides -->
+  <g filter="url(#glow)">
+    <ellipse cx="1470" cy="525" rx="320" ry="22" fill="#f4d35e" opacity="0.45"/>
+    <ellipse cx="1740" cy="512" rx="200" ry="14" fill="#d4a73a" opacity="0.4"/>
+    <ellipse cx="1160" cy="515" rx="190" ry="12" fill="#c09048" opacity="0.32"/>
+  </g>
+
+  <!-- ── the bolt: halo, branches, body, white core -->
+  <rect width="2560" height="1440" fill="url(#strike)"/>
+  <!-- the flash spreading through the storm's belly -->
+  <ellipse cx="1470" cy="470" rx="420" ry="90" fill="#f4d35e" opacity="0.32" filter="url(#haze)"/>
+  <ellipse cx="1460" cy="470" rx="160" ry="40" fill="#fff4cc" opacity="0.45" filter="url(#glow)"/>
+  <g fill="none" stroke-linejoin="miter" stroke-linecap="round">
+    <path filter="url(#glow)" stroke="#f4d35e" stroke-width="64" opacity="0.7"
+          d="M1452 470 L1461 489 L1455 498 L1474 514 L1490 536 L1478 539 L1470 551 L1488 566 L1503 573 L1512 590 L1540 614 L1531 619 L1520 627 L1546 644 L1561 648 L1578 664 L1600 676 L1592 681 L1584 688 L1611 697 L1630 702 L1660 715 L1683 717 L1712 722"/>
+    <g stroke="#f4d35e" filter="url(#glowS)" opacity="0.6">
+      <path d="M1490 536 L1462 551 L1448 553 L1420 580 L1426 588 L1432 593 L1404 614 L1396 632 L1378 641 L1360 656" stroke-width="13"/>
+      <path d="M1540 614 L1572 615 L1590 624 L1612 622 L1608 629 L1604 634 L1640 637 L1652 644 L1676 644" stroke-width="7"/>
+    </g>
+    <path d="M1490 536 L1462 551 L1448 553 L1420 580 L1426 588 L1432 593 L1404 614 L1396 632 L1378 641 L1360 656 M1396 622 L1376 675" stroke="#f4d35e" stroke-width="5"/>
+    <path d="M1540 614 L1572 615 L1590 624 L1612 622 L1608 629 L1604 634 L1640 637 L1652 644 L1676 644" stroke="#f4d35e" stroke-width="3"/>
+    <path d="M1452 470 L1461 489 L1455 498 L1474 514 L1490 536 L1478 539 L1470 551 L1488 566 L1503 573 L1512 590 L1540 614 L1531 619 L1520 627 L1546 644 L1561 648 L1578 664 L1600 676 L1592 681 L1584 688 L1611 697 L1630 702 L1660 715 L1683 717 L1712 722" stroke="#f4d35e" stroke-width="17"/>
+    <path d="M1452 470 L1461 489 L1455 498 L1474 514 L1490 536 L1478 539 L1470 551 L1488 566 L1503 573 L1512 590 L1540 614 L1531 619 L1520 627 L1546 644 L1561 648 L1578 664 L1600 676 L1592 681 L1584 688 L1611 697 L1630 702 L1660 715 L1683 717 L1712 722" stroke="#fffbea" stroke-width="7"/>
+  </g>
+  <!-- the strike lighting the pediment -->
+  <circle cx="1712" cy="722" r="20" fill="#fffbea" filter="url(#glowS)"/>
+
+  <!-- ── sea of cloud: lit crests near the mountain, darker toward the edges -->
+  <path d="M-120 1200 C300 1170 700 1180 1100 1170 C1500 1165 1900 1200 2700 1210 L2700 1520 L-120 1520 Z" fill="#2a2538"
+        filter="url(#cloudSoft)"/>
+  <g filter="url(#reliefCloud)"><g filter="url(#cloud)">
+    <path d="M-120 1150 C40 1110 180 1120 300 1100 C420 1080 520 1110 640 1095 C760 1080 860 1120 980 1105 C1100 1090 1180 1130
+      1300 1120 C1420 1110 1500 1150 1620 1140 C1740 1130 1840 1170 1960 1160 C2100 1150 2200 1180 2340 1170 C2460 1160 2560 1180
+      2700 1175 L2700 1520 L-120 1520 Z" fill="url(#seaTop)"/>
+  </g></g>
+  <g filter="url(#cloudSoft)">
+    <path d="M-120 1250 C120 1220 300 1240 520 1228 C720 1215 900 1255 1120 1248 C1340 1240 1520 1280 1760 1270 C1980 1262
+      2200 1290 2700 1275 L2700 1520 L-120 1520 Z" fill="#1c1a2e"/>
+    <path d="M-120 1340 C200 1320 500 1345 800 1335 C1100 1325 1400 1360 1700 1350 C2000 1340 2300 1370 2700 1355 L2700 1520
+      L-120 1520 Z" fill="#131226"/>
+  </g>
+  <g filter="url(#glow)">
+    <ellipse cx="1560" cy="1140" rx="420" ry="26" fill="#e0b450" opacity="0.38"/>
+    <ellipse cx="1120" cy="1112" rx="240" ry="16" fill="#b0905a" opacity="0.3"/>
+  </g>
+
+  <!-- ── foreground crag, bottom left, where the eagle has come from -->
+  <g filter="url(#rock)">
+    <path d="M-60 1440 L-60 1150 L30 1135 L90 1175 L150 1170 L210 1215 L260 1210 L330 1268 L400 1300 L470 1360 L520 1440 Z"
+          fill="url(#ledge)"/>
+    <path d="M30 1135 L90 1175 L150 1170 L120 1200 L60 1196 Z" fill="#8a7050" opacity="0.35"/>
+  </g>
+
+  <!-- ── the eagle, gliding toward the strike, rim-lit from it -->
+  <g transform="translate(720 740) rotate(-6) scale(0.92)">
+    <!-- far wing, behind the body -->
+    <use xlink:href="#eFarWing" fill="url(#eFar)"/>
+    <use xlink:href="#eFarWing" fill="url(#vanes)" opacity="0.6"/>
+    <path d="M70 -30 C72 -90 84 -150 102 -200 C108 -232 102 -262 88 -290 L60 -376" fill="none" stroke="#f4d35e" stroke-width="2.4" opacity="0.6"/>
+    <!-- tail and body -->
+    <use xlink:href="#eBodyP" fill="url(#eBody)"/>
+    <path d="M-150 22 L-242 26 M-150 34 L-246 46 M-150 46 L-238 64" stroke="#000" stroke-opacity="0.4" stroke-width="2" fill="none"/>
+    <path d="M150 -30 C168 -34 184 -28 192 -18 L190 4 C176 16 150 22 120 22 C130 4 136 -14 150 -30 Z" fill="url(#eNape)" opacity="0.8"/>
+    <!-- feathered legs tucked under, talons drawn up -->
+    <path d="M-10 52 C-20 74 -46 84 -70 80 C-60 70 -40 60 -30 50 Z" fill="#20160f"/>
+    <path d="M-66 80 l-10 8 M-60 82 l-6 10 M-54 81 l-2 10" stroke="#d4a73a" stroke-width="2.4" opacity="0.8"/>
+    <!-- beak: yellow cere, dark hooked tip; amber eye under a brow -->
+    <path d="M192 -18 L204 -15 C204 -6 200 0 193 3 Z" fill="#e0b040"/>
+    <path d="M204 -15 L214 -12 C226 -9 229 4 216 9 L213 2 C209 3 204 2 200 0 C203 -4 205 -9 204 -15 Z" fill="#2a2420"/>
+    <circle cx="176" cy="-17" r="4.2" fill="#e8a838"/><circle cx="177" cy="-17" r="2" fill="#0a0806"/>
+    <path d="M166 -24 C172 -27 182 -26 188 -22" stroke="#1a120c" stroke-width="3" fill="none"/>
+    <!-- rim light along the head, throat and breast, facing the bolt -->
+    <path d="M150 -30 C168 -34 184 -28 192 -18 L214 -12 C226 -9 229 4 216 9" fill="none" stroke="#ffe08a" stroke-width="2.4" opacity="0.85"/>
+    <path d="M192 3 C186 11 174 18 156 22 C120 40 70 58 10 60" fill="none" stroke="#f4d35e" stroke-width="2.6" opacity="0.6"/>
+    <!-- near wing, in front: coverts in rows, fingered primaries, scalloped secondaries -->
+    <use xlink:href="#eNearWing" fill="url(#eNear)"/>
+    <use xlink:href="#eNearWing" fill="url(#vanes)" opacity="0.7"/>
+    <g fill="none" stroke-linecap="round">
+      <path d="M22 -40 Q4 -48 -10 -40 Q-24 -52 -40 -44 Q-54 -58 -70 -52 Q-84 -66 -100 -62" stroke="#7a5a36" stroke-width="2.4" opacity="0.7"/>
+      <path d="M8 -90 Q-10 -96 -24 -88 Q-40 -100 -56 -92 Q-72 -106 -90 -100 Q-106 -112 -124 -108" stroke="#6a4c2e" stroke-width="2.2" opacity="0.6"/>
+      <path d="M-20 -150 Q-38 -156 -52 -148 Q-68 -160 -84 -152 Q-100 -166 -118 -160 Q-134 -172 -152 -170" stroke="#5a4028" stroke-width="2" opacity="0.55"/>
+      <path d="M-150 -330 L-176 -340 M-152 -322 L-202 -330 M-156 -314 L-224 -318 M-162 -304 L-242 -300 M-168 -294 L-252 -282 M-172 -284 L-246 -244"
+            stroke="#000" stroke-width="2.2" opacity="0.5"/>
+    </g>
+    <path d="M40 -24 C22 -100 -8 -168 -58 -228 C-88 -264 -118 -298 -150 -330 Q-150 -400 -172 -434" fill="none" stroke="#f4d35e" stroke-width="3" opacity="0.75"/>
+    <path d="M40 -24 C22 -100 -8 -168 -58 -228" fill="none" stroke="#fff0b8" stroke-width="1.2" opacity="0.7"/>
+  </g>
+  <g fill="#1a1622" opacity="0.85">
+    <g transform="translate(430 860) rotate(-4) scale(0.13)"><use xlink:href="#eFarWing"/><use xlink:href="#eBodyP"/><use xlink:href="#eNearWing"/></g>
+    <g transform="translate(540 910) rotate(3) scale(-0.1 0.1)"><use xlink:href="#eFarWing"/><use xlink:href="#eBodyP"/><use xlink:href="#eNearWing"/></g>
+  </g>
+
+  <!-- ── rain veils hanging from the storm on the right: dark and quiet -->
+  <g filter="url(#glowS)" opacity="0.4" stroke="#2c2a3a" stroke-width="10">
+    <path d="M2090 480 L2040 820 M2170 490 L2120 860 M2250 480 L2200 840 M2330 490 L2280 880 M2410 480 L2360 850"/>
+  </g>
+
+  <!-- ── finish: quiet top for the bar, darker top-right for notifications, vignette, grain -->
+  <rect width="2560" height="300" fill="url(#topShade)"/>
+  <rect width="2560" height="1440" fill="url(#cornerShade)"/>
+  <rect width="2560" height="1440" fill="url(#vignette)"/>
+  <rect width="2560" height="1440" filter="url(#grain)"/>
+</svg>

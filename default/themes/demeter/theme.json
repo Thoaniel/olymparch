@@ -39,5 +39,8 @@
     "#c2aed0",
     "#94cac3",
     "#ffffff"
+  ],
+  "backgrounds": [
+    { "id": "harvest", "name": { "en": "Harvest moon", "nb": "Høstmåne" } }
   ]
 }

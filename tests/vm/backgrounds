@@ -1,6 +1,7 @@
 #!/bin/bash
 # VM test: backgrounds (docs/themes.md, «Backgrounds»). Copies the shell, lock screen, settings, olymparch-theme and every
-# theme with its temple (made here at 1080 with art/torch.py) and its own backgrounds into a copy of the
+# theme with its temple and its god's illustration (made here at 1080 with art/torch.py and
+# art/illustrations/render.py) into a copy of the
 # installed disk. Then, for every theme: each background on an empty desktop, and with a floating terminal and two
 # notifications over it (is the text readable?); the background picker (Super+Ctrl+Space) with → trying the next one
 # and Esc going back; Settings → Appearance → Background with its thumbnails. Then pictures of your own dropped into
@@ -39,9 +40,15 @@ for id in "${ids[@]}"; do
     if [ "$id" != zeus ] && ! { [ -s "$c/frame-47.png" ] && [ "$c/frame-47.png" -nt "$t" ] && [ "$c/frame-47.png" -nt art/torch.py ]; }; then
         jobs+=("TORCH $c 1920 1080 48 $t")
     fi
+    svg=art/illustrations/$id.svg
+    bgid=$(python3 -I -c 'import json, sys; print(json.load(open(sys.argv[1]))["backgrounds"][0]["id"])' "$t")
+    c=$A/$id/$bgid/1080
+    if [ -s "$c/frame-00.png" ] && [ "$c/frame-00.png" -nt "$svg" ] && [ "$c/frame-00.png" -nt art/illustrations/render.py ]; then :; else
+        jobs+=("ILLU $svg $c 1920 1080")
+    fi
 done
 if [ ${#jobs[@]} -gt 0 ]; then
-    printf '%s\n' "${jobs[@]}" | xargs -P "$(nproc)" -L1 sh -c 'shift; s=art/torch.py
+    printf '%s\n' "${jobs[@]}" | xargs -P "$(nproc)" -L1 sh -c 'if [ "$1" = TORCH ]; then s=art/torch.py; else s=art/illustrations/render.py; fi; shift
         if command -v uv >/dev/null; then uv run -q --no-project --with pillow python $s "$@"; else python $s "$@"; fi >/dev/null' art
 fi
 # pictures of your own: a photo-like JPEG, a PNG for every theme, and a text file called .png (must be skipped)
@@ -191,25 +198,64 @@ grep -aoE 'QS: .*' "$O/$LOG" | sed 's/\x1b\[[0-9;]*m//g' >"$O/shell-log.txt"
 errors=$(awk '/Launching config/ {n = 0} /ERROR|TypeError|ReferenceError/ {n++} END {print n + 0}' "$O/shell-log.txt")
 ((errors == 0)) || fails+=("$errors feil i skall-loggen")
 
-# contact sheets: every background of a theme on one picture (the empty-desktop shots)
-py - "$O" <<'EOF'
+# contact sheets: per god the illustration itself (large), and both backgrounds on the desktop: empty, and under a
+# terminal with two notifications; then one overview of all the illustrations (sheets/oversikt.png)
+py - "$O" "$A" "${ids[@]}" <<'EOF'
+import json
 import re
 import sys
 from pathlib import Path
-from PIL import Image
-o = Path(sys.argv[1])
+from PIL import Image, ImageDraw, ImageFont
+o, art, ids = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3:]
 shots = {}
-for p in sorted(o.glob("*-skrivebord.png"), key=lambda p: int(p.name.split("-")[0])):
-    m = re.match(r"\d+-(.+)-(\d+)-skrivebord\.png", p.name)
+for p in o.glob("*.png"):
+    m = re.match(r"\d+-([a-z]+)-(\d+)-(skrivebord|terminal)\.png", p.name)
     if m:
-        shots.setdefault(m.group(1), []).append(p)
-for tid, ps in shots.items():
-    tiles = [Image.open(p).convert("RGB") for p in ps]
-    w, h = tiles[0].size
-    cols = 2
-    sheet = Image.new("RGB", (cols * w + (cols + 1) * 16, ((len(tiles) + 1) // 2) * (h + 16) + 16), (12, 12, 14))
-    for i, t in enumerate(tiles):
-        sheet.paste(t, (16 + (i % cols) * (w + 16), 16 + (i // cols) * (h + 16)))
+        shots[(m.group(1), int(m.group(2)), m.group(3))] = p
+BG, INK = (14, 14, 17), (226, 222, 214)
+def font():   # the system's sans (fontconfig) for æøå; Pillow's own font as a fallback
+    import subprocess
+    try:
+        f = subprocess.run(["fc-match", "-f", "%{file}", "sans"], capture_output=True, text=True).stdout
+        return ImageFont.truetype(f, 16)
+    except (OSError, ValueError):
+        return ImageFont.load_default()
+FONT = font()
+def fit(im, w):
+    return im.convert("RGB").resize((w, round(im.height * w / im.width)), Image.LANCZOS)
+over = []
+for tid in ids:
+    t = json.loads(Path("default/themes", tid, "theme.json").read_text())
+    bg = t["backgrounds"][0]
+    big_p = art / tid / bg["id"] / "1080" / "frame-00.png"
+    if not big_p.exists():
+        continue
+    big = fit(Image.open(big_p), 1600)
+    over.append((t["name"]["nb"], bg["name"]["nb"], big))
+    tiles = [(f"{n} · {k}", fit(Image.open(shots[(tid, n, k)]), 384)) for n in (2, 1) for k in ("skrivebord", "terminal")
+             if (tid, n, k) in shots]
+    th = max([im.height for _, im in tiles], default=0)
+    sheet = Image.new("RGB", (16 + 1600 + 16, 16 + 30 + big.height + 16 + (th + 40 if tiles else 0) * 1 + 16), BG)
+    d = ImageDraw.Draw(sheet); d.font = FONT
+    d.text((16, 20), f"{t['name']['nb']} · {bg['name']['nb']}  (art/illustrations/{tid}.svg, 1920x1080)", fill=INK)
+    sheet.paste(big, (16, 46))
+    y = 46 + big.height + 16
+    for i, (label, im) in enumerate(tiles[:4]):
+        x = 16 + i * (384 + 21)
+        sheet.paste(im, (x, y + 22))
+        d.text((x, y + 4), ("illustrasjon" if label.startswith("2") else "tempelet") + (" · tomt" if "skrivebord" in label else " · terminal og varsler"), fill=INK)
     sheet.save(o / "sheets" / f"{tid}.png")
+if over:
+    cols = 4
+    tw = 600
+    rows = (len(over) + cols - 1) // cols
+    th = round(tw * 9 / 16)
+    ov = Image.new("RGB", (16 + cols * (tw + 16), 16 + rows * (th + 40)), BG)
+    d = ImageDraw.Draw(ov); d.font = FONT
+    for i, (god, name, im) in enumerate(over):
+        x, y = 16 + (i % cols) * (tw + 16), 16 + (i // cols) * (th + 40)
+        d.text((x, y + 4), f"{god} · {name}", fill=INK)
+        ov.paste(im.resize((tw, th), Image.LANCZOS), (x, y + 22))
+    ov.save(o / "sheets" / "oversikt.png")
 EOF
 finish "$([ ${#fails[@]} = 0 ] && echo PASS || echo "FAIL (${fails[*]})") · ${#ids[@]} temaer: hver bakgrunn på tomt skrivebord og under terminal og varsler, velgeren, innstillingene; egne bilder, husket per tema, Av står stille, på $((SECONDS - t0)) s"

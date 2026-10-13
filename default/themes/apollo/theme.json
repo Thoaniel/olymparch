@@ -39,5 +39,8 @@
     "#8e4bb8",
     "#127b86",
     "#2a2113"
+  ],
+  "backgrounds": [
+    { "id": "chariot", "name": { "en": "The sun chariot at dawn", "nb": "Solvognen ved daggry" } }
   ]
 }
