@@ -75,6 +75,8 @@ shot valg "Valg: Spill er krysset av fra start"
 press ret
 shot flere-apper "Flere apper og verktøy: alt er valgfritt og ingenting er krysset av"
 press ret
+shot ai-agenter "AI-agenter: én linje per agentfil, ingenting er krysset av"
+press ret
 shot oppsummering "Oppsummeringen før noe skrives"
 press ret
 sleep 5

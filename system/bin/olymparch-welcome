@@ -1,6 +1,6 @@
 #!/bin/bash
 # Hints at login that need the desktop (they are notifications). Started by Hyprland at session start.
-# Zeus: when Olympus is installed but not set up, offer «olympus setup». It asks before downloading any model.
+# Zeus: where it is (the bar), once. AI agents ticked in the installer: offered for install, as you.
 set -uo pipefail
 state=${XDG_STATE_HOME:-$HOME/.local/state}/olymparch
 mkdir -p "$state"
@@ -8,17 +8,26 @@ case ${LANG:-} in nb*|nn*|no*) nb=1 ;; *) nb=0 ;; esac
 t() { if [ $nb = 1 ]; then printf '%s' "$2"; else printf '%s' "$1"; fi; }
 
 olympus=$HOME/.local/bin/olympus
-# Settings → Zeus switched off: no offer
+# Settings → Zeus switched off: no hint
 zeus_on=$(olymparch-settings get zeus.enabled 2>/dev/null || echo true)
+# Zeus runs in the background (a user service); the first login says where it is: the bar and Super+Z. No terminal,
+# and no model is downloaded until you choose one (the Zeus panel, Settings → Zeus).
 if [ -x "$olympus" ] && [ ! -e "$state/zeus-set-up" ] && [ "$zeus_on" != false ] && [ "$zeus_on" != off ]; then
     sleep 5   # the shell's notification server comes up with the session
-    answer=$(notify-send -w -a Zeus \
-        --action=setup="$(t "Set up Zeus" "Sett opp Zeus")" --action=later="$(t "Later" "Senere")" \
-        "$(t "Zeus is installed" "Zeus er installert")" \
-        "$(t "Setup picks llama.cpp for your graphics card and suggests a model. Nothing is downloaded until you say yes." \
-             "Oppsettet velger llama.cpp for skjermkortet ditt og foreslår en modell. Ingenting lastes ned før du sier ja.")")
-    if [ "$answer" = setup ]; then
-        touch "$state/zeus-set-up"
-        exec foot -e "$olympus" setup
-    fi
+    touch "$state/zeus-set-up"
+    answer=$(notify-send -w -a Zeus --action=open="$(t "Open Zeus" "Åpne Zeus")" \
+        "$(t "Zeus is running" "Zeus kjører")" \
+        "$(t "It is in the bar (⚡ Zeus, or Super+Z). Pick the model it answers with there: free cloud models need a key, a local one is downloaded only when you say yes." \
+             "Den ligger i baren (⚡ Zeus, eller Super+Z). Velg modellen den svarer med der: gratis skymodeller trenger en nøkkel, en lokal lastes ned bare når du sier ja.")")
+    [ "$answer" = open ] && qs ipc -p /usr/share/olymparch/shell call panel open zeus >/dev/null 2>&1
+fi
+
+# AI agents ticked in the installer: installed now, as you, each from its own site, in one terminal
+pending=${XDG_CONFIG_HOME:-$HOME/.config}/olymparch/agents-pending
+if [ -s "$pending" ]; then
+    sleep 2
+    names=$(paste -sd, "$pending" | sed 's/,/, /g')
+    answer=$(notify-send -w -a Olymparch --action=install="$(t "Install now" "Installer nå")" --action=later="$(t "Later" "Senere")" \
+        "$(t "AI agents you picked" "AI-agentene du valgte")" "$names")
+    if [ "$answer" = install ]; then exec olymparch-agent install --pending; fi
 fi

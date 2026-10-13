@@ -452,14 +452,40 @@ def cmd_status(args):
     write_state()
 
 
+PENDING = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.join(HOME, ".config"), "olymparch", "agents-pending")
+
+
 def cmd_install(args):
-    a = agents().get(args[0] if args else "") or die("usage: install AGENT")
-    cmd = (a.get("install") or {}).get("command")
-    if not cmd:
-        die(L(f"{a.get('name')} has no installer here; see {a.get('docs', '')}", f"{a.get('name')} har ingen installasjon her; se {a.get('docs', '')}"), 1)
-    if os.geteuid() == 0 or "sudo" in cmd:
+    """install AGENT… | --pending: each agent's official installer, as you, one after the other in one terminal.
+    --pending: the ones ticked in the installer (agents-pending, written by olymparch-install), then forgotten."""
+    if os.geteuid() == 0:
         die(L("agents are installed as you, never as root", "agenter installeres som deg, aldri som root"))
-    terminal(cmd, hold=True)
+    ids = list(args)
+    if ids == ["--pending"]:
+        try:
+            with open(PENDING) as f:
+                ids = [x.strip() for x in f if x.strip()]
+        except OSError:
+            ids = []
+        try:
+            os.remove(PENDING)
+        except OSError:
+            pass
+    if not ids:
+        die("usage: install AGENT… | --pending")
+    ag, lines = agents(), []
+    for aid in ids:
+        a = ag.get(aid)
+        cmd = ((a or {}).get("install") or {}).get("command")
+        if not a or not cmd or "sudo" in cmd:
+            print(L(f"skipped: {aid}", f"hoppet over: {aid}"), file=sys.stderr)
+            continue
+        lines.append(f"printf '\\n==> %s\\n' {shlex.quote(a.get('name', aid))}")
+        lines.append(f"{shlex.join(cmd)} || printf '%s\\n' {shlex.quote(L('(did not work; try again from Settings → AI)', '(det gikk ikke; prøv igjen fra Innstillinger → AI)'))}")
+    if not lines:
+        die(L("nothing to install", "ingenting å installere"), 1)
+    lines.append(f"olymparch-mcp register --auto >/dev/null 2>&1; printf '\\n%s\\n' {shlex.quote(L('Done. Sign in from Settings → AI: services and agents.', 'Ferdig. Logg inn fra Innstillinger → AI: tjenester og agenter.'))}")
+    terminal(["bash", "-c", "\n".join(lines)], hold=True)
 
 
 def cmd_mode(args):
