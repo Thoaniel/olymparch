@@ -25,7 +25,7 @@
     { "id": "hardware", "group": "devices", "label": { "en": "Hardware and drivers", "nb": "Maskinvare og drivere" }, "where": "olymparch-hw" },
     { "id": "games", "group": "games", "label": { "en": "Games", "nb": "Spill" }, "where": "~/.config/olymparch/settings.json" },
     { "id": "zeus", "group": "games", "label": { "en": "Zeus and AI", "nb": "Zeus og AI" }, "where": "~/.config/olymparch/settings.json" },
-    { "id": "ai", "group": "games", "label": { "en": "AI agents", "nb": "AI-agenter" }, "where": "~/.config/olymparch/settings.json, ~/.local/state/olymparch/mcp-audit.log", "command": "olymparch-mcp status" },
+    { "id": "ai", "group": "games", "label": { "en": "AI: services and agents", "nb": "AI: tjenester og agenter" }, "where": "~/.config/olymparch/settings.json, ~/.local/state/olymparch/mcp-audit.log", "command": "olymparch-mcp status" },
     { "id": "events", "group": "automation", "label": { "en": "Events", "nb": "Hendelser" }, "where": "~/.config/olymparch/settings.json" },
     { "id": "apps", "group": "automation", "label": { "en": "Default apps", "nb": "Standardapper" }, "where": "~/.config/mimeapps.list" },
     { "id": "account", "group": "personal", "label": { "en": "Account and lock", "nb": "Konto og lås" }, "where": "~/.config/hypr/hypridle.conf" },
@@ -339,6 +339,9 @@
       "label": { "en": "Night training", "nb": "Natt-trening" }, "description": { "en": "Olympus' model chooser learns from the day's conversations at 04:30 (only where Olympus installed the timer)", "nb": "Olympus' modellvelger lærer av dagens samtaler kl. 04.30 (bare der Olympus har installert timeren)" },
       "apply": { "via": "unit", "command": "systemctl --user enable|disable --now olympus-router-night.timer", "units": ["olympus-router-night.timer"] } },
 
+    { "key": "ai.services", "page": "ai", "level": "simple", "type": "action", "widget": "services", "ready": true,
+      "label": { "en": "Services", "nb": "Tjenester" }, "description": { "en": "Every AI service Zeus and the agents can use: free ones need a key (entered once, kept in the Secret Service or a private file), subscriptions need you to sign in", "nb": "Alle AI-tjenestene Zeus og agentene kan bruke: de gratis trenger en nøkkel (legges inn én gang og lagres i Secret Service eller en privat fil), abonnementene at du logger inn" },
+      "apply": { "via": "action", "command": "olympus providers" } },
     { "key": "ai.enabled", "page": "ai", "level": "simple", "type": "bool", "default": true, "ready": true,
       "label": { "en": "AI agents may control this PC", "nb": "AI-agenter kan styre PC-en" }, "description": { "en": "Olymparch's MCP server (olymparch-mcp) for Claude Code, Hermes, OpenClaw and Zeus. Every change waits for your yes on a card", "nb": "Olymparchs MCP-server (olymparch-mcp) for Claude Code, Hermes, OpenClaw og Zeus. Alle endringer venter på ditt ja på et kort" },
       "apply": { "via": "mcp", "command": "olymparch-mcp apply" } },

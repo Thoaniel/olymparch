@@ -1,0 +1,68 @@
+#!/bin/bash
+# API keys for AI services, entered once and used by Zeus (Olympus) and the agents. Stored in the Secret Service
+# (secret-tool: service=olymparch key=NAME) when one is running, else in ~/.local/share/olymparch/keys/NAME (0600,
+# folder 0700). A key never goes through argv, a log or the audit: it is read from stdin and written to stdout
+# only for `get`, and `run` puts keys into a program's environment when it starts.
+#
+#   olymparch-keys set NAME          the key from stdin (a hidden prompt on a terminal)
+#   olymparch-keys get NAME          print it (exit 1 when there is none)
+#   olymparch-keys has NAME          exit 0 when there is one
+#   olymparch-keys rm NAME
+#   olymparch-keys list              the names that have a key, and where: «groq secret-service»
+#   olymparch-keys run VAR=NAME… -- PROGRAM [ARGS]   start PROGRAM with those keys as environment variables
+# NAME: a provider or agent id (lower-case letters, digits, - and _).
+set -euo pipefail
+dir=${XDG_DATA_HOME:-$HOME/.local/share}/olymparch/keys
+die() { echo "olymparch-keys: $*" >&2; exit 2; }
+valid() { [[ $1 =~ ^[a-z0-9][a-z0-9_-]{0,63}$ ]] || die "invalid name: $1"; }
+# a running Secret Service (gnome-keyring, KeePassXC, KWallet's bridge …); without one, the file
+have_ss() {
+    command -v secret-tool >/dev/null && command -v busctl >/dev/null &&
+        busctl --user status org.freedesktop.secrets >/dev/null 2>&1
+}
+ss_get() { secret-tool lookup service olymparch key "$1" 2>/dev/null; }
+file_get() { [ -f "$dir/$1" ] && cat -- "$dir/$1"; }
+get() { local v; v=$(have_ss && ss_get "$1") || true; [ -n "$v" ] || v=$(file_get "$1" 2>/dev/null) || true; [ -n "$v" ] && printf '%s' "$v"; }
+
+cmd=${1:-}; shift || true
+case $cmd in
+    set)
+        name=${1:-}; valid "$name"
+        if [ -t 0 ]; then read -rsp "Key for $name: " key; echo >&2; else IFS= read -r key || [ -n "$key" ]; fi
+        key=${key//[$'\r\n\t ']/}
+        [ -n "$key" ] || die "no key given"
+        [ ${#key} -le 4096 ] || die "that is not a key (too long)"
+        if have_ss && printf '%s' "$key" | secret-tool store --label "Olymparch: $name" service olymparch key "$name" 2>/dev/null; then
+            rm -f -- "$dir/$name"   # one place only
+            echo "secret-service"
+        else
+            (umask 077; mkdir -p -- "$dir"; chmod 700 -- "$dir"; printf '%s' "$key" >"$dir/$name.new" && mv -f -- "$dir/$name.new" "$dir/$name")
+            echo "file"
+        fi ;;
+    get) valid "${1:-}"; get "$1" || exit 1 ;;
+    has) valid "${1:-}"; get "$1" >/dev/null || exit 1 ;;
+    rm)
+        valid "${1:-}"
+        have_ss && secret-tool clear service olymparch key "$1" 2>/dev/null || true
+        rm -f -- "$dir/$1" ;;
+    list)
+        if have_ss; then
+            secret-tool search --all service olymparch 2>/dev/null | sed -n 's/^attribute\.key = \([a-z0-9_-]*\)$/\1 secret-service/p'
+        fi
+        [ -d "$dir" ] && for f in "$dir"/*; do [ -f "$f" ] && case ${f##*/} in *.new) ;; *) echo "${f##*/} file" ;; esac; done
+        true ;;
+    run)
+        declare -a envs=()
+        while [ $# -gt 0 ] && [ "$1" != -- ]; do
+            [[ $1 =~ ^([A-Z][A-Z0-9_]*)=([a-z0-9][a-z0-9_-]*)$ ]] || die "run: VAR=NAME expected, got $1"
+            v=$(get "${BASH_REMATCH[2]}") || v=''
+            [ -n "$v" ] && envs+=("${BASH_REMATCH[1]}=$v")
+            shift
+        done
+        [ "${1:-}" = -- ] && shift
+        [ $# -gt 0 ] || die "run: no program"
+        # env(1) would show the values in its own argv for a moment; export in this shell and exec instead
+        for e in "${envs[@]}"; do export "${e%%=*}=${e#*=}"; done
+        exec "$@" ;;
+    *) sed -n '2,13p' "$0"; exit 2 ;;
+esac

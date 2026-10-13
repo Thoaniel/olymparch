@@ -520,7 +520,7 @@ Scope {
                                 readonly property string w: s.widget || ({ bool: "switch", choice: "select", number: "slider", text: "field", action: "button" })[s.type]
                                 readonly property var opts: s.type === "choice" ? win.options(s) : []
                                 width: content.width
-                                readonly property bool wide: w === "themes" || w === "backgrounds"   // cards and thumbnails get the whole width, under the text
+                                readonly property bool wide: w === "themes" || w === "backgrounds" || w === "services"   // cards, thumbnails and the services list get the whole width, under the text
                                 height: (wide ? info.implicitHeight + 10 + ctl.height : Math.max(info.implicitHeight, ctl.height)) + 18 + (out.visible ? out.height + 8 : 0)
 
                                 Column {
@@ -559,7 +559,7 @@ Scope {
                                     width: row.width - x
                                     height: Math.max(26, sw.visible ? sw.height : seg.visible ? seg.height : sel.visible ? sel.height
                                                            : sld.visible ? sld.height : fld.visible ? fld.height : btn.visible ? btn.height : kc.visible ? kc.height
-                                                           : thm.visible ? thm.height : bgs.visible ? bgs.height : itm.visible ? itm.implicitHeight : info2.height)
+                                                           : thm.visible ? thm.height : bgs.visible ? bgs.height : svcs.visible ? svcs.height : itm.visible ? itm.implicitHeight : info2.height)
                                     opacity: row.ready ? 1 : 0.45
                                     enabled: row.ready
 
@@ -572,6 +572,14 @@ Scope {
                                         themes: visible ? win.themeList : []
                                         current: String(row.value)
                                         onPicked: id => { if (id !== String(row.value)) win.change(row.s, id); }
+                                    }
+
+                                    // AI services (ServicesList.qml): status, keys and sign-in for everything Zeus and the agents use
+                                    ServicesList {
+                                        id: svcs
+                                        visible: row.w === "services"
+                                        theme: win.theme
+                                        width: ctl.width
                                     }
 
                                     // backgrounds: thumbnails of the theme in use's backgrounds; a click uses one at once
