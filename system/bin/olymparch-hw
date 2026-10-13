@@ -288,7 +288,7 @@ rnote() {
 declare -A INSTALLED=()
 KERNELS=()
 MULTILIB=1
-OURREPO=0   # the [olymparch] repo is configured: ourrepo= packages (xone-dkms, hid-tmff2-dkms) can be offered
+OURREPO=0   # the [olymparch] repo is configured: ourrepo= packages (xone-dkms, hid-tmff2-dkms-git) can be offered
 load_installed() {
     local p
     if [ -n "$S" ]; then

@@ -17,14 +17,14 @@ Matched rules
   rgb                        RGB lighting: OpenRGB
                                optional: openrgb
   thrustmaster-wheel         Thrustmaster wheel: force feedback (hid-tmff2)
-                               ourrepo: hid-tmff2-dkms
+                               ourrepo: hid-tmff2-dkms-git
 
 To install (5)
   nvidia-open-dkms nvidia-utils lib32-nvidia-utils linux-zen-headers libva-nvidia-driver
 Already installed
   amd-ucode
 Offered, not installed automatically
-  openrgb hid-tmff2-dkms
+  openrgb hid-tmff2-dkms-git
 
 Configuration
   /etc/olymparch/hw/hypr-env

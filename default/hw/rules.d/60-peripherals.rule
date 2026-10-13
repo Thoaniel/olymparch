@@ -41,5 +41,5 @@ modalias=usb:v044FpB669*
 modalias=usb:v044FpB689*
 modalias=usb:v044FpB692*
 modalias=usb:v044FpB696*
-ourrepo=hid-tmff2-dkms
+ourrepo=hid-tmff2-dkms-git
 when=install hotplug

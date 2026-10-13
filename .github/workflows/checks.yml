@@ -14,4 +14,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - run: tests/ci-checks
+      # as an ordinary user, like on a real system (olymparch-hw, for one, ignores test machines when run as root)
+      - run: |
+          useradd -m ci
+          chown -R ci: "$GITHUB_WORKSPACE"
+          runuser -u ci -- tests/ci-checks
