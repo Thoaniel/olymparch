@@ -6,9 +6,9 @@ set -euo pipefail
 export PATH=/usr/bin LC_ALL=C
 unset OLYMPARCH_SYSROOT OLYMPARCH_HW_DATA OLYMPARCH_HW_NO_LOCAL
 [ "$(id -u)" = 0 ] || { echo "hw-apply: run through pkexec" >&2; exit 1; }
-[ $# -ge 1 ] && [ $# -le 8 ] || { echo "bruk: hw-apply REGEL..." >&2; exit 2; }
+[ $# -ge 1 ] && [ $# -le 8 ] || { echo "usage: hw-apply RULE..." >&2; exit 2; }
 for id in "$@"; do
-    [[ $id =~ ^[a-z0-9][a-z0-9-]{0,63}$ ]] || { echo "hw-apply: ugyldig regel-id" >&2; exit 2; }
+    [[ $id =~ ^[a-z0-9][a-z0-9-]{0,63}$ ]] || { echo "hw-apply: invalid rule id" >&2; exit 2; }
 done
 user=''
 [ -n "${PKEXEC_UID:-}" ] && user=$(id -nu "$PKEXEC_UID" 2>/dev/null || true)

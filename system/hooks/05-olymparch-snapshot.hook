@@ -6,7 +6,7 @@ Type = Package
 Target = *
 
 [Action]
-Description = Olymparch: tar øyeblikksbilde
+Description = Olymparch: taking a snapshot / tar øyeblikksbilde
 When = PreTransaction
 Exec = /usr/bin/olymparch-snapshot
 NeedsTargets

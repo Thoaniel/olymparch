@@ -6,6 +6,6 @@ Type = Package
 Target = *
 
 [Action]
-Description = Olymparch: oppdaterer oppstartsmenyen
+Description = Olymparch: updating the boot menu / oppdaterer oppstartsmenyen
 When = PostTransaction
 Exec = /usr/bin/olymparch-boot sync

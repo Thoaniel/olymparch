@@ -2,11 +2,15 @@
 # What leaves this PC (read-only; Settings → Privacy): the open connections of your own programs right now,
 # and what Olymparch itself contacts. Olymparch has no telemetry.
 set -uo pipefail
-echo "Olymparch selv: pakkespeil (pacman), GitHub (oppdateringer/backup hvis slått på), nettsjekken til NetworkManager."
-echo "Ingen telemetri."
+# messages in English, or Norwegian for nb/nn/no (the shared rule: /usr/lib/olymparch/lang.sh)
+. /usr/lib/olymparch/lang.sh 2>/dev/null || . "${BASH_SOURCE[0]%/*}/../lib/lang.sh" 2>/dev/null || L() { printf '%s' "$1"; }
+echo "$(L "Olymparch itself: package mirrors (pacman), GitHub (updates/backup if switched on), NetworkManager's connectivity check." \
+          "Olymparch selv: pakkespeil (pacman), GitHub (oppdateringer/backup hvis slått på), nettsjekken til NetworkManager.")"
+echo "$(L "No telemetry." "Ingen telemetri.")"
 echo
-echo "Åpne tilkoblinger nå («ukjent program»: en prosess du ikke har innsyn i, f.eks. en annen bruker eller en sandkasse):"
+echo "$(L "Open connections now («unknown program»: a process you cannot see into, e.g. another user or a sandbox):" \
+          "Åpne tilkoblinger nå («ukjent program»: en prosess du ikke har innsyn i, f.eks. en annen bruker eller en sandkasse):")"
 # columns with a state filter: Recv-Q Send-Q Local Peer [Process]
-ss -Htnp state established 2>/dev/null | awk '{
-    p = "(ukjent program)"; if (match($0, /users:\(\("[^"]+"/)) p = substr($0, RSTART + 9, RLENGTH - 10)
+ss -Htnp state established 2>/dev/null | awk -v unknown="($(L "unknown program" "ukjent program"))" '{
+    p = unknown; if (match($0, /users:\(\("[^"]+"/)) p = substr($0, RSTART + 9, RLENGTH - 10)
     printf "  %-20s %s\n", p, $4 }' | sort -u

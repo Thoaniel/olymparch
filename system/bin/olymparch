@@ -2,8 +2,10 @@
 # Command router: olymparch update → olymparch-update, olymparch rollback 3 → olymparch-rollback 3, …
 cmd=${1:-help}
 shift || true
+# messages in English, or Norwegian for nb/nn/no (the shared rule: /usr/lib/olymparch/lang.sh)
+. /usr/lib/olymparch/lang.sh 2>/dev/null || . "${BASH_SOURCE[0]%/*}/../lib/lang.sh" 2>/dev/null || L() { printf '%s' "$1"; }
 if [ "$cmd" = help ] || [ "$cmd" = --help ]; then
-    echo "Olymparch-kommandoer:"
+    echo "$(L "Olymparch commands:" "Olymparch-kommandoer:")"
     for f in /usr/bin/olymparch-*; do printf '  olymparch %s\n' "${f##*/olymparch-}"; done
     exit 0
 fi

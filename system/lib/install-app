@@ -5,7 +5,7 @@
 set -euo pipefail
 export PATH=/usr/bin LC_ALL=C
 [ "$(id -u)" = 0 ] || { echo "install-app: run through pkexec" >&2; exit 1; }
-[ $# = 1 ] || { echo "bruk: install-app APP" >&2; exit 2; }
+[ $# = 1 ] || { echo "usage: install-app APP" >&2; exit 2; }
 case $1 in
     torrent) pkgs=(transmission-gtk) ;;
     backup) pkgs=(git openssh age) ;;   # Settings → Backup (olymparch-gitbackup)
@@ -36,10 +36,10 @@ case $1 in
     # AUR packages only from Olymparch's own signed repo [olymparch] (repo/packages.tsv), never from the AUR here
     localsend) pkgs=(localsend-bin) ;;
     # ── end of the catalog ──
-    *) echo "install-app: ukjent app" >&2; exit 2 ;;
+    *) echo "install-app: unknown app" >&2; exit 2 ;;
 esac
 case $1 in
-    localsend) grep -qx '\[olymparch\]' /etc/pacman.conf || { echo "install-app: $1 trenger pakkebrønnen [olymparch]" >&2; exit 3; } ;;
+    localsend) grep -qx '\[olymparch\]' /etc/pacman.conf || { echo "install-app: $1 needs the [olymparch] repository" >&2; exit 3; } ;;
 esac
 exec </dev/null 9>/run/olymparch-install-app.lock
 flock 9

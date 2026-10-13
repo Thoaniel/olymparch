@@ -47,7 +47,8 @@ for f in olymparch.plymouth olymparch-mkinitcpio-install olymparch-plymouth-hand
 done
 # the system commands, and the root helpers and policies that are installed already (the installer chose them)
 for f in "$repo"/system/bin/*; do put 755 "$f" "/usr/bin/${f##*/}"; done
-for f in "$repo"/system/lib/*; do [ -e "/usr/lib/olymparch/${f##*/}" ] && put 755 "$f" "/usr/lib/olymparch/${f##*/}"; done
+for f in "$repo"/system/lib/*; do [ "${f##*/}" != lang.sh ] && [ -e "/usr/lib/olymparch/${f##*/}" ] && put 755 "$f" "/usr/lib/olymparch/${f##*/}"; done
+put 644 "$repo/system/lib/lang.sh" /usr/lib/olymparch/lang.sh   # sourced by the system commands, so always
 put 755 "$repo/default/launch-shell" /usr/lib/olymparch/launch-shell
 for f in "$repo"/default/systemd/user/*; do put 644 "$f" "/usr/lib/systemd/user/${f##*/}"; done
 for f in "$repo"/system/polkit/*.policy; do [ -e "/usr/share/polkit-1/actions/${f##*/}" ] && put 644 "$f" "/usr/share/polkit-1/actions/${f##*/}"; done

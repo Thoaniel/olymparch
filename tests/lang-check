@@ -1,0 +1,76 @@
+#!/bin/bash
+# One language rule everywhere (system/lib/lang.sh): an English user never sees Norwegian, a Norwegian user gets
+# Norwegian. Runs a few commands' usage, help and read-only paths with LANG=en_US.UTF-8 and LANG=nb_NO.UTF-8 and
+# looks for Norwegian in the English output; also checks that no script picks the language from LC_ALL or
+# LC_MESSAGES. No VM, no root: everything runs in a throwaway HOME.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+fail=0
+bad() { echo "  FAIL  $1"; fail=1; }
+ok() { echo "  ok    $1"; }
+tmp=$(mktemp -d); trap 'rm -rf -- "$tmp"' EXIT
+mkdir -p "$tmp/home" "$tmp/run"
+chmod 700 "$tmp/run"
+
+# the helper itself
+rule() { env -u OLYMPARCH_LANG "$@" bash -c '. system/lib/lang.sh; printf "%s %s" "$OLYMPARCH_LANG" "$(L en no)"'; }
+for c in "LANG=nb_NO.UTF-8:nb no" "LANG=nn_NO.UTF-8:nb no" "LANG=no_NO:nb no" "LANG=en_US.UTF-8:en en" "LANG=C:en en" \
+         "LANG=de_DE.UTF-8:en en" "LANG=en_US.UTF-8 LC_ALL=nb_NO.UTF-8:en en" "LANG=en_US.UTF-8 LC_MESSAGES=nb_NO.UTF-8:en en"; do
+    got=$(eval "rule ${c%%:*}")
+    [ "$got" = "${c#*:}" ] && ok "lang.sh: ${c%%:*} → ${got%% *}" || bad "lang.sh: ${c%%:*} gave «$got», want «${c#*:}»"
+done
+got=$(env -u OLYMPARCH_LANG LANG=en_US.UTF-8 OLYMPARCH_LANG=nb bash -c '. system/lib/lang.sh; L en no')
+[ "$got" = no ] && ok "lang.sh: OLYMPARCH_LANG=nb wins over LANG" || bad "lang.sh: OLYMPARCH_LANG=nb gave «$got»"
+
+# Norwegian in English output: the letters, and a few common words
+norsk='[æøåÆØÅ]|(^|[^[:alpha:]])(ikke|Ikke|Trykk|bruk|Ingen|Rydd|Ferdig|Fjern|kjøres|ledig)([^[:alpha:]]|$)'
+# run LANG NAME CMD...: the output (stdout and stderr) of one command in that language, stdin closed
+run() {
+    local lang=$1; shift
+    env -i PATH="$PATH" HOME="$tmp/home" XDG_RUNTIME_DIR="$tmp/run" XDG_CONFIG_HOME="$tmp/home/.config" \
+        XDG_STATE_HOME="$tmp/home/.local/state" XDG_CACHE_HOME="$tmp/home/.cache" LANG="$lang" \
+        OLYMPARCH_PACMAN_LOG="$tmp/no-pacman.log" timeout 20 "$@" </dev/null 2>&1
+}
+check() {   # check NAME CMD...
+    local name=$1; shift
+    local en nb
+    en=$(run en_US.UTF-8 "$@")
+    nb=$(run nb_NO.UTF-8 "$@")
+    if [ -z "$en" ]; then bad "$name: no output"; return; fi
+    if grep -qE "$norsk" <<<"$en"; then
+        bad "$name: Norwegian in the English output: $(grep -E "$norsk" <<<"$en" | head -n 2 | tr '\n' ' ')"
+    elif [ "$en" = "$nb" ]; then
+        bad "$name: the same output in English and Norwegian: $(head -n 1 <<<"$en")"
+    else
+        ok "$name"
+    fi
+}
+check "olymparch help" system/bin/olymparch help
+check "olymparch-boot usage" system/bin/olymparch-boot
+check "olymparch-game-hook usage" system/bin/olymparch-game-hook
+check "olymparch-open-torrent usage" system/bin/olymparch-open-torrent
+check "olymparch-changes (no log)" system/bin/olymparch-changes
+check "olymparch-privacy" system/bin/olymparch-privacy
+check "olymparch-cleanup" system/bin/olymparch-cleanup
+if command -v lua >/dev/null; then
+    check "olymparch-settings zeus-setup (not installed)" system/bin/olymparch-settings zeus-setup
+    check "olymparch-settings zeus-install (no uv or installed)" env PATH=/nonexistent:/usr/bin:/bin system/bin/olymparch-settings zeus-install
+fi
+
+# nobody picks the language from LC_ALL or LC_MESSAGES (they say how to format, not what a person reads)
+if hits=$(grep -rnE 'LC_MESSAGES|(getenv|env|environ\.get)\(["'\'']LC_ALL' system/bin system/lib default/shell default/lock \
+        default/launch-shell bin 2>/dev/null | grep -v '^system/lib/lang.sh:'); then
+    bad "language read from LC_ALL/LC_MESSAGES: $hits"
+else
+    ok "no language from LC_ALL or LC_MESSAGES"
+fi
+# the converted shell commands use the shared helper
+for f in olymparch olymparch-update olymparch-cleanup olymparch-disk-check olymparch-scan-downloads olymparch-extract \
+         olymparch-privacy olymparch-changes olymparch-guard olymparch-boot olymparch-game-hook olymparch-open-torrent; do
+    grep -q '/usr/lib/olymparch/lang.sh' "system/bin/$f" || bad "system/bin/$f does not source /usr/lib/olymparch/lang.sh"
+done
+grep -q 'system/lib/lang.sh /mnt/usr/lib/olymparch/lang.sh' bin/olymparch-install || bad "bin/olymparch-install does not install lang.sh"
+grep -q 'system/lib/lang.sh" /usr/lib/olymparch/lang.sh' dev/apply-local || bad "dev/apply-local does not install lang.sh"
+
+[ $fail = 0 ] && echo "lang-check: all OK"
+exit $fail

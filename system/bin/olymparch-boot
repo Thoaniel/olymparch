@@ -5,9 +5,11 @@
 # Snapshot entries boot read-only with a writable overlay in RAM (systemd.volatile=overlay).
 # «Recovery (text mode)» boots the system without the boot screen and GPU driver, to a text shell.
 set -euo pipefail
-[ "${1:-}" = sync ] || { echo "bruk: olymparch-boot sync" >&2; exit 2; }
-[ "$(id -u)" = 0 ] || { echo "olymparch-boot må kjøres som root" >&2; exit 1; }
-mountpoint -q /boot || { echo "/boot er ikke montert" >&2; exit 1; }
+# messages in English, or Norwegian for nb/nn/no (the shared rule: /usr/lib/olymparch/lang.sh)
+. /usr/lib/olymparch/lang.sh 2>/dev/null || . "${BASH_SOURCE[0]%/*}/../lib/lang.sh" 2>/dev/null || L() { printf '%s' "$1"; }
+[ "${1:-}" = sync ] || { echo "$(L "usage" "bruk"): olymparch-boot sync" >&2; exit 2; }
+[ "$(id -u)" = 0 ] || { echo "$(L "olymparch-boot must run as root" "olymparch-boot må kjøres som root")" >&2; exit 1; }
+mountpoint -q /boot || { echo "$(L "/boot is not mounted" "/boot er ikke montert")" >&2; exit 1; }
 
 K=/boot/olymparch/k
 CONF=/etc/olymparch/boot.conf      # written by the installer: UUID, CMDLINE, KERNEL

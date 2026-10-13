@@ -66,7 +66,8 @@ RUNTIME = os.environ.get("XDG_RUNTIME_DIR") or ""
 RUN = os.path.join(RUNTIME, "olymparch-mcp") if RUNTIME else ""
 TOKEN = os.path.join(RUN, "token") if RUN else ""
 ANSWERS = os.path.join(RUN, "answers") if RUN else ""
-NB = (os.environ.get("LANG") or "").startswith(("nb", "nn", "no"))
+# the shared language rule (/usr/lib/olymparch/lang.sh): Norwegian for nb, nn or no in ${OLYMPARCH_LANG:-$LANG}
+NB = (os.environ.get("OLYMPARCH_LANG") or os.environ.get("LANG") or "")[:2] in ("nb", "nn", "no")
 
 
 def L(en, nb):
@@ -1085,7 +1086,7 @@ def t_rollback(a, s):
 
 
 # ── games
-@tool("games_list", "read", "List games", "Vis spill", "Programs counted as games (spillmodus) and the known emulators.")
+@tool("games_list", "read", "List games", "Vis spill", "Programs counted as games (game mode) and the known emulators.")
 def t_games(a, s):
     return ran(run([cmd("olymparch-game"), "list"]))
 

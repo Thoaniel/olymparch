@@ -6,6 +6,8 @@
 # Steam's `reaper SteamLaunch AppId=N`, SteamAppId/STEAM_COMPAT_APP_ID, HEROIC_APP_NAME, umu-run, an emulator,
 # or a program in ~/.config/olymparch/games.conf.
 set -euo pipefail
+# messages in English, or Norwegian for nb/nn/no (the shared rule: /usr/lib/olymparch/lang.sh)
+. /usr/lib/olymparch/lang.sh 2>/dev/null || . "${BASH_SOURCE[0]%/*}/../lib/lang.sh" 2>/dev/null || L() { printf '%s' "$1"; }
 share=/usr/share/olymparch/games
 conf=${XDG_CONFIG_HOME:-$HOME/.config}/olymparch/games.conf
 run=${XDG_RUNTIME_DIR:-/tmp}/olymparch/games
@@ -97,5 +99,5 @@ case ${1:-} in
         ;;
     start) say "spillmodus on"; spillmodus on ;;
     end) say "spillmodus off"; spillmodus off ;;
-    *) echo "bruk: olymparch-game-hook window ADRESSE [PID] | start | end" >&2; exit 2 ;;
+    *) echo "$(L "usage: olymparch-game-hook window ADDRESS [PID] | start | end" "bruk: olymparch-game-hook window ADRESSE [PID] | start | end")" >&2; exit 2 ;;
 esac

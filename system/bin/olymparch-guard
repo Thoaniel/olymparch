@@ -2,9 +2,11 @@
 # pacman PreTransaction guard (AbortOnFail): stop before anything changes if the update could break booting.
 # Override with OLYMPARCH_FORCE=1.
 [ "${OLYMPARCH_FORCE:-0}" = 1 ] && exit 0
+# messages in English, or Norwegian for nb/nn/no (the shared rule: /usr/lib/olymparch/lang.sh)
+. /usr/lib/olymparch/lang.sh 2>/dev/null || . "${BASH_SOURCE[0]%/*}/../lib/lang.sh" 2>/dev/null || L() { printf '%s' "$1"; }
 fail() { echo "olymparch: $*" >&2; exit 1; }
-mountpoint -q /boot || fail "/boot er ikke montert. Oppdateringen stoppes, så kjernen ikke havner feil sted."
+mountpoint -q /boot || fail "$(L "/boot is not mounted. The update is stopped, so the kernel does not end up in the wrong place." "/boot er ikke montert. Oppdateringen stoppes, så kjernen ikke havner feil sted.")"
 free=$(df --output=avail -k /boot | tail -n 1)
-(( free > 512 * 1024 )) || fail "under 512 MiB ledig på /boot."
-grep -q 'subvol=@snapshots/' /proc/cmdline && fail "du har startet fra et øyeblikksbilde. Rull tilbake først: olymparch rollback N"
+(( free > 512 * 1024 )) || fail "$(L "less than 512 MiB free on /boot." "under 512 MiB ledig på /boot.")"
+grep -q 'subvol=@snapshots/' /proc/cmdline && fail "$(L "you started from a snapshot. Roll back first: olymparch rollback N" "du har startet fra et øyeblikksbilde. Rull tilbake først: olymparch rollback N")"
 exit 0

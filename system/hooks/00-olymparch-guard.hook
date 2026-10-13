@@ -6,7 +6,7 @@ Type = Package
 Target = *
 
 [Action]
-Description = Olymparch: sjekker at oppdateringen er trygg
+Description = Olymparch: checking that the update is safe / sjekker at oppdateringen er trygg
 When = PreTransaction
 Exec = /usr/bin/olymparch-guard
 AbortOnFail
