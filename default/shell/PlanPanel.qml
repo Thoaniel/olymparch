@@ -30,7 +30,6 @@ Dropdown {
             if (r.status === 200 && r.json) p.events = (r.json.events || []).slice().sort((a, b) => String(a.start).localeCompare(String(b.start)));
         });
         rem.running = false; rem.running = true;
-        loadWeather();
     }
     onOpened: { result.text = ""; month = new Date(clock.date.getFullYear(), clock.date.getMonth(), 1); load(); }
 
@@ -90,30 +89,8 @@ Dropdown {
         }
     }
 
-    // ── the weather (MET Norway's locationforecast; they ask for a User-Agent that says who asks)
-    readonly property string weatherPlace: String(Settings.get("appearance.weather_place") || "").trim()
-    property var weather: null          // { now: °C, symbol, wind, later: [{ hour, temp }] }
-    function loadWeather() {
-        const m = weatherPlace.match(/^(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)$/);
-        if (!m) { weather = null; return; }
-        wx.command = ["curl", "-fsS", "--max-time", "8", "-A", "Olymparch/1.0 github.com/Thoaniel/olymparch",
-                      "https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=" + Number(m[1]).toFixed(2) + "&lon=" + Number(m[2]).toFixed(2)];
-        wx.running = false; wx.running = true;
-    }
-    Process {
-        id: wx
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const ts = JSON.parse(text).properties.timeseries;
-                    const d = t0 => t0.data.instant.details;
-                    const sym = t0 => ((t0.data.next_1_hours || t0.data.next_6_hours || {}).summary || {}).symbol_code || "";
-                    p.weather = { now: Math.round(d(ts[0]).air_temperature), wind: Math.round(d(ts[0]).wind_speed), symbol: sym(ts[0]),
-                                  later: [3, 6, 9, 12].filter(i => ts[i]).map(i => ({ hour: new Date(ts[i].time).getHours(), temp: Math.round(d(ts[i]).air_temperature) })) };
-                } catch (e) { p.weather = null; }
-            }
-        }
-    }
+    // ── the weather (Weather: MET Norway / yr.no, shared with the bar)
+    readonly property var weather: Weather.now
     readonly property var words: ({ clearsky: t("wx.clear", "clear"), fair: t("wx.fair", "fair"), partlycloudy: t("wx.partly", "partly cloudy"),
                                      cloudy: t("wx.cloudy", "cloudy"), fog: t("wx.fog", "fog"), rain: t("wx.rain", "rain"), lightrain: t("wx.lightrain", "light rain"),
                                      heavyrain: t("wx.heavyrain", "heavy rain"), sleet: t("wx.sleet", "sleet"), snow: t("wx.snow", "snow"),
@@ -122,7 +99,7 @@ Dropdown {
         theme: p.theme
         visible: !!p.weather
         label: p.t("plan.weather", "Weather")
-        value: p.weather ? p.weather.now + " °C  ·  " + (p.words[String(p.weather.symbol).replace(/_(day|night|polartwilight)$/, "")] || String(p.weather.symbol).replace(/_.*/, ""))
+        value: p.weather ? p.weather.temp + " °C  ·  " + (p.words[String(p.weather.symbol).replace(/_(day|night|polartwilight)$/, "")] || String(p.weather.symbol).replace(/_.*/, ""))
                            + "  ·  " + p.weather.wind + " m/s" : ""
     }
     PanelLine {
@@ -133,7 +110,7 @@ Dropdown {
         valueTint: p.theme.muted
     }
     PanelAction {
-        theme: p.theme; visible: p.weatherPlace === ""
+        theme: p.theme; visible: !Weather.enabled
         icon: "\u{F0590}"
         label: p.t("plan.weather_set", "Choose a place in Settings to see the weather")
         onActivated: { Panels.close("plan"); Quickshell.execDetached(["olymparch-settings", "open", "appearance"]); }

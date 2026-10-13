@@ -1,6 +1,7 @@
-// The right side of the bar: what is playing, microphone/camera in use, Zeus, network, volume, battery (laptops
-// only), do not disturb and the clock. Everything here follows events (PipeWire, MPRIS, NetworkManager, UPower);
-// nothing polls.
+// The right side of the bar: how the PC is doing (CPU, temperature, memory), what is playing, microphone/camera in
+// use, Zeus, network, volume, battery (laptops only), notifications, updates waiting, the weather and the clock.
+// Most of it follows events (PipeWire, MPRIS, NetworkManager, UPower); SysStats reads /proc every 3 s, Updates and
+// Weather now and then.
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -50,6 +51,11 @@ Row {
     readonly property var battery: UPower.displayDevice
     readonly property bool hasBattery: battery && battery.isLaptopBattery && battery.isPresent
 
+    // a thin line between groups of cells
+    component Divider: Item {
+        width: 13; height: 34
+        Rectangle { anchors.centerIn: parent; width: 1; height: 16; color: status.theme.line }
+    }
     component Cell: Item {
         id: cell
         property string icon
@@ -113,13 +119,49 @@ Row {
         }
     }
 
-    Cell {
-        id: mediaCell
-        visible: status.player !== null
-        icon: status.player && status.player.isPlaying ? "\u{F075A}" : "\u{F03E4}"
-        label: status.player ? [status.player.trackArtist, status.player.trackTitle].filter(s => s).join(" – ") : ""
-        clickable: true
-        onClicked: Panels.toggle("media", status.screenName)   // play/pause, next … are in the panel
+    // ── the left side of the bar (shell.qml gives the place after the workspaces): how the PC is doing — CPU use,
+    // the hottest temperature (graphics card, else CPU), memory in use, each with its own icon — and what is playing
+    property Item leftSlot: null
+    Row {
+        id: leftGroup
+        parent: status.leftSlot || status
+        spacing: 4
+        readonly property bool hotPc: SysStats.gpuTemp >= 95 || SysStats.cpuTemp >= 90
+        Cell {
+            id: sysCell
+            icon: "\u{F061A}"
+            label: SysStats.cpu + "%"
+            labelChars: 4
+            clickable: true
+            onClicked: Panels.toggle("system", status.screenName)
+        }
+        Cell {
+            readonly property int temp: SysStats.gpuTemp || SysStats.cpuTemp
+            visible: temp > 0
+            icon: "\u{F050F}"
+            label: temp + "°C"
+            labelChars: 5
+            tint: leftGroup.hotPc ? status.theme.red : status.theme.muted
+            labelTint: leftGroup.hotPc ? status.theme.red : status.theme.text
+            clickable: true
+            onClicked: Panels.toggle("system", status.screenName)
+        }
+        Cell {
+            icon: "\u{F035B}"
+            label: SysStats.gb(SysStats.memUsed) + " GB"
+            labelChars: 7
+            clickable: true
+            onClicked: Panels.toggle("system", status.screenName)
+        }
+        Divider { visible: mediaCell.visible }
+        Cell {
+            id: mediaCell
+            visible: status.player !== null
+            icon: status.player && status.player.isPlaying ? "\u{F075A}" : "\u{F03E4}"
+            label: status.player ? [status.player.trackArtist, status.player.trackTitle].filter(s => s).join(" – ") : ""
+            clickable: true
+            onClicked: Panels.toggle("media", status.screenName)   // play/pause, next … are in the panel
+        }
     }
     MediaPanel { theme: status.theme; anchorItem: mediaCell.visible ? mediaCell : clockItem; screenName: status.screenName }
     // Settings → Privacy → «Camera and microphone indicator» can hide these two
@@ -146,6 +188,7 @@ Row {
     }
     RecordPanel { theme: status.theme; anchorItem: recCell.visible ? recCell : clockItem; screenName: status.screenName }
     // ── Zeus (Zeus.qml, `olympus bar`): what it is doing and who answers; a click opens its panel (ZeusPanel.qml)
+    Divider { visible: micCell.visible || camCell.visible || recCell.visible }
     Cell {
         id: zeusCell
         visible: Zeus.enabled
@@ -159,7 +202,7 @@ Row {
         dot: waiting
         tint: off ? status.theme.muted : status.theme.gold
         labelTint: off ? status.theme.muted : waiting ? status.theme.goldHi : status.theme.text
-        maxLabelWidth: status.theme.px(260)
+        maxLabelWidth: status.theme.px(420)
         clickable: true
         onClicked: Panels.toggle("zeus", status.screenName)
         // thinking: the cell breathes; waiting for you: a gold dot on the bolt
@@ -185,6 +228,7 @@ Row {
         onClicked: Panels.toggle("agents", status.screenName)
     }
     AgentsPanel { theme: status.theme; anchorItem: agentsCell; screenName: status.screenName }
+    Divider {}
     Cell {
         id: netCell
         icon: !status.netDevice ? (status.hasWifi ? "\u{F092D}" : "\u{F0319}")
@@ -243,8 +287,27 @@ Row {
         onClicked: Panels.toggle("notifications", status.screenName)
     }
     NotificationsPanel { theme: status.theme; anchorItem: bellCell; screenName: status.screenName }
+    // updates waiting (a number only when there are some) and the weather (when Settings has a place)
+    Cell {
+        id: updatesCell
+        visible: Updates.count > 0
+        icon: "\u{F01DA}"
+        label: String(Updates.count)
+        tint: status.theme.gold
+        clickable: true
+        onClicked: Panels.toggle("system", status.screenName)
+    }
+    Divider { visible: weatherCell.visible }
+    Cell {
+        id: weatherCell
+        visible: !!Weather.now
+        icon: Weather.icon
+        label: Weather.now ? Weather.now.temp + "°" : ""
+        clickable: true
+        onClicked: Panels.toggle("plan", status.screenName)
+    }
     SystemClock { id: clock; precision: SystemClock.Minutes }
-    // the clock opens the Plan panel; the System panel (menu, IPC) hangs under it too
+    // the clock opens the Plan panel
     Item {
         id: clockItem
         width: clockText.implicitWidth
@@ -260,6 +323,6 @@ Row {
         MouseArea { id: clockMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Panels.toggle("plan", status.screenName) }
     }
     PlanPanel { theme: status.theme; anchorItem: clockItem; screenName: status.screenName }
-    SystemPanel { theme: status.theme; anchorItem: clockItem; screenName: status.screenName }
+    SystemPanel { theme: status.theme; anchorItem: sysCell; screenName: status.screenName }
 
 }

@@ -25,58 +25,17 @@ Dropdown {
     statusTint: info.problems > 0 ? theme.red : theme.muted
     onOpened: {
         loading = true; confirmPid = "";
-        cpuH = []; gpuH = []; memH = []; cpuT = []; gpuT = []; prevTotal = 0;
         probe.running = false; probe.running = true;
         gmState.running = false; gmState.running = true;
-        sample(); lists.running = false; lists.running = true;
+        SysStats.sample(); lists.running = false; lists.running = true;
     }
 
-    // ── live numbers: one small read of /proc and /sys every 1.5 s while the panel is open
-    readonly property int keep: 40
-    property var cpuH: []; property var gpuH: []; property var memH: []; property var cpuT: []; property var gpuT: []
-    property real prevTotal: 0; property real prevIdle: 0
-    property string memText: ""; property string vramText: ""; property string uptime: ""
-    function push(arr, v) { const a = arr.concat([v]); return a.length > keep ? a.slice(a.length - keep) : a; }
-    function last(a) { return a.length ? a[a.length - 1] : 0; }
-    function gb(bytes) { return Number(bytes / 1073741824).toLocaleString(Qt.locale(), "f", 1); }
-    function sample() { live.running = false; live.running = true; }
-    Timer { running: p.visible; interval: 1500; repeat: true; onTriggered: p.sample() }
-    Process {
-        id: live
-        command: ["sh", "-c",
-            "head -1 /proc/stat; grep -E '^(MemTotal|MemAvailable):' /proc/meminfo; " +
-            "for c in /sys/class/drm/card*/device; do [ -r $c/gpu_busy_percent ] && { echo gpu $(cat $c/gpu_busy_percent $c/mem_info_vram_used $c/mem_info_vram_total 2>/dev/null); break; }; done; " +
-            "for h in /sys/class/hwmon/hwmon*; do n=$(cat $h/name 2>/dev/null); for f in $h/temp*_input; do [ -r $f ] && echo t $n $(cat $f); done; done 2>/dev/null; " +
-            "echo up $(cut -d' ' -f1 /proc/uptime)"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                let memTotal = 0, memAvail = 0, cpuMax = 0, gpuMax = 0;
-                for (const l of text.split("\n")) {
-                    const f = l.trim().split(/\s+/);
-                    if (f[0] === "cpu") {
-                        const n = f.slice(1).map(Number), idle = n[3] + (n[4] || 0), total = n.reduce((a, b) => a + b, 0);
-                        if (p.prevTotal > 0 && total > p.prevTotal) p.cpuH = p.push(p.cpuH, Math.round(100 * (1 - (idle - p.prevIdle) / (total - p.prevTotal))));
-                        p.prevTotal = total; p.prevIdle = idle;
-                    } else if (f[0] === "MemTotal:") memTotal = Number(f[1]) * 1024;
-                    else if (f[0] === "MemAvailable:") memAvail = Number(f[1]) * 1024;
-                    else if (f[0] === "gpu" && f.length >= 2) {
-                        p.gpuH = p.push(p.gpuH, Number(f[1]));
-                        p.vramText = f.length >= 4 ? p.gb(Number(f[2])) + " / " + p.gb(Number(f[3])) + " GB" : "";
-                    } else if (f[0] === "t" && f.length >= 3) {
-                        const c = Number(f[2]) / 1000;
-                        if (!(c > 0 && c < 130)) continue;
-                        if (/^(amdgpu|nouveau|nvidia|xe|i915)/.test(f[1])) gpuMax = Math.max(gpuMax, c);
-                        else if (/^(k10temp|coretemp|zenpower|cpu_thermal|acpitz)/.test(f[1])) cpuMax = Math.max(cpuMax, c);
-                    } else if (f[0] === "up") {
-                        const s = Math.floor(Number(f[1])), d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
-                        p.uptime = (d ? d + " " + p.t("system.days", "d") + " " : "") + h + " " + p.t("system.hours", "h") + " " + m + " min";
-                    }
-                }
-                if (memTotal > 0) { p.memH = p.push(p.memH, Math.round(100 * (memTotal - memAvail) / memTotal)); p.memText = p.gb(memTotal - memAvail) + " / " + p.gb(memTotal) + " GB"; }
-                if (cpuMax > 0) p.cpuT = p.push(p.cpuT, Math.round(cpuMax));
-                if (gpuMax > 0) p.gpuT = p.push(p.gpuT, Math.round(gpuMax));
-            }
-        }
+    // ── live numbers (SysStats, shared with the bar): sampled faster while this panel is open
+    onVisibleChanged: SysStats.fast = visible
+    function gb(bytes) { return SysStats.gb(bytes); }
+    readonly property string uptime: {
+        const t = SysStats.uptime, d = Math.floor(t / 86400), h = Math.floor(t % 86400 / 3600), m = Math.floor(t % 3600 / 60);
+        return t ? (d ? d + " " + p.t("system.days", "d") + " " : "") + h + " " + p.t("system.hours", "h") + " " + m + " min" : "";
     }
 
     // a row: label, the number, and its graph on the right
@@ -98,12 +57,12 @@ Dropdown {
         Sparkline { id: graph; theme: p.theme; width: p.theme.px(120); height: p.theme.px(20); anchors { right: parent.right; rightMargin: p.theme.px(18); verticalCenter: parent.verticalCenter }
                     values: m.values; max: m.max; tint: m.hot ? p.theme.red : p.theme.gold }
     }
-    Meter { label: p.t("system.cpu_use", "CPU"); values: p.cpuH; value: p.last(p.cpuH) + " %" }
-    Meter { label: p.t("system.gpu_use", "Graphics card"); values: p.gpuH; value: p.last(p.gpuH) + " %" }
-    PanelLine { theme: p.theme; visible: p.vramText !== ""; label: p.t("system.vram", "Graphics memory"); value: p.vramText }
-    Meter { label: p.t("system.memory", "Memory"); values: p.memH; value: p.memText; warn: 90 }
-    Meter { label: p.t("system.cpu_temp", "CPU temperature"); values: p.cpuT; value: p.last(p.cpuT) + " °C"; max: 100; warn: 90 }
-    Meter { label: p.t("system.gpu_temp", "GPU temperature"); values: p.gpuT; value: p.last(p.gpuT) + " °C"; max: 110; warn: 95 }
+    Meter { label: p.t("system.cpu_use", "CPU"); values: SysStats.cpuH; value: SysStats.cpu + " %" }
+    Meter { label: p.t("system.gpu_use", "Graphics card"); values: SysStats.gpuH; value: SysStats.gpu + " %" }
+    PanelLine { theme: p.theme; visible: SysStats.vramTotal > 0; label: p.t("system.vram", "Graphics memory"); value: p.gb(SysStats.vramUsed) + " / " + p.gb(SysStats.vramTotal) + " GB" }
+    Meter { label: p.t("system.memory", "Memory"); values: SysStats.memH; value: p.gb(SysStats.memUsed) + " / " + p.gb(SysStats.memTotal) + " GB"; warn: 90 }
+    Meter { label: p.t("system.cpu_temp", "CPU temperature"); values: SysStats.cpuT; value: SysStats.cpuTemp + " °C"; max: 100; warn: 90 }
+    Meter { label: p.t("system.gpu_temp", "GPU temperature"); values: SysStats.gpuT; value: SysStats.gpuTemp + " °C"; max: 110; warn: 95 }
     PanelLine { theme: p.theme; visible: p.uptime !== ""; label: p.t("system.uptime", "Uptime"); value: p.uptime }
 
     // ── what uses the most CPU, and the disks (read when the panel opens)

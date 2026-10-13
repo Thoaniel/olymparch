@@ -148,6 +148,7 @@ ShellRoot {
                     Rectangle { anchors { left: parent.left; right: parent.right; bottom: parent.bottom } height: 1; color: root.line }
 
                     Row {
+                        id: workspaceRow
                         anchors { left: parent.left; leftMargin: 6; verticalCenter: parent.verticalCenter }
                         Repeater {
                             model: Hyprland.workspaces
@@ -169,6 +170,14 @@ ShellRoot {
                                 MouseArea { anchors.fill: parent; onClicked: Hyprland.dispatch(`hl.dsp.focus({ workspace = ${parent.modelData.id} })`) }
                             }
                         }
+                    }
+
+                    // the left side after the workspaces: BarStatus puts the system numbers and what is playing here
+                    Item {
+                        id: leftSlot
+                        anchors { left: workspaceRow.right; leftMargin: 8; verticalCenter: parent.verticalCenter }
+                        width: childrenRect.width; height: 34
+                        Rectangle { anchors.verticalCenter: parent.verticalCenter; x: -4; width: 1; height: 16; color: root.line }
                     }
 
                     // The wordmark gives way (only the bolt stays) when the right side grows into it on a narrow screen
@@ -197,6 +206,7 @@ ShellRoot {
                     BarStatus {
                         id: barStatus
                         theme: root
+                        leftSlot: leftSlot
                         screenName: modelData.name
                         clockFormat: (Settings.get("appearance.clock_format") === "12h" ? "ddd d%1 MMM  h:mm AP" : "ddd d%1 MMM  HH:mm")
                             .arg(Qt.locale().name.startsWith("nb") || Qt.locale().name.startsWith("nn") ? "." : "")
