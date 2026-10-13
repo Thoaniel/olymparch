@@ -4,9 +4,16 @@
 shell=/usr/share/olymparch/shell
 log=${XDG_STATE_HOME:-$HOME/.local/state}/olymparch/shell.log
 mkdir -p "${log%/*}"
+# Development: ~/.config/olymparch/dev-shell can hold the path of a shell folder of your own (a checkout's
+# default/shell). It runs as you, like any program you start; delete the file to go back. Read at every start.
+dev=${XDG_CONFIG_HOME:-$HOME/.config}/olymparch/dev-shell
+pick_shell() {
+    local d
+    if [ -f "$dev" ] && IFS= read -r d <"$dev" && [ -f "$d/shell.qml" ] && [ -O "$d" ]; then printf '%s' "$d"; else printf '%s' "$shell"; fi
+}
 starts=()
 while true; do
-    QS_NO_RELOAD_POPUP=1 QS_DISABLE_FILE_WATCHER=1 quickshell -p "$shell" >>"$log" 2>&1
+    QS_NO_RELOAD_POPUP=1 QS_DISABLE_FILE_WATCHER=1 quickshell -p "$(pick_shell)" >>"$log" 2>&1
     code=$?
     [ "$code" = 0 ] && exit 0
     now=$(date +%s)
