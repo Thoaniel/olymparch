@@ -1,0 +1,29 @@
+#!/bin/bash
+# Writes an Olymparch USB stick (run as root): partition 1 = the boot partition from dev/build-usb-image,
+# partition 2 = ext4 data partition OLYMPARCH-DATA owned by OWNER, filling the rest. The stick's serial number
+# must be given too, so a mistyped device name can never wipe the wrong disk. Everything on the stick is erased.
+#
+#   sudo dev/write-usb /dev/sdX SERIAL out/olymparch-usb.boot.img [OWNER]      (lsblk -o NAME,SERIAL,MODEL)
+set -euo pipefail
+[ $# -ge 3 ] || { sed -n '2,6p' "$0"; exit 2; }
+dev=$1 serial=$2 boot=$3 owner=${4:-${SUDO_UID:-1000}:${SUDO_GID:-1000}}
+[ "$(id -u)" = 0 ] || { echo "Run as root (sudo)." >&2; exit 2; }
+[ -b "$dev" ] && [ "$(lsblk -dno TYPE "$dev")" = disk ] || { echo "$dev is not a whole disk." >&2; exit 1; }
+[ "$(lsblk -dno SERIAL "$dev")" = "$serial" ] || { echo "$dev has serial «$(lsblk -dno SERIAL "$dev")», not $serial. Stopping." >&2; exit 1; }
+[ "$(lsblk -dno RM "$dev" | tr -d ' ')" = 1 ] || [ "$(lsblk -dno TRAN "$dev")" = usb ] || { echo "$dev is not a USB/removable disk." >&2; exit 1; }
+boot_mib=$(( $(stat -c %s "$boot") / 1048576 ))
+[ "$boot_mib" -ge 512 ] || { echo "$boot does not look like a boot image." >&2; exit 1; }
+
+echo "Erasing $dev ($(lsblk -dno SIZE,MODEL "$dev" | xargs)) in 5 s. Ctrl+C stops."
+sleep 5
+for p in $(lsblk -lno PATH "$dev" | tail -n +2); do umount -q "$p" 2>/dev/null || true; done
+wipefs -qa "$dev"
+printf 'label: gpt\nstart=2048, size=%s, type=U, name="OLYMPARCH"\nstart=%s, type=L, name="OLYMPARCH-DATA"\n' \
+    $((boot_mib * 2048)) $((2048 + boot_mib * 2048)) | sfdisk -q "$dev"
+udevadm settle
+p1=$(lsblk -lno PATH "$dev" | sed -n 2p) p2=$(lsblk -lno PATH "$dev" | sed -n 3p)
+dd if="$boot" of="$p1" bs=4M conv=fsync status=progress
+mkfs.ext4 -q -F -L OLYMPARCH-DATA -E root_owner="$owner" "$p2"
+sync
+lsblk -o NAME,SIZE,FSTYPE,LABEL "$dev"
+echo "Done: boot from $p1, data on $p2 (OLYMPARCH-DATA)."

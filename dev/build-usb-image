@@ -1,0 +1,33 @@
+#!/bin/bash
+# Builds a whole-disk USB image from an Olymparch ISO, without root: partition 1 is a FAT32 boot partition
+# holding the ISO's files (archiso finds itself by the archisosearchuuid file, so no label tricks), partition 2
+# is an ext4 data partition owned by you, labelled OLYMPARCH-DATA, filling the rest of the stick.
+# Also leaves OUT.boot.img (just the boot partition): dev/write-usb writes a real stick from it in a few minutes.
+#
+#   dev/build-usb-image ISO OUT.img SIZE_BYTES      SIZE_BYTES: the stick's exact size (lsblk -bdno SIZE /dev/sdX)
+set -euo pipefail
+[ $# = 3 ] || { sed -n '2,7p' "$0"; exit 2; }
+iso=$(realpath -- "$1") out=$(realpath -- "$2") size=$3
+. "$(dirname "$0")/env"
+boot_mib=2048
+work=$(mktemp -d "${TMPDIR:-/tmp}/olymparch-usb.XXXXXX")
+trap 'chmod -R u+w -- "$work" 2>/dev/null; rm -rf -- "$work" "$work.fat"' EXIT
+
+bsdtar -xf "$iso" -C "$work" --exclude '[BOOT]'
+need=$(du -sm "$work" | cut -f1)
+[ "$need" -lt $((boot_mib - 128)) ] || { echo "The ISO ($need MiB) does not fit in $boot_mib MiB" >&2; exit 1; }
+
+rm -f -- "$out"
+truncate -s "$size" "$out"
+printf 'label: gpt\nstart=2048, size=%s, type=U, name="OLYMPARCH"\nstart=%s, type=L, name="OLYMPARCH-DATA"\n' \
+    $((boot_mib * 2048)) $((2048 + boot_mib * 2048)) | sfdisk -q "$out"
+
+mkfs.fat -F 32 -n OLYMPARCH -C "$work.fat" $((boot_mib * 1024)) >/dev/null
+mcopy -s -i "$work.fat" "$work"/* ::/
+dd if="$work.fat" of="$out" bs=1M seek=1 conv=notrunc,sparse status=none
+mv -- "$work.fat" "${out%.img}.boot.img"
+
+start2=$((2048 + boot_mib * 2048))
+sectors2=$(sfdisk -d "$out" | awk -v s="$start2" '$4 == s"," { gsub(",", "", $6); print $6 }')
+mkfs.ext4 -q -L OLYMPARCH-DATA -E offset=$((start2 * 512)),root_owner="$(id -u):$(id -g)" "$out" $((sectors2 / 2))k
+echo "$out: boot ${boot_mib} MiB + data $((sectors2 / 2048)) MiB"
