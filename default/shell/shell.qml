@@ -128,6 +128,9 @@ ShellRoot {
                         cache: true
                         asynchronous: false
                     }
+                    // a click on the empty desktop closes an open bar panel (the wallpaper never takes the keyboard,
+                    // so the panel would not notice it otherwise)
+                    MouseArea { anchors.fill: parent; enabled: Panels.current !== ""; onPressed: Panels.close(Panels.current) }
                 }
             }
 
