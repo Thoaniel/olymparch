@@ -1,5 +1,5 @@
 #!/bin/bash
-# Olymparch installer, piece 2: unattended install from an answers file. The interactive wizard comes later
+# Olymparch installer, piece 2: unattended install from an answers file. The interactive wizard is olymparch-setup.
 # and will write the same answers file.
 #
 #   olymparch-install --answers FILE [--recovery-key-file FILE]

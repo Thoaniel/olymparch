@@ -1,7 +1,8 @@
 
   Olymparch installer
 
-  Install Olymparch:   olymparch-install --answers FILE   (the wizard comes in the next version)
+  Install Olymparch:   olymparch-setup                    (the wizard; Norwegian on the first screen)
+  Unattended:          olymparch-install --answers FILE
   Wi-Fi:               nmtui or iwctl
   Keyboard layout:     loadkeys no
 
