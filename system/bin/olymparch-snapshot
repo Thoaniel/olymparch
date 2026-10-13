@@ -1,6 +1,42 @@
 #!/bin/bash
-# pacman PreTransaction: one snapper snapshot before every package change (listed in the boot menu).
-desc="before: $(tr '\n' ' ' | cut -c1-60)"   # pacman passes the package names on stdin
-snapper -c root create --type single --cleanup-algorithm number --description "$desc" >/dev/null 2>&1 || \
-    echo "olymparch: fikk ikke tatt øyeblikksbilde" >&2
+# pacman PreTransaction: one snapper snapshot before every package change, listed in the boot menu at once (so the
+# state from just before an update is there even if the power goes in the middle of it).
+#   Before a system update (the kernel, systemd, glibc, mesa, Hyprland or pacman, or more than 10 packages) the
+#   snapshot is marked important: snapper keeps those apart (NUMBER_LIMIT_IMPORTANT), so installing a few apps
+#   afterwards never pushes the last good system out.
+# If the snapshot cannot be taken, the change is stopped (the hook has AbortOnFail): no update without a way back.
+# OLYMPARCH_NO_SNAPSHOT=1 lets a change through anyway (for repairs by hand).
+set -uo pipefail
+lang=${LANG:-}
+[ -n "$lang" ] || lang=$(sed -n 's/^LANG=//p' /etc/locale.conf 2>/dev/null | head -n 1)
+nb=0
+case $lang in nb* | no* | nn*) nb=1 ;; esac
+L() { if ((nb)); then printf '%s' "$2"; else printf '%s' "$1"; fi; }
+
+mapfile -t pkgs   # pacman passes the package names on stdin, one per line
+n=${#pkgs[@]}
+important=no
+((n > 10)) && important=yes
+for p in "${pkgs[@]}"; do
+    case $p in linux | linux-lts | linux-zen | linux-hardened | linux-firmware* | systemd | glibc | mesa | hyprland | pacman | olymparch*) important=yes ;; esac
+done
+if [ "$important" = yes ]; then
+    desc="$(L "Before an update" "Før en oppdatering") · $n $(L packages pakker)"
+else
+    desc="$(L "Before" "Før"): $(printf '%s ' "${pkgs[@]}" | cut -c1-60)"
+fi
+if ! snapper -c root create --type single --cleanup-algorithm number --userdata "important=$important" \
+        --description "$desc" >/dev/null 2>&1; then
+    if [ "${OLYMPARCH_NO_SNAPSHOT:-}" = 1 ]; then
+        L "olymparch: no snapshot (OLYMPARCH_NO_SNAPSHOT=1): going on without one" "olymparch: intet øyeblikksbilde (OLYMPARCH_NO_SNAPSHOT=1): fortsetter uten" >&2
+        echo >&2
+        exit 0
+    fi
+    L "Olymparch could not take a snapshot first, so nothing was changed. Check the system with olymparch-doctor (or free some disk space) and try again." \
+      "Olymparch fikk ikke tatt et øyeblikksbilde først, så ingenting ble endret. Sjekk systemet med olymparch-doctor (eller frigjør diskplass) og prøv igjen." >&2
+    echo >&2
+    exit 1
+fi
+# in the boot menu now, not only after the change
+olymparch-boot sync >/dev/null 2>&1 || true
 exit 0

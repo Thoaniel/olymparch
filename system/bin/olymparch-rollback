@@ -1,29 +1,61 @@
 #!/bin/bash
 # Make snapshot N the system. The current system is kept as @.broken-<date>, never deleted.
-#   olymparch rollback N      (then reboot)
-#   olymparch rollback        in a terminal: shows the snapshots and asks for N (Settings → Disks → Roll back)
+#   olymparch-rollback N      (then restart)
+#   olymparch-rollback        in a terminal: shows the snapshots and asks for N (Settings → Disks → Roll back)
+# The snapshot's own kernel goes back into /boot with it (kernels are kept per version in /boot/olymparch/k by
+# olymparch-boot): without that, the restored system would start a newer kernel whose drivers it does not have.
 set -euo pipefail
+# the user's language: LANG, else the system's (sudo may not pass LANG on)
+lang=${LANG:-}
+[ -n "$lang" ] || lang=$(sed -n 's/^LANG=//p' /etc/locale.conf 2>/dev/null | head -n 1)
+nb=0
+case $lang in nb* | no* | nn*) nb=1 ;; esac
+L() { if ((nb)); then printf '%s' "$2"; else printf '%s' "$1"; fi; }
 n=${1:-}
 if [ -z "$n" ] && [ -t 0 ]; then
-    [ "$(id -u)" = 0 ] || exec sudo "$0"
+    [ "$(id -u)" = 0 ] || exec sudo LANG="$lang" "$0"
     snapper list || true
     echo
-    read -r -p "Nummer på øyeblikksbildet som skal bli systemet (tomt = avbryt): " n
+    read -r -p "$(L "Number of the snapshot that becomes the system (empty = cancel): " "Nummer på øyeblikksbildet som skal bli systemet (tomt = avbryt): ")" n
     [ -n "$n" ] || exit 0
-    [[ $n =~ ^[0-9]+$ ]] || { echo "ikke et tall" >&2; read -r -p "Trykk Enter for å lukke." _; exit 2; }
+    [[ $n =~ ^[0-9]+$ ]] || { L "not a number" "ikke et tall" >&2; echo >&2; read -r -p "$(L "Press Enter to close." "Trykk Enter for å lukke.")" _; exit 2; }
     rc=0; "$0" "$n" || rc=$?
-    read -r -p "Trykk Enter for å lukke." _
+    read -r -p "$(L "Press Enter to close." "Trykk Enter for å lukke.")" _
     exit "$rc"
 fi
-[[ $n =~ ^[0-9]+$ ]] || { echo "bruk: olymparch rollback N   (se: snapper list)" >&2; exit 2; }
-[ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
+[[ $n =~ ^[0-9]+$ ]] || { L "usage: olymparch-rollback N   (see: snapper list)" "bruk: olymparch-rollback N   (se: snapper list)" >&2; echo >&2; exit 2; }
+[ "$(id -u)" = 0 ] || exec sudo LANG="$lang" "$0" "$@"
 dev=$(findmnt -no SOURCE /.snapshots | sed 's/\[.*//')   # / is an overlay when booted from a snapshot
 top=$(mktemp -d)
 trap 'umount "$top" 2>/dev/null; rmdir "$top"' EXIT
 mount -o subvolid=5 "$dev" "$top"
-[ -d "$top/@snapshots/$n/snapshot" ] || { echo "fant ikke øyeblikksbilde $n" >&2; exit 1; }
+[ -d "$top/@snapshots/$n/snapshot" ] || { printf '%s %s\n' "$(L "no snapshot" "fant ikke øyeblikksbilde")" "$n" >&2; exit 1; }
+
+# the snapshot's kernel, before anything is moved: no kernel copy = refuse (the restored system would have no drivers)
+K=/boot/olymparch/k
+CONF=/etc/olymparch/boot.conf
+# shellcheck disable=SC1090
+. "$CONF"
+mountpoint -q /boot || mount /boot
+v=''
+for d in "$top/@snapshots/$n/snapshot"/usr/lib/modules/*/; do [ -f "$d/vmlinuz" ] && v=$(basename "$d") && break; done
+if [ -z "$v" ] || [ ! -f "$K/$v/vmlinuz" ] || [ ! -f "$K/$v/initramfs.img" ]; then
+    L "This snapshot's kernel ($v) is no longer kept, so it cannot be started safely. Nothing was changed." \
+      "Kjernen til dette øyeblikksbildet ($v) er ikke tatt vare på, så det kan ikke startes trygt. Ingenting er endret." >&2
+    echo >&2
+    exit 1
+fi
+
+# keep the running system's own kernel first (olymparch-boot copies /boot's kernel under the running version)
+olymparch-boot sync || true
 stamp=$(date +%Y%m%d-%H%M%S)
 mv "$top/@" "$top/@.broken-$stamp"
 btrfs -q subvolume snapshot "$top/@snapshots/$n/snapshot" "$top/@"
-echo "Øyeblikksbilde $n er nå systemet. Det gamle ligger som @.broken-$stamp."
-echo "Start maskinen på nytt for å bruke det."
+# the kernel and initramfs that belong to it, so the normal boot entry starts the right one
+cp "$K/$v/vmlinuz" "/boot/vmlinuz-$KERNEL.new" && mv "/boot/vmlinuz-$KERNEL.new" "/boot/vmlinuz-$KERNEL"
+cp "$K/$v/initramfs.img" "/boot/initramfs-$KERNEL.img.new" && mv "/boot/initramfs-$KERNEL.img.new" "/boot/initramfs-$KERNEL.img"
+sync
+printf '%s\n' "$(L "Snapshot $n is now the system (kernel $v). The old system is kept as @.broken-$stamp." \
+                   "Øyeblikksbilde $n er nå systemet (kjerne $v). Det gamle ligger som @.broken-$stamp.")"
+L "Restart the PC to use it." "Start maskinen på nytt for å bruke det."
+echo
