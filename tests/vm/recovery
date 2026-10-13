@@ -55,7 +55,7 @@ press ret
 wait_text 'passphrase|password|Please enter' 90 || { shot passord-feil "Ingen passordspørsmål"; finish "FAIL · ingen tekstspørsmål om diskpassordet"; }
 shot passord "Diskpassordet spørres om som tekst (ingen oppstartsskjerm)"
 keys "$PW\n"
-wait_text 'Olymparch recovery' 120 || { shot skall-feil "Ikke recovery-skallet"; finish "FAIL · recovery-meldingen kom ikke på tty1"; }
+wait_text 'Olymparch (recovery|gjenoppretting)' 120 || { shot skall-feil "Ikke recovery-skallet"; finish "FAIL · recovery-meldingen kom ikke på tty1"; }
 shot skall "Tekstskall på tty1 med recovery-meldingen, uten skrivebord"
 # the shell works and the desktop is not running
 keys 'clear; pgrep -x Hyprland >/dev/null && echo DESKTOP-RUNNING || echo NO-DESKTOP; tr " " "\n" </proc/cmdline | grep -E "^(nomodeset|plymouth.enable=0|olymparch.recovery)$" | paste -sd" "\n'

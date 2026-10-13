@@ -21,6 +21,15 @@ Singleton {
     property string provider: ""
     property bool cloud: false
     property string answering: ""         // the model that answered last
+    // who that is: the provider of the model that answered (the fallback chain may have moved on from the chosen one)
+    readonly property string answeringProvider: {
+        if (!answering || answering === model) return provider;
+        const c = (models.choices || []).find(x => x.id === answering);
+        if (c) return c.provider === "lokal" ? "lokal" : c.provider;
+        const f = (models.fallback || []).find(x => x.id === answering);
+        return f ? f.label : answering.indexOf("/") > 0 ? answering.split("/")[0] : "lokal";
+    }
+    readonly property bool answeringCloud: answering ? answeringProvider !== "lokal" : cloud
     property string state: "idle"         // off | approval | thinking | idle
     property var approvals: []            // [{ id, tool, reason, danger, preview }]
     property var lastError: null          // { text, at }
@@ -53,6 +62,14 @@ Singleton {
     }
     Timer { id: restart; interval: 3000; onTriggered: if (zeus.enabled && !bridge.running) bridge.running = true }
 
+    IpcHandler {   // read-only, for the VM tests: what the bar and the panel show
+        target: "zeus"
+        function status(): string {
+            return JSON.stringify({ connected: zeus.connected, state: zeus.state, provider: zeus.provider, cloud: zeus.cloud,
+                                    answering: zeus.answering, answering_provider: zeus.answeringProvider, approvals: zeus.approvals.length,
+                                    error: zeus.lastError ? zeus.lastError.text : "", messages: zeus.messages.length });
+        }
+    }
     function out(obj) { if (bridge.running) bridge.write(JSON.stringify(obj) + "\n"); }
     property int rid: 0
     property var pending: ({})            // rid → callback(reply)

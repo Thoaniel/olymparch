@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+"""Every string key the shell asks I18n for (I18n.t("key", …), and the panels' own t("key", …)) is in both
+default/i18n/en.json and nb.json, and the two files have the same keys. No VM needed."""
+import json
+import pathlib
+import re
+import sys
+
+root = pathlib.Path(__file__).resolve().parent.parent
+en = json.loads((root / "default/i18n/en.json").read_text())
+nb = json.loads((root / "default/i18n/nb.json").read_text())
+used = {}
+for f in sorted((root / "default/shell").glob("*.qml")):
+    for key in re.findall(r'\b(?:I18n\.)?t\("([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+)",', f.read_text()):
+        used.setdefault(key, f.name)
+missing = [(k, f) for k, f in sorted(used.items()) if k not in en or k not in nb]
+only = sorted(set(en) ^ set(nb))
+for k, f in missing:
+    print(f"  FAIL  {k} ({f}) missing in {'en.json' if k not in en else ''} {'nb.json' if k not in nb else ''}".rstrip())
+for k in only:
+    print(f"  FAIL  {k} is only in {'en.json' if k in en else 'nb.json'}")
+if missing or only:
+    sys.exit(1)
+print(f"  ok    {len(used)} keys used in the shell, all in en.json and nb.json ({len(en)} each)")

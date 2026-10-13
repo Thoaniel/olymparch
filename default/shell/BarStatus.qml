@@ -153,7 +153,7 @@ Row {
         label: off ? I18n.t("zeus.bar.off", "Zeus off")
              : waiting ? I18n.t("zeus.bar.waiting", "Zeus · waiting")
              : Zeus.state === "thinking" ? I18n.t("zeus.bar.thinking", "Zeus · thinking")
-             : Zeus.cloud ? "Zeus · " + Zeus.provider : "Zeus"
+             : Zeus.answeringCloud ? "Zeus · " + Zeus.answeringProvider : "Zeus"   // who answered, after a fallback too
         dot: waiting
         tint: off ? status.theme.muted : status.theme.gold
         labelTint: off ? status.theme.muted : waiting ? status.theme.goldHi : status.theme.text

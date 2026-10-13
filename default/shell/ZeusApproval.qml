@@ -5,6 +5,7 @@
 // not shown at all (Zeus waits; the bar's gold dot and the panel still have it). Data: Zeus.qml.
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Wayland
 
 Scope {
@@ -15,6 +16,10 @@ Scope {
     readonly property bool show: Zeus.approvals.length > 0 && !gameActive && Panels.current !== "zeus"
         && Settings.get("appearance.bar") !== false
 
+    IpcHandler {   // read-only, for the VM tests: is the card on screen (there is no IPC call that answers it)
+        target: "zeuscard"
+        function shown(): bool { return za.show; }
+    }
     PanelWindow {
         screen: Quickshell.screens.find(s => s.name === Panels.focusedScreen()) || Quickshell.screens[0]
         visible: za.show

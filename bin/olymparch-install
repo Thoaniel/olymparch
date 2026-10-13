@@ -403,9 +403,15 @@ cat >/mnt/etc/profile.d/zz-olymparch-session.sh <<'SESSION'
 # (olymparch.recovery) gives a plain shell instead. A desktop that stops with an error logs out; the next
 # login (with the password: autologin is once per boot) then gets a plain shell instead of the desktop.
 if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ "$(id -u)" != 0 ] && grep -qw olymparch.recovery /proc/cmdline; then
-    printf '\n  Olymparch recovery (text mode). The desktop is not started.\n  Check the system: olymparch-doctor · drivers: olymparch-hw plan · log: journalctl -b -p err\n  Back to normal: reboot and pick Olymparch in the boot menu.\n\n'
+    case ${LANG:-} in
+        nb* | nn* | no*) printf '\n  Olymparch gjenoppretting (tekstmodus). Skrivebordet er ikke startet.\n  Sjekk systemet: olymparch-doctor · drivere: olymparch-hw plan · logg: journalctl -b -p err\n  Tilbake til vanlig: start på nytt og velg Olymparch i oppstartsmenyen.\n\n' ;;
+        *) printf '\n  Olymparch recovery (text mode). The desktop is not started.\n  Check the system: olymparch-doctor · drivers: olymparch-hw plan · log: journalctl -b -p err\n  Back to normal: reboot and pick Olymparch in the boot menu.\n\n' ;;
+    esac
 elif [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ "$(id -u)" != 0 ] && [ -e "$HOME/.cache/olymparch/desktop-failed" ]; then
-    printf '\n  The desktop stopped with an error last time (code %s). This is a plain shell.\n  Check the system: olymparch-doctor · log: journalctl -b -1 -p err · start the desktop: start-hyprland\n\n' "$(cat "$HOME/.cache/olymparch/desktop-failed" 2>/dev/null)"
+    case ${LANG:-} in
+        nb* | nn* | no*) printf '\n  Skrivebordet stoppet med en feil sist (kode %s). Dette er et vanlig skall.\n  Sjekk systemet: olymparch-doctor · logg: journalctl -b -1 -p err · start skrivebordet: start-hyprland\n\n' "$(cat "$HOME/.cache/olymparch/desktop-failed" 2>/dev/null)" ;;
+        *) printf '\n  The desktop stopped with an error last time (code %s). This is a plain shell.\n  Check the system: olymparch-doctor · log: journalctl -b -1 -p err · start the desktop: start-hyprland\n\n' "$(cat "$HOME/.cache/olymparch/desktop-failed" 2>/dev/null)" ;;
+    esac
     rm -f -- "$HOME/.cache/olymparch/desktop-failed"
 elif [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ "$(id -u)" != 0 ]; then
     # keys that reach this tty must never signal the session: Ctrl+C here would end the whole desktop

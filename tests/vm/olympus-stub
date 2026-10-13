@@ -24,7 +24,7 @@ case "$1" in
         sc=${OLYMPUS_STUB_BAR:-$(cat "$HOME/.olympus-stub-bar" 2>/dev/null || echo idle)}   # idle | chat | approval | off
         state=idle ai=true approvals='[]'
         case $sc in
-            approval) state=approval
+            approval | timeout) state=approval
                 approvals='[{"id":"a1","tool":"shell","reason":"kjører en kommando","danger":false,"preview":"$ df -h /home\n(viser ledig plass på hjemmedisken)"}]' ;;
             off) state=off ai=false ;;
         esac
@@ -37,6 +37,19 @@ case "$1" in
         [ "$sc" = chat ] && printf '%s\n' '{"type":"user","text":"Og hva er det som tar mest plass?"}' '{"type":"agent_start","model":"gemma4-26b-a4b"}' \
             '{"type":"tool","id":"t1","name":"du","detail":"~ (dybde 1)"}' '{"type":"tool_result","id":"t1","ok":true,"summary":"7 mapper"}' \
             '{"type":"chunk","text":"Mest plass tar **~/Spill** (212 GB) og **~/.olympus/models** (14 GB). Vil du at jeg skal se nærmere på spillene?"}' '{"type":"agent_end"}'
+        # fallback: Groq answers, hits its free quota (429), and Gemini takes over (what the bar then shows)
+        if [ "$sc" = fallback ]; then
+            printf '%s\n' '{"type":"user","text":"Hva er været?"}' '{"type":"agent_start","model":"groq/openai/gpt-oss-120b"}'
+            printf '{"type":"bar","connected":true,"ai":true,"model":"groq/openai/gpt-oss-120b","provider":"Groq","cloud":true,"answering":"groq/openai/gpt-oss-120b","state":"thinking","approvals":[],"plan":null,"media":null,"downloads":null,"phones":null,"last_error":null}\n'
+            sleep 2
+            printf '%s\n' '{"type":"notice","text":"Groq: gratiskvoten er brukt opp eller du sender for fort (429). Bytter til skymodell gemini/gemini-flash-latest og fortsetter."}' \
+                '{"type":"agent_start","model":"gemini/gemini-flash-latest"}' '{"type":"chunk","text":"Det blir sol i Oslo i morgen."}' '{"type":"agent_end"}'
+            printf '{"type":"bar","connected":true,"ai":true,"model":"groq/openai/gpt-oss-120b","provider":"Groq","cloud":true,"answering":"gemini/gemini-flash-latest","state":"idle","approvals":[],"plan":null,"media":null,"downloads":null,"phones":null,"last_error":{"text":"Groq: gratiskvoten er brukt opp (429)","at":%s}}\n' "$(date +%s)"
+        fi
+        # timeout: nobody answers the card; Zeus gives up on it (the server's own timeout, shortened here)
+        if [ "$sc" = timeout ]; then
+            ( sleep 12; bar idle '[]'; printf '{"type":"approval_done","id":"a1"}\n' ) &
+        fi
         while IFS= read -r line; do
             echo "$line" >>"$HOME/olympus-bar.log"
             rid=$(printf '%s' "$line" | sed -n 's/.*"rid": *\([0-9]*\).*/\1/p')

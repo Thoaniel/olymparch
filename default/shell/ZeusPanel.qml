@@ -26,6 +26,7 @@ Dropdown {
           : off ? t("zeus.status.off", "Off · the graphics card is free")
           : waiting ? t("zeus.status.approval", "Waiting for you")
           : Zeus.state === "thinking" ? t("zeus.status.thinking", "Thinking …")
+          : Zeus.answering && Zeus.answering !== Zeus.model ? t("zeus.status.answered_by", "Ready · %1 answered (fallback)").replace("%1", Zeus.answeringProvider)
           : t("zeus.status.idle", "Ready")
     statusTint: waiting ? theme.goldHi : theme.muted
     initialFocus: off ? turnOn : dangerWaiting ? approvalsBox.noButton : ask

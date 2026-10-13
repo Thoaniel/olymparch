@@ -243,6 +243,7 @@
   "zeus.off": "Slå av Zeus",
   "zeus.off.hint": "frigjør skjermkortet",
   "zeus.on": "Slå på Zeus",
+  "zeus.status.answered_by": "Klar · %1 svarte (reserve)",
   "zeus.status.approval": "Venter på deg",
   "zeus.status.idle": "Klar",
   "zeus.status.off": "Av · skjermkortet er ledig",
