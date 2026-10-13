@@ -29,7 +29,7 @@ tmp=$(mktemp -d); trap 'rm -rf -- "$tmp"' EXIT
 block=$(awk '/^# 0600 for the answers file/ {on = 1; next} on && /^KEYFILE=/ {exit} on' bin/olymparch-setup)
 if [ -z "$block" ]; then bad "olymparch-setup: answers-file block not found"
 else
-    ( umask 022; ANSWERS=$tmp/answers DISK=/dev/x DISK_SERIAL=s USERNAME=u PASSWORD=p KEYMAP=no LOCALE=l TIMEZONE=t OPTIONS='' lang=nb
+    ( umask 022; ANSWERS=$tmp/answers DISK=/dev/x DISK_SERIAL=s USERNAME=u PASSWORD=p KEYMAP=no LOCALE=l TIMEZONE=t OPTIONS='' lang=nb AGENTS=''
       eval "$block"; umask >"$tmp/after" )
     m=$(stat -c %a "$tmp/answers" 2>/dev/null)
     [ "$m" = 600 ] && ok "answers file is 0600" || bad "answers file is ${m:-missing}, not 0600"
