@@ -264,73 +264,90 @@
     <path d="M2240 960 C2300 962 2360 970 2420 986" stroke-width="3"/>
   </g>
 
-  <!-- ── the great wave, breaking to the left: dark body, a band of light through the water under the crest, the
-       hollow under the curling lip, and foam lace drawn down the face -->
-  <linearGradient id="waveFace" gradientUnits="userSpaceOnUse" x1="0" y1="660" x2="0" y2="1300">
-    <stop offset="0" stop-color="#1e7a78"/>
-    <stop offset="0.25" stop-color="#0c3c46"/>
-    <stop offset="0.6" stop-color="#05222a"/>
+  <!-- ── the great wave, breaking to the left: a steep face under a lip that curls forward over a dark hollow, foam
+       tumbling from the lip into the trough, a faint teal translucency just under the crest -->
+  <linearGradient id="waveFace" gradientUnits="userSpaceOnUse" x1="0" y1="620" x2="0" y2="1300">
+    <stop offset="0" stop-color="#16646a"/>
+    <stop offset="0.2" stop-color="#0a3440"/>
+    <stop offset="0.55" stop-color="#05222a"/>
     <stop offset="1" stop-color="#02101a"/>
   </linearGradient>
-  <linearGradient id="waveLit" gradientUnits="userSpaceOnUse" x1="0" y1="690" x2="0" y2="960">
-    <stop offset="0" stop-color="#86f2e3" stop-opacity="0.85"/>
-    <stop offset="0.3" stop-color="#2ec4b6" stop-opacity="0.55"/>
-    <stop offset="1" stop-color="#2ec4b6" stop-opacity="0"/>
+  <linearGradient id="hollowG" gradientUnits="userSpaceOnUse" x1="0" y1="740" x2="0" y2="1080">
+    <stop offset="0" stop-color="#010a0e"/>
+    <stop offset="0.5" stop-color="#03161e"/>
+    <stop offset="1" stop-color="#0a3440"/>
   </linearGradient>
   <g filter="url(#reliefWave)">
-    <path d="M-60 1220 L-60 1060 C100 1050 220 1020 300 970 C370 920 410 850 430 790 C446 740 470 700 510 676 C570 642 650 632 750 640
-      C890 650 1040 700 1180 770 C1360 860 1560 960 1760 1020 C1960 1070 2200 1090 2620 1090 L2620 1500 L-60 1500 Z" fill="url(#waveFace)"/>
+    <path d="M-60 1220 L-60 1100 C40 1096 120 1086 180 1076 C300 1060 380 1000 410 930 C430 870 420 810 440 770 C420 750 390 738 350 740
+      C320 744 290 760 270 780 C262 740 280 706 320 680 C380 640 470 620 560 630 C700 630 880 680 1040 760 C1240 860 1500 960 1760 1020
+      C1960 1070 2200 1090 2620 1090 L2620 1500 L-60 1500 Z" fill="url(#waveFace)"/>
   </g>
-  <!-- light through the water just under the crest -->
-  <path d="M500 690 C570 652 650 642 750 650 C890 660 1040 710 1180 780 C1300 840 1400 890 1480 930 C1380 940 1240 900 1100 860
-    C960 830 820 840 700 860 C600 876 540 880 500 870 C480 800 486 730 500 690 Z" fill="url(#waveLit)" filter="url(#glowM)"/>
-  <!-- the hollow under the lip and down the steep face -->
-  <path d="M420 830 C440 760 466 718 500 696 C478 740 470 800 480 880 C488 940 470 990 430 1010 C390 1030 340 1030 300 1000
-    C360 960 404 900 420 830 Z" fill="#021016" opacity="0.75" filter="url(#glowM)"/>
-  <!-- foam lace drawn down the face (soft, broad) -->
-  <g filter="url(#glowM)" fill="none" stroke-linecap="round">
-    <path d="M560 760 C540 840 500 910 430 970" stroke="#bff8f0" stroke-width="10" opacity="0.18"/>
-    <path d="M660 760 C650 830 620 900 560 960" stroke="#86f2e3" stroke-width="8" opacity="0.22"/>
-    <path d="M780 776 C790 840 780 910 740 980" stroke="#86f2e3" stroke-width="7" opacity="0.18"/>
-    <path d="M930 820 C960 880 970 940 950 1010" stroke="#86f2e3" stroke-width="6" opacity="0.16"/>
-    <path d="M1100 880 C1140 930 1160 990 1170 1060" stroke="#86f2e3" stroke-width="6" opacity="0.14"/>
-    <path d="M300 1030 C220 1060 140 1080 40 1090" stroke="#bff8f0" stroke-width="9" opacity="0.2"/>
-  </g>
+  <!-- the hollow under the lip: the back wall of the tube, darkest up under the lip -->
+  <path d="M440 770 C420 750 390 738 350 740 C320 744 290 760 270 780 C252 840 238 920 222 990 C214 1030 200 1060 180 1076
+    C300 1060 380 1000 410 930 C430 870 420 810 440 770 Z" fill="url(#hollowG)"/>
+  <path d="M440 770 C430 820 436 870 418 920" fill="none" stroke="#2a8a86" stroke-width="5" opacity="0.35" filter="url(#glowS)"/>
+  <!-- faint translucency just under the crest, on the back of the wave -->
+  <path d="M560 640 C700 640 880 690 1040 770 C1120 810 1200 846 1270 876 C1160 862 1040 820 920 784 C800 748 680 720 560 700 Z"
+        fill="#2ec4b6" opacity="0.22" filter="url(#glowM)"/>
+  <!-- the dark trough in front of the wave -->
+  <path d="M-60 1090 C60 1080 160 1076 260 1070 C340 1066 400 1080 460 1100 C360 1130 240 1140 120 1140 C40 1140 -20 1134 -60 1130 Z"
+        fill="#010a0e" opacity="0.7" filter="url(#glowM)"/>
 
   <linearGradient id="lipG" x1="0" y1="0" x2="0" y2="1">
     <stop offset="0" stop-color="#e8fffb"/><stop offset="0.6" stop-color="#9eeee2"/><stop offset="1" stop-color="#2a8a86"/>
   </linearGradient>
-  <!-- ── the crest: foam piling along the top and over the lip, the lip curling forward -->
+  <!-- ── the crest: foam piling along the top, the lip curling forward over the hollow -->
   <g filter="url(#surf)">
-    <path d="M330 720 C400 670 470 640 560 640 C650 638 720 660 800 690 C880 718 960 742 1040 774 C1120 806 1200 840 1290 880
-      C1220 892 1130 872 1040 848 C960 826 880 806 800 790 C700 772 600 760 520 762 C440 764 370 756 330 720 Z" fill="#e8fffb" opacity="0.9"/>
-    <path d="M300 760 C380 740 460 750 540 770 C640 790 740 820 840 850 C760 860 640 840 540 822 C440 806 360 800 300 760 Z" fill="#86f2e3" opacity="0.4"/>
+    <path d="M300 690 C380 640 470 616 560 622 C700 626 880 676 1040 752 C1110 786 1180 820 1250 850 C1170 846 1080 816 1000 790
+      C880 752 740 712 600 700 C500 692 400 700 300 690 Z" fill="#e8fffb" opacity="0.9"/>
   </g>
   <g filter="url(#foamy)">
-    <path d="M510 676 C460 650 400 652 356 676 C320 696 306 736 322 772 C336 748 360 730 392 726 C428 724 456 742 470 776
-      C484 734 494 700 510 676 Z" fill="url(#lipG)"/>
-    <path d="M356 676 C320 696 306 736 322 772" fill="none" stroke="#ffffff" stroke-width="4" opacity="0.8"/>
-    <path d="M392 726 C428 724 456 742 470 776" fill="none" stroke="#2a8a86" stroke-width="5" opacity="0.6"/>
+    <path d="M560 628 C470 618 380 638 320 678 C280 704 262 740 270 782 C284 768 300 756 322 748 C334 718 362 698 402 688
+      C452 674 504 666 560 666 Z" fill="url(#lipG)"/>
+    <path d="M560 628 C470 618 380 638 320 678 C280 704 262 740 270 782" fill="none" stroke="#ffffff" stroke-width="4" opacity="0.8"/>
+    <path d="M270 782 C284 768 300 756 322 748" fill="none" stroke="#0a3a40" stroke-width="5" opacity="0.6"/>
   </g>
+  <!-- foam tumbling from the lip down into the trough: torn strands, then a churned skirt along the base -->
+  <g filter="url(#surf)">
+    <path d="M268 782 C262 840 250 900 240 960 C234 1000 222 1040 206 1070 C224 1060 238 1040 246 1010 C258 950 268 870 280 790 Z"
+          fill="#d8fbf5" opacity="0.6"/>
+    <path d="M292 772 C292 830 290 880 286 930 C284 960 278 990 268 1016 C284 1000 294 970 298 940 C304 890 304 830 304 768 Z"
+          fill="#bff8f0" opacity="0.4"/>
+    <path d="M250 800 C240 850 226 900 214 940 C210 954 204 966 196 976 C212 968 222 952 228 936 C238 900 246 850 256 800 Z"
+          fill="#e8fffb" opacity="0.5"/>
+  </g>
+  <g filter="url(#surf)">
+    <path d="M60 1092 C140 1070 230 1062 320 1070 C420 1078 520 1096 640 1110 C740 1122 820 1130 880 1140 C760 1150 620 1146 480 1136
+      C340 1126 200 1120 60 1110 Z" fill="#bff8f0" opacity="0.45"/>
+    <path d="M140 1076 C200 1064 260 1062 320 1068 C300 1086 240 1094 180 1094 Z" fill="#e8fffb" opacity="0.6"/>
+  </g>
+  <!-- broken foam scum on the back of the wave, following its slope -->
+  <g filter="url(#surf)" fill="#86f2e3">
+    <path d="M700 820 C780 830 860 850 930 880 C860 884 780 870 700 840 Z" opacity="0.18"/>
+    <path d="M980 900 C1060 920 1140 950 1210 990 C1130 990 1050 960 980 920 Z" opacity="0.15"/>
+    <path d="M560 900 C640 910 700 930 760 960 C690 962 620 944 560 916 Z" opacity="0.12"/>
+    <path d="M1300 980 C1380 1000 1460 1030 1530 1060 C1450 1064 1370 1040 1300 1000 Z" opacity="0.14"/>
+  </g>
+
   <!-- ── the horses, rearing out of the crest; the far one first -->
   <linearGradient id="horseFar" x1="0" y1="0" x2="1" y2="1">
     <stop offset="0" stop-color="#b8f4ec"/><stop offset="0.5" stop-color="#5ab8b0"/><stop offset="1" stop-color="#145a60"/>
   </linearGradient>
-  <g transform="translate(1030 800) rotate(5) scale(0.72)" opacity="0.9">
+  <g transform="translate(1030 768) rotate(6) scale(0.72)" opacity="0.9">
     <g mask="url(#horseFade)" filter="url(#foamy)">
       <use xlink:href="#seaHorse" fill="url(#horseFar)"/><use xlink:href="#horseShade" fill="#0e4a50" opacity="0.6"/>
       <use xlink:href="#horseLight" fill="#e8fffb" opacity="0.55"/>
     </g>
     <use xlink:href="#horseStreaks" mask="url(#horseFade)"/><use xlink:href="#horseEye"/>
   </g>
-  <g transform="translate(500 730) rotate(-10) scale(0.68)" opacity="0.88">
+  <g transform="translate(470 668) rotate(-12) scale(0.68)" opacity="0.88">
     <g mask="url(#horseFade)" filter="url(#foamy)">
       <use xlink:href="#seaHorse" fill="url(#horseFar)"/><use xlink:href="#horseShade" fill="#0e4a50" opacity="0.6"/>
       <use xlink:href="#horseLight" fill="#e8fffb" opacity="0.45"/>
     </g>
     <use xlink:href="#horseStreaks" mask="url(#horseFade)"/><use xlink:href="#horseEye"/>
   </g>
-  <g transform="translate(760 712) rotate(-3) scale(0.96)">
+  <g transform="translate(760 668) rotate(-4) scale(0.96)">
     <g mask="url(#horseFade)" filter="url(#foamy)">
       <use xlink:href="#seaHorse" fill="url(#horse)"/><use xlink:href="#horseShade" fill="#0e4a50" opacity="0.55"/>
       <use xlink:href="#horseLight" fill="#f2fffd" opacity="0.7"/>
@@ -339,9 +356,9 @@
   </g>
   <!-- foam collars where the horses leave the water -->
   <g filter="url(#surf)" fill="#e8fffb">
-    <ellipse cx="770" cy="722" rx="120" ry="26" opacity="0.85"/>
-    <ellipse cx="1036" cy="802" rx="80" ry="18" opacity="0.8"/>
-    <ellipse cx="508" cy="734" rx="84" ry="20" opacity="0.8"/>
+    <ellipse cx="772" cy="672" rx="120" ry="24" opacity="0.85"/>
+    <ellipse cx="1036" cy="770" rx="80" ry="17" opacity="0.8"/>
+    <ellipse cx="478" cy="668" rx="84" ry="19" opacity="0.8"/>
   </g>
   <!-- manes of water streaming back to the right, breaking into spray -->
   <linearGradient id="maneG" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="180" y2="0">
@@ -349,22 +366,24 @@
     <stop offset="1" stop-color="#2ec4b6" stop-opacity="0"/>
   </linearGradient>
   <g filter="url(#surf)" fill="url(#maneG)">
-    <use xlink:href="#mane" transform="translate(1030 800) rotate(5) scale(0.72)" opacity="0.75"/>
-    <use xlink:href="#mane" transform="translate(500 730) rotate(-10) scale(0.68)" opacity="0.7"/>
-    <use xlink:href="#mane" transform="translate(760 712) rotate(-3) scale(0.96)" opacity="0.9"/>
+    <use xlink:href="#mane" transform="translate(1030 768) rotate(6) scale(0.72)" opacity="0.75"/>
+    <use xlink:href="#mane" transform="translate(470 668) rotate(-12) scale(0.68)" opacity="0.7"/>
+    <use xlink:href="#mane" transform="translate(760 668) rotate(-4) scale(0.96)" opacity="0.9"/>
   </g>
-  <use xlink:href="#maneSpray" transform="translate(1030 800) rotate(5) scale(0.72)"/>
-  <use xlink:href="#maneSpray" transform="translate(500 730) rotate(-10) scale(0.68)" opacity="0.8"/>
-  <use xlink:href="#maneSpray" transform="translate(760 712) rotate(-3) scale(0.96)"/>
+  <use xlink:href="#maneSpray" transform="translate(1030 768) rotate(6) scale(0.72)"/>
+  <use xlink:href="#maneSpray" transform="translate(470 668) rotate(-12) scale(0.68)" opacity="0.8"/>
+  <use xlink:href="#maneSpray" transform="translate(760 668) rotate(-4) scale(0.96)"/>
 
-  <!-- spray thrown off the lip and the crest, lit -->
-  <g filter="url(#cloudSoft)" opacity="0.55">
-    <path d="M330 660 C380 600 460 570 540 580 C620 590 690 620 760 652 C680 652 600 640 520 650 C450 658 380 672 330 660 Z" fill="#bff8f0"/>
+  <!-- spray torn off the crest and blown back by the wind, lit -->
+  <g filter="url(#cloudSoft)" opacity="0.5">
+    <path d="M300 670 C360 610 450 580 540 584 C640 590 740 620 860 660 C760 650 660 634 560 636 C470 640 380 664 300 670 Z" fill="#bff8f0"/>
+    <path d="M860 690 C940 670 1020 680 1100 712 C1160 736 1220 770 1280 806 C1200 790 1120 760 1040 740 C960 722 900 712 860 690 Z" fill="#bff8f0" opacity="0.8"/>
   </g>
   <g fill="#e8fffb">
-    <circle cx="312" cy="664" r="4" opacity="0.7"/><circle cx="290" cy="700" r="3" opacity="0.6"/><circle cx="276" cy="652" r="2.4" opacity="0.5"/>
-    <circle cx="332" cy="624" r="3" opacity="0.6"/><circle cx="262" cy="726" r="2.6" opacity="0.5"/><circle cx="302" cy="602" r="2" opacity="0.45"/>
-    <circle cx="248" cy="690" r="1.8" opacity="0.4"/><circle cx="352" cy="590" r="1.6" opacity="0.4"/>
+    <circle cx="290" cy="664" r="4" opacity="0.7"/><circle cx="262" cy="700" r="3" opacity="0.6"/><circle cx="560" cy="580" r="2.4" opacity="0.5"/>
+    <circle cx="620" cy="566" r="3" opacity="0.6"/><circle cx="700" cy="590" r="2.6" opacity="0.5"/><circle cx="660" cy="552" r="2" opacity="0.45"/>
+    <circle cx="900" cy="640" r="2.4" opacity="0.5"/><circle cx="960" cy="664" r="3" opacity="0.55"/><circle cx="1080" cy="690" r="2.2" opacity="0.45"/>
+    <circle cx="1160" cy="730" r="2.6" opacity="0.5"/><circle cx="1210" cy="760" r="2" opacity="0.4"/><circle cx="780" cy="560" r="1.8" opacity="0.4"/>
   </g>
 
   <!-- ── the trident, rising slantwise out of the wave's shoulder; the spray around it is lit -->
