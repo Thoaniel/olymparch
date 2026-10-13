@@ -44,8 +44,8 @@ stop_vm
 vm boot2.log
 for ((i = 0; i < 40; i++)); do seen 'BdsDxe: starting' && break; sleep 0.25; done
 sleep 1
-press down
-shot meny "Limine-menyen: Olymparch og Snapshots"
+press down; press down   # past «Recovery (text mode)» to «Snapshots»
+shot meny "Limine-menyen: Olymparch, Recovery og Snapshots"
 press ret
 sleep 0.5
 shot meny-bilder "Øyeblikksbildene i menyen ($entries stykker, nyeste øverst)"

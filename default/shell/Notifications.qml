@@ -29,6 +29,7 @@ Scope {
     readonly property var kept: frozen.filter(n => waiting.includes(n))
     readonly property var shown: hovering && kept.length > 0 ? kept : live
     property var arrived: ({})   // id → Date, for «3 min» on the toast
+    property bool replying: false   // a card's answer field has been clicked: the toasts take the keyboard until sent
     // how long each one stays (ms, 0 = until answered), by id: set when it comes, run by its card while it is shown
     property var durations: ({})
 
@@ -108,7 +109,9 @@ Scope {
         visible: notes.shown.length > 0
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "olymparch-notifications"
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand   // only when you click into an answer field
+        // never takes the keyboard when a toast comes (you may be typing or playing); only while you write an answer
+        // after clicking into its field (NotifyCard.replying), and it gives it back when you send or press Esc
+        WlrLayershell.keyboardFocus: notes.replying ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
         exclusionMode: ExclusionMode.Ignore
         anchors { top: notes.top; bottom: !notes.top; left: notes.left; right: !notes.left }
         margins { top: 42; bottom: 10; left: 10; right: 12 }
@@ -131,6 +134,8 @@ Scope {
                     arrived: notes.arrived[modelData.id] || new Date()
                     onHoveredChanged: notes.hovering = column.children.some(c => c.hovered === true)
                     onCloseAll: notes.waiting.slice().forEach(n => n.dismiss())
+                    onReplyingChanged: notes.replying = column.children.some(c => c.replying === true)
+                    Component.onDestruction: if (replying) notes.replying = false
                 }
             }
             Text {   // more are waiting behind the ones shown: a click opens the bell's list

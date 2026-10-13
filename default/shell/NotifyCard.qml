@@ -17,7 +17,8 @@ Rectangle {
     property bool newest: false
     property var arrived: new Date()
     signal closeAll
-    readonly property bool hovered: hover.containsMouse || closeArea.containsMouse || reply.activeFocus
+    readonly property bool hovered: hover.containsMouse || closeArea.containsMouse || replying
+    property bool replying: false      // you clicked into the answer field: the toasts hold the keyboard until you send
     readonly property bool critical: modelData.urgency === NotificationUrgency.Critical
     readonly property var defaultAction: modelData.actions.find(a => a.identifier === "default") || null
     readonly property var buttons: modelData.actions.filter(a => a.identifier !== "default")
@@ -35,7 +36,7 @@ Rectangle {
 
     // ── the time it stays, paused under the mouse (and while you write an answer)
     property real elapsed: 0
-    readonly property bool paused: hover.containsMouse || reply.activeFocus
+    readonly property bool paused: hover.containsMouse || replying
     Timer {
         running: card.duration > 0 && !card.paused
         interval: 100; repeat: true
@@ -192,7 +193,7 @@ Rectangle {
             visible: card.modelData.hasInlineReply
             width: parent.width; height: card.theme.px(28)
             color: card.theme.bg
-            border.color: reply.activeFocus ? card.theme.gold : card.theme.line
+            border.color: card.replying ? card.theme.gold : card.theme.line
             TextInput {
                 id: reply
                 anchors { fill: parent; leftMargin: 8; rightMargin: 8 }
@@ -200,9 +201,12 @@ Rectangle {
                 font { family: card.theme.mono; pixelSize: card.theme.px(12) }
                 color: card.theme.text
                 clip: true
-                onAccepted: { const t = text.trim(); if (t) card.modelData.sendInlineReply(t); text = ""; }
+                onAccepted: { const t = text.trim(); if (t) card.modelData.sendInlineReply(t); text = ""; card.replying = false; }
+                Keys.onEscapePressed: { text = ""; card.replying = false; }
+                // the window gets the keyboard only now (Notifications.qml), then the field takes it
+                MouseArea { anchors.fill: parent; onPressed: { card.replying = true; Qt.callLater(() => reply.forceActiveFocus()); } }
                 Text {
-                    visible: !reply.text && !reply.activeFocus
+                    visible: !reply.text && !card.replying
                     anchors.verticalCenter: parent.verticalCenter
                     text: card.modelData.inlineReplyPlaceholder || I18n.t("notify.reply", "Answer …")
                     font: reply.font
