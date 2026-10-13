@@ -213,10 +213,14 @@ for p in o.glob("*.png"):
     if m:
         shots[(m.group(1), int(m.group(2)), m.group(3))] = p
 BG, INK = (14, 14, 17), (226, 222, 214)
-try:
-    FONT = ImageFont.load_default(size=16)   # Pillow ≥ 10.1: a FreeType font with æøå
-except TypeError:
-    FONT = ImageFont.load_default()
+def font():   # the system's sans (fontconfig) for æøå; Pillow's own font as a fallback
+    import subprocess
+    try:
+        f = subprocess.run(["fc-match", "-f", "%{file}", "sans"], capture_output=True, text=True).stdout
+        return ImageFont.truetype(f, 16)
+    except (OSError, ValueError):
+        return ImageFont.load_default()
+FONT = font()
 def fit(im, w):
     return im.convert("RGB").resize((w, round(im.height * w / im.width)), Image.LANCZOS)
 over = []
