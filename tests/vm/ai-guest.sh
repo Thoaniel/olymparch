@@ -95,7 +95,7 @@ bar-log)   # what the shell sent Olympus' stub (approve, deny …)
 status)
     for d in "${XDG_STATE_HOME:-$HOME/.local/state}"/olymparch/agents/fakerunner-*/; do
         [ -d "$d" ] || continue
-        mark "RUNNER-EXIT $(cat "$d/exit" 2>/dev/null || echo none)"
+        mark "RUNNER-EXIT $(cat "$d/exit" 2>/dev/null || echo none) tmux=$(tmux -V 2>/dev/null) script=$(tail -n 1 "$d/run.sh" 2>/dev/null | cut -c1-60)"
         tail -n 4 "$d/log" 2>/dev/null | while IFS= read -r l; do mark "RUNNER-LOG $l"; done
     done
     python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(" ".join(t["agent"]+"="+t["status"] for t in d["tasks"]))' \

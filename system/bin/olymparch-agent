@@ -377,13 +377,17 @@ def cmd_new(args):
             die(L("tmux is missing: install it from the menu (Install → Package → tmux)",
                   "tmux mangler: installer den fra menyen (Installer → Pakke → tmux)"), 1)
         argv = [binary, *fill((a.get("task") or {}).get("command", ["{prompt}"])[1:], prompt=prompt, dir=d, mode=mode, id=tid)]
-        # the agent in tmux (so «Open» can attach), its output also to the log; the exit code to a file
-        inner = (f"{shlex.join(argv)} 2>&1 | tee -a {shlex.quote(log)}; "
-                 f"echo ${{PIPESTATUS[0]}} > {shlex.quote(os.path.join(td, 'exit'))}")
-        # the keys are in env (agent_env), handed to tmux' server through its environment, never on a command line
+        # the agent in tmux (so «Open» can attach), its output also to the log, the exit code to a file. A script
+        # in the task's own folder (0700): tmux gets nothing but «bash FILE», so no shell re-quotes anything.
+        script = os.path.join(td, "run.sh")
+        with open(script, "w") as f:
+            f.write("#!/bin/bash\n"
+                    f"{shlex.join(argv)} 2>&1 | tee -a {shlex.quote(log)}\n"
+                    f"echo \"${{PIPESTATUS[0]}}\" > {shlex.quote(os.path.join(td, 'exit'))}\n")
+        os.chmod(script, 0o700)
+        # the keys are in env (agent_env), handed to this task's own tmux server, never on a command line
         r = subprocess.run(["systemd-run", "--user", "--scope", "--quiet", f"--unit=olymparch-agent-{tid}", "--collect",
-                            # one string: tmux hands it to sh -c, so bash's ${PIPESTATUS[0]} must reach bash quoted
-                            *tmux(tid), "new-session", "-d", "-s", tid, "-c", d, "bash -c " + shlex.quote(inner)],
+                            *tmux(tid), "new-session", "-d", "-s", tid, "-c", d, "bash " + shlex.quote(script)],
                            env=env, capture_output=True, text=True, timeout=30)
         if r.returncode != 0:
             die((r.stderr or "").strip()[-400:] or L("the task did not start", "oppgaven startet ikke"), 1)
