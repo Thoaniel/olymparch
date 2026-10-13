@@ -168,6 +168,19 @@ Row {
         }
     }
     ZeusPanel { theme: status.theme; anchorItem: zeusCell; screenName: status.screenName }
+    // ── AI agents (Agents.qml, olymparch-agent): how many tasks run across every agent; a gold dot when one waits
+    Cell {
+        id: agentsCell
+        visible: Agents.available && Agents.present && (Agents.tasks.length > 0 || Agents.list.some(a => a.installed))
+        icon: "\uf544"
+        label: Agents.active > 0 ? String(Agents.active) : ""
+        dot: Agents.waiting
+        tint: Agents.active > 0 ? status.theme.gold : status.theme.muted
+        labelTint: Agents.waiting ? status.theme.goldHi : status.theme.text
+        clickable: true
+        onClicked: Panels.toggle("agents", status.screenName)
+    }
+    AgentsPanel { theme: status.theme; anchorItem: agentsCell; screenName: status.screenName }
     Cell {
         icon: !status.netDevice ? (status.hasWifi ? "\u{F092D}" : "\u{F0319}")
             : status.wifiStrength < 0 ? "\u{F0318}"

@@ -209,6 +209,8 @@ ShellRoot {
     }
 
     GameMode { id: gameMode }
+    // the bar panels' own hotkeys (Zeus' Super+Z goes through olymparch-settings zeus-open)
+    GlobalShortcut { appid: "olymparch"; name: "panel-agents"; description: "The Agents panel"; onPressed: Panels.toggle("agents", "") }
     Launcher { id: launcher; theme: root }
     // ── the Olymparch menu (Super+Alt+Space, the bolt in the bar) and the list of shortcuts (Super+K)
     Menu { id: olymparchMenu; theme: root; launcher: launcher; cheatsheet: cheatsheet }
