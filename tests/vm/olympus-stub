@@ -2,6 +2,7 @@
 # A stand-in for ~/.local/bin/olympus in tests/vm/settings: answers only the calls Settings makes, logs every call
 # to ~/olympus.log, and never downloads or runs a model.
 echo "$*" >>"$HOME/olympus.log"
+case "${LANG:-}" in en*) en=1 ;; *) en=0 ;; esac   # the chat in English when the shell runs in English
 case "$1" in
     --version) echo "olympus 0.0 (test stub)" ;;
     modell)
@@ -32,11 +33,21 @@ case "$1" in
         printf '{"type":"bridge","status":"connected","detail":"stub"}\n'
         bar "$state" "$approvals"
         if [ "$sc" != idle ] && [ "$sc" != off ]; then
-            printf '%s\n' '{"type":"history","session":"s1","items":[{"kind":"user","text":"Hvor mye plass har jeg igjen?"},{"kind":"agent","text":"Jeg sjekker hjemmedisken for deg.","model":"gemma4-26b-a4b","tools":["df"]}]}'
+            if [ "$en" = 1 ]; then
+                printf '%s\n' '{"type":"history","session":"s1","items":[{"kind":"user","text":"How much space do I have left?"},{"kind":"agent","text":"I am checking your home disk.","model":"gemma4-26b-a4b","tools":["df"]}]}'
+            else
+                printf '%s\n' '{"type":"history","session":"s1","items":[{"kind":"user","text":"Hvor mye plass har jeg igjen?"},{"kind":"agent","text":"Jeg sjekker hjemmedisken for deg.","model":"gemma4-26b-a4b","tools":["df"]}]}'
+            fi
         fi
-        [ "$sc" = chat ] && printf '%s\n' '{"type":"user","text":"Og hva er det som tar mest plass?"}' '{"type":"agent_start","model":"gemma4-26b-a4b"}' \
-            '{"type":"tool","id":"t1","name":"du","detail":"~ (dybde 1)"}' '{"type":"tool_result","id":"t1","ok":true,"summary":"7 mapper"}' \
-            '{"type":"chunk","text":"Mest plass tar **~/Spill** (212 GB) og **~/.olympus/models** (14 GB). Vil du at jeg skal se nærmere på spillene?"}' '{"type":"agent_end"}'
+        if [ "$sc" = chat ] && [ "$en" = 1 ]; then
+            printf '%s\n' '{"type":"user","text":"And what takes the most space?"}' '{"type":"agent_start","model":"gemma4-26b-a4b"}' \
+                '{"type":"tool","id":"t1","name":"du","detail":"~ (depth 1)"}' '{"type":"tool_result","id":"t1","ok":true,"summary":"7 folders"}' \
+                '{"type":"chunk","text":"Most of it is **~/Games** (212 GB) and **~/.olympus/models** (14 GB). Shall I look closer at the games?"}' '{"type":"agent_end"}'
+        elif [ "$sc" = chat ]; then
+            printf '%s\n' '{"type":"user","text":"Og hva er det som tar mest plass?"}' '{"type":"agent_start","model":"gemma4-26b-a4b"}' \
+                '{"type":"tool","id":"t1","name":"du","detail":"~ (dybde 1)"}' '{"type":"tool_result","id":"t1","ok":true,"summary":"7 mapper"}' \
+                '{"type":"chunk","text":"Mest plass tar **~/Spill** (212 GB) og **~/.olympus/models** (14 GB). Vil du at jeg skal se nærmere på spillene?"}' '{"type":"agent_end"}'
+        fi
         # fallback: Groq answers, hits its free quota (429), and Gemini takes over (what the bar then shows)
         if [ "$sc" = fallback ]; then
             printf '%s\n' '{"type":"user","text":"Hva er været?"}' '{"type":"agent_start","model":"groq/openai/gpt-oss-120b"}'

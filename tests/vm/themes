@@ -19,6 +19,7 @@ qemu-img create -q -f qcow2 -b "$(realpath "$SRC/disk.qcow2")" -F qcow2 "$O/disk
 QMP=$O/qmp.sock
 . tests/vm/lib.sh
 PW='olymp-test-123'
+L=${OLYMPARCH_TEST_LANG:-nb_NO.UTF-8}   # the shell's language: en_US.UTF-8 for the English pictures in the README
 trap 'kill "$QPID" 2>/dev/null; python3 -I tests/vm/report.py tests/vm/out/themes.html "$O" >/dev/null 2>&1' EXIT
 t0=$SECONDS
 fails=()
@@ -59,7 +60,7 @@ unlock_and_desktop "$PW"
 
 # This repo's files in place (the themes with their frames), the shell restarted in Norwegian, the check helper
 press meta_l+ret; sleep 2
-keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /mnt/default/settings /mnt/default/lock /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -Dm644 /mnt/default/foot/foot.ini /etc/xdg/foot/foot.ini && sudo install -m755 /mnt/system/bin/olymparch-settings /mnt/system/bin/olymparch-theme /usr/bin/ && sudo mkdir -p /usr/share/olymparch/themes && sudo cp -r /mnt/default/themes/. /usr/share/olymparch/themes/ && for d in /mnt/tests/vm/out/themes-wallpaper/*/; do i=\$(basename \$d); sudo mkdir -p /usr/share/olymparch/themes/\$i/wallpaper && sudo cp -r \$d/1080 /usr/share/olymparch/themes/\$i/wallpaper/; done; sudo chmod 666 /dev/kmsg && olymparch-theme apply --quiet; hyprctl reload >/dev/null; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=nb_NO.UTF-8 setsid -f /usr/lib/olymparch/launch-shell; echo '<2>THEMES-UPDATED' > /dev/kmsg\n" 1
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /mnt/default/settings /mnt/default/lock /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -Dm644 /mnt/default/foot/foot.ini /etc/xdg/foot/foot.ini && sudo install -m755 /mnt/system/bin/olymparch-settings /mnt/system/bin/olymparch-theme /usr/bin/ && sudo mkdir -p /usr/share/olymparch/themes && sudo cp -r /mnt/default/themes/. /usr/share/olymparch/themes/ && for d in /mnt/tests/vm/out/themes-wallpaper/*/; do i=\$(basename \$d); sudo mkdir -p /usr/share/olymparch/themes/\$i/wallpaper && sudo cp -r \$d/1080 /usr/share/olymparch/themes/\$i/wallpaper/; done; sudo chmod 666 /dev/kmsg && olymparch-theme apply --quiet; hyprctl reload >/dev/null; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=$L setsid -f /usr/lib/olymparch/launch-shell; echo '<2>THEMES-UPDATED' > /dev/kmsg\n" 1
 keys "$PW\n" 1
 wait_for 'THEMES-UPDATED' 60 || finish "FAIL · fikk ikke kopiert filene inn"
 keys "c() { if eval \"\$2\" >/dev/null 2>&1; then echo \"<2>CHK-\$1-OK\"; else echo \"<2>CHK-\$1-NO\"; fi > /dev/kmsg; }; clear\n" 0.5

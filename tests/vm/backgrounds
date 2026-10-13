@@ -22,6 +22,7 @@ qemu-img create -q -f qcow2 -b "$(realpath "$SRC/disk.qcow2")" -F qcow2 "$O/disk
 QMP=$O/qmp.sock
 . tests/vm/lib.sh
 PW='olymp-test-123'
+L=${OLYMPARCH_TEST_LANG:-nb_NO.UTF-8}   # the shell's language: en_US.UTF-8 for the English pictures in the README
 trap 'kill "$QPID" 2>/dev/null; python3 -I tests/vm/report.py tests/vm/out/backgrounds.html "$O" >/dev/null 2>&1' EXIT
 t0=$SECONDS
 fails=()
@@ -100,7 +101,7 @@ unlock_and_desktop "$PW"
 
 # This repo's files in place (the themes with their temples and backgrounds), the shell restarted in Norwegian, the helpers
 press meta_l+ret; sleep 2
-keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /mnt/default/settings /mnt/default/lock /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -Dm644 /mnt/default/foot/foot.ini /etc/xdg/foot/foot.ini && sudo install -m755 /mnt/system/bin/olymparch-settings /mnt/system/bin/olymparch-theme /usr/bin/ && sudo install -m755 /mnt/tests/vm/backgrounds-guest.sh /usr/local/bin/bgt && sudo mkdir -p /usr/share/olymparch/themes && sudo cp -r /mnt/default/themes/. /usr/share/olymparch/themes/ && for d in /mnt/tests/vm/out/backgrounds-art/*/*/1080; do s=\${d%/1080}; sc=\${s##*/}; i=\${s%/*}; i=\${i##*/}; [ \$i = user ] && continue; if [ \$sc = temple ]; then t=/usr/share/olymparch/themes/\$i/wallpaper; else t=/usr/share/olymparch/themes/\$i/backgrounds/\$sc; fi; sudo mkdir -p \$t && sudo cp -r \$d \$t/; done; sudo chmod 666 /dev/kmsg && olymparch-theme apply --quiet; hyprctl reload >/dev/null; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=nb_NO.UTF-8 setsid -f /usr/lib/olymparch/launch-shell; echo '<2>BG-UPDATED' > /dev/kmsg\n" 1
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /mnt/default/settings /mnt/default/lock /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -Dm644 /mnt/default/foot/foot.ini /etc/xdg/foot/foot.ini && sudo install -m755 /mnt/system/bin/olymparch-settings /mnt/system/bin/olymparch-theme /usr/bin/ && sudo install -m755 /mnt/tests/vm/backgrounds-guest.sh /usr/local/bin/bgt && sudo mkdir -p /usr/share/olymparch/themes && sudo cp -r /mnt/default/themes/. /usr/share/olymparch/themes/ && for d in /mnt/tests/vm/out/backgrounds-art/*/*/1080; do s=\${d%/1080}; sc=\${s##*/}; i=\${s%/*}; i=\${i##*/}; [ \$i = user ] && continue; if [ \$sc = temple ]; then t=/usr/share/olymparch/themes/\$i/wallpaper; else t=/usr/share/olymparch/themes/\$i/backgrounds/\$sc; fi; sudo mkdir -p \$t && sudo cp -r \$d \$t/; done; sudo chmod 666 /dev/kmsg && olymparch-theme apply --quiet; hyprctl reload >/dev/null; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=$L setsid -f /usr/lib/olymparch/launch-shell; echo '<2>BG-UPDATED' > /dev/kmsg\n" 1
 keys "$PW\n" 1
 wait_for 'BG-UPDATED' 120 || finish "FAIL · fikk ikke kopiert filene inn"
 sleep 4

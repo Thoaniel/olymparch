@@ -20,6 +20,7 @@ qemu-img create -q -f qcow2 -b "$(realpath "$SRC/disk.qcow2")" -F qcow2 "$O/disk
 QMP=$O/qmp.sock
 . tests/vm/lib.sh
 PW='olymp-test-123'
+L=${OLYMPARCH_TEST_LANG:-nb_NO.UTF-8}   # the shell's language: en_US.UTF-8 for the English pictures in the README
 trap 'kill "$QPID" 2>/dev/null; python3 -I tests/vm/report.py tests/vm/out/report.html "$O" >/dev/null 2>&1' EXIT
 t0=$SECONDS
 ok=()
@@ -50,7 +51,7 @@ term() {   # a command in a fresh terminal (the panel is closed first, so the ke
 
 # ── setup: this repo's files in place, the stub and the fake agents, the shell in Norwegian, the watcher
 press meta_l+ret; sleep 2
-keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo bash /mnt/tests/vm/ai-guest.sh setup; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=nb_NO.UTF-8 setsid -f /usr/lib/olymparch/launch-shell; sleep 3; $G stubs; hyprctl reload >/dev/null; exit\n" 1
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo bash /mnt/tests/vm/ai-guest.sh setup; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=$L setsid -f /usr/lib/olymparch/launch-shell; sleep 3; $G stubs; hyprctl reload >/dev/null; exit\n" 1
 keys "$PW\n" 1
 wait_for 'AI: SETUP-(OK|NO-TMUX)' 180 || { shot oppsett-feil "Oppsettet ble ikke ferdig"; finish "FAIL · fikk ikke lagt inn filene"; }
 # the watcher as a user service of its own: it outlives the terminal that starts it
