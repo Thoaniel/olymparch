@@ -1,7 +1,8 @@
 // The Notifications panel (under the bell): do not disturb on/off, the last notifications (also those it held back,
-// marked), clear the list, and the notification settings. The list lives in memory only (NotifyHistory.qml).
+// marked; a click on one goes to the app's window when it is open), clear the list, and the notification settings. The list lives in memory only (NotifyHistory.qml).
 import QtQuick
 import Quickshell
+import Quickshell.Wayland
 
 Dropdown {
     id: p
@@ -33,10 +34,20 @@ Dropdown {
     Repeater {
         model: NotifyHistory.items.slice(0, 8)
         delegate: Column {
+            id: entry
             required property var modelData
+            readonly property var win: NotifyHistory.windowOf(modelData)
             x: p.theme.px(18); width: p.panelWidth - 2 - 2 * x
             spacing: 1
             bottomPadding: p.theme.px(6)
+            // a click goes to the app's window (when it is open)
+            MouseArea {
+                width: parent.width; height: parent.height
+                enabled: !!entry.win
+                hoverEnabled: true
+                cursorShape: entry.win ? Qt.PointingHandCursor : Qt.ArrowCursor
+                onClicked: { Panels.close("notifications"); entry.win.activate(); }
+            }
             Text {
                 width: parent.width
                 text: Qt.formatTime(modelData.time, "HH:mm") + "  " + (modelData.app || "?") + (modelData.held ? "  · " + p.t("notes.held", "held back") : "")
