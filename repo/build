@@ -36,7 +36,9 @@ build)
         [ ${#deps[@]} -eq 0 ] || pacman -S --noconfirm --needed --asdeps "${deps[@]}" >/dev/null
         # packages land next to the PKGBUILD (a PKGDEST was refused inside makepkg's fakeroot step, in CI too)
         (cd "$d" && sudo -u builder makepkg --nodeps --noconfirm --clean --nocheck >/dev/null)
-        cp "$d"/*.pkg.tar.zst "$out/"
+        # a «:» (an epoch, as in proton-ge-custom-bin 1:…) is not allowed in GitHub artifact and release file names;
+        # the database records the real file name, so pacman finds it, and the version inside the package is unchanged
+        for p in "$d"/*.pkg.tar.zst; do cp -- "$p" "$out/$(basename -- "$p" | tr ':' '.')"; done
     done <repo/packages.tsv
     rm -rf -- "$work"
     ;;
