@@ -21,6 +21,8 @@ for f in sorted(glob.glob("default/agents/*.toml")):
     assert "sudo" not in inst, f + ": sudo in the installer"
     p = a.get("permissions") or {}
     assert p.get("default") in (p.get("modes") or []), f + ": default mode not in modes"
+    if a["id"] == "openclaw":   # unrestricted by default: its safe policy must be set before every task
+        assert "--security" in (a.get("task") or {}).get("preflight", []), f + ": OpenClaw without its exec-policy preflight"
     bad = ("bypass", "dangerously", "yolo", "full-access", "--yes-always")
     assert not any(b in str(p.get("default")) for b in bad), f
     assert not any(b in " ".join(map(str, (a.get("task") or {}).get("command") or (a.get("native") or {}).get("new") or [])) for b in bad), f
@@ -62,6 +64,12 @@ sed -i 's/"state":"working"/"state":"blocked"/' "$HOME/.fakenative"
 "$A" stop "$id"; [ "$(st "$id")" = stopped ] && grep -q '"state":"stopped"' "$HOME/.fakenative" && ok "native: stop through its own command" || bad "native stop"
 "$A" rm "$id"; [ "$(st "$id")" = "?" ] && ok "native: removed" || bad "native rm"
 "$A" new fakenative "$HOME" "x" >/dev/null 2>&1 && bad "a task in ~ itself was allowed" || ok "refuses ~ itself as the folder"
+# preflight (what makes a safe mode real, like OpenClaw's exec policy): no task when it fails
+printf '%s\n' '#!/bin/sh' '[ "$1" = policy ] && exit 3' 'echo should-not-run' >"$t/bin/fakepre"; chmod +x "$t/bin/fakepre"
+printf '%s\n' 'id = "fakepre"' 'name = "Fake preflight"' 'binary = "fakepre"' '[permissions]' 'modes = ["safe"]' 'default = "safe"' \
+    '[task]' 'preflight = ["fakepre", "policy", "--safe"]' 'command = ["fakepre", "{prompt}"]' >"$t/agents/fakepre.toml"
+out=$("$A" new fakepre "$HOME/proj" "x" 2>&1); [ $? = 1 ] && [[ $out == *"safe permissions"* || $out == *"trygge tillatelsene"* ]] && [ -z "$(ls "$XDG_STATE_HOME/olymparch/agents" | grep fakepre)" ] &&
+    ok "preflight failed: the task was not started" || bad "preflight: $out"
 "$A" new fakenative / "x" >/dev/null 2>&1 && bad "a task in / was allowed" || ok "refuses /"
 
 # MCP registration from the agent files: a JSON-key agent (like OpenCode) gets exactly one key, and unregister

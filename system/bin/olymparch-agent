@@ -350,6 +350,19 @@ def cmd_new(args):
          "mode": mode, "native": False}
     env = agent_env(a)
     env["OLYMPARCH_AGENT_TASK"] = tid   # the agent's hooks report through this
+    # [task] preflight: what makes the agent's safe mode real (OpenClaw's exec policy) — no task without it
+    pre = (a.get("task") or {}).get("preflight")
+    if pre:
+        try:
+            r = subprocess.run([binary, *fill(pre[1:], dir=d, mode=mode, id=tid)], cwd=d, env=env, capture_output=True,
+                               text=True, timeout=60)
+        except (OSError, subprocess.SubprocessError) as e:
+            r = subprocess.CompletedProcess(pre, 1, "", str(e))
+        if r.returncode != 0:
+            shutil.rmtree(td, ignore_errors=True)
+            die(L(f"{a.get('name', aid)}: could not set its safe permissions, so the task was not started: ",
+                  f"{a.get('name', aid)}: fikk ikke satt de trygge tillatelsene, så oppgaven ble ikke startet: ")
+                + (r.stderr or r.stdout).strip()[-300:], 1)
     native = (a.get("native") or {}).get("new")
     if native:
         r = subprocess.run([binary, *fill(native[1:], prompt=prompt, dir=d, mode=mode, id=tid)], cwd=d, env=env,
