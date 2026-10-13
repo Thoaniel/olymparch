@@ -63,33 +63,33 @@ shot bar "Baren: ⚡ Zeus (stubben svarer) og agentikonet"
 python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/bar.ppm"
 xy=$(python3 -I tests/vm/bar-gold.py "$O/bar.ppm" 0)
 if [ "$xy" != none ]; then
-    n=$(count 'PANEL=zeus ')
+    c=$(count 'PANEL=zeus ')
     click ${xy% *} ${xy#* } 1.5
-    expect panel-klikk 'PANEL=zeus ' 10 "$n"
+    expect panel-klikk 'PANEL=zeus ' 10 "$c"
     shot panel-klikk "Klikk på lynet i baren: Zeus-panelet åpnes under det"
-    n=$(count 'PANEL= ')
+    c=$(count 'PANEL= ')
     click $((W / 2)) $((H / 2)) 1   # outside: it closes
-    expect panel-lukk-klikk 'PANEL= ' 10 "$n"
+    expect panel-lukk-klikk 'PANEL= ' 10 "$c"
     shot panel-lukket "Klikk utenfor: panelet er lukket"
 else fail+=(fant-ikke-lynet); fi
-n=$(count 'PANEL=zeus ')
-press meta_l+alt+space; sleep 1.2
+c=$(count 'PANEL=zeus ')
+press meta_l+alt+spc; sleep 1.2
 keys "zeus" 1
 shot meny-sok "Olymparch-menyen: søk «zeus» viser Paneler › Zeus"
 press ret
-expect panel-meny 'PANEL=zeus ' 10 "$n"
+expect panel-meny 'PANEL=zeus ' 10 "$c"
 shot panel-meny "Fra menyen: Zeus-panelet"
-n=$(count 'PANEL= ')
+c=$(count 'PANEL= ')
 press esc
-expect panel-esc 'PANEL= ' 10 "$n"
-n=$(count 'PANEL=zeus ')
+expect panel-esc 'PANEL= ' 10 "$c"
+c=$(count 'PANEL=zeus ')
 term "qs ipc -p /usr/share/olymparch/shell call panel toggle zeus"
-expect panel-ipc 'PANEL=zeus ' 10 "$n"
+expect panel-ipc 'PANEL=zeus ' 10 "$c"
 shot panel-ipc "Fra IPC (qs ipc call panel toggle zeus)"
 press esc; sleep 0.5
-n=$(count 'PANEL=zeus ')
+c=$(count 'PANEL=zeus ')
 press meta_l+z
-expect panel-supz 'PANEL=zeus ' 10 "$n"
+expect panel-supz 'PANEL=zeus ' 10 "$c"
 press esc
 
 # ── 2. a conversation in the panel, and an approval answered from the keyboard
@@ -99,14 +99,14 @@ press meta_l+z; sleep 2
 shot samtale "Samtalen i panelet: svarene, verktøylinjene, feltet"
 press esc
 term "$G scenario approval"
-n=$(count 'CARD=true')
+c=$(count 'CARD=true')
 need scenario-godkjenning 'AI: SCENARIO-approval' 30
-expect kort-vises 'CARD=true' 15 "$n"
+expect kort-vises 'CARD=true' 15 "$c"
 sleep 2
 shot kort "Zeus venter: kortet under baren (ingen tastatur), gullprikk på lynet"
-n=$(count 'PANEL=zeus CARD=false')
+c=$(count 'PANEL=zeus CARD=false')
 press meta_l+z; sleep 1.5
-expect kort-borte-med-panel 'PANEL=zeus CARD=false' 10 "$n"
+expect kort-borte-med-panel 'PANEL=zeus CARD=false' 10 "$c"
 shot godkjenning-panel "Panelet: kortet står over feltet; tastaturet står i feltet, ikke på Ja"
 press ret; sleep 1   # Enter in the field must not approve anything
 press up; press up; press up; sleep 0.5
@@ -125,11 +125,11 @@ wait_for 'AI: BAR-LOG-DONE' 20
 if seen 'SENT "cmd":"approve" x1' && seen 'SENT "cmd":"deny" x1'; then ok+=(ja-og-nei); else fail+=(ja-og-nei); fi
 
 # ── 3. nobody answers: the card goes away when Zeus gives up; a game: no card at all
-n=$(count 'CARD=false')
+c=$(count 'CARD=false')
 term "$G scenario timeout"
 wait_for 'AI: SCENARIO-timeout' 30
 sleep 3; shot kort-venter "Ingen svarer: kortet står"
-expect kort-tidsavbrudd 'CARD=false' 30 "$n"
+expect kort-tidsavbrudd 'CARD=false' 30 "$c"
 shot kort-tidsavbrudd "Zeus ga opp: kortet er borte"
 term "$G scenario approval; sleep 3; qs ipc -p /usr/share/olymparch/shell call olymparch gamemode on"
 sleep 8
@@ -139,9 +139,9 @@ term "qs ipc -p /usr/share/olymparch/shell call olymparch gamemode off"
 sleep 1
 
 # ── 4. the fallback chain: Groq's free quota runs out (429), Gemini answers, and the bar says so
-n=$(count '"answering_provider":"(GoogleGemini|gemini)"')
+c=$(count '"answering_provider":"(GoogleGemini|gemini)"')
 term "$G scenario fallback"
-expect reserve '"answering_provider":"(GoogleGemini|gemini)"' 25 "$n"
+expect reserve '"answering_provider":"(GoogleGemini|gemini)"' 25 "$c"
 seen 'ZEUS=.*429' && ok+=(kvote-vist) || fail+=(kvote-vist)
 sleep 1
 shot reservekjede "Groq svarte 429: Gemini tok over, baren viser «Zeus · Google Gemini»"
@@ -150,9 +150,9 @@ shot reservekjede-panel "Panelet: «Klar · Gemini svarte (reserve)», varselet 
 press esc
 
 # ── 5. the Agents panel: a task typed into it, a native task and a tmux task to the end; stop and remove
-n=$(count 'PANEL=agents ')
+c=$(count 'PANEL=agents ')
 term "qs ipc -p /usr/share/olymparch/shell call panel toggle agents"
-expect agentpanel 'PANEL=agents ' 10 "$n"
+expect agentpanel 'PANEL=agents ' 10 "$c"
 shot agenter-tomt "Agent-panelet: ingen oppgaver, «Ny oppgave» med testagentene"
 press up; keys "~/dev/prosjekt" 0.5   # the folder field (the task field has the keyboard first)
 press down; keys "skriv en hilsen" 0.5
