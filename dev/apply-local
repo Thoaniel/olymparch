@@ -52,7 +52,7 @@ put 755 "$repo/default/launch-shell" /usr/lib/olymparch/launch-shell
 for f in "$repo"/default/systemd/user/*; do put 644 "$f" "/usr/lib/systemd/user/${f##*/}"; done
 for f in "$repo"/system/polkit/*.policy; do [ -e "/usr/share/polkit-1/actions/${f##*/}" ] && put 644 "$f" "/usr/share/polkit-1/actions/${f##*/}"; done
 for f in "$repo"/system/polkit/*.rules; do [ -e "/usr/share/polkit-1/rules.d/${f##*/}" ] && put 644 "$f" "/usr/share/polkit-1/rules.d/${f##*/}"; done
-for f in "$repo"/system/hooks/*.hook; do [ -e "/etc/pacman.d/hooks/${f##*/}" ] && put 644 "$f" "/etc/pacman.d/hooks/${f##*/}"; done
+for f in "$repo"/system/hooks/*.hook; do put 644 "$f" "/etc/pacman.d/hooks/${f##*/}"; done   # new hooks too
 
 if [ ${#changed[@]} -eq 0 ]; then echo "Nothing to change: the system already has this checkout."; exit 0; fi
 printf '%s\n' "${changed[@]}"

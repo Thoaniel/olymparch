@@ -349,7 +349,9 @@ Scope {
         stderr: StdioCollector { id: previewErr }
         onExited: code => {
             if (!menu.view || menu.view.checking !== name) return;   // gone back in the meantime
-            const lines = previewOut.text.split("\n").filter(l => l.trim()).map(l => l.split("\t"));
+            const all = previewOut.text.split("\n").filter(l => l.trim()).map(l => l.split("\t"));
+            const lines = all.filter(l => !l[0].startsWith("#"));
+            const updates = parseInt((all.find(l => l[0] === "#updates") || [])[1]) || 0;
             const inst = action === "install";
             if (code !== 0) {
                 const why = previewErr.text.trim().replace(/^packages: /, "") || menu.t("The helper is missing (olymparch update)", "Hjelperen mangler (olymparch update)");
@@ -370,6 +372,9 @@ Scope {
                                        `Dette installeres (${n} pakke${n > 1 ? "r" : ""}` + (total ? `, ${menu.size(total)}):` : "):"))
                               : menu.t(`This is removed (${n} package${n > 1 ? "s" : ""}):`, `Dette fjernes (${n} pakke${n > 1 ? "r" : ""}):`);
             const what = (inst ? menu.t("install ", "installere ") : menu.t("remove ", "fjerne ")) + label + menu.t(` (${n}\u00a0package${n > 1 ? "s" : ""})`, ` (${n}\u00a0pakke${n > 1 ? "r" : ""})`);
+            // an install brings the system up to date too (never a new package on an old system)
+            if (inst && updates > 0) list.push(menu.t(`The system is updated at the same time (${updates} update${updates > 1 ? "s" : ""}), so everything fits together.`,
+                                                      `Systemet oppdateres samtidig (${updates} oppdatering${updates > 1 ? "er" : ""}), så alt passer sammen.`));
             menu.confirm(inst ? menu.t("Install ", "Installere ") + label + "?" : menu.t("Remove ", "Fjerne ") + label + "?", [head].concat(list),
                          inst ? menu.t("Install", "Installer") : menu.t("Remove", "Fjern"), !inst,
                          () => menu.runJob((inst ? menu.t("Installing ", "Installerer ") : menu.t("Removing ", "Fjerner ")) + label,

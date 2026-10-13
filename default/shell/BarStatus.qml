@@ -287,6 +287,16 @@ Row {
         onClicked: Panels.toggle("notifications", status.screenName)
     }
     NotificationsPanel { theme: status.theme; anchorItem: bellCell; screenName: status.screenName }
+    // an update that needs a restart to finish (a new kernel or graphics driver): the System panel has the button
+    Cell {
+        id: restartCell
+        visible: RestartNeeded.needed
+        icon: "\u{F0709}"
+        tint: status.theme.gold
+        dot: true
+        clickable: true
+        onClicked: Panels.toggle("system", status.screenName)
+    }
     // updates waiting (a number only when there are some) and the weather (when Settings has a place)
     Cell {
         id: updatesCell

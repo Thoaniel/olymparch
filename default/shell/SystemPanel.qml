@@ -30,8 +30,20 @@ Dropdown {
         SysStats.sample(); lists.running = false; lists.running = true;
     }
 
+    // ── an update that needs a restart to finish: first in the panel, the second press restarts
+    property bool restartSure: false
+    PanelAction {
+        theme: p.theme
+        visible: RestartNeeded.needed
+        icon: "\u{F0709}"
+        danger: p.restartSure
+        label: p.restartSure ? p.t("system.restart_sure", "Press again to restart now") : p.t("system.restart_needed", "Restart to finish the update")
+        hint: p.restartSure ? "" : p.t("system.restart_why", "a new kernel or driver is installed")
+        onActivated: { if (!p.restartSure) { p.restartSure = true; return; } Quickshell.execDetached(["systemctl", "reboot"]); }
+    }
+
     // ── live numbers (SysStats, shared with the bar): sampled faster while this panel is open
-    onVisibleChanged: SysStats.fast = visible
+    onVisibleChanged: { SysStats.fast = visible; if (!visible) restartSure = false; }
     function gb(bytes) { return SysStats.gb(bytes); }
     readonly property string uptime: {
         const t = SysStats.uptime, d = Math.floor(t / 86400), h = Math.floor(t % 86400 / 3600), m = Math.floor(t % 3600 / 60);

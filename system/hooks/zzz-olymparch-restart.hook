@@ -1,0 +1,17 @@
+[Trigger]
+Operation = Upgrade
+Operation = Install
+Type = Package
+Target = linux
+Target = linux-lts
+Target = linux-zen
+Target = linux-hardened
+Target = nvidia*
+Target = systemd
+Target = glibc
+Target = mesa
+
+[Action]
+Description = Olymparch: a restart finishes this update / en omstart fullfører oppdateringen
+When = PostTransaction
+Exec = /usr/bin/sh -c 'mkdir -p /run/olymparch && date +%s > /run/olymparch/restart-needed'

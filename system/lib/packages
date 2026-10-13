@@ -14,7 +14,11 @@
 # extra, multilib or olymparch (never the AUR, a group, a file or a URL); everything it pulls in must come from
 # those repositories too. Remove refuses the protected list below, every package the installer put in
 # (/var/lib/olymparch/base-packages) and anything removing NAME would take with it from those. pacman runs with
-# --noconfirm (the menu asked), never with -dd, --overwrite or -c. Everything is logged to
+# --noconfirm (the menu asked), never with -dd, --overwrite or -c. An install is always `pacman -Syu … NAME`: the
+# package and the system are brought up to date together, never a new package on top of an old system (Arch's
+# «partial upgrade», which breaks libraries) and never a download from a stale database (404s). The preview's last
+# line «#updates<TAB>N» says how many updates come along (from the bar's checkupdates copy; 0 if unknown).
+# A pacman lock left by a crash or a power cut (no pacman running) is removed. Everything is logged to
 # /var/log/olymparch-packages.log. Exit codes: 0 done, 1 failed or not root, 2 refused.
 set -euo pipefail
 export PATH=/usr/bin LC_ALL=C
@@ -94,7 +98,12 @@ case $action in
         [ $# = 3 ] || refuse "usage: preview install|remove NAME"
         valid_name "$3" || refuse "not a package name"
         case $2 in
-            install) repo=$(repo_of "$3"); install_targets "$repo" "$3" ;;
+            install)
+                repo=$(repo_of "$3"); install_targets "$repo" "$3"
+                db=${XDG_CACHE_HOME:-$HOME/.cache}/olymparch/checkup-db
+                u=0
+                [ -d "$db/sync" ] && command -v checkupdates >/dev/null && u=$(CHECKUPDATES_DB=$db checkupdates --nosync 2>/dev/null | grep -c . || true)
+                printf '#updates\t%s\n' "${u:-0}" ;;
             remove) remove_targets "$3" ;;
             *) refuse "unknown action" ;;
         esac
@@ -123,9 +132,11 @@ flock 9
 umask 022
 {
     printf '\n== %s %s %s (uid %s)\n%s\n' "$(date '+%F %T')" "$action" "$name" "${PKEXEC_UID:-?}" "$targets"
+    # a lock with no pacman behind it is left over (a crash or a power cut): remove it; a real one: wait for it
+    if [ -e /var/lib/pacman/db.lck ] && ! pgrep -x pacman >/dev/null; then rm -f /var/lib/pacman/db.lck; echo "removed a stale pacman lock"; fi
     for _ in $(seq 60); do [ -e /var/lib/pacman/db.lck ] || break; sleep 2; done   # another install is running
     if [ "$action" = install ]; then
-        pacman -S --noconfirm --needed -- "$repo/$name"
+        pacman -Syu --noconfirm --needed -- "$repo/$name"
     else
         pacman -Rs --noconfirm -- "$name"
     fi

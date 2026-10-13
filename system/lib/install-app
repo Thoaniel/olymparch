@@ -45,8 +45,11 @@ exec </dev/null 9>/run/olymparch-install-app.lock
 flock 9
 {
     printf '\n== %s install-app %s (uid %s)\n' "$(date '+%F %T')" "$1" "${PKEXEC_UID:-?}"
+    # a lock with no pacman behind it is left over (a crash or a power cut): remove it; a real one: wait for it
+    if [ -e /var/lib/pacman/db.lck ] && ! pgrep -x pacman >/dev/null; then rm -f /var/lib/pacman/db.lck; fi
     for _ in $(seq 60); do [ -e /var/lib/pacman/db.lck ] || break; sleep 2; done   # another install is running
-    pacman -S --noconfirm --needed -- "${pkgs[@]}"
+    # the app and the system together, never a new package on an old system (a partial upgrade breaks libraries)
+    pacman -Syu --noconfirm --needed -- "${pkgs[@]}"
     # Neovim gets Olymparch's small default config (your own ~/.config/nvim wins)
     if [ "$1" = neovim ] && [ ! -e /etc/xdg/nvim/init.lua ] && [ -f /usr/share/olymparch/nvim/init.lua ]; then
         install -Dm644 /usr/share/olymparch/nvim/init.lua /etc/xdg/nvim/init.lua
