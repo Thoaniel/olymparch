@@ -511,8 +511,10 @@ mode_is 644 /etc/profile /etc/profile.d/zz-olymparch-session.sh /etc/fstab /etc/
 # and nothing Olymparch put in place is closed to other users
 while IFS= read -r f; do bad+=" ${f#/mnt} ($(stat -c %a "$f"))"; done < <(find /mnt/usr/share/olymparch /mnt/usr/lib/olymparch \
     /mnt/usr/share/plymouth/themes/olymparch /mnt/etc/olymparch /mnt/etc/xdg/foot -xdev \( -type d ! -perm -005 -o -type f ! -perm -004 \) 2>/dev/null | head -n 20)
-# as the user and as alpm, without PAM (setpriv, not runuser: no login session in the chroot)
-as_user() { local u=$1; shift; arch-chroot /mnt setpriv --reuid "$u" --regid "$u" --init-groups env -i HOME=/ PATH=/usr/bin "$@" 2>&1; }
+# as the user and as alpm, without PAM (setpriv, not runuser: no login session in the chroot). stdin is
+# /dev/null: the installer runs on tty1, and a login shell on tty1 is the one the session script turns into the
+# desktop (it would try to start Hyprland, and switch off echo on the installer's console).
+as_user() { local u=$1; shift; arch-chroot /mnt setpriv --reuid "$u" --regid "$u" --init-groups env -i HOME=/ PATH=/usr/bin "$@" </dev/null 2>&1; }
 me=$(as_user "$USERNAME" sh -c '. /etc/profile >/dev/null 2>&1; id -un' | tail -n 1)
 [ "$me" = "$USERNAME" ] || bad+=" ($USERNAME cannot read /etc/profile or has no name: «$me»)"
 as_user alpm test -r /etc/pacman.conf >/dev/null || bad+=" (pacman's user alpm cannot read /etc)"
