@@ -233,7 +233,7 @@ for tid in ids:
     th = max([im.height for _, im in tiles], default=0)
     sheet = Image.new("RGB", (16 + 1600 + 16, 16 + 30 + big.height + 16 + (th + 40 if tiles else 0) * 1 + 16), BG)
     d = ImageDraw.Draw(sheet); d.font = FONT
-    d.text((16, 20), f"{t['name']['nb']} · {bg['name']['nb']}  (art/illustrations/{tid}.svg, 1920×1080)", fill=INK)
+    d.text((16, 20), f"{t['name']['nb']} · {bg['name']['nb']}  (art/illustrations/{tid}.svg, 1920x1080)", fill=INK)
     sheet.paste(big, (16, 46))
     y = 46 + big.height + 16
     for i, (label, im) in enumerate(tiles[:4]):
