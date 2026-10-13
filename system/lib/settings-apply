@@ -16,6 +16,7 @@
 #   tailscale on|off                 tailscaled.service enabled and started (the user becomes its operator) or stopped
 #   firewall on|off                  nftables.service with Arch's /etc/nftables.conf, or stopped (rules flushed)
 #   charge-limit 50…100              charge_control_end_threshold of every battery, now and at boot (tmpfiles.d)
+#   restart network|bluetooth|dns|printing|power|tailscale   restart that one system service (troubleshooting, AI agents)
 set -euo pipefail
 export PATH=/usr/bin LC_ALL=C
 umask 022
@@ -34,7 +35,8 @@ case "$action:$value" in
     mac-random:on | mac-random:off | \
     snapshots:[2-9] | snapshots:[1-4][0-9] | snapshots:50 | \
     mousepoll:auto | mousepoll:fast | tailscale:on | tailscale:off | firewall:on | firewall:off | \
-    charge-limit:[5-9][0-9] | charge-limit:100) ;;
+    charge-limit:[5-9][0-9] | charge-limit:100 | \
+    restart:network | restart:bluetooth | restart:dns | restart:printing | restart:power | restart:tailscale) ;;
     *) echo "settings-apply: not allowed: $action $value" >&2; exit 2 ;;
 esac
 fi
@@ -155,6 +157,14 @@ case "$action" in
     firewall)
         [ -x /usr/bin/nft ] || { echo "settings-apply: nftables is not installed" >&2; exit 3; }
         if [ "$value" = on ]; then systemctl enable --now nftables.service; else systemctl disable --now nftables.service; fi
+        ;;
+    restart)   # a fixed word for a fixed unit, restarted only when it is installed
+        case $value in
+            network) unit=NetworkManager.service ;; bluetooth) unit=bluetooth.service ;; dns) unit=systemd-resolved.service ;;
+            printing) unit=cups.service ;; power) unit=power-profiles-daemon.service ;; tailscale) unit=tailscaled.service ;;
+        esac
+        systemctl cat "$unit" >/dev/null 2>&1 || { echo "settings-apply: $unit is not installed" >&2; exit 1; }
+        systemctl restart "$unit"
         ;;
     charge-limit)
         found=0

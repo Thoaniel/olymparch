@@ -406,6 +406,207 @@ def t_hw(a, s):
     return ran(run([cmd("olymparch-hw"), "plan", "--summary"], timeout=60))
 
 
+# ── troubleshooting: crashes, errors, failed services, what changed. Logs are other programs' text (openWorld) and
+# can hold private things, so reading them is «sensitive» (the user approves); keys, tokens and passwords in them are
+# masked before they leave, and every read is capped.
+CACHE = os.environ.get("XDG_CACHE_HOME") or os.path.join(HOME, ".cache")
+SHELL_LOG = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.join(HOME, ".local/state"), "olymparch/shell.log")
+SECRETS_IN_TEXT = re.compile(
+    r"(?i)\b(sk-(?:ant|or-v1|proj)?-?[A-Za-z0-9_-]{16,}|gsk_[A-Za-z0-9]{16,}|AIza[0-9A-Za-z_-]{30,}|gh[pousr]_[A-Za-z0-9]{20,}"
+    r"|xox[abpr]-[A-Za-z0-9-]{10,}|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,})"
+    r"|(bearer\s+)[A-Za-z0-9._~+/=-]{12,}"
+    r"|((?:password|passwd|passphrase|secret|token|api[_-]?key)\s*[=:]\s*)[\"']?[^\s\"',;]{4,}")
+
+
+def redact(t):
+    def mask(m):
+        if m.group(2):
+            return m.group(2) + "***"
+        if m.group(3):
+            return m.group(3) + "***"
+        return "***"
+    return SECRETS_IN_TEXT.sub(mask, t)
+
+
+def capped(t, limit=12000):
+    t = redact(t)
+    return t if len(t) <= limit else L(f"… (only the last {limit} characters)\n", f"… (bare de siste {limit} tegnene)\n") + t[-limit:]
+
+
+def hypr_reports():
+    d = os.path.join(CACHE, "hyprland")
+    out = []
+    if os.path.isdir(d):
+        for f in os.listdir(d):
+            if re.fullmatch(r"hyprlandCrashReport\d{1,10}\.txt", f):
+                out.append((os.path.getmtime(os.path.join(d, f)), f))
+    return [f for _, f in sorted(out, reverse=True)]
+
+
+@tool("crashes_list", "read", "Recent crashes", "Siste krasj",
+      "What crashed lately: programs that dumped core this week (coredumpctl: time, program, signal, pid), "
+      "Hyprland's crash reports, and whether the desktop stopped with an error. Then crash_details for one of them, "
+      "logs_errors for the errors around it, recent_changes for what an update changed just before.")
+def t_crashes_list(a, s):
+    lines = []
+    rc, out, _ = run(["coredumpctl", "list", "--no-pager", "--no-legend", "--since=-7d"], timeout=30)
+    rows = [r for r in out.splitlines() if r.strip()] if rc == 0 else []
+    lines.append(L("Programs that crashed (core dumps, 7 days):", "Programmer som krasjet (kjernedumper, 7 dager):"))
+    lines += [f"  {r.strip()}" for r in rows[-25:]] or ["  " + L("none", "ingen")]
+    reports = hypr_reports()
+    lines.append(L("Hyprland crash reports:", "Hyprlands krasjrapporter:"))
+    lines += [f"  {f}  ({time.strftime('%Y-%m-%d %H:%M', time.localtime(os.path.getmtime(os.path.join(CACHE, 'hyprland', f))))})"
+              for f in reports[:10]] or ["  " + L("none", "ingen")]
+    failed = os.path.join(HOME, ".cache/olymparch/desktop-failed")
+    if os.path.exists(failed):
+        lines.append(L("The desktop stopped with an error at the last login (code ", "Skrivebordet stoppet med en feil ved forrige innlogging (kode ")
+                     + open(failed).read().strip() + ")")
+    if os.path.exists(SHELL_LOG):
+        with open(SHELL_LOG, errors="replace") as f:
+            starts = sum(1 for line in f if "Launching config" in line)
+        lines.append(L(f"The Olymparch shell has started {starts} time(s) since its log began (more than once a login = it restarted)",
+                       f"Olymparch-skallet har startet {starts} gang(er) siden loggen begynte (mer enn én per innlogging = det startet på nytt)"))
+    return text("\n".join(lines))
+
+
+@tool("crash_details", "sensitive", "Details of a crash", "Detaljer om et krasj",
+      "One crash in detail: kind coredump (id = the pid from crashes_list: coredumpctl info, with the backtrace when "
+      "there are symbols), hyprland (id = a report's file name from crashes_list), or shell (the Olymparch shell's own "
+      "log, the last 200 lines; no id). Keys and passwords in it are masked.",
+      {"kind": S(10, enum=("coredump", "hyprland", "shell")), "id": S(40, r"[A-Za-z0-9._-]{1,40}")}, ("kind",),
+      open_world=True)
+def t_crash_details(a, s):
+    kind, ident = a["kind"], a.get("id", "")
+    if kind == "coredump":
+        if not re.fullmatch(r"\d{1,10}", ident):
+            raise BadArgs(L("id: the pid of the crash (crashes_list)", "id: pid-en til krasjet (crashes_list)"))
+        rc, out, err = run(["coredumpctl", "info", "--no-pager", ident], timeout=60)
+        if rc != 0:
+            raise ToolError(err.strip()[:300] or f"exit code {rc}")
+        return text(capped(out))
+    if kind == "hyprland":
+        if ident not in hypr_reports():
+            raise BadArgs(L("id: one of the report names crashes_list shows", "id: et av rapportnavnene crashes_list viser"))
+        with open(os.path.join(CACHE, "hyprland", ident), errors="replace") as f:
+            return text(capped(f.read()))
+    try:
+        with open(SHELL_LOG, errors="replace") as f:
+            return text(capped("".join(f.readlines()[-200:])))
+    except OSError:
+        raise ToolError(L("the shell has no log yet", "skallet har ingen logg ennå"))
+
+
+@tool("logs_errors", "sensitive", "Errors in the logs", "Feil i loggene",
+      "Errors from the journal, newest last: scope system (all services), user (your session: the shell, Hyprland, "
+      "PipeWire …) or kernel (drivers, GPU resets, firmware; warnings too); since boot (this one), previous_boot (the "
+      "one that crashed) or hour; optionally one unit. At most `lines` lines (default 80). Keys and passwords masked.",
+      {"scope": S(8, enum=("system", "user", "kernel")), "since": S(14, enum=("boot", "previous_boot", "hour")),
+       "unit": S(80, r"[A-Za-z0-9@._:-]{1,80}", "a unit, such as pipewire.service"), "lines": I(1, 300)},
+      ("scope",), open_world=True)
+def t_logs_errors(a, s):
+    argv = ["journalctl", "--no-pager", "-o", "short-iso", "-n", str(a.get("lines", 80))]
+    since = a.get("since", "boot")
+    argv += {"boot": ["-b", "0"], "previous_boot": ["-b", "-1"], "hour": ["--since", "-1h"]}[since]
+    scope = a["scope"]
+    if scope == "kernel":
+        argv += ["-k", "-p", "warning"]
+    else:
+        argv += ["-p", "err"] + (["--user"] if scope == "user" else [])
+    if a.get("unit"):
+        argv += ["--user-unit" if scope == "user" else "-u", a["unit"]]
+    rc, out, err = run(argv, timeout=60)
+    if rc != 0 and not out.strip():
+        raise ToolError(err.strip()[:300] or f"exit code {rc}")
+    return text(capped(out) if out.strip() else L("no errors there", "ingen feil der"))
+
+
+@tool("services_failed", "read", "Failed services", "Tjenester som feilet",
+      "The system and user services that have failed (systemctl --failed), with their descriptions. For why: "
+      "logs_errors with the unit.")
+def t_services_failed(a, s):
+    out = []
+    for label, extra in ((L("System", "System"), []), (L("Your session", "Økten din"), ["--user"])):
+        rc, o, _ = run(["systemctl", *extra, "--failed", "--no-legend", "--plain", "--no-pager"], timeout=20)
+        rows = [r.strip() for r in o.splitlines() if r.strip()] if rc == 0 else []
+        out.append(f"{label}:")
+        out += [f"  {r}" for r in rows] or ["  " + L("none", "ingen")]
+    return text("\n".join(out))
+
+
+@tool("recent_changes", "read", "What the last update changed", "Hva siste oppdatering endret",
+      "The packages pacman upgraded, installed or removed in its last run (olymparch-changes): a crash that began right "
+      "after an update often starts here. Rolling back is the user's choice (rollback_open).")
+def t_recent_changes(a, s):
+    return ran(run([cmd("olymparch-changes")], timeout=30))
+
+
+# ── fixing what was found: each one a fixed action behind the approval card. Root goes only through Olymparch's
+# narrow helpers (settings-apply restart WORD, hw-apply RULE…), never a unit, package or path the agent names.
+@tool("desktop_reload", "change", "Restart part of the desktop", "Start en del av skrivebordet på nytt",
+      "Fix a stuck or crashed part without logging out: bar (the Olymparch shell: launch-shell starts it again), "
+      "hyprland (reload its config; open windows stay), or sound (PipeWire, its Pulse server and WirePlumber).",
+      {"what": S(8, enum=("bar", "hyprland", "sound"))}, ("what",), idempotent=True)
+def t_desktop_reload(a, s):
+    what = a["what"]
+    if what == "bar":
+        rc, out, _ = run(["pgrep", "-u", str(os.getuid()), "-x", "quickshell"])
+        pids = [p for p in out.split() if p.isdigit()]
+        if not pids:
+            raise ToolError(L("the shell is not running; log out and in again", "skallet kjører ikke; logg ut og inn igjen"))
+        for pid in pids:
+            os.kill(int(pid), 15)
+        return text(L("the bar restarts in a moment", "baren starter på nytt om et øyeblikk"))
+    if what == "hyprland":
+        return ran(run(["hyprctl", "reload"], timeout=20))
+    return ran(run(["systemctl", "--user", "restart", "pipewire.service", "pipewire-pulse.service", "wireplumber.service"], timeout=60))
+
+
+@tool("user_service_restart", "change", "Restart one of your services", "Start en av tjenestene dine på nytt",
+      "Restart one systemd user service of this session that exists (systemctl --user restart UNIT), such as "
+      "olympus-web.service; services_failed and logs_errors show which. Not Olymparch's own MCP server.",
+      {"unit": S(80, r"[A-Za-z0-9@._:-]{1,72}\.service")}, ("unit",), idempotent=True)
+def t_user_service_restart(a, s):
+    unit = a["unit"]
+    if unit.startswith("olymparch-mcp"):
+        raise ToolError(L("the MCP server is not restarted from inside itself", "MCP-serveren startes ikke på nytt innenfra"))
+    rc, out, _ = run(["systemctl", "--user", "list-unit-files", "--no-legend", "--plain", unit], timeout=20)
+    loaded = run(["systemctl", "--user", "show", "-p", "LoadState", "--value", unit], timeout=20)[1].strip()
+    if loaded != "loaded" and unit not in out:
+        raise ToolError(L(f"no such user service: {unit}", f"ingen slik tjeneste: {unit}"))
+    return ran(run(["systemctl", "--user", "restart", unit], timeout=90))
+
+
+@tool("system_service_restart", "sensitive", "Restart a system service", "Start en systemtjeneste på nytt",
+      "Restart one system service from a fixed list, as root through Olymparch's settings helper: network "
+      "(NetworkManager), bluetooth, dns (systemd-resolved), printing (cups), power (power-profiles-daemon), "
+      "tailscale. Anything else: tell the user, who runs it themselves.",
+      {"service": S(12, enum=("network", "bluetooth", "dns", "printing", "power", "tailscale"))}, ("service",),
+      idempotent=True)
+def t_system_service_restart(a, s):
+    return ran(run(["pkexec", "/usr/lib/olymparch/settings-apply", "restart", a["service"]], timeout=120))
+
+
+@tool("drivers_install", "sensitive", "Install missing drivers", "Installer manglende drivere",
+      "Install what Olymparch's hardware rules say this machine needs and lacks (GPU drivers, firmware, microcode …): "
+      "rule ids from hardware_plan (separated by spaces), or none for all the rules that match. Through the Install button's helper "
+      "(pkexec /usr/lib/olymparch/hw-apply RULE…): rule ids only, never package names; the new kernel files take "
+      "effect after a restart.",
+      {"rules": S(300, r"[a-z0-9][a-z0-9-]{0,63}( [a-z0-9][a-z0-9-]{0,63}){0,7}", "rule ids separated by spaces")},
+      open_world=True)
+def t_drivers_install(a, s):
+    rc, out, err = run([cmd("olymparch-hw"), "plan", "--list", "rules"], timeout=60)
+    active = set(out.split()) if rc == 0 else set()
+    rules = a["rules"].split() if a.get("rules") else sorted(active)
+    if not rules:
+        return text(L("no hardware rule matches this machine: nothing to install", "ingen maskinvareregel passer denne maskinen: ingenting å installere"))
+    unknown = [r for r in rules if r not in active]
+    if unknown:
+        raise ToolError(L("not a rule that matches this machine: ", "ikke en regel som passer denne maskinen: ") + ", ".join(unknown))
+    r = ran(run(["pkexec", "/usr/lib/olymparch/hw-apply", *rules], timeout=1800))
+    r["content"][0]["text"] += "\n" + L("Details: /var/log/olymparch-hw.log. A restart may be needed.", "Detaljer: /var/log/olymparch-hw.log. Det kan trengs en omstart.")
+    return r
+
+
 # ── settings
 @tool("settings_list", "read", "List settings", "Vis innstillinger",
       "Every setting: key, value, page, label. Optionally only one page (display, audio, appearance, keyboard, "
@@ -1235,7 +1436,10 @@ INSTRUCTIONS = (
     "Olymparch is the user's Arch Linux gaming desktop (Hyprland). These tools control it. Prefer them over shell "
     "commands, never use sudo yourself. read tools run at once; change and sensitive tools show the user an approval "
     "card and may be denied: then stop and ask the user in the chat. Settings: read the resource "
-    "olymparch://settings/schema before settings_set. Troubleshooting: start with system_doctor.")
+    "olymparch://settings/schema before settings_set. Troubleshooting: start with system_doctor; for crashes "
+    "crashes_list, then crash_details, logs_errors, services_failed and recent_changes. Fixes, each with the user's "
+    "approval: settings_reset/settings_set, desktop_reload, user_service_restart, system_service_restart, "
+    "drivers_install, package_install, update_open, rollback_open.")
 
 
 def handle(session, msg):

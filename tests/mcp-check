@@ -191,10 +191,13 @@ try:
            and "x-multiline" not in json.dumps(t["inputSchema"]), f"{t['name']}: schema")
         ok(not any(w in t["name"] for w in ("shell", "exec", "command", "run_")), f"{t['name']}: looks like a raw shell tool")
     names = {t["name"]: t for t in tools}
-    for n in ("clipboard_read", "files_read", "screenshot", "package_install"):
+    for n in ("clipboard_read", "files_read", "screenshot", "package_install", "crash_details", "logs_errors"):
         ok(names.get(n, {}).get("risk") == "sensitive", f"{n} must be sensitive")
-    for n in ("clipboard_read", "files_read", "files_list", "screenshot", "ocr_screen", "reminders_list", "webapp_add"):
+    for n in ("clipboard_read", "files_read", "files_list", "screenshot", "ocr_screen", "reminders_list", "webapp_add",
+              "crash_details", "logs_errors"):
         ok(names.get(n, {}).get("annotations", {}).get("openWorldHint") is True, f"{n}: openWorldHint must be true")
+    for n in ("crashes_list", "services_failed", "recent_changes"):   # troubleshooting without the user's say: metadata only
+        ok(names.get(n, {}).get("risk") == "read", f"{n} must be read")
     for n in ("settings_get", "settings_list", "themes_list", "backgrounds_list", "system_info", "windows_list",
               "workspaces_list", "packages_search", "packages_catalog", "volume_get"):
         ok(names.get(n, {}).get("annotations", {}).get("openWorldHint") is False, f"{n}: openWorldHint must be false")
@@ -535,6 +538,19 @@ try:
         ok(desc and 20 <= len(desc.group(1)) <= 1024, f"{d.name}: description")
         for tool_ in re.findall(r"`([a-z]+_[a-z_]+)`", t):
             ok(tool_ in names or "." in tool_, f"{d.name}: mentions unknown tool {tool_}")
+
+    # ── troubleshooting output: keys, tokens and passwords in logs are masked before they reach an agent
+    ns = {"re": re}
+    exec(src[src.index("SECRETS_IN_TEXT = re.compile("):src.index("def capped")], ns)
+    for raw, secret in (("key gsk_abcdefghijklmnopqrstuv1 end", "gsk_abcdefghijklmnopqrstuv1"),
+                        ("Authorization: Bearer abc.def-ghi_jklmnop123", "abc.def-ghi_jklmnop123"),
+                        ("password=hunter2222 ok", "hunter2222"), ('api_key: "sk-proj-ABCDEFGHIJKLMNOPQRSTUV"', "ABCDEFGHIJKLMNOPQRSTUV"),
+                        ("AIzaSyA1234567890abcdefghijklmnopqrstu", "AIzaSyA1234567890"), ("xoxb-1234567890-abcdefghij", "1234567890-abc")):
+        ok(secret not in ns["redact"](raw), f"redact left a secret in: {raw}")
+    ok(ns["redact"]("an ordinary line: 42 errors in pipewire") == "an ordinary line: 42 errors in pipewire", "redact changed a plain line")
+    # fixes go to root only through the helpers' fixed words
+    ok('"pkexec", "/usr/lib/olymparch/settings-apply", "restart", a["service"]' in src and
+       "restart:network | restart:bluetooth" in (ROOT / "system/lib/settings-apply").read_text(), "system_service_restart: fixed words only")
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 
