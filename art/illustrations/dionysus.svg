@@ -212,16 +212,34 @@
     <path id="vleaf" d="M0 0 C-10 10 -30 6 -46 4 C-40 18 -58 26 -76 24 C-66 38 -80 58 -96 66 C-74 74 -60 70 -50 80
       C-56 98 -50 114 -40 128 C-26 116 -16 112 -8 116 C-6 132 0 146 6 152 C12 140 16 128 18 116 C28 116 40 120 50 130
       C58 114 62 100 56 84 C70 76 86 74 100 70 C86 58 76 44 80 26 C62 28 46 20 46 6 C30 8 12 10 0 0 Z"/>
+    <!-- veins of a vine leaf (same frame as #vleaf) -->
+    <path id="vveins" d="M0 0 L-86 62 M0 0 L-44 118 M0 0 L4 146 M0 0 L48 122 M0 0 L92 66 M-40 28 L-58 18 M-44 32 L-40 54
+      M-24 64 L-46 82 M-20 70 L-6 92 M2 80 L-10 100 M2 80 L16 98 M26 66 L22 90 M26 66 L44 74 M46 34 L66 34 M46 34 L46 54"
+      fill="none" stroke-linecap="round"/>
+    <radialGradient id="leafBack" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#6a5a30"/>
+      <stop offset="0.35" stop-color="#3a3620"/>
+      <stop offset="0.75" stop-color="#262414"/>
+      <stop offset="1" stop-color="#14120c"/>
+    </radialGradient>
+    <radialGradient id="leafDeep" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#3a2e24"/>
+      <stop offset="0.6" stop-color="#1c1416"/>
+      <stop offset="1" stop-color="#0e080e"/>
+    </radialGradient>
     <!-- an ivy leaf: three-pointed, ~60 px -->
     <path id="ivy" d="M0 0 C-8 -6 -20 -8 -30 -4 C-26 -12 -28 -24 -22 -34 C-14 -30 -6 -34 0 -46 C6 -34 14 -30 22 -34
       C28 -24 26 -12 30 -4 C20 -8 8 -6 0 0 Z"/>
-    <!-- a row of vines on a terrace: posts and bunched foliage, 600 px wide -->
-    <!-- one vine on its stake (~44 px tall), and a row of them, 600 px wide; the lit edge faces the afterglow -->
-    <path id="vine1" d="M-2 0 L-2 -14 C-18 -12 -30 -18 -28 -28 C-32 -36 -22 -44 -12 -40 C-8 -48 4 -50 10 -42 C18 -46 30 -40 28 -30
+    <!-- three irregular vines on their stakes (~46 px tall); the lit edge faces the afterglow -->
+    <path id="vA" d="M-2 0 L-3 -14 C-18 -12 -30 -18 -28 -28 C-33 -37 -22 -45 -12 -41 C-8 -49 4 -51 10 -43 C18 -47 30 -40 28 -30
       C34 -22 26 -14 14 -14 C8 -12 4 -14 2 -14 L2 0 Z"/>
-    <path id="vine1lit" d="M-28 -28 C-32 -36 -22 -44 -12 -40 C-8 -48 4 -50 10 -42" fill="none"/>
-    <g id="row"><use xlink:href="#vine1" x="0"/><use xlink:href="#vine1" x="50"/><use xlink:href="#vine1" x="100"/><use xlink:href="#vine1" x="150"/><use xlink:href="#vine1" x="200"/><use xlink:href="#vine1" x="250"/><use xlink:href="#vine1" x="300"/><use xlink:href="#vine1" x="350"/><use xlink:href="#vine1" x="400"/><use xlink:href="#vine1" x="450"/><use xlink:href="#vine1" x="500"/><use xlink:href="#vine1" x="550"/><rect x="-20" y="-4" width="600" height="4"/></g>
-    <g id="rowLit"><use xlink:href="#vine1lit" x="0"/><use xlink:href="#vine1lit" x="50"/><use xlink:href="#vine1lit" x="100"/><use xlink:href="#vine1lit" x="150"/><use xlink:href="#vine1lit" x="200"/><use xlink:href="#vine1lit" x="250"/><use xlink:href="#vine1lit" x="300"/><use xlink:href="#vine1lit" x="350"/><use xlink:href="#vine1lit" x="400"/><use xlink:href="#vine1lit" x="450"/><use xlink:href="#vine1lit" x="500"/><use xlink:href="#vine1lit" x="550"/></g>
+    <path id="vAlit" d="M-28 -28 C-33 -37 -22 -45 -12 -41 C-8 -49 4 -51 10 -43" fill="none" stroke="#ff9a8a" stroke-width="2"/>
+    <path id="vB" d="M-1 0 L-2 -12 C-14 -8 -26 -14 -24 -24 C-30 -30 -24 -40 -14 -38 C-14 -50 -2 -54 6 -48 C14 -54 26 -50 26 -40
+      C34 -36 34 -24 24 -20 C22 -12 12 -10 3 -12 L2 0 Z"/>
+    <path id="vBlit" d="M-24 -24 C-30 -30 -24 -40 -14 -38 C-14 -50 -2 -54 6 -48" fill="none" stroke="#ff9a8a" stroke-width="2"/>
+    <path id="vC" d="M-2 0 L-2 -16 C-12 -16 -20 -22 -18 -30 C-26 -34 -20 -46 -8 -44 C-4 -54 10 -52 12 -44 C22 -44 24 -34 18 -28
+      C22 -20 12 -16 2 -16 L2 0 Z"/>
+    <path id="vClit" d="M-18 -30 C-26 -34 -20 -46 -8 -44 C-4 -54 10 -52 12 -44" fill="none" stroke="#ff9a8a" stroke-width="2"/>
   </defs>
 
   <!-- ── sky and the afterglow -->
@@ -264,74 +282,914 @@
     <ellipse cx="760" cy="905" rx="700" ry="40" fill="#ff9a8a"/>
   </g>
 
-  <!-- ── middle hills with terraces of vines -->
+  <!-- ── middle hills: vineyards whose rows run away toward the crests, smaller and hazier with distance -->
   <g filter="url(#reliefHill)">
     <path d="M-60 1000 C100 970 260 950 420 960 C560 970 660 990 780 1010 C900 1030 980 1030 1080 1040 L1080 1440 L-60 1440 Z"
           fill="url(#mid)"/>
-    <path d="M900 1060 C1060 1000 1240 940 1420 900 C1560 870 1700 840 1840 830 C1980 822 2120 840 2260 860 C2400 880 2520 900
-      2620 910 L2620 1440 L900 1440 Z" fill="url(#hill)"/>
   </g>
-  <!-- terrace walls on the big hill: lit lips, shadowed faces -->
-  <g fill="none" stroke-linecap="round">
-    <g stroke="#14061a" stroke-width="7" opacity="0.7">
-      <path d="M1180 1010 C1400 950 1640 905 1900 892 C2120 884 2320 905 2620 935"/>
-      <path d="M1080 1080 C1320 1020 1600 970 1880 958 C2120 950 2340 970 2620 1000"/>
-      <path d="M1020 1150 C1300 1090 1600 1040 1900 1030 C2160 1024 2380 1040 2620 1070"/>
-      <path d="M1600 870 C1760 852 1920 852 2080 862 C2240 872 2400 890 2620 900"/>
-    </g>
-    <g stroke="#c06a7a" stroke-width="2.5" opacity="0.45">
-      <path d="M1180 1006 C1400 946 1640 901 1900 888"/>
-      <path d="M1080 1076 C1320 1016 1600 966 1880 954"/>
-      <path d="M1020 1146 C1300 1086 1600 1036 1900 1026"/>
-      <path d="M1600 866 C1760 848 1920 848 2080 858"/>
-    </g>
-  </g>
-  <g fill="#b0587a" opacity="0.16">
-    <path d="M1180 1006 C1400 946 1640 901 1900 888 C2120 880 2320 900 2620 930 L2620 960 C2340 940 2120 920 1900 924 C1640 934 1400 974 1180 1030 Z"/>
-    <path d="M1080 1076 C1320 1016 1600 966 1880 954 C2120 946 2340 966 2620 996 L2620 1030 C2340 1000 2120 984 1880 990 C1600 1004 1320 1050 1080 1106 Z"/>
-  </g>
-  <!-- vine rows on the terraces, smaller as they climb -->
-  <g fill="#1a0820">
-    <use xlink:href="#row" transform="translate(1640 862) rotate(-4) scale(0.5)"/>
-    <use xlink:href="#row" transform="translate(1980 860) rotate(0) scale(0.5)"/>
-    <use xlink:href="#row" transform="translate(2300 866) rotate(3) scale(0.5)"/>
-    <use xlink:href="#row" transform="translate(1320 962) rotate(-9) scale(0.65)"/>
-    <use xlink:href="#row" transform="translate(1760 902) rotate(-4) scale(0.65)"/>
-    <use xlink:href="#row" transform="translate(2180 910) rotate(0) scale(0.65)"/>
-    <use xlink:href="#row" transform="translate(1180 1040) rotate(-9) scale(0.8)"/>
-    <use xlink:href="#row" transform="translate(1680 980) rotate(-4) scale(0.8)"/>
-    <use xlink:href="#row" transform="translate(2180 976) rotate(0) scale(0.8)"/>
-    <use xlink:href="#row" transform="translate(1100 1122) rotate(-8) scale(0.95)"/>
-    <use xlink:href="#row" transform="translate(1660 1056) rotate(-4) scale(0.95)"/>
-    <use xlink:href="#row" transform="translate(2240 1052) rotate(0) scale(0.95)"/>
-  </g>
-  <g stroke="#ff9a8a" stroke-width="2.5" opacity="0.55">
-    <use xlink:href="#rowLit" transform="translate(1640 862) rotate(-4) scale(0.5)"/>
-    <use xlink:href="#rowLit" transform="translate(1980 860) rotate(0) scale(0.5)"/>
-    <use xlink:href="#rowLit" transform="translate(2300 866) rotate(3) scale(0.5)"/>
-    <use xlink:href="#rowLit" transform="translate(1320 962) rotate(-9) scale(0.65)"/>
-    <use xlink:href="#rowLit" transform="translate(1760 902) rotate(-4) scale(0.65)"/>
-    <use xlink:href="#rowLit" transform="translate(2180 910) rotate(0) scale(0.65)"/>
-    <use xlink:href="#rowLit" transform="translate(1180 1040) rotate(-9) scale(0.8)"/>
-    <use xlink:href="#rowLit" transform="translate(1680 980) rotate(-4) scale(0.8)"/>
-    <use xlink:href="#rowLit" transform="translate(2180 976) rotate(0) scale(0.8)"/>
-    <use xlink:href="#rowLit" transform="translate(1100 1122) rotate(-8) scale(0.95)"/>
-    <use xlink:href="#rowLit" transform="translate(1660 1056) rotate(-4) scale(0.95)"/>
-    <use xlink:href="#rowLit" transform="translate(2240 1052) rotate(0) scale(0.95)"/>
-  </g>
-  <!-- left middle hill: a cypress pair and a few rows -->
   <g fill="#1c0a22">
     <path d="M318 964 C304 930 306 880 318 840 C324 816 330 800 334 784 C340 806 348 830 352 852 C362 900 360 936 348 964 Z"/>
     <path d="M364 968 C354 944 354 906 362 876 C366 860 370 848 372 836 C376 852 382 868 384 884 C390 920 388 948 380 968 Z"/>
     <path d="M560 990 C540 970 548 950 572 948 C580 930 610 926 624 942 C648 936 666 956 654 974 C668 990 640 1004 620 996
       L618 1016 L606 1016 L604 998 C584 1006 556 1004 560 990 Z"/>
-    <use xlink:href="#row" transform="translate(60 1036) scale(0.6)"/>
-    <use xlink:href="#row" transform="translate(440 1056) scale(0.6)"/>
-    <use xlink:href="#row" transform="translate(-20 1100) scale(0.75)"/>
-    <use xlink:href="#row" transform="translate(500 1110) scale(0.75)"/>
   </g>
   <path d="M318 964 C304 930 306 880 318 840 C324 816 330 800 334 784" stroke="#ff9a7a" stroke-width="2.5" fill="none" opacity="0.55"/>
   <path d="M560 990 C540 970 548 950 572 948 C580 930 610 926 624 942" stroke="#ff9a7a" stroke-width="2" fill="none" opacity="0.45"/>
+  <g>
+    <use xlink:href="#vC" fill="#50264c" transform="translate(-18 1038) scale(0.48 0.48)"/>
+    <use xlink:href="#vC" fill="#53284e" transform="translate(20 1030) scale(-0.46 0.46)"/>
+    <use xlink:href="#vA" fill="#562950" transform="translate(52 1023) scale(0.46 0.46)"/>
+    <use xlink:href="#vB" fill="#582a52" transform="translate(80 1017) scale(-0.43 0.43)"/>
+    <use xlink:href="#vA" fill="#5a2b53" transform="translate(104 1011) scale(0.40 0.40)"/>
+    <use xlink:href="#vB" fill="#5b2c54" transform="translate(126 1006) scale(-0.42 0.42)"/>
+    <use xlink:href="#vA" fill="#5d2d55" transform="translate(145 1002) scale(0.34 0.34)"/>
+    <use xlink:href="#vA" fill="#5e2e57" transform="translate(162 998) scale(0.30 0.30)"/>
+    <use xlink:href="#vC" fill="#5f2e57" transform="translate(178 995) scale(-0.35 0.35)"/>
+    <use xlink:href="#vC" fill="#602f58" transform="translate(191 992) scale(0.32 0.32)"/>
+    <use xlink:href="#vC" fill="#612f59" transform="translate(204 989) scale(0.26 0.26)"/>
+    <use xlink:href="#vA" fill="#62305a" transform="translate(216 987) scale(0.26 0.26)"/>
+    <use xlink:href="#vB" fill="#63305a" transform="translate(226 984) scale(-0.29 0.29)"/>
+    <use xlink:href="#vB" fill="#64315b" transform="translate(236 982) scale(-0.26 0.26)"/>
+    <use xlink:href="#vC" fill="#64315c" transform="translate(245 980) scale(-0.23 0.23)"/>
+    <use xlink:href="#vA" fill="#65315c" transform="translate(253 978) scale(0.26 0.26)"/>
+    <use xlink:href="#vA" fill="#66325d" transform="translate(261 976) scale(0.25 0.25)"/>
+    <use xlink:href="#vB" fill="#66325d" transform="translate(268 975) scale(0.19 0.19)"/>
+    <use xlink:href="#vC" fill="#67325d" transform="translate(275 973) scale(-0.19 0.19)"/>
+    <use xlink:href="#vB" fill="#67335e" transform="translate(281 972) scale(-0.22 0.22)"/>
+    <use xlink:href="#vB" fill="#492246" transform="translate(-40 1060) scale(-0.63 0.63)"/>
+    <use xlink:href="#vB" fill="#4d2449" transform="translate(6 1048) scale(0.57 0.57)"/>
+    <use xlink:href="#vC" fill="#50264c" transform="translate(45 1038) scale(0.58 0.58)"/>
+    <use xlink:href="#vC" fill="#53284e" transform="translate(78 1030) scale(0.53 0.53)"/>
+    <use xlink:href="#vB" fill="#562950" transform="translate(106 1023) scale(0.47 0.47)"/>
+    <use xlink:href="#vA" fill="#582a52" transform="translate(130 1017) scale(0.44 0.44)"/>
+    <use xlink:href="#vC" fill="#5a2b53" transform="translate(151 1011) scale(-0.41 0.41)"/>
+    <use xlink:href="#vA" fill="#5b2c54" transform="translate(170 1006) scale(0.34 0.34)"/>
+    <use xlink:href="#vC" fill="#5d2d55" transform="translate(187 1002) scale(-0.35 0.35)"/>
+    <use xlink:href="#vA" fill="#5e2e57" transform="translate(202 998) scale(0.29 0.29)"/>
+    <use xlink:href="#vA" fill="#5f2e57" transform="translate(215 995) scale(0.30 0.30)"/>
+    <use xlink:href="#vB" fill="#602f58" transform="translate(227 992) scale(-0.25 0.25)"/>
+    <use xlink:href="#vA" fill="#612f59" transform="translate(238 989) scale(0.32 0.32)"/>
+    <use xlink:href="#vA" fill="#62305a" transform="translate(248 987) scale(0.28 0.28)"/>
+    <use xlink:href="#vC" fill="#63305a" transform="translate(258 984) scale(-0.25 0.25)"/>
+    <use xlink:href="#vB" fill="#64315b" transform="translate(266 982) scale(0.25 0.25)"/>
+    <use xlink:href="#vB" fill="#64315c" transform="translate(274 980) scale(0.28 0.28)"/>
+    <use xlink:href="#vC" fill="#65315c" transform="translate(281 978) scale(0.20 0.20)"/>
+    <use xlink:href="#vB" fill="#66325d" transform="translate(288 976) scale(-0.25 0.25)"/>
+    <use xlink:href="#vA" fill="#66325d" transform="translate(294 975) scale(0.22 0.22)"/>
+    <use xlink:href="#vB" fill="#67325d" transform="translate(300 973) scale(-0.22 0.22)"/>
+    <use xlink:href="#vA" fill="#67335e" transform="translate(305 972) scale(0.19 0.19)"/>
+    <use xlink:href="#vB" fill="#441f42" transform="translate(-13 1074) scale(-0.78 0.78)"/>
+    <use xlink:href="#vC" fill="#492246" transform="translate(35 1060) scale(-0.62 0.62)"/>
+    <use xlink:href="#vC" fill="#4d2449" transform="translate(75 1048) scale(0.59 0.59)"/>
+    <use xlink:href="#vC" fill="#50264c" transform="translate(108 1038) scale(-0.54 0.54)"/>
+    <use xlink:href="#vC" fill="#53284e" transform="translate(135 1030) scale(0.47 0.47)"/>
+    <use xlink:href="#vB" fill="#562950" transform="translate(159 1023) scale(-0.50 0.50)"/>
+    <use xlink:href="#vC" fill="#582a52" transform="translate(180 1017) scale(-0.42 0.42)"/>
+    <use xlink:href="#vB" fill="#5a2b53" transform="translate(198 1011) scale(-0.33 0.33)"/>
+    <use xlink:href="#vC" fill="#5b2c54" transform="translate(214 1006) scale(0.31 0.31)"/>
+    <use xlink:href="#vC" fill="#5d2d55" transform="translate(228 1002) scale(-0.30 0.30)"/>
+    <use xlink:href="#vC" fill="#5e2e57" transform="translate(241 998) scale(-0.33 0.33)"/>
+    <use xlink:href="#vB" fill="#5f2e57" transform="translate(252 995) scale(-0.32 0.32)"/>
+    <use xlink:href="#vA" fill="#602f58" transform="translate(263 992) scale(0.25 0.25)"/>
+    <use xlink:href="#vA" fill="#612f59" transform="translate(272 989) scale(0.32 0.32)"/>
+    <use xlink:href="#vB" fill="#62305a" transform="translate(281 987) scale(-0.31 0.31)"/>
+    <use xlink:href="#vC" fill="#63305a" transform="translate(289 984) scale(-0.24 0.24)"/>
+    <use xlink:href="#vA" fill="#64315b" transform="translate(296 982) scale(0.23 0.23)"/>
+    <use xlink:href="#vB" fill="#64315c" transform="translate(303 980) scale(-0.23 0.23)"/>
+    <use xlink:href="#vB" fill="#65315c" transform="translate(309 978) scale(0.22 0.22)"/>
+    <use xlink:href="#vA" fill="#66325d" transform="translate(315 976) scale(0.24 0.24)"/>
+    <use xlink:href="#vC" fill="#66325d" transform="translate(320 975) scale(0.25 0.25)"/>
+    <use xlink:href="#vA" fill="#67325d" transform="translate(325 973) scale(0.20 0.20)"/>
+    <use xlink:href="#vB" fill="#67335e" transform="translate(330 972) scale(0.21 0.21)"/>
+    <use xlink:href="#vC" fill="#361836" transform="translate(-44 1116) scale(-0.85 0.85)"/>
+    <use xlink:href="#vA" fill="#3e1c3d" transform="translate(20 1092) scale(0.82 0.82)"/>
+    <use xlink:href="#vB" fill="#441f42" transform="translate(70 1074) scale(-0.61 0.61)"/>
+    <use xlink:href="#vA" fill="#492246" transform="translate(110 1060) scale(0.66 0.66)"/>
+    <use xlink:href="#vA" fill="#4d2449" transform="translate(143 1048) scale(0.56 0.56)"/>
+    <use xlink:href="#vC" fill="#50264c" transform="translate(170 1038) scale(0.46 0.46)"/>
+    <use xlink:href="#vB" fill="#53284e" transform="translate(193 1030) scale(-0.54 0.54)"/>
+    <use xlink:href="#vA" fill="#562950" transform="translate(213 1023) scale(0.41 0.41)"/>
+    <use xlink:href="#vA" fill="#582a52" transform="translate(230 1017) scale(0.36 0.36)"/>
+    <use xlink:href="#vC" fill="#5a2b53" transform="translate(245 1011) scale(0.37 0.37)"/>
+    <use xlink:href="#vB" fill="#5b2c54" transform="translate(258 1006) scale(0.41 0.41)"/>
+    <use xlink:href="#vB" fill="#5d2d55" transform="translate(270 1002) scale(0.38 0.38)"/>
+    <use xlink:href="#vC" fill="#5e2e57" transform="translate(281 998) scale(-0.32 0.32)"/>
+    <use xlink:href="#vC" fill="#5f2e57" transform="translate(290 995) scale(-0.31 0.31)"/>
+    <use xlink:href="#vC" fill="#602f58" transform="translate(299 992) scale(-0.28 0.28)"/>
+    <use xlink:href="#vB" fill="#612f59" transform="translate(306 989) scale(0.24 0.24)"/>
+    <use xlink:href="#vB" fill="#62305a" transform="translate(313 987) scale(-0.25 0.25)"/>
+    <use xlink:href="#vC" fill="#63305a" transform="translate(320 984) scale(0.27 0.27)"/>
+    <use xlink:href="#vB" fill="#64315b" transform="translate(326 982) scale(-0.21 0.21)"/>
+    <use xlink:href="#vA" fill="#64315c" transform="translate(332 980) scale(0.24 0.24)"/>
+    <use xlink:href="#vC" fill="#65315c" transform="translate(337 978) scale(-0.26 0.26)"/>
+    <use xlink:href="#vA" fill="#66325d" transform="translate(341 976) scale(0.20 0.20)"/>
+    <use xlink:href="#vC" fill="#66325d" transform="translate(346 975) scale(0.19 0.19)"/>
+    <use xlink:href="#vB" fill="#67325d" transform="translate(350 973) scale(0.23 0.23)"/>
+    <use xlink:href="#vC" fill="#67335e" transform="translate(354 972) scale(0.17 0.17)"/>
+    <use xlink:href="#vB" fill="#2b122e" transform="translate(-5 1147) scale(0.94 0.94)"/>
+    <use xlink:href="#vC" fill="#361836" transform="translate(63 1116) scale(-0.94 0.94)"/>
+    <use xlink:href="#vC" fill="#3e1c3d" transform="translate(114 1092) scale(0.68 0.68)"/>
+    <use xlink:href="#vB" fill="#441f42" transform="translate(153 1074) scale(-0.66 0.66)"/>
+    <use xlink:href="#vA" fill="#492246" transform="translate(185 1060) scale(0.68 0.68)"/>
+    <use xlink:href="#vA" fill="#4d2449" transform="translate(211 1048) scale(0.54 0.54)"/>
+    <use xlink:href="#vA" fill="#50264c" transform="translate(232 1038) scale(0.46 0.46)"/>
+    <use xlink:href="#vB" fill="#53284e" transform="translate(251 1030) scale(0.43 0.43)"/>
+    <use xlink:href="#vA" fill="#562950" transform="translate(266 1023) scale(0.49 0.49)"/>
+    <use xlink:href="#vC" fill="#582a52" transform="translate(280 1017) scale(-0.42 0.42)"/>
+    <use xlink:href="#vB" fill="#5a2b53" transform="translate(292 1011) scale(0.34 0.34)"/>
+    <use xlink:href="#vC" fill="#5b2c54" transform="translate(302 1006) scale(-0.34 0.34)"/>
+    <use xlink:href="#vB" fill="#5d2d55" transform="translate(312 1002) scale(0.30 0.30)"/>
+    <use xlink:href="#vA" fill="#5e2e57" transform="translate(320 998) scale(0.36 0.36)"/>
+    <use xlink:href="#vA" fill="#5f2e57" transform="translate(328 995) scale(0.27 0.27)"/>
+    <use xlink:href="#vA" fill="#602f58" transform="translate(334 992) scale(0.26 0.26)"/>
+    <use xlink:href="#vA" fill="#612f59" transform="translate(340 989) scale(0.31 0.31)"/>
+    <use xlink:href="#vB" fill="#62305a" transform="translate(346 987) scale(-0.27 0.27)"/>
+    <use xlink:href="#vA" fill="#63305a" transform="translate(351 984) scale(0.23 0.23)"/>
+    <use xlink:href="#vC" fill="#64315b" transform="translate(356 982) scale(-0.24 0.24)"/>
+    <use xlink:href="#vB" fill="#64315c" transform="translate(360 980) scale(-0.25 0.25)"/>
+    <use xlink:href="#vB" fill="#65315c" transform="translate(364 978) scale(-0.21 0.21)"/>
+    <use xlink:href="#vC" fill="#66325d" transform="translate(368 976) scale(0.20 0.20)"/>
+    <use xlink:href="#vB" fill="#66325d" transform="translate(372 975) scale(0.23 0.23)"/>
+    <use xlink:href="#vA" fill="#67325d" transform="translate(375 973) scale(0.21 0.21)"/>
+    <use xlink:href="#vC" fill="#67335e" transform="translate(378 972) scale(-0.19 0.19)"/>
+    <use xlink:href="#vA" fill="#1c0a22" transform="translate(50 1190) scale(1.30 1.30)"/>
+    <use xlink:href="#vB" fill="#2b122e" transform="translate(120 1147) scale(1.08 1.08)"/>
+    <use xlink:href="#vB" fill="#361836" transform="translate(170 1116) scale(-0.86 0.86)"/>
+    <use xlink:href="#vC" fill="#3e1c3d" transform="translate(208 1092) scale(-0.76 0.76)"/>
+    <use xlink:href="#vA" fill="#441f42" transform="translate(237 1074) scale(0.69 0.69)"/>
+    <use xlink:href="#vB" fill="#492246" transform="translate(260 1060) scale(0.57 0.57)"/>
+    <use xlink:href="#vA" fill="#4d2449" transform="translate(279 1048) scale(0.62 0.62)"/>
+    <use xlink:href="#vA" fill="#50264c" transform="translate(295 1038) scale(0.51 0.51)"/>
+    <use xlink:href="#vB" fill="#53284e" transform="translate(308 1030) scale(-0.54 0.54)"/>
+    <use xlink:href="#vC" fill="#562950" transform="translate(320 1023) scale(0.40 0.40)"/>
+    <use xlink:href="#vC" fill="#582a52" transform="translate(330 1017) scale(-0.47 0.47)"/>
+    <use xlink:href="#vC" fill="#5a2b53" transform="translate(339 1011) scale(-0.41 0.41)"/>
+    <use xlink:href="#vA" fill="#5b2c54" transform="translate(346 1006) scale(0.37 0.37)"/>
+    <use xlink:href="#vC" fill="#5d2d55" transform="translate(353 1002) scale(0.38 0.38)"/>
+    <use xlink:href="#vA" fill="#5e2e57" transform="translate(359 998) scale(0.33 0.33)"/>
+    <use xlink:href="#vA" fill="#5f2e57" transform="translate(365 995) scale(0.34 0.34)"/>
+    <use xlink:href="#vC" fill="#602f58" transform="translate(370 992) scale(0.30 0.30)"/>
+    <use xlink:href="#vB" fill="#612f59" transform="translate(375 989) scale(0.30 0.30)"/>
+    <use xlink:href="#vB" fill="#62305a" transform="translate(379 987) scale(0.30 0.30)"/>
+    <use xlink:href="#vA" fill="#63305a" transform="translate(383 984) scale(0.22 0.22)"/>
+    <use xlink:href="#vC" fill="#64315b" transform="translate(386 982) scale(-0.26 0.26)"/>
+    <use xlink:href="#vA" fill="#64315c" transform="translate(389 980) scale(0.25 0.25)"/>
+    <use xlink:href="#vC" fill="#65315c" transform="translate(392 978) scale(0.20 0.20)"/>
+    <use xlink:href="#vC" fill="#66325d" transform="translate(395 976) scale(0.20 0.20)"/>
+    <use xlink:href="#vA" fill="#66325d" transform="translate(398 975) scale(0.24 0.24)"/>
+    <use xlink:href="#vC" fill="#67325d" transform="translate(400 973) scale(0.21 0.21)"/>
+    <use xlink:href="#vA" fill="#67335e" transform="translate(402 972) scale(0.22 0.22)"/>
+    <use xlink:href="#vC" fill="#1c0a22" transform="translate(200 1190) scale(1.44 1.44)"/>
+    <use xlink:href="#vC" fill="#2b122e" transform="translate(245 1147) scale(-1.03 1.03)"/>
+    <use xlink:href="#vC" fill="#361836" transform="translate(277 1116) scale(-0.83 0.83)"/>
+    <use xlink:href="#vC" fill="#3e1c3d" transform="translate(301 1092) scale(-0.88 0.88)"/>
+    <use xlink:href="#vB" fill="#441f42" transform="translate(320 1074) scale(0.79 0.79)"/>
+    <use xlink:href="#vB" fill="#492246" transform="translate(335 1060) scale(0.71 0.71)"/>
+    <use xlink:href="#vC" fill="#4d2449" transform="translate(347 1048) scale(-0.55 0.55)"/>
+    <use xlink:href="#vB" fill="#50264c" transform="translate(358 1038) scale(0.47 0.47)"/>
+    <use xlink:href="#vB" fill="#53284e" transform="translate(366 1030) scale(-0.43 0.43)"/>
+    <use xlink:href="#vC" fill="#562950" transform="translate(374 1023) scale(-0.50 0.50)"/>
+    <use xlink:href="#vA" fill="#582a52" transform="translate(380 1017) scale(0.43 0.43)"/>
+    <use xlink:href="#vA" fill="#5a2b53" transform="translate(386 1011) scale(0.35 0.35)"/>
+    <use xlink:href="#vC" fill="#5b2c54" transform="translate(391 1006) scale(-0.33 0.33)"/>
+    <use xlink:href="#vC" fill="#5d2d55" transform="translate(395 1002) scale(-0.39 0.39)"/>
+    <use xlink:href="#vB" fill="#5e2e57" transform="translate(399 998) scale(-0.35 0.35)"/>
+    <use xlink:href="#vB" fill="#5f2e57" transform="translate(402 995) scale(0.35 0.35)"/>
+    <use xlink:href="#vB" fill="#602f58" transform="translate(406 992) scale(0.28 0.28)"/>
+    <use xlink:href="#vB" fill="#612f59" transform="translate(409 989) scale(0.26 0.26)"/>
+    <use xlink:href="#vA" fill="#62305a" transform="translate(411 987) scale(0.26 0.26)"/>
+    <use xlink:href="#vC" fill="#63305a" transform="translate(414 984) scale(-0.25 0.25)"/>
+    <use xlink:href="#vA" fill="#64315b" transform="translate(416 982) scale(0.27 0.27)"/>
+    <use xlink:href="#vC" fill="#64315c" transform="translate(418 980) scale(0.24 0.24)"/>
+    <use xlink:href="#vC" fill="#65315c" transform="translate(420 978) scale(0.23 0.23)"/>
+    <use xlink:href="#vB" fill="#66325d" transform="translate(422 976) scale(0.25 0.25)"/>
+    <use xlink:href="#vA" fill="#66325d" transform="translate(423 975) scale(0.21 0.21)"/>
+    <use xlink:href="#vC" fill="#67325d" transform="translate(425 973) scale(0.23 0.23)"/>
+    <use xlink:href="#vB" fill="#67335e" transform="translate(426 972) scale(0.23 0.23)"/>
+    <use xlink:href="#vB" fill="#1c0a22" transform="translate(350 1190) scale(1.40 1.40)"/>
+    <use xlink:href="#vC" fill="#2b122e" transform="translate(370 1147) scale(0.94 0.94)"/>
+    <use xlink:href="#vB" fill="#361836" transform="translate(384 1116) scale(1.00 1.00)"/>
+    <use xlink:href="#vB" fill="#3e1c3d" transform="translate(395 1092) scale(0.87 0.87)"/>
+    <use xlink:href="#vC" fill="#441f42" transform="translate(403 1074) scale(0.68 0.68)"/>
+    <use xlink:href="#vB" fill="#492246" transform="translate(410 1060) scale(-0.55 0.55)"/>
+    <use xlink:href="#vB" fill="#4d2449" transform="translate(415 1048) scale(-0.49 0.49)"/>
+    <use xlink:href="#vB" fill="#50264c" transform="translate(420 1038) scale(-0.44 0.44)"/>
+    <use xlink:href="#vB" fill="#53284e" transform="translate(424 1030) scale(0.47 0.47)"/>
+    <use xlink:href="#vC" fill="#562950" transform="translate(427 1023) scale(-0.41 0.41)"/>
+    <use xlink:href="#vC" fill="#582a52" transform="translate(430 1017) scale(-0.40 0.40)"/>
+    <use xlink:href="#vB" fill="#5a2b53" transform="translate(432 1011) scale(0.35 0.35)"/>
+    <use xlink:href="#vA" fill="#5b2c54" transform="translate(435 1006) scale(0.39 0.39)"/>
+    <use xlink:href="#vC" fill="#5d2d55" transform="translate(437 1002) scale(-0.34 0.34)"/>
+    <use xlink:href="#vC" fill="#5e2e57" transform="translate(438 998) scale(-0.29 0.29)"/>
+    <use xlink:href="#vB" fill="#5f2e57" transform="translate(440 995) scale(-0.33 0.33)"/>
+    <use xlink:href="#vC" fill="#602f58" transform="translate(441 992) scale(-0.28 0.28)"/>
+    <use xlink:href="#vB" fill="#612f59" transform="translate(443 989) scale(0.25 0.25)"/>
+    <use xlink:href="#vC" fill="#62305a" transform="translate(444 987) scale(-0.29 0.29)"/>
+    <use xlink:href="#vB" fill="#63305a" transform="translate(445 984) scale(0.23 0.23)"/>
+    <use xlink:href="#vC" fill="#64315b" transform="translate(446 982) scale(0.26 0.26)"/>
+    <use xlink:href="#vC" fill="#64315c" transform="translate(447 980) scale(-0.22 0.22)"/>
+    <use xlink:href="#vC" fill="#65315c" transform="translate(448 978) scale(0.21 0.21)"/>
+    <use xlink:href="#vC" fill="#66325d" transform="translate(449 976) scale(-0.25 0.25)"/>
+    <use xlink:href="#vC" fill="#66325d" transform="translate(449 975) scale(0.22 0.22)"/>
+    <use xlink:href="#vB" fill="#67325d" transform="translate(450 973) scale(0.21 0.21)"/>
+    <use xlink:href="#vA" fill="#67335e" transform="translate(451 972) scale(0.21 0.21)"/>
+    <use xlink:href="#vC" fill="#1c0a22" transform="translate(500 1190) scale(-1.33 1.33)"/>
+    <use xlink:href="#vB" fill="#2b122e" transform="translate(495 1147) scale(-1.00 1.00)"/>
+    <use xlink:href="#vA" fill="#361836" transform="translate(491 1116) scale(0.86 0.86)"/>
+    <use xlink:href="#vC" fill="#3e1c3d" transform="translate(489 1092) scale(-0.67 0.67)"/>
+    <use xlink:href="#vC" fill="#441f42" transform="translate(487 1074) scale(-0.64 0.64)"/>
+    <use xlink:href="#vB" fill="#492246" transform="translate(485 1060) scale(-0.70 0.70)"/>
+    <use xlink:href="#vA" fill="#4d2449" transform="translate(484 1048) scale(0.58 0.58)"/>
+    <use xlink:href="#vA" fill="#50264c" transform="translate(482 1038) scale(0.50 0.50)"/>
+    <use xlink:href="#vC" fill="#53284e" transform="translate(482 1030) scale(0.43 0.43)"/>
+    <use xlink:href="#vC" fill="#562950" transform="translate(481 1023) scale(0.47 0.47)"/>
+    <use xlink:href="#vA" fill="#582a52" transform="translate(480 1017) scale(0.38 0.38)"/>
+    <use xlink:href="#vC" fill="#5a2b53" transform="translate(479 1011) scale(-0.40 0.40)"/>
+    <use xlink:href="#vC" fill="#5b2c54" transform="translate(479 1006) scale(0.40 0.40)"/>
+    <use xlink:href="#vA" fill="#5d2d55" transform="translate(478 1002) scale(0.36 0.36)"/>
+    <use xlink:href="#vA" fill="#5e2e57" transform="translate(478 998) scale(0.36 0.36)"/>
+    <use xlink:href="#vA" fill="#5f2e57" transform="translate(478 995) scale(0.32 0.32)"/>
+    <use xlink:href="#vA" fill="#602f58" transform="translate(477 992) scale(0.30 0.30)"/>
+    <use xlink:href="#vB" fill="#612f59" transform="translate(477 989) scale(-0.32 0.32)"/>
+    <use xlink:href="#vB" fill="#62305a" transform="translate(477 987) scale(-0.23 0.23)"/>
+    <use xlink:href="#vB" fill="#63305a" transform="translate(476 984) scale(-0.30 0.30)"/>
+    <use xlink:href="#vC" fill="#64315b" transform="translate(476 982) scale(-0.25 0.25)"/>
+    <use xlink:href="#vC" fill="#64315c" transform="translate(476 980) scale(-0.25 0.25)"/>
+    <use xlink:href="#vC" fill="#65315c" transform="translate(476 978) scale(-0.26 0.26)"/>
+    <use xlink:href="#vA" fill="#66325d" transform="translate(475 976) scale(0.19 0.19)"/>
+    <use xlink:href="#vA" fill="#66325d" transform="translate(475 975) scale(0.23 0.23)"/>
+    <use xlink:href="#vC" fill="#67325d" transform="translate(475 973) scale(0.18 0.18)"/>
+    <use xlink:href="#vC" fill="#67335e" transform="translate(475 972) scale(-0.20 0.20)"/>
+    <use xlink:href="#vC" fill="#1c0a22" transform="translate(650 1190) scale(1.14 1.14)"/>
+    <use xlink:href="#vC" fill="#2b122e" transform="translate(620 1147) scale(-0.90 0.90)"/>
+    <use xlink:href="#vB" fill="#361836" transform="translate(599 1116) scale(0.79 0.79)"/>
+    <use xlink:href="#vA" fill="#3e1c3d" transform="translate(582 1092) scale(0.70 0.70)"/>
+    <use xlink:href="#vA" fill="#441f42" transform="translate(570 1074) scale(0.72 0.72)"/>
+    <use xlink:href="#vC" fill="#492246" transform="translate(560 1060) scale(0.54 0.54)"/>
+    <use xlink:href="#vB" fill="#4d2449" transform="translate(552 1048) scale(0.57 0.57)"/>
+    <use xlink:href="#vB" fill="#50264c" transform="translate(545 1038) scale(-0.59 0.59)"/>
+    <use xlink:href="#vC" fill="#53284e" transform="translate(539 1030) scale(0.53 0.53)"/>
+    <use xlink:href="#vC" fill="#562950" transform="translate(534 1023) scale(0.39 0.39)"/>
+    <use xlink:href="#vC" fill="#582a52" transform="translate(530 1017) scale(-0.44 0.44)"/>
+    <use xlink:href="#vA" fill="#5a2b53" transform="translate(526 1011) scale(0.45 0.45)"/>
+    <use xlink:href="#vA" fill="#5b2c54" transform="translate(523 1006) scale(0.42 0.42)"/>
+    <use xlink:href="#vA" fill="#5d2d55" transform="translate(520 1002) scale(0.34 0.34)"/>
+    <use xlink:href="#vA" fill="#5e2e57" transform="translate(517 998) scale(0.33 0.33)"/>
+    <use xlink:href="#vB" fill="#5f2e57" transform="translate(515 995) scale(0.34 0.34)"/>
+    <use xlink:href="#vC" fill="#602f58" transform="translate(513 992) scale(0.33 0.33)"/>
+    <use xlink:href="#vB" fill="#612f59" transform="translate(511 989) scale(0.27 0.27)"/>
+    <use xlink:href="#vB" fill="#62305a" transform="translate(509 987) scale(0.27 0.27)"/>
+    <use xlink:href="#vB" fill="#63305a" transform="translate(508 984) scale(0.27 0.27)"/>
+    <use xlink:href="#vC" fill="#64315b" transform="translate(506 982) scale(-0.25 0.25)"/>
+    <use xlink:href="#vB" fill="#64315c" transform="translate(505 980) scale(0.24 0.24)"/>
+    <use xlink:href="#vB" fill="#65315c" transform="translate(503 978) scale(-0.25 0.25)"/>
+    <use xlink:href="#vB" fill="#66325d" transform="translate(502 976) scale(-0.22 0.22)"/>
+    <use xlink:href="#vA" fill="#66325d" transform="translate(501 975) scale(0.20 0.20)"/>
+    <use xlink:href="#vB" fill="#67325d" transform="translate(500 973) scale(-0.23 0.23)"/>
+    <use xlink:href="#vB" fill="#67335e" transform="translate(499 972) scale(0.18 0.18)"/>
+    <use xlink:href="#vA" fill="#1c0a22" transform="translate(800 1190) scale(1.12 1.12)"/>
+    <use xlink:href="#vB" fill="#2b122e" transform="translate(745 1147) scale(0.94 0.94)"/>
+    <use xlink:href="#vA" fill="#361836" transform="translate(706 1116) scale(0.93 0.93)"/>
+    <use xlink:href="#vA" fill="#3e1c3d" transform="translate(676 1092) scale(0.69 0.69)"/>
+    <use xlink:href="#vA" fill="#441f42" transform="translate(653 1074) scale(0.68 0.68)"/>
+    <use xlink:href="#vA" fill="#492246" transform="translate(635 1060) scale(0.54 0.54)"/>
+    <use xlink:href="#vB" fill="#4d2449" transform="translate(620 1048) scale(-0.55 0.55)"/>
+    <use xlink:href="#vC" fill="#50264c" transform="translate(608 1038) scale(0.45 0.45)"/>
+    <use xlink:href="#vA" fill="#53284e" transform="translate(597 1030) scale(0.44 0.44)"/>
+    <use xlink:href="#vA" fill="#562950" transform="translate(588 1023) scale(0.43 0.43)"/>
+    <use xlink:href="#vA" fill="#582a52" transform="translate(580 1017) scale(0.47 0.47)"/>
+    <use xlink:href="#vB" fill="#5a2b53" transform="translate(573 1011) scale(-0.36 0.36)"/>
+    <use xlink:href="#vB" fill="#5b2c54" transform="translate(567 1006) scale(0.33 0.33)"/>
+    <use xlink:href="#vA" fill="#5d2d55" transform="translate(562 1002) scale(0.33 0.33)"/>
+    <use xlink:href="#vC" fill="#5e2e57" transform="translate(557 998) scale(-0.34 0.34)"/>
+    <use xlink:href="#vB" fill="#5f2e57" transform="translate(552 995) scale(-0.29 0.29)"/>
+    <use xlink:href="#vC" fill="#602f58" transform="translate(549 992) scale(-0.30 0.30)"/>
+    <use xlink:href="#vB" fill="#612f59" transform="translate(545 989) scale(-0.24 0.24)"/>
+    <use xlink:href="#vA" fill="#62305a" transform="translate(542 987) scale(0.26 0.26)"/>
+    <use xlink:href="#vA" fill="#63305a" transform="translate(539 984) scale(0.27 0.27)"/>
+    <use xlink:href="#vA" fill="#64315b" transform="translate(536 982) scale(0.26 0.26)"/>
+    <use xlink:href="#vC" fill="#64315c" transform="translate(533 980) scale(0.21 0.21)"/>
+    <use xlink:href="#vC" fill="#65315c" transform="translate(531 978) scale(0.20 0.20)"/>
+    <use xlink:href="#vA" fill="#66325d" transform="translate(529 976) scale(0.22 0.22)"/>
+    <use xlink:href="#vB" fill="#66325d" transform="translate(527 975) scale(0.23 0.23)"/>
+    <use xlink:href="#vB" fill="#1c0a22" transform="translate(950 1190) scale(-1.40 1.40)"/>
+    <use xlink:href="#vB" fill="#2b122e" transform="translate(870 1147) scale(1.14 1.14)"/>
+    <use xlink:href="#vC" fill="#361836" transform="translate(813 1116) scale(-0.86 0.86)"/>
+    <use xlink:href="#vB" fill="#3e1c3d" transform="translate(770 1092) scale(0.68 0.68)"/>
+    <use xlink:href="#vA" fill="#441f42" transform="translate(737 1074) scale(0.77 0.77)"/>
+    <use xlink:href="#vC" fill="#492246" transform="translate(710 1060) scale(-0.63 0.63)"/>
+    <use xlink:href="#vB" fill="#4d2449" transform="translate(688 1048) scale(0.57 0.57)"/>
+    <use xlink:href="#vC" fill="#50264c" transform="translate(670 1038) scale(-0.57 0.57)"/>
+    <use xlink:href="#vC" fill="#53284e" transform="translate(655 1030) scale(-0.53 0.53)"/>
+    <use xlink:href="#vB" fill="#562950" transform="translate(641 1023) scale(-0.50 0.50)"/>
+    <use xlink:href="#vB" fill="#582a52" transform="translate(630 1017) scale(-0.41 0.41)"/>
+    <use xlink:href="#vA" fill="#5a2b53" transform="translate(620 1011) scale(0.37 0.37)"/>
+    <use xlink:href="#vC" fill="#5b2c54" transform="translate(611 1006) scale(-0.37 0.37)"/>
+    <use xlink:href="#vA" fill="#5d2d55" transform="translate(603 1002) scale(0.39 0.39)"/>
+    <use xlink:href="#vC" fill="#5e2e57" transform="translate(596 998) scale(0.29 0.29)"/>
+    <use xlink:href="#vA" fill="#5f2e57" transform="translate(590 995) scale(0.34 0.34)"/>
+    <use xlink:href="#vC" fill="#602f58" transform="translate(584 992) scale(0.32 0.32)"/>
+    <use xlink:href="#vC" fill="#612f59" transform="translate(579 989) scale(0.27 0.27)"/>
+    <use xlink:href="#vA" fill="#62305a" transform="translate(574 987) scale(0.30 0.30)"/>
+    <use xlink:href="#vC" fill="#63305a" transform="translate(570 984) scale(-0.26 0.26)"/>
+    <use xlink:href="#vA" fill="#64315b" transform="translate(566 982) scale(0.29 0.29)"/>
+    <use xlink:href="#vB" fill="#64315c" transform="translate(562 980) scale(0.21 0.21)"/>
+    <use xlink:href="#vB" fill="#1c0a22" transform="translate(1100 1190) scale(1.19 1.19)"/>
+    <use xlink:href="#vC" fill="#2b122e" transform="translate(995 1147) scale(1.03 1.03)"/>
+    <use xlink:href="#vA" fill="#361836" transform="translate(920 1116) scale(0.82 0.82)"/>
+    <use xlink:href="#vC" fill="#3e1c3d" transform="translate(864 1092) scale(0.89 0.89)"/>
+    <use xlink:href="#vA" fill="#441f42" transform="translate(820 1074) scale(0.71 0.71)"/>
+    <use xlink:href="#vB" fill="#492246" transform="translate(785 1060) scale(0.55 0.55)"/>
+    <use xlink:href="#vC" fill="#4d2449" transform="translate(756 1048) scale(-0.52 0.52)"/>
+    <use xlink:href="#vC" fill="#50264c" transform="translate(732 1038) scale(-0.52 0.52)"/>
+    <use xlink:href="#vC" fill="#53284e" transform="translate(712 1030) scale(0.52 0.52)"/>
+    <use xlink:href="#vC" fill="#562950" transform="translate(695 1023) scale(0.44 0.44)"/>
+    <use xlink:href="#vA" fill="#582a52" transform="translate(680 1017) scale(0.36 0.36)"/>
+    <use xlink:href="#vA" fill="#5a2b53" transform="translate(667 1011) scale(0.40 0.40)"/>
+    <use xlink:href="#vB" fill="#5b2c54" transform="translate(655 1006) scale(0.33 0.33)"/>
+    <use xlink:href="#vB" fill="#5d2d55" transform="translate(645 1002) scale(0.31 0.31)"/>
+    <use xlink:href="#vC" fill="#5e2e57" transform="translate(636 998) scale(0.36 0.36)"/>
+    <use xlink:href="#vC" fill="#5f2e57" transform="translate(628 995) scale(-0.33 0.33)"/>
+    <use xlink:href="#vC" fill="#602f58" transform="translate(620 992) scale(-0.29 0.29)"/>
+    <use xlink:href="#vB" fill="#612f59" transform="translate(613 989) scale(-0.31 0.31)"/>
+    <use xlink:href="#vA" fill="#62305a" transform="translate(607 987) scale(0.30 0.30)"/>
+    <use xlink:href="#vA" fill="#361836" transform="translate(1027 1116) scale(0.79 0.79)"/>
+    <use xlink:href="#vC" fill="#3e1c3d" transform="translate(958 1092) scale(0.77 0.77)"/>
+    <use xlink:href="#vA" fill="#441f42" transform="translate(903 1074) scale(0.66 0.66)"/>
+    <use xlink:href="#vA" fill="#492246" transform="translate(860 1060) scale(0.62 0.62)"/>
+    <use xlink:href="#vC" fill="#4d2449" transform="translate(825 1048) scale(-0.64 0.64)"/>
+    <use xlink:href="#vC" fill="#50264c" transform="translate(795 1038) scale(0.51 0.51)"/>
+    <use xlink:href="#vA" fill="#53284e" transform="translate(770 1030) scale(0.50 0.50)"/>
+    <use xlink:href="#vA" fill="#562950" transform="translate(749 1023) scale(0.41 0.41)"/>
+    <use xlink:href="#vB" fill="#582a52" transform="translate(730 1017) scale(-0.40 0.40)"/>
+    <use xlink:href="#vA" fill="#5a2b53" transform="translate(714 1011) scale(0.34 0.34)"/>
+    <use xlink:href="#vC" fill="#5b2c54" transform="translate(699 1006) scale(0.35 0.35)"/>
+    <use xlink:href="#vC" fill="#5d2d55" transform="translate(687 1002) scale(-0.37 0.37)"/>
+    <use xlink:href="#vC" fill="#5e2e57" transform="translate(675 998) scale(-0.37 0.37)"/>
+    <use xlink:href="#vA" fill="#5f2e57" transform="translate(665 995) scale(0.30 0.30)"/>
+    <use xlink:href="#vB" fill="#3e1c3d" transform="translate(1051 1092) scale(-0.88 0.88)"/>
+    <use xlink:href="#vB" fill="#441f42" transform="translate(987 1074) scale(-0.78 0.78)"/>
+    <use xlink:href="#vA" fill="#492246" transform="translate(935 1060) scale(0.72 0.72)"/>
+    <use xlink:href="#vA" fill="#4d2449" transform="translate(893 1048) scale(0.53 0.53)"/>
+    <use xlink:href="#vA" fill="#50264c" transform="translate(858 1038) scale(0.47 0.47)"/>
+    <use xlink:href="#vA" fill="#53284e" transform="translate(828 1030) scale(0.41 0.41)"/>
+    <use xlink:href="#vC" fill="#562950" transform="translate(802 1023) scale(0.42 0.42)"/>
+    <use xlink:href="#vA" fill="#582a52" transform="translate(780 1017) scale(0.43 0.43)"/>
+    <use xlink:href="#vA" fill="#5a2b53" transform="translate(761 1011) scale(0.35 0.35)"/>
+  </g>
+  <g>
+    <use xlink:href="#vClit" transform="translate(-18 1038) scale(0.48 0.48)" opacity="0.20"/>
+    <use xlink:href="#vClit" transform="translate(20 1030) scale(-0.46 0.46)" opacity="0.20"/>
+    <use xlink:href="#vAlit" transform="translate(52 1023) scale(0.46 0.46)" opacity="0.19"/>
+    <use xlink:href="#vBlit" transform="translate(80 1017) scale(-0.43 0.43)" opacity="0.18"/>
+    <use xlink:href="#vAlit" transform="translate(104 1011) scale(0.40 0.40)" opacity="0.17"/>
+    <use xlink:href="#vBlit" transform="translate(-40 1060) scale(-0.63 0.63)" opacity="0.23"/>
+    <use xlink:href="#vBlit" transform="translate(6 1048) scale(0.57 0.57)" opacity="0.22"/>
+    <use xlink:href="#vClit" transform="translate(45 1038) scale(0.58 0.58)" opacity="0.20"/>
+    <use xlink:href="#vClit" transform="translate(78 1030) scale(0.53 0.53)" opacity="0.20"/>
+    <use xlink:href="#vBlit" transform="translate(106 1023) scale(0.47 0.47)" opacity="0.19"/>
+    <use xlink:href="#vAlit" transform="translate(130 1017) scale(0.44 0.44)" opacity="0.18"/>
+    <use xlink:href="#vClit" transform="translate(151 1011) scale(-0.41 0.41)" opacity="0.17"/>
+    <use xlink:href="#vBlit" transform="translate(-13 1074) scale(-0.78 0.78)" opacity="0.25"/>
+    <use xlink:href="#vClit" transform="translate(35 1060) scale(-0.62 0.62)" opacity="0.23"/>
+    <use xlink:href="#vClit" transform="translate(75 1048) scale(0.59 0.59)" opacity="0.22"/>
+    <use xlink:href="#vClit" transform="translate(108 1038) scale(-0.54 0.54)" opacity="0.20"/>
+    <use xlink:href="#vClit" transform="translate(135 1030) scale(0.47 0.47)" opacity="0.20"/>
+    <use xlink:href="#vBlit" transform="translate(159 1023) scale(-0.50 0.50)" opacity="0.19"/>
+    <use xlink:href="#vClit" transform="translate(180 1017) scale(-0.42 0.42)" opacity="0.18"/>
+    <use xlink:href="#vBlit" transform="translate(198 1011) scale(-0.33 0.33)" opacity="0.17"/>
+    <use xlink:href="#vClit" transform="translate(-44 1116) scale(-0.85 0.85)" opacity="0.29"/>
+    <use xlink:href="#vAlit" transform="translate(20 1092) scale(0.82 0.82)" opacity="0.27"/>
+    <use xlink:href="#vBlit" transform="translate(70 1074) scale(-0.61 0.61)" opacity="0.25"/>
+    <use xlink:href="#vAlit" transform="translate(110 1060) scale(0.66 0.66)" opacity="0.23"/>
+    <use xlink:href="#vAlit" transform="translate(143 1048) scale(0.56 0.56)" opacity="0.22"/>
+    <use xlink:href="#vClit" transform="translate(170 1038) scale(0.46 0.46)" opacity="0.20"/>
+    <use xlink:href="#vBlit" transform="translate(193 1030) scale(-0.54 0.54)" opacity="0.20"/>
+    <use xlink:href="#vAlit" transform="translate(213 1023) scale(0.41 0.41)" opacity="0.19"/>
+    <use xlink:href="#vAlit" transform="translate(230 1017) scale(0.36 0.36)" opacity="0.18"/>
+    <use xlink:href="#vClit" transform="translate(245 1011) scale(0.37 0.37)" opacity="0.17"/>
+    <use xlink:href="#vBlit" transform="translate(-5 1147) scale(0.94 0.94)" opacity="0.33"/>
+    <use xlink:href="#vClit" transform="translate(63 1116) scale(-0.94 0.94)" opacity="0.29"/>
+    <use xlink:href="#vClit" transform="translate(114 1092) scale(0.68 0.68)" opacity="0.27"/>
+    <use xlink:href="#vBlit" transform="translate(153 1074) scale(-0.66 0.66)" opacity="0.25"/>
+    <use xlink:href="#vAlit" transform="translate(185 1060) scale(0.68 0.68)" opacity="0.23"/>
+    <use xlink:href="#vAlit" transform="translate(211 1048) scale(0.54 0.54)" opacity="0.22"/>
+    <use xlink:href="#vAlit" transform="translate(232 1038) scale(0.46 0.46)" opacity="0.20"/>
+    <use xlink:href="#vBlit" transform="translate(251 1030) scale(0.43 0.43)" opacity="0.20"/>
+    <use xlink:href="#vAlit" transform="translate(266 1023) scale(0.49 0.49)" opacity="0.19"/>
+    <use xlink:href="#vClit" transform="translate(280 1017) scale(-0.42 0.42)" opacity="0.18"/>
+    <use xlink:href="#vBlit" transform="translate(292 1011) scale(0.34 0.34)" opacity="0.17"/>
+    <use xlink:href="#vAlit" transform="translate(50 1190) scale(1.30 1.30)" opacity="0.38"/>
+    <use xlink:href="#vBlit" transform="translate(120 1147) scale(1.08 1.08)" opacity="0.33"/>
+    <use xlink:href="#vBlit" transform="translate(170 1116) scale(-0.86 0.86)" opacity="0.29"/>
+    <use xlink:href="#vClit" transform="translate(208 1092) scale(-0.76 0.76)" opacity="0.27"/>
+    <use xlink:href="#vAlit" transform="translate(237 1074) scale(0.69 0.69)" opacity="0.25"/>
+    <use xlink:href="#vBlit" transform="translate(260 1060) scale(0.57 0.57)" opacity="0.23"/>
+    <use xlink:href="#vAlit" transform="translate(279 1048) scale(0.62 0.62)" opacity="0.22"/>
+    <use xlink:href="#vAlit" transform="translate(295 1038) scale(0.51 0.51)" opacity="0.20"/>
+    <use xlink:href="#vBlit" transform="translate(308 1030) scale(-0.54 0.54)" opacity="0.20"/>
+    <use xlink:href="#vClit" transform="translate(320 1023) scale(0.40 0.40)" opacity="0.19"/>
+    <use xlink:href="#vClit" transform="translate(330 1017) scale(-0.47 0.47)" opacity="0.18"/>
+    <use xlink:href="#vClit" transform="translate(339 1011) scale(-0.41 0.41)" opacity="0.17"/>
+    <use xlink:href="#vClit" transform="translate(200 1190) scale(1.44 1.44)" opacity="0.38"/>
+    <use xlink:href="#vClit" transform="translate(245 1147) scale(-1.03 1.03)" opacity="0.33"/>
+    <use xlink:href="#vClit" transform="translate(277 1116) scale(-0.83 0.83)" opacity="0.29"/>
+    <use xlink:href="#vClit" transform="translate(301 1092) scale(-0.88 0.88)" opacity="0.27"/>
+    <use xlink:href="#vBlit" transform="translate(320 1074) scale(0.79 0.79)" opacity="0.25"/>
+    <use xlink:href="#vBlit" transform="translate(335 1060) scale(0.71 0.71)" opacity="0.23"/>
+    <use xlink:href="#vClit" transform="translate(347 1048) scale(-0.55 0.55)" opacity="0.22"/>
+    <use xlink:href="#vBlit" transform="translate(358 1038) scale(0.47 0.47)" opacity="0.20"/>
+    <use xlink:href="#vBlit" transform="translate(366 1030) scale(-0.43 0.43)" opacity="0.20"/>
+    <use xlink:href="#vClit" transform="translate(374 1023) scale(-0.50 0.50)" opacity="0.19"/>
+    <use xlink:href="#vAlit" transform="translate(380 1017) scale(0.43 0.43)" opacity="0.18"/>
+    <use xlink:href="#vAlit" transform="translate(386 1011) scale(0.35 0.35)" opacity="0.17"/>
+    <use xlink:href="#vBlit" transform="translate(350 1190) scale(1.40 1.40)" opacity="0.38"/>
+    <use xlink:href="#vClit" transform="translate(370 1147) scale(0.94 0.94)" opacity="0.33"/>
+    <use xlink:href="#vBlit" transform="translate(384 1116) scale(1.00 1.00)" opacity="0.29"/>
+    <use xlink:href="#vBlit" transform="translate(395 1092) scale(0.87 0.87)" opacity="0.27"/>
+    <use xlink:href="#vClit" transform="translate(403 1074) scale(0.68 0.68)" opacity="0.25"/>
+    <use xlink:href="#vBlit" transform="translate(410 1060) scale(-0.55 0.55)" opacity="0.23"/>
+    <use xlink:href="#vBlit" transform="translate(415 1048) scale(-0.49 0.49)" opacity="0.22"/>
+    <use xlink:href="#vBlit" transform="translate(420 1038) scale(-0.44 0.44)" opacity="0.20"/>
+    <use xlink:href="#vBlit" transform="translate(424 1030) scale(0.47 0.47)" opacity="0.20"/>
+    <use xlink:href="#vClit" transform="translate(427 1023) scale(-0.41 0.41)" opacity="0.19"/>
+    <use xlink:href="#vClit" transform="translate(430 1017) scale(-0.40 0.40)" opacity="0.18"/>
+    <use xlink:href="#vBlit" transform="translate(432 1011) scale(0.35 0.35)" opacity="0.17"/>
+    <use xlink:href="#vClit" transform="translate(500 1190) scale(-1.33 1.33)" opacity="0.38"/>
+    <use xlink:href="#vBlit" transform="translate(495 1147) scale(-1.00 1.00)" opacity="0.33"/>
+    <use xlink:href="#vAlit" transform="translate(491 1116) scale(0.86 0.86)" opacity="0.29"/>
+    <use xlink:href="#vClit" transform="translate(489 1092) scale(-0.67 0.67)" opacity="0.27"/>
+    <use xlink:href="#vClit" transform="translate(487 1074) scale(-0.64 0.64)" opacity="0.25"/>
+    <use xlink:href="#vBlit" transform="translate(485 1060) scale(-0.70 0.70)" opacity="0.23"/>
+    <use xlink:href="#vAlit" transform="translate(484 1048) scale(0.58 0.58)" opacity="0.22"/>
+    <use xlink:href="#vAlit" transform="translate(482 1038) scale(0.50 0.50)" opacity="0.20"/>
+    <use xlink:href="#vClit" transform="translate(482 1030) scale(0.43 0.43)" opacity="0.20"/>
+    <use xlink:href="#vClit" transform="translate(481 1023) scale(0.47 0.47)" opacity="0.19"/>
+    <use xlink:href="#vAlit" transform="translate(480 1017) scale(0.38 0.38)" opacity="0.18"/>
+    <use xlink:href="#vClit" transform="translate(479 1011) scale(-0.40 0.40)" opacity="0.17"/>
+    <use xlink:href="#vClit" transform="translate(650 1190) scale(1.14 1.14)" opacity="0.38"/>
+    <use xlink:href="#vClit" transform="translate(620 1147) scale(-0.90 0.90)" opacity="0.33"/>
+    <use xlink:href="#vBlit" transform="translate(599 1116) scale(0.79 0.79)" opacity="0.29"/>
+    <use xlink:href="#vAlit" transform="translate(582 1092) scale(0.70 0.70)" opacity="0.27"/>
+    <use xlink:href="#vAlit" transform="translate(570 1074) scale(0.72 0.72)" opacity="0.25"/>
+    <use xlink:href="#vClit" transform="translate(560 1060) scale(0.54 0.54)" opacity="0.23"/>
+    <use xlink:href="#vBlit" transform="translate(552 1048) scale(0.57 0.57)" opacity="0.22"/>
+    <use xlink:href="#vBlit" transform="translate(545 1038) scale(-0.59 0.59)" opacity="0.20"/>
+    <use xlink:href="#vClit" transform="translate(539 1030) scale(0.53 0.53)" opacity="0.20"/>
+    <use xlink:href="#vClit" transform="translate(534 1023) scale(0.39 0.39)" opacity="0.19"/>
+    <use xlink:href="#vClit" transform="translate(530 1017) scale(-0.44 0.44)" opacity="0.18"/>
+    <use xlink:href="#vAlit" transform="translate(526 1011) scale(0.45 0.45)" opacity="0.17"/>
+    <use xlink:href="#vAlit" transform="translate(800 1190) scale(1.12 1.12)" opacity="0.38"/>
+    <use xlink:href="#vBlit" transform="translate(745 1147) scale(0.94 0.94)" opacity="0.33"/>
+    <use xlink:href="#vAlit" transform="translate(706 1116) scale(0.93 0.93)" opacity="0.29"/>
+    <use xlink:href="#vAlit" transform="translate(676 1092) scale(0.69 0.69)" opacity="0.27"/>
+    <use xlink:href="#vAlit" transform="translate(653 1074) scale(0.68 0.68)" opacity="0.25"/>
+    <use xlink:href="#vAlit" transform="translate(635 1060) scale(0.54 0.54)" opacity="0.23"/>
+    <use xlink:href="#vBlit" transform="translate(620 1048) scale(-0.55 0.55)" opacity="0.22"/>
+    <use xlink:href="#vClit" transform="translate(608 1038) scale(0.45 0.45)" opacity="0.20"/>
+    <use xlink:href="#vAlit" transform="translate(597 1030) scale(0.44 0.44)" opacity="0.20"/>
+    <use xlink:href="#vAlit" transform="translate(588 1023) scale(0.43 0.43)" opacity="0.19"/>
+    <use xlink:href="#vAlit" transform="translate(580 1017) scale(0.47 0.47)" opacity="0.18"/>
+    <use xlink:href="#vBlit" transform="translate(573 1011) scale(-0.36 0.36)" opacity="0.17"/>
+    <use xlink:href="#vBlit" transform="translate(950 1190) scale(-1.40 1.40)" opacity="0.38"/>
+    <use xlink:href="#vBlit" transform="translate(870 1147) scale(1.14 1.14)" opacity="0.33"/>
+    <use xlink:href="#vClit" transform="translate(813 1116) scale(-0.86 0.86)" opacity="0.29"/>
+    <use xlink:href="#vBlit" transform="translate(770 1092) scale(0.68 0.68)" opacity="0.27"/>
+    <use xlink:href="#vAlit" transform="translate(737 1074) scale(0.77 0.77)" opacity="0.25"/>
+    <use xlink:href="#vClit" transform="translate(710 1060) scale(-0.63 0.63)" opacity="0.23"/>
+    <use xlink:href="#vBlit" transform="translate(688 1048) scale(0.57 0.57)" opacity="0.22"/>
+    <use xlink:href="#vClit" transform="translate(670 1038) scale(-0.57 0.57)" opacity="0.20"/>
+    <use xlink:href="#vClit" transform="translate(655 1030) scale(-0.53 0.53)" opacity="0.20"/>
+    <use xlink:href="#vBlit" transform="translate(641 1023) scale(-0.50 0.50)" opacity="0.19"/>
+    <use xlink:href="#vBlit" transform="translate(630 1017) scale(-0.41 0.41)" opacity="0.18"/>
+    <use xlink:href="#vAlit" transform="translate(620 1011) scale(0.37 0.37)" opacity="0.17"/>
+    <use xlink:href="#vBlit" transform="translate(1100 1190) scale(1.19 1.19)" opacity="0.38"/>
+    <use xlink:href="#vClit" transform="translate(995 1147) scale(1.03 1.03)" opacity="0.33"/>
+    <use xlink:href="#vAlit" transform="translate(920 1116) scale(0.82 0.82)" opacity="0.29"/>
+    <use xlink:href="#vClit" transform="translate(864 1092) scale(0.89 0.89)" opacity="0.27"/>
+    <use xlink:href="#vAlit" transform="translate(820 1074) scale(0.71 0.71)" opacity="0.25"/>
+    <use xlink:href="#vBlit" transform="translate(785 1060) scale(0.55 0.55)" opacity="0.23"/>
+    <use xlink:href="#vClit" transform="translate(756 1048) scale(-0.52 0.52)" opacity="0.22"/>
+    <use xlink:href="#vClit" transform="translate(732 1038) scale(-0.52 0.52)" opacity="0.20"/>
+    <use xlink:href="#vClit" transform="translate(712 1030) scale(0.52 0.52)" opacity="0.20"/>
+    <use xlink:href="#vClit" transform="translate(695 1023) scale(0.44 0.44)" opacity="0.19"/>
+    <use xlink:href="#vAlit" transform="translate(680 1017) scale(0.36 0.36)" opacity="0.18"/>
+    <use xlink:href="#vAlit" transform="translate(667 1011) scale(0.40 0.40)" opacity="0.17"/>
+    <use xlink:href="#vAlit" transform="translate(1027 1116) scale(0.79 0.79)" opacity="0.29"/>
+    <use xlink:href="#vClit" transform="translate(958 1092) scale(0.77 0.77)" opacity="0.27"/>
+    <use xlink:href="#vAlit" transform="translate(903 1074) scale(0.66 0.66)" opacity="0.25"/>
+    <use xlink:href="#vAlit" transform="translate(860 1060) scale(0.62 0.62)" opacity="0.23"/>
+    <use xlink:href="#vClit" transform="translate(825 1048) scale(-0.64 0.64)" opacity="0.22"/>
+    <use xlink:href="#vClit" transform="translate(795 1038) scale(0.51 0.51)" opacity="0.20"/>
+    <use xlink:href="#vAlit" transform="translate(770 1030) scale(0.50 0.50)" opacity="0.20"/>
+    <use xlink:href="#vAlit" transform="translate(749 1023) scale(0.41 0.41)" opacity="0.19"/>
+    <use xlink:href="#vBlit" transform="translate(730 1017) scale(-0.40 0.40)" opacity="0.18"/>
+    <use xlink:href="#vAlit" transform="translate(714 1011) scale(0.34 0.34)" opacity="0.17"/>
+    <use xlink:href="#vBlit" transform="translate(1051 1092) scale(-0.88 0.88)" opacity="0.27"/>
+    <use xlink:href="#vBlit" transform="translate(987 1074) scale(-0.78 0.78)" opacity="0.25"/>
+    <use xlink:href="#vAlit" transform="translate(935 1060) scale(0.72 0.72)" opacity="0.23"/>
+    <use xlink:href="#vAlit" transform="translate(893 1048) scale(0.53 0.53)" opacity="0.22"/>
+    <use xlink:href="#vAlit" transform="translate(858 1038) scale(0.47 0.47)" opacity="0.20"/>
+    <use xlink:href="#vAlit" transform="translate(828 1030) scale(0.41 0.41)" opacity="0.20"/>
+    <use xlink:href="#vClit" transform="translate(802 1023) scale(0.42 0.42)" opacity="0.19"/>
+    <use xlink:href="#vAlit" transform="translate(780 1017) scale(0.43 0.43)" opacity="0.18"/>
+    <use xlink:href="#vAlit" transform="translate(761 1011) scale(0.35 0.35)" opacity="0.17"/>
+  </g>
+  <g filter="url(#reliefHill)">
+    <path d="M900 1060 C1060 1000 1240 940 1420 900 C1560 870 1700 840 1840 830 C1980 822 2120 840 2260 860 C2400 880 2520 900
+      2620 910 L2620 1440 L900 1440 Z" fill="url(#hill)"/>
+  </g>
+  <!-- the crest catching the last light -->
+  <path d="M900 1060 C1060 1000 1240 940 1420 900 C1560 870 1700 840 1840 830" stroke="#ff9a8a" stroke-width="3" fill="none" opacity="0.4"/>
+  <g>
+    <use xlink:href="#vA" fill="#28102d" transform="translate(1015 1120) scale(1.34 1.34)"/>
+    <use xlink:href="#vA" fill="#341636" transform="translate(1126 1070) scale(1.18 1.18)"/>
+    <use xlink:href="#vC" fill="#3c1b3c" transform="translate(1209 1032) scale(0.93 0.93)"/>
+    <use xlink:href="#vA" fill="#431e42" transform="translate(1273 1003) scale(0.91 0.91)"/>
+    <use xlink:href="#vA" fill="#482146" transform="translate(1325 980) scale(0.95 0.95)"/>
+    <use xlink:href="#vB" fill="#4d2449" transform="translate(1367 961) scale(-0.67 0.67)"/>
+    <use xlink:href="#vA" fill="#50264c" transform="translate(1402 945) scale(0.62 0.62)"/>
+    <use xlink:href="#vA" fill="#53274f" transform="translate(1432 932) scale(0.66 0.66)"/>
+    <use xlink:href="#vA" fill="#562951" transform="translate(1458 920) scale(0.67 0.67)"/>
+    <use xlink:href="#vC" fill="#582a53" transform="translate(1480 910) scale(0.64 0.64)"/>
+    <use xlink:href="#vB" fill="#5a2b54" transform="translate(1499 901) scale(0.54 0.54)"/>
+    <use xlink:href="#vA" fill="#5c2c56" transform="translate(1516 894) scale(0.57 0.57)"/>
+    <use xlink:href="#vA" fill="#5e2d57" transform="translate(1532 887) scale(0.48 0.48)"/>
+    <use xlink:href="#vA" fill="#5f2d58" transform="translate(1545 881) scale(0.42 0.42)"/>
+    <use xlink:href="#vC" fill="#180820" transform="translate(1060 1190) scale(-1.72 1.72)"/>
+    <use xlink:href="#vC" fill="#28102d" transform="translate(1182 1120) scale(1.44 1.44)"/>
+    <use xlink:href="#vC" fill="#341636" transform="translate(1269 1070) scale(1.07 1.07)"/>
+    <use xlink:href="#vC" fill="#3c1b3c" transform="translate(1334 1032) scale(1.02 1.02)"/>
+    <use xlink:href="#vC" fill="#431e42" transform="translate(1384 1003) scale(0.96 0.96)"/>
+    <use xlink:href="#vC" fill="#482146" transform="translate(1425 980) scale(-0.85 0.85)"/>
+    <use xlink:href="#vB" fill="#4d2449" transform="translate(1458 961) scale(-0.84 0.84)"/>
+    <use xlink:href="#vA" fill="#50264c" transform="translate(1486 945) scale(0.68 0.68)"/>
+    <use xlink:href="#vC" fill="#53274f" transform="translate(1509 932) scale(0.71 0.71)"/>
+    <use xlink:href="#vB" fill="#562951" transform="translate(1529 920) scale(-0.53 0.53)"/>
+    <use xlink:href="#vC" fill="#582a53" transform="translate(1547 910) scale(-0.63 0.63)"/>
+    <use xlink:href="#vA" fill="#5a2b54" transform="translate(1562 901) scale(0.50 0.50)"/>
+    <use xlink:href="#vB" fill="#5c2c56" transform="translate(1575 894) scale(0.44 0.44)"/>
+    <use xlink:href="#vA" fill="#5e2d57" transform="translate(1587 887) scale(0.51 0.51)"/>
+    <use xlink:href="#vB" fill="#5f2d58" transform="translate(1598 881) scale(0.51 0.51)"/>
+    <use xlink:href="#vA" fill="#602e59" transform="translate(1608 875) scale(0.48 0.48)"/>
+    <use xlink:href="#vC" fill="#622f5a" transform="translate(1616 870) scale(-0.44 0.44)"/>
+    <use xlink:href="#vB" fill="#632f5b" transform="translate(1624 865) scale(-0.37 0.37)"/>
+    <use xlink:href="#vB" fill="#64305b" transform="translate(1631 861) scale(0.38 0.38)"/>
+    <use xlink:href="#vB" fill="#180820" transform="translate(1260 1190) scale(-1.87 1.87)"/>
+    <use xlink:href="#vA" fill="#28102d" transform="translate(1348 1120) scale(1.50 1.50)"/>
+    <use xlink:href="#vC" fill="#341636" transform="translate(1411 1070) scale(-1.05 1.05)"/>
+    <use xlink:href="#vC" fill="#3c1b3c" transform="translate(1459 1032) scale(-1.11 1.11)"/>
+    <use xlink:href="#vB" fill="#431e42" transform="translate(1496 1003) scale(-0.88 0.88)"/>
+    <use xlink:href="#vB" fill="#482146" transform="translate(1525 980) scale(-0.73 0.73)"/>
+    <use xlink:href="#vA" fill="#4d2449" transform="translate(1549 961) scale(0.70 0.70)"/>
+    <use xlink:href="#vA" fill="#50264c" transform="translate(1569 945) scale(0.71 0.71)"/>
+    <use xlink:href="#vA" fill="#53274f" transform="translate(1586 932) scale(0.71 0.71)"/>
+    <use xlink:href="#vB" fill="#562951" transform="translate(1601 920) scale(-0.65 0.65)"/>
+    <use xlink:href="#vB" fill="#582a53" transform="translate(1613 910) scale(0.64 0.64)"/>
+    <use xlink:href="#vB" fill="#5a2b54" transform="translate(1624 901) scale(-0.48 0.48)"/>
+    <use xlink:href="#vB" fill="#5c2c56" transform="translate(1634 894) scale(-0.56 0.56)"/>
+    <use xlink:href="#vB" fill="#5e2d57" transform="translate(1643 887) scale(-0.50 0.50)"/>
+    <use xlink:href="#vA" fill="#5f2d58" transform="translate(1651 881) scale(0.51 0.51)"/>
+    <use xlink:href="#vA" fill="#602e59" transform="translate(1658 875) scale(0.37 0.37)"/>
+    <use xlink:href="#vA" fill="#622f5a" transform="translate(1664 870) scale(0.37 0.37)"/>
+    <use xlink:href="#vC" fill="#632f5b" transform="translate(1670 865) scale(0.33 0.33)"/>
+    <use xlink:href="#vA" fill="#64305b" transform="translate(1675 861) scale(0.34 0.34)"/>
+    <use xlink:href="#vC" fill="#64305c" transform="translate(1680 858) scale(-0.32 0.32)"/>
+    <use xlink:href="#vB" fill="#65305d" transform="translate(1684 854) scale(0.35 0.35)"/>
+    <use xlink:href="#vC" fill="#180820" transform="translate(1460 1190) scale(1.80 1.80)"/>
+    <use xlink:href="#vC" fill="#28102d" transform="translate(1515 1120) scale(-1.40 1.40)"/>
+    <use xlink:href="#vB" fill="#341636" transform="translate(1554 1070) scale(1.18 1.18)"/>
+    <use xlink:href="#vB" fill="#3c1b3c" transform="translate(1584 1032) scale(1.06 1.06)"/>
+    <use xlink:href="#vA" fill="#431e42" transform="translate(1607 1003) scale(0.86 0.86)"/>
+    <use xlink:href="#vA" fill="#482146" transform="translate(1625 980) scale(0.83 0.83)"/>
+    <use xlink:href="#vA" fill="#4d2449" transform="translate(1640 961) scale(0.74 0.74)"/>
+    <use xlink:href="#vC" fill="#50264c" transform="translate(1652 945) scale(0.62 0.62)"/>
+    <use xlink:href="#vB" fill="#53274f" transform="translate(1663 932) scale(0.66 0.66)"/>
+    <use xlink:href="#vA" fill="#562951" transform="translate(1672 920) scale(0.53 0.53)"/>
+    <use xlink:href="#vA" fill="#582a53" transform="translate(1680 910) scale(0.59 0.59)"/>
+    <use xlink:href="#vB" fill="#5a2b54" transform="translate(1687 901) scale(-0.55 0.55)"/>
+    <use xlink:href="#vA" fill="#5c2c56" transform="translate(1693 894) scale(0.50 0.50)"/>
+    <use xlink:href="#vB" fill="#5e2d57" transform="translate(1698 887) scale(-0.52 0.52)"/>
+    <use xlink:href="#vA" fill="#5f2d58" transform="translate(1703 881) scale(0.45 0.45)"/>
+    <use xlink:href="#vC" fill="#602e59" transform="translate(1708 875) scale(-0.38 0.38)"/>
+    <use xlink:href="#vB" fill="#622f5a" transform="translate(1711 870) scale(0.43 0.43)"/>
+    <use xlink:href="#vA" fill="#632f5b" transform="translate(1715 865) scale(0.39 0.39)"/>
+    <use xlink:href="#vC" fill="#64305b" transform="translate(1718 861) scale(-0.42 0.42)"/>
+    <use xlink:href="#vC" fill="#64305c" transform="translate(1721 858) scale(0.32 0.32)"/>
+    <use xlink:href="#vB" fill="#65305d" transform="translate(1724 854) scale(0.37 0.37)"/>
+    <use xlink:href="#vB" fill="#66315d" transform="translate(1727 851) scale(-0.35 0.35)"/>
+    <use xlink:href="#vB" fill="#67315e" transform="translate(1729 848) scale(0.35 0.35)"/>
+    <use xlink:href="#vC" fill="#180820" transform="translate(1680 1190) scale(-1.72 1.72)"/>
+    <use xlink:href="#vC" fill="#28102d" transform="translate(1698 1120) scale(1.47 1.47)"/>
+    <use xlink:href="#vB" fill="#341636" transform="translate(1711 1070) scale(1.33 1.33)"/>
+    <use xlink:href="#vB" fill="#3c1b3c" transform="translate(1721 1032) scale(-0.97 0.97)"/>
+    <use xlink:href="#vA" fill="#431e42" transform="translate(1729 1003) scale(1.01 1.01)"/>
+    <use xlink:href="#vB" fill="#482146" transform="translate(1735 980) scale(-0.92 0.92)"/>
+    <use xlink:href="#vC" fill="#4d2449" transform="translate(1740 961) scale(-0.70 0.70)"/>
+    <use xlink:href="#vC" fill="#50264c" transform="translate(1744 945) scale(-0.70 0.70)"/>
+    <use xlink:href="#vB" fill="#53274f" transform="translate(1748 932) scale(0.74 0.74)"/>
+    <use xlink:href="#vA" fill="#562951" transform="translate(1751 920) scale(0.56 0.56)"/>
+    <use xlink:href="#vB" fill="#582a53" transform="translate(1753 910) scale(0.56 0.56)"/>
+    <use xlink:href="#vC" fill="#5a2b54" transform="translate(1756 901) scale(0.53 0.53)"/>
+    <use xlink:href="#vC" fill="#5c2c56" transform="translate(1758 894) scale(-0.50 0.50)"/>
+    <use xlink:href="#vA" fill="#5e2d57" transform="translate(1759 887) scale(0.51 0.51)"/>
+    <use xlink:href="#vA" fill="#5f2d58" transform="translate(1761 881) scale(0.49 0.49)"/>
+    <use xlink:href="#vC" fill="#602e59" transform="translate(1762 875) scale(0.48 0.48)"/>
+    <use xlink:href="#vA" fill="#622f5a" transform="translate(1764 870) scale(0.40 0.40)"/>
+    <use xlink:href="#vC" fill="#632f5b" transform="translate(1765 865) scale(-0.38 0.38)"/>
+    <use xlink:href="#vC" fill="#64305b" transform="translate(1766 861) scale(-0.32 0.32)"/>
+    <use xlink:href="#vC" fill="#64305c" transform="translate(1767 858) scale(0.35 0.35)"/>
+    <use xlink:href="#vA" fill="#65305d" transform="translate(1768 854) scale(0.36 0.36)"/>
+    <use xlink:href="#vA" fill="#66315d" transform="translate(1769 851) scale(0.38 0.38)"/>
+    <use xlink:href="#vB" fill="#67315e" transform="translate(1770 848) scale(0.28 0.28)"/>
+    <use xlink:href="#vC" fill="#67325e" transform="translate(1770 845) scale(-0.31 0.31)"/>
+    <use xlink:href="#vB" fill="#68325f" transform="translate(1771 842) scale(0.31 0.31)"/>
+    <use xlink:href="#vA" fill="#180820" transform="translate(1910 1190) scale(1.72 1.72)"/>
+    <use xlink:href="#vC" fill="#28102d" transform="translate(1890 1120) scale(1.21 1.21)"/>
+    <use xlink:href="#vA" fill="#341636" transform="translate(1876 1070) scale(1.22 1.22)"/>
+    <use xlink:href="#vA" fill="#3c1b3c" transform="translate(1865 1032) scale(1.04 1.04)"/>
+    <use xlink:href="#vA" fill="#431e42" transform="translate(1857 1003) scale(1.04 1.04)"/>
+    <use xlink:href="#vA" fill="#482146" transform="translate(1850 980) scale(0.73 0.73)"/>
+    <use xlink:href="#vA" fill="#4d2449" transform="translate(1845 961) scale(0.72 0.72)"/>
+    <use xlink:href="#vB" fill="#50264c" transform="translate(1840 945) scale(-0.76 0.76)"/>
+    <use xlink:href="#vA" fill="#53274f" transform="translate(1836 932) scale(0.66 0.66)"/>
+    <use xlink:href="#vC" fill="#562951" transform="translate(1833 920) scale(-0.53 0.53)"/>
+    <use xlink:href="#vC" fill="#582a53" transform="translate(1830 910) scale(-0.63 0.63)"/>
+    <use xlink:href="#vC" fill="#5a2b54" transform="translate(1828 901) scale(0.58 0.58)"/>
+    <use xlink:href="#vC" fill="#5c2c56" transform="translate(1825 894) scale(0.50 0.50)"/>
+    <use xlink:href="#vA" fill="#5e2d57" transform="translate(1823 887) scale(0.53 0.53)"/>
+    <use xlink:href="#vA" fill="#5f2d58" transform="translate(1822 881) scale(0.46 0.46)"/>
+    <use xlink:href="#vB" fill="#602e59" transform="translate(1820 875) scale(0.38 0.38)"/>
+    <use xlink:href="#vB" fill="#622f5a" transform="translate(1819 870) scale(-0.41 0.41)"/>
+    <use xlink:href="#vA" fill="#632f5b" transform="translate(1817 865) scale(0.42 0.42)"/>
+    <use xlink:href="#vA" fill="#64305b" transform="translate(1816 861) scale(0.41 0.41)"/>
+    <use xlink:href="#vB" fill="#64305c" transform="translate(1815 858) scale(0.33 0.33)"/>
+    <use xlink:href="#vC" fill="#65305d" transform="translate(1814 854) scale(-0.37 0.37)"/>
+    <use xlink:href="#vA" fill="#66315d" transform="translate(1813 851) scale(0.33 0.33)"/>
+    <use xlink:href="#vC" fill="#67315e" transform="translate(1812 848) scale(0.31 0.31)"/>
+    <use xlink:href="#vB" fill="#67325e" transform="translate(1811 845) scale(-0.32 0.32)"/>
+    <use xlink:href="#vA" fill="#68325f" transform="translate(1811 842) scale(0.29 0.29)"/>
+    <use xlink:href="#vB" fill="#68325f" transform="translate(1810 840) scale(0.30 0.30)"/>
+    <use xlink:href="#vA" fill="#693260" transform="translate(1809 838) scale(0.30 0.30)"/>
+    <use xlink:href="#vB" fill="#180820" transform="translate(2160 1190) scale(-1.66 1.66)"/>
+    <use xlink:href="#vC" fill="#28102d" transform="translate(2098 1120) scale(1.34 1.34)"/>
+    <use xlink:href="#vA" fill="#341636" transform="translate(2054 1070) scale(1.19 1.19)"/>
+    <use xlink:href="#vA" fill="#3c1b3c" transform="translate(2021 1032) scale(1.12 1.12)"/>
+    <use xlink:href="#vA" fill="#431e42" transform="translate(1996 1003) scale(1.06 1.06)"/>
+    <use xlink:href="#vC" fill="#482146" transform="translate(1975 980) scale(-0.96 0.96)"/>
+    <use xlink:href="#vA" fill="#4d2449" transform="translate(1958 961) scale(0.69 0.69)"/>
+    <use xlink:href="#vA" fill="#50264c" transform="translate(1944 945) scale(0.81 0.81)"/>
+    <use xlink:href="#vA" fill="#53274f" transform="translate(1932 932) scale(0.70 0.70)"/>
+    <use xlink:href="#vB" fill="#562951" transform="translate(1922 920) scale(0.59 0.59)"/>
+    <use xlink:href="#vA" fill="#582a53" transform="translate(1913 910) scale(0.65 0.65)"/>
+    <use xlink:href="#vB" fill="#5a2b54" transform="translate(1906 901) scale(-0.48 0.48)"/>
+    <use xlink:href="#vA" fill="#5c2c56" transform="translate(1899 894) scale(0.48 0.48)"/>
+    <use xlink:href="#vA" fill="#5e2d57" transform="translate(1893 887) scale(0.45 0.45)"/>
+    <use xlink:href="#vA" fill="#5f2d58" transform="translate(1887 881) scale(0.48 0.48)"/>
+    <use xlink:href="#vB" fill="#602e59" transform="translate(1882 875) scale(-0.40 0.40)"/>
+    <use xlink:href="#vB" fill="#622f5a" transform="translate(1878 870) scale(-0.43 0.43)"/>
+    <use xlink:href="#vB" fill="#632f5b" transform="translate(1874 865) scale(0.39 0.39)"/>
+    <use xlink:href="#vA" fill="#64305b" transform="translate(1870 861) scale(0.33 0.33)"/>
+    <use xlink:href="#vA" fill="#64305c" transform="translate(1867 858) scale(0.40 0.40)"/>
+    <use xlink:href="#vB" fill="#65305d" transform="translate(1864 854) scale(0.30 0.30)"/>
+    <use xlink:href="#vA" fill="#66315d" transform="translate(1861 851) scale(0.37 0.37)"/>
+    <use xlink:href="#vA" fill="#67315e" transform="translate(1859 848) scale(0.29 0.29)"/>
+    <use xlink:href="#vC" fill="#67325e" transform="translate(1856 845) scale(-0.33 0.33)"/>
+    <use xlink:href="#vC" fill="#68325f" transform="translate(1854 842) scale(-0.28 0.28)"/>
+    <use xlink:href="#vA" fill="#68325f" transform="translate(1852 840) scale(0.30 0.30)"/>
+    <use xlink:href="#vC" fill="#693260" transform="translate(1850 838) scale(0.26 0.26)"/>
+    <use xlink:href="#vA" fill="#180820" transform="translate(2440 1190) scale(1.66 1.66)"/>
+    <use xlink:href="#vA" fill="#28102d" transform="translate(2332 1120) scale(1.32 1.32)"/>
+    <use xlink:href="#vB" fill="#341636" transform="translate(2254 1070) scale(1.26 1.26)"/>
+    <use xlink:href="#vA" fill="#3c1b3c" transform="translate(2196 1032) scale(1.10 1.10)"/>
+    <use xlink:href="#vA" fill="#431e42" transform="translate(2151 1003) scale(0.82 0.82)"/>
+    <use xlink:href="#vB" fill="#482146" transform="translate(2115 980) scale(-0.84 0.84)"/>
+    <use xlink:href="#vB" fill="#4d2449" transform="translate(2085 961) scale(0.87 0.87)"/>
+    <use xlink:href="#vC" fill="#50264c" transform="translate(2061 945) scale(0.61 0.61)"/>
+    <use xlink:href="#vA" fill="#53274f" transform="translate(2040 932) scale(0.74 0.74)"/>
+    <use xlink:href="#vA" fill="#562951" transform="translate(2022 920) scale(0.56 0.56)"/>
+    <use xlink:href="#vB" fill="#582a53" transform="translate(2007 910) scale(-0.52 0.52)"/>
+    <use xlink:href="#vA" fill="#5a2b54" transform="translate(1993 901) scale(0.54 0.54)"/>
+    <use xlink:href="#vC" fill="#5c2c56" transform="translate(1981 894) scale(0.47 0.47)"/>
+    <use xlink:href="#vA" fill="#5e2d57" transform="translate(1971 887) scale(0.44 0.44)"/>
+    <use xlink:href="#vA" fill="#5f2d58" transform="translate(1961 881) scale(0.51 0.51)"/>
+    <use xlink:href="#vC" fill="#602e59" transform="translate(1952 875) scale(0.36 0.36)"/>
+    <use xlink:href="#vA" fill="#622f5a" transform="translate(1945 870) scale(0.41 0.41)"/>
+    <use xlink:href="#vA" fill="#632f5b" transform="translate(1938 865) scale(0.44 0.44)"/>
+    <use xlink:href="#vC" fill="#64305b" transform="translate(1931 861) scale(-0.39 0.39)"/>
+    <use xlink:href="#vC" fill="#64305c" transform="translate(1925 858) scale(-0.37 0.37)"/>
+    <use xlink:href="#vB" fill="#65305d" transform="translate(1920 854) scale(0.39 0.39)"/>
+    <use xlink:href="#vB" fill="#66315d" transform="translate(1915 851) scale(0.37 0.37)"/>
+    <use xlink:href="#vC" fill="#67315e" transform="translate(1910 848) scale(0.35 0.35)"/>
+    <use xlink:href="#vB" fill="#67325e" transform="translate(1906 845) scale(0.29 0.29)"/>
+    <use xlink:href="#vA" fill="#68325f" transform="translate(1902 842) scale(0.32 0.32)"/>
+    <use xlink:href="#vC" fill="#68325f" transform="translate(1898 840) scale(-0.25 0.25)"/>
+    <use xlink:href="#vA" fill="#693260" transform="translate(1895 838) scale(0.27 0.27)"/>
+    <use xlink:href="#vB" fill="#28102d" transform="translate(2598 1120) scale(-1.24 1.24)"/>
+    <use xlink:href="#vC" fill="#341636" transform="translate(2483 1070) scale(-1.25 1.25)"/>
+    <use xlink:href="#vA" fill="#3c1b3c" transform="translate(2396 1032) scale(0.92 0.92)"/>
+    <use xlink:href="#vB" fill="#431e42" transform="translate(2329 1003) scale(0.85 0.85)"/>
+    <use xlink:href="#vB" fill="#482146" transform="translate(2275 980) scale(-0.79 0.79)"/>
+    <use xlink:href="#vB" fill="#4d2449" transform="translate(2231 961) scale(0.71 0.71)"/>
+    <use xlink:href="#vA" fill="#50264c" transform="translate(2194 945) scale(0.68 0.68)"/>
+    <use xlink:href="#vA" fill="#53274f" transform="translate(2163 932) scale(0.62 0.62)"/>
+    <use xlink:href="#vC" fill="#562951" transform="translate(2136 920) scale(0.60 0.60)"/>
+    <use xlink:href="#vA" fill="#582a53" transform="translate(2113 910) scale(0.52 0.52)"/>
+    <use xlink:href="#vA" fill="#5a2b54" transform="translate(2093 901) scale(0.47 0.47)"/>
+    <use xlink:href="#vC" fill="#5c2c56" transform="translate(2075 894) scale(0.45 0.45)"/>
+    <use xlink:href="#vB" fill="#5e2d57" transform="translate(2059 887) scale(-0.46 0.46)"/>
+    <use xlink:href="#vA" fill="#5f2d58" transform="translate(2045 881) scale(0.46 0.46)"/>
+    <use xlink:href="#vC" fill="#602e59" transform="translate(2032 875) scale(0.44 0.44)"/>
+    <use xlink:href="#vC" fill="#622f5a" transform="translate(2021 870) scale(-0.42 0.42)"/>
+    <use xlink:href="#vC" fill="#632f5b" transform="translate(2010 865) scale(-0.42 0.42)"/>
+    <use xlink:href="#vC" fill="#64305b" transform="translate(2001 861) scale(0.33 0.33)"/>
+    <use xlink:href="#vC" fill="#64305c" transform="translate(1992 858) scale(-0.31 0.31)"/>
+    <use xlink:href="#vC" fill="#65305d" transform="translate(1984 854) scale(0.36 0.36)"/>
+    <use xlink:href="#vC" fill="#66315d" transform="translate(1977 851) scale(0.37 0.37)"/>
+    <use xlink:href="#vC" fill="#67315e" transform="translate(1970 848) scale(0.35 0.35)"/>
+    <use xlink:href="#vA" fill="#67325e" transform="translate(1963 845) scale(0.27 0.27)"/>
+    <use xlink:href="#vB" fill="#68325f" transform="translate(1957 842) scale(0.26 0.26)"/>
+    <use xlink:href="#vB" fill="#68325f" transform="translate(1952 840) scale(0.27 0.27)"/>
+    <use xlink:href="#vC" fill="#693260" transform="translate(1946 838) scale(0.28 0.28)"/>
+    <use xlink:href="#vA" fill="#3c1b3c" transform="translate(2621 1032) scale(1.06 1.06)"/>
+    <use xlink:href="#vA" fill="#431e42" transform="translate(2529 1003) scale(0.93 0.93)"/>
+    <use xlink:href="#vC" fill="#482146" transform="translate(2455 980) scale(0.91 0.91)"/>
+    <use xlink:href="#vA" fill="#4d2449" transform="translate(2395 961) scale(0.81 0.81)"/>
+    <use xlink:href="#vB" fill="#50264c" transform="translate(2344 945) scale(-0.76 0.76)"/>
+    <use xlink:href="#vB" fill="#53274f" transform="translate(2302 932) scale(0.71 0.71)"/>
+    <use xlink:href="#vA" fill="#562951" transform="translate(2265 920) scale(0.65 0.65)"/>
+    <use xlink:href="#vC" fill="#582a53" transform="translate(2233 910) scale(-0.52 0.52)"/>
+    <use xlink:href="#vB" fill="#5a2b54" transform="translate(2206 901) scale(0.53 0.53)"/>
+    <use xlink:href="#vC" fill="#5c2c56" transform="translate(2181 894) scale(-0.50 0.50)"/>
+    <use xlink:href="#vC" fill="#5e2d57" transform="translate(2159 887) scale(0.51 0.51)"/>
+    <use xlink:href="#vA" fill="#5f2d58" transform="translate(2140 881) scale(0.39 0.39)"/>
+    <use xlink:href="#vC" fill="#602e59" transform="translate(2122 875) scale(-0.40 0.40)"/>
+    <use xlink:href="#vA" fill="#622f5a" transform="translate(2107 870) scale(0.42 0.42)"/>
+    <use xlink:href="#vA" fill="#632f5b" transform="translate(2092 865) scale(0.33 0.33)"/>
+    <use xlink:href="#vC" fill="#64305b" transform="translate(2079 861) scale(0.37 0.37)"/>
+    <use xlink:href="#vC" fill="#64305c" transform="translate(2067 858) scale(-0.37 0.37)"/>
+    <use xlink:href="#vC" fill="#65305d" transform="translate(2056 854) scale(-0.32 0.32)"/>
+    <use xlink:href="#vB" fill="#66315d" transform="translate(2046 851) scale(0.32 0.32)"/>
+    <use xlink:href="#vC" fill="#67315e" transform="translate(2036 848) scale(0.36 0.36)"/>
+    <use xlink:href="#vA" fill="#67325e" transform="translate(2028 845) scale(0.29 0.29)"/>
+    <use xlink:href="#vA" fill="#68325f" transform="translate(2019 842) scale(0.33 0.33)"/>
+    <use xlink:href="#vA" fill="#68325f" transform="translate(2012 840) scale(0.27 0.27)"/>
+    <use xlink:href="#vB" fill="#693260" transform="translate(2005 838) scale(-0.30 0.30)"/>
+    <use xlink:href="#vA" fill="#4d2449" transform="translate(2576 961) scale(0.75 0.75)"/>
+    <use xlink:href="#vA" fill="#50264c" transform="translate(2511 945) scale(0.62 0.62)"/>
+    <use xlink:href="#vC" fill="#53274f" transform="translate(2455 932) scale(-0.58 0.58)"/>
+    <use xlink:href="#vA" fill="#562951" transform="translate(2408 920) scale(0.69 0.69)"/>
+    <use xlink:href="#vC" fill="#582a53" transform="translate(2367 910) scale(-0.58 0.58)"/>
+    <use xlink:href="#vC" fill="#5a2b54" transform="translate(2331 901) scale(-0.59 0.59)"/>
+    <use xlink:href="#vB" fill="#5c2c56" transform="translate(2299 894) scale(-0.46 0.46)"/>
+    <use xlink:href="#vA" fill="#5e2d57" transform="translate(2271 887) scale(0.40 0.40)"/>
+    <use xlink:href="#vC" fill="#5f2d58" transform="translate(2245 881) scale(-0.51 0.51)"/>
+    <use xlink:href="#vC" fill="#602e59" transform="translate(2222 875) scale(0.41 0.41)"/>
+    <use xlink:href="#vB" fill="#622f5a" transform="translate(2202 870) scale(-0.39 0.39)"/>
+    <use xlink:href="#vB" fill="#632f5b" transform="translate(2183 865) scale(0.34 0.34)"/>
+    <use xlink:href="#vB" fill="#64305b" transform="translate(2166 861) scale(-0.35 0.35)"/>
+    <use xlink:href="#vA" fill="#64305c" transform="translate(2150 858) scale(0.31 0.31)"/>
+    <use xlink:href="#vC" fill="#65305d" transform="translate(2136 854) scale(-0.36 0.36)"/>
+    <use xlink:href="#vA" fill="#66315d" transform="translate(2123 851) scale(0.30 0.30)"/>
+    <use xlink:href="#vC" fill="#67315e" transform="translate(2110 848) scale(0.30 0.30)"/>
+    <use xlink:href="#vB" fill="#67325e" transform="translate(2099 845) scale(-0.29 0.29)"/>
+    <use xlink:href="#vB" fill="#68325f" transform="translate(2088 842) scale(0.32 0.32)"/>
+    <use xlink:href="#vC" fill="#53274f" transform="translate(2625 932) scale(-0.57 0.57)"/>
+    <use xlink:href="#vA" fill="#562951" transform="translate(2565 920) scale(0.63 0.63)"/>
+    <use xlink:href="#vB" fill="#582a53" transform="translate(2513 910) scale(-0.52 0.52)"/>
+    <use xlink:href="#vA" fill="#5a2b54" transform="translate(2468 901) scale(0.53 0.53)"/>
+    <use xlink:href="#vB" fill="#5c2c56" transform="translate(2428 894) scale(0.54 0.54)"/>
+    <use xlink:href="#vC" fill="#5e2d57" transform="translate(2393 887) scale(-0.52 0.52)"/>
+    <use xlink:href="#vC" fill="#5f2d58" transform="translate(2361 881) scale(0.50 0.50)"/>
+    <use xlink:href="#vA" fill="#602e59" transform="translate(2332 875) scale(0.45 0.45)"/>
+  </g>
+  <g>
+    <use xlink:href="#vAlit" transform="translate(1015 1120) scale(1.34 1.34)" opacity="0.33"/>
+    <use xlink:href="#vAlit" transform="translate(1126 1070) scale(1.18 1.18)" opacity="0.29"/>
+    <use xlink:href="#vClit" transform="translate(1209 1032) scale(0.93 0.93)" opacity="0.27"/>
+    <use xlink:href="#vAlit" transform="translate(1273 1003) scale(0.91 0.91)" opacity="0.25"/>
+    <use xlink:href="#vAlit" transform="translate(1325 980) scale(0.95 0.95)" opacity="0.23"/>
+    <use xlink:href="#vBlit" transform="translate(1367 961) scale(-0.67 0.67)" opacity="0.22"/>
+    <use xlink:href="#vAlit" transform="translate(1402 945) scale(0.62 0.62)" opacity="0.20"/>
+    <use xlink:href="#vAlit" transform="translate(1432 932) scale(0.66 0.66)" opacity="0.20"/>
+    <use xlink:href="#vAlit" transform="translate(1458 920) scale(0.67 0.67)" opacity="0.19"/>
+    <use xlink:href="#vClit" transform="translate(1480 910) scale(0.64 0.64)" opacity="0.18"/>
+    <use xlink:href="#vBlit" transform="translate(1499 901) scale(0.54 0.54)" opacity="0.17"/>
+    <use xlink:href="#vClit" transform="translate(1060 1190) scale(-1.72 1.72)" opacity="0.38"/>
+    <use xlink:href="#vClit" transform="translate(1182 1120) scale(1.44 1.44)" opacity="0.33"/>
+    <use xlink:href="#vClit" transform="translate(1269 1070) scale(1.07 1.07)" opacity="0.29"/>
+    <use xlink:href="#vClit" transform="translate(1334 1032) scale(1.02 1.02)" opacity="0.27"/>
+    <use xlink:href="#vClit" transform="translate(1384 1003) scale(0.96 0.96)" opacity="0.25"/>
+    <use xlink:href="#vClit" transform="translate(1425 980) scale(-0.85 0.85)" opacity="0.23"/>
+    <use xlink:href="#vBlit" transform="translate(1458 961) scale(-0.84 0.84)" opacity="0.22"/>
+    <use xlink:href="#vAlit" transform="translate(1486 945) scale(0.68 0.68)" opacity="0.20"/>
+    <use xlink:href="#vClit" transform="translate(1509 932) scale(0.71 0.71)" opacity="0.20"/>
+    <use xlink:href="#vBlit" transform="translate(1529 920) scale(-0.53 0.53)" opacity="0.19"/>
+    <use xlink:href="#vClit" transform="translate(1547 910) scale(-0.63 0.63)" opacity="0.18"/>
+    <use xlink:href="#vAlit" transform="translate(1562 901) scale(0.50 0.50)" opacity="0.17"/>
+    <use xlink:href="#vBlit" transform="translate(1260 1190) scale(-1.87 1.87)" opacity="0.38"/>
+    <use xlink:href="#vAlit" transform="translate(1348 1120) scale(1.50 1.50)" opacity="0.33"/>
+    <use xlink:href="#vClit" transform="translate(1411 1070) scale(-1.05 1.05)" opacity="0.29"/>
+    <use xlink:href="#vClit" transform="translate(1459 1032) scale(-1.11 1.11)" opacity="0.27"/>
+    <use xlink:href="#vBlit" transform="translate(1496 1003) scale(-0.88 0.88)" opacity="0.25"/>
+    <use xlink:href="#vBlit" transform="translate(1525 980) scale(-0.73 0.73)" opacity="0.23"/>
+    <use xlink:href="#vAlit" transform="translate(1549 961) scale(0.70 0.70)" opacity="0.22"/>
+    <use xlink:href="#vAlit" transform="translate(1569 945) scale(0.71 0.71)" opacity="0.20"/>
+    <use xlink:href="#vAlit" transform="translate(1586 932) scale(0.71 0.71)" opacity="0.20"/>
+    <use xlink:href="#vBlit" transform="translate(1601 920) scale(-0.65 0.65)" opacity="0.19"/>
+    <use xlink:href="#vBlit" transform="translate(1613 910) scale(0.64 0.64)" opacity="0.18"/>
+    <use xlink:href="#vBlit" transform="translate(1624 901) scale(-0.48 0.48)" opacity="0.17"/>
+    <use xlink:href="#vClit" transform="translate(1460 1190) scale(1.80 1.80)" opacity="0.38"/>
+    <use xlink:href="#vClit" transform="translate(1515 1120) scale(-1.40 1.40)" opacity="0.33"/>
+    <use xlink:href="#vBlit" transform="translate(1554 1070) scale(1.18 1.18)" opacity="0.29"/>
+    <use xlink:href="#vBlit" transform="translate(1584 1032) scale(1.06 1.06)" opacity="0.27"/>
+    <use xlink:href="#vAlit" transform="translate(1607 1003) scale(0.86 0.86)" opacity="0.25"/>
+    <use xlink:href="#vAlit" transform="translate(1625 980) scale(0.83 0.83)" opacity="0.23"/>
+    <use xlink:href="#vAlit" transform="translate(1640 961) scale(0.74 0.74)" opacity="0.22"/>
+    <use xlink:href="#vClit" transform="translate(1652 945) scale(0.62 0.62)" opacity="0.20"/>
+    <use xlink:href="#vBlit" transform="translate(1663 932) scale(0.66 0.66)" opacity="0.20"/>
+    <use xlink:href="#vAlit" transform="translate(1672 920) scale(0.53 0.53)" opacity="0.19"/>
+    <use xlink:href="#vAlit" transform="translate(1680 910) scale(0.59 0.59)" opacity="0.18"/>
+    <use xlink:href="#vBlit" transform="translate(1687 901) scale(-0.55 0.55)" opacity="0.17"/>
+    <use xlink:href="#vClit" transform="translate(1680 1190) scale(-1.72 1.72)" opacity="0.38"/>
+    <use xlink:href="#vClit" transform="translate(1698 1120) scale(1.47 1.47)" opacity="0.33"/>
+    <use xlink:href="#vBlit" transform="translate(1711 1070) scale(1.33 1.33)" opacity="0.29"/>
+    <use xlink:href="#vBlit" transform="translate(1721 1032) scale(-0.97 0.97)" opacity="0.27"/>
+    <use xlink:href="#vAlit" transform="translate(1729 1003) scale(1.01 1.01)" opacity="0.25"/>
+    <use xlink:href="#vBlit" transform="translate(1735 980) scale(-0.92 0.92)" opacity="0.23"/>
+    <use xlink:href="#vClit" transform="translate(1740 961) scale(-0.70 0.70)" opacity="0.22"/>
+    <use xlink:href="#vClit" transform="translate(1744 945) scale(-0.70 0.70)" opacity="0.20"/>
+    <use xlink:href="#vBlit" transform="translate(1748 932) scale(0.74 0.74)" opacity="0.20"/>
+    <use xlink:href="#vAlit" transform="translate(1751 920) scale(0.56 0.56)" opacity="0.19"/>
+    <use xlink:href="#vBlit" transform="translate(1753 910) scale(0.56 0.56)" opacity="0.18"/>
+    <use xlink:href="#vClit" transform="translate(1756 901) scale(0.53 0.53)" opacity="0.17"/>
+    <use xlink:href="#vAlit" transform="translate(1910 1190) scale(1.72 1.72)" opacity="0.38"/>
+    <use xlink:href="#vClit" transform="translate(1890 1120) scale(1.21 1.21)" opacity="0.33"/>
+    <use xlink:href="#vAlit" transform="translate(1876 1070) scale(1.22 1.22)" opacity="0.29"/>
+    <use xlink:href="#vAlit" transform="translate(1865 1032) scale(1.04 1.04)" opacity="0.27"/>
+    <use xlink:href="#vAlit" transform="translate(1857 1003) scale(1.04 1.04)" opacity="0.25"/>
+    <use xlink:href="#vAlit" transform="translate(1850 980) scale(0.73 0.73)" opacity="0.23"/>
+    <use xlink:href="#vAlit" transform="translate(1845 961) scale(0.72 0.72)" opacity="0.22"/>
+    <use xlink:href="#vBlit" transform="translate(1840 945) scale(-0.76 0.76)" opacity="0.20"/>
+    <use xlink:href="#vAlit" transform="translate(1836 932) scale(0.66 0.66)" opacity="0.20"/>
+    <use xlink:href="#vClit" transform="translate(1833 920) scale(-0.53 0.53)" opacity="0.19"/>
+    <use xlink:href="#vClit" transform="translate(1830 910) scale(-0.63 0.63)" opacity="0.18"/>
+    <use xlink:href="#vClit" transform="translate(1828 901) scale(0.58 0.58)" opacity="0.17"/>
+    <use xlink:href="#vBlit" transform="translate(2160 1190) scale(-1.66 1.66)" opacity="0.38"/>
+    <use xlink:href="#vClit" transform="translate(2098 1120) scale(1.34 1.34)" opacity="0.33"/>
+    <use xlink:href="#vAlit" transform="translate(2054 1070) scale(1.19 1.19)" opacity="0.29"/>
+    <use xlink:href="#vAlit" transform="translate(2021 1032) scale(1.12 1.12)" opacity="0.27"/>
+    <use xlink:href="#vAlit" transform="translate(1996 1003) scale(1.06 1.06)" opacity="0.25"/>
+    <use xlink:href="#vClit" transform="translate(1975 980) scale(-0.96 0.96)" opacity="0.23"/>
+    <use xlink:href="#vAlit" transform="translate(1958 961) scale(0.69 0.69)" opacity="0.22"/>
+    <use xlink:href="#vAlit" transform="translate(1944 945) scale(0.81 0.81)" opacity="0.20"/>
+    <use xlink:href="#vAlit" transform="translate(1932 932) scale(0.70 0.70)" opacity="0.20"/>
+    <use xlink:href="#vBlit" transform="translate(1922 920) scale(0.59 0.59)" opacity="0.19"/>
+    <use xlink:href="#vAlit" transform="translate(1913 910) scale(0.65 0.65)" opacity="0.18"/>
+    <use xlink:href="#vBlit" transform="translate(1906 901) scale(-0.48 0.48)" opacity="0.17"/>
+    <use xlink:href="#vAlit" transform="translate(2440 1190) scale(1.66 1.66)" opacity="0.38"/>
+    <use xlink:href="#vAlit" transform="translate(2332 1120) scale(1.32 1.32)" opacity="0.33"/>
+    <use xlink:href="#vBlit" transform="translate(2254 1070) scale(1.26 1.26)" opacity="0.29"/>
+    <use xlink:href="#vAlit" transform="translate(2196 1032) scale(1.10 1.10)" opacity="0.27"/>
+    <use xlink:href="#vAlit" transform="translate(2151 1003) scale(0.82 0.82)" opacity="0.25"/>
+    <use xlink:href="#vBlit" transform="translate(2115 980) scale(-0.84 0.84)" opacity="0.23"/>
+    <use xlink:href="#vBlit" transform="translate(2085 961) scale(0.87 0.87)" opacity="0.22"/>
+    <use xlink:href="#vClit" transform="translate(2061 945) scale(0.61 0.61)" opacity="0.20"/>
+    <use xlink:href="#vAlit" transform="translate(2040 932) scale(0.74 0.74)" opacity="0.20"/>
+    <use xlink:href="#vAlit" transform="translate(2022 920) scale(0.56 0.56)" opacity="0.19"/>
+    <use xlink:href="#vBlit" transform="translate(2007 910) scale(-0.52 0.52)" opacity="0.18"/>
+    <use xlink:href="#vAlit" transform="translate(1993 901) scale(0.54 0.54)" opacity="0.17"/>
+    <use xlink:href="#vBlit" transform="translate(2598 1120) scale(-1.24 1.24)" opacity="0.33"/>
+    <use xlink:href="#vClit" transform="translate(2483 1070) scale(-1.25 1.25)" opacity="0.29"/>
+    <use xlink:href="#vAlit" transform="translate(2396 1032) scale(0.92 0.92)" opacity="0.27"/>
+    <use xlink:href="#vBlit" transform="translate(2329 1003) scale(0.85 0.85)" opacity="0.25"/>
+    <use xlink:href="#vBlit" transform="translate(2275 980) scale(-0.79 0.79)" opacity="0.23"/>
+    <use xlink:href="#vBlit" transform="translate(2231 961) scale(0.71 0.71)" opacity="0.22"/>
+    <use xlink:href="#vAlit" transform="translate(2194 945) scale(0.68 0.68)" opacity="0.20"/>
+    <use xlink:href="#vAlit" transform="translate(2163 932) scale(0.62 0.62)" opacity="0.20"/>
+    <use xlink:href="#vClit" transform="translate(2136 920) scale(0.60 0.60)" opacity="0.19"/>
+    <use xlink:href="#vAlit" transform="translate(2113 910) scale(0.52 0.52)" opacity="0.18"/>
+    <use xlink:href="#vAlit" transform="translate(2093 901) scale(0.47 0.47)" opacity="0.17"/>
+    <use xlink:href="#vAlit" transform="translate(2621 1032) scale(1.06 1.06)" opacity="0.27"/>
+    <use xlink:href="#vAlit" transform="translate(2529 1003) scale(0.93 0.93)" opacity="0.25"/>
+    <use xlink:href="#vClit" transform="translate(2455 980) scale(0.91 0.91)" opacity="0.23"/>
+    <use xlink:href="#vAlit" transform="translate(2395 961) scale(0.81 0.81)" opacity="0.22"/>
+    <use xlink:href="#vBlit" transform="translate(2344 945) scale(-0.76 0.76)" opacity="0.20"/>
+    <use xlink:href="#vBlit" transform="translate(2302 932) scale(0.71 0.71)" opacity="0.20"/>
+    <use xlink:href="#vAlit" transform="translate(2265 920) scale(0.65 0.65)" opacity="0.19"/>
+    <use xlink:href="#vClit" transform="translate(2233 910) scale(-0.52 0.52)" opacity="0.18"/>
+    <use xlink:href="#vBlit" transform="translate(2206 901) scale(0.53 0.53)" opacity="0.17"/>
+    <use xlink:href="#vAlit" transform="translate(2576 961) scale(0.75 0.75)" opacity="0.22"/>
+    <use xlink:href="#vAlit" transform="translate(2511 945) scale(0.62 0.62)" opacity="0.20"/>
+    <use xlink:href="#vClit" transform="translate(2455 932) scale(-0.58 0.58)" opacity="0.20"/>
+    <use xlink:href="#vAlit" transform="translate(2408 920) scale(0.69 0.69)" opacity="0.19"/>
+    <use xlink:href="#vClit" transform="translate(2367 910) scale(-0.58 0.58)" opacity="0.18"/>
+    <use xlink:href="#vClit" transform="translate(2331 901) scale(-0.59 0.59)" opacity="0.17"/>
+    <use xlink:href="#vClit" transform="translate(2625 932) scale(-0.57 0.57)" opacity="0.20"/>
+    <use xlink:href="#vAlit" transform="translate(2565 920) scale(0.63 0.63)" opacity="0.19"/>
+    <use xlink:href="#vBlit" transform="translate(2513 910) scale(-0.52 0.52)" opacity="0.18"/>
+    <use xlink:href="#vAlit" transform="translate(2468 901) scale(0.53 0.53)" opacity="0.17"/>
+  </g>
 
   <!-- ── the near slope, dark, under the ledge -->
   <path d="M-60 1150 C200 1120 500 1130 800 1150 C1100 1170 1400 1150 1700 1160 C2000 1170 2300 1150 2620 1160 L2620 1440
@@ -421,39 +1279,45 @@
     <path d="M-24 -560 C-24 -600 -14 -636 0 -650" stroke="#ffc08a" stroke-width="3" fill="none" opacity="0.8"/>
   </g>
 
-  <!-- the kantharos: deep bowl, high handles, black glaze with a terracotta band -->
+  <!-- the kantharos: deep black-glazed bowl on a stemmed foot, two tall crisp handles, a fine reserved band of ivy -->
   <g transform="translate(860 1166) scale(1.65)">
-    <ellipse cx="0" cy="4" rx="90" ry="12" fill="#0a0308" opacity="0.6"/>
-    <!-- handles -->
-    <path d="M-92 -150 C-150 -170 -160 -90 -84 -78" stroke="#120610" stroke-width="13" fill="none"/>
-    <path d="M-92 -150 C-150 -170 -160 -90 -84 -78" stroke="#ff9a7a" stroke-width="3" fill="none" opacity="0.6" transform="translate(-4 -2)"/>
-    <path d="M92 -150 C150 -170 160 -90 84 -78" stroke="#0a0408" stroke-width="13" fill="none"/>
-    <!-- foot and stem -->
-    <path d="M-50 0 L50 0 L40 -12 L18 -18 L14 -48 L-14 -48 L-18 -18 L-40 -12 Z" fill="url(#glaze)"/>
-    <!-- bowl -->
-    <path d="M-104 -160 C-104 -100 -70 -54 -16 -48 L16 -48 C70 -54 104 -100 104 -160 Z" fill="url(#glaze)"/>
-    <!-- terracotta band with a running wave -->
-    <path d="M-103 -142 C-102 -130 -100 -124 -97 -116 L97 -116 C100 -124 102 -130 103 -142 Z" fill="url(#terracotta)"/>
-    <path d="M-96 -128 L-80 -128 L-80 -136 L-66 -136 L-66 -122 L-52 -122 L-52 -136 M-40 -128 L-24 -128 L-24 -136 L-10 -136 L-10 -122
-      L4 -122 L4 -136 M16 -128 L32 -128 L32 -136 L46 -136 L46 -122 L60 -122 L60 -136 M72 -128 L86 -128 L86 -136 L96 -136"
-          stroke="#1a0a10" stroke-width="3" fill="none"/>
-    <!-- ivy wreath painted on the black body -->
-    <path d="M-80 -100 C-40 -88 40 -88 80 -100" stroke="#c46a40" stroke-width="2" fill="none" opacity="0.7"/>
-    <g fill="#c46a40" opacity="0.7">
-      <use xlink:href="#ivy" transform="translate(-60 -94) rotate(200) scale(0.22)"/><use xlink:href="#ivy" transform="translate(-30 -90) rotate(-20) scale(0.22)"/>
-      <use xlink:href="#ivy" transform="translate(0 -89) rotate(200) scale(0.22)"/><use xlink:href="#ivy" transform="translate(30 -90) rotate(-20) scale(0.22)"/>
-      <use xlink:href="#ivy" transform="translate(60 -94) rotate(200) scale(0.22)"/>
+    <ellipse cx="0" cy="3" rx="84" ry="10" fill="#0a0308" opacity="0.6"/>
+    <!-- handles: tall straps from the rim up and out, down to the lower bowl -->
+    <g fill="none" stroke-linecap="round">
+      <path d="M-94 -152 C-104 -204 -152 -222 -154 -176 C-156 -134 -116 -104 -76 -94" stroke="#0c0508" stroke-width="10"/>
+      <path d="M-98 -156 C-108 -206 -154 -226 -158 -178 C-160 -136 -120 -106 -80 -98" stroke="#ffb08a" stroke-width="1.8" opacity="0.8"/>
+      <path d="M94 -152 C104 -204 152 -222 154 -176 C156 -134 116 -104 76 -94" stroke="#08030a" stroke-width="10"/>
+      <path d="M100 -170 C112 -206 146 -214 150 -184" stroke="#b07090" stroke-width="1.5" opacity="0.35"/>
     </g>
+    <!-- foot, stem, a reserved ring -->
+    <path d="M-46 0 L46 0 C46 -8 34 -12 16 -16 L12 -46 L-12 -46 L-16 -16 C-34 -12 -46 -8 -46 0 Z" fill="url(#glaze)"/>
+    <path d="M-44 -4 L44 -4" stroke="#c46a40" stroke-width="2" opacity="0.7"/>
+    <path d="M-46 0 C-46 -8 -34 -12 -16 -16" stroke="#ffb08a" stroke-width="1.5" fill="none" opacity="0.7"/>
+    <!-- bowl -->
+    <path d="M-102 -160 C-102 -104 -70 -56 -14 -48 L14 -48 C70 -56 102 -104 102 -160 Z" fill="url(#glaze)"/>
+    <!-- the reserved band: clay colour with a black ivy stem and heart-shaped leaves, between two fine lines -->
+    <path d="M-101 -146 C-100 -138 -99 -132 -97 -126 L97 -126 C99 -132 100 -138 101 -146 Z" fill="url(#terracotta)"/>
+    <path d="M-97 -136 C-70 -132 -50 -140 -24 -136 C2 -132 24 -140 50 -136 C70 -132 86 -138 97 -136" stroke="#120608" stroke-width="1.3" fill="none"/>
+    <g fill="#120608">
+      <path d="M-84 -136 c-3 -5 -9 -4 -9 0 c0 3 5 6 9 6 z"/><path d="M-62 -137 c3 5 9 4 9 0 c0 -3 -5 -6 -9 -6 z"/>
+      <path d="M-38 -138 c-3 -5 -9 -4 -9 0 c0 3 5 6 9 6 z"/><path d="M-14 -135 c3 5 9 4 9 0 c0 -3 -5 -6 -9 -6 z"/>
+      <path d="M10 -134 c-3 -5 -9 -4 -9 0 c0 3 5 6 9 6 z"/><path d="M36 -138 c3 5 9 4 9 0 c0 -3 -5 -6 -9 -6 z"/>
+      <path d="M60 -136 c-3 -5 -9 -4 -9 0 c0 3 5 6 9 6 z"/><path d="M82 -136 c3 5 9 4 9 0 c0 -3 -5 -6 -9 -6 z"/>
+    </g>
+    <path d="M-101 -146 L101 -146 M-97 -126 L97 -126" stroke="#120608" stroke-width="1.2"/>
+    <!-- glaze sheen: a long soft reflection of the sky, and the rim light from the afterglow -->
+    <path d="M-80 -118 C-78 -96 -66 -76 -48 -64" stroke="#fff0e0" stroke-width="5" fill="none" opacity="0.18" stroke-linecap="round"/>
+    <path d="M-82 -118 C-80 -100 -72 -86 -62 -76" stroke="#fff4ea" stroke-width="1.6" fill="none" opacity="0.55" stroke-linecap="round"/>
+    <path d="M-102 -160 C-102 -104 -70 -56 -14 -48" stroke="#ffb08a" stroke-width="2.5" fill="none" opacity="0.8"/>
+    <path d="M64 -150 C62 -120 50 -96 34 -80" stroke="#b07090" stroke-width="2" fill="none" opacity="0.25"/>
     <!-- rim and the wine -->
-    <ellipse cx="0" cy="-160" rx="104" ry="18" fill="#1a0a12"/>
-    <ellipse cx="0" cy="-157" rx="94" ry="13" fill="url(#wine)"/>
+    <ellipse cx="0" cy="-160" rx="102" ry="17" fill="#160810"/>
+    <ellipse cx="0" cy="-157" rx="94" ry="12.5" fill="url(#wine)"/>
     <ellipse cx="-30" cy="-158" rx="44" ry="5" fill="#ffb0c8" opacity="0.5"/>
     <ellipse cx="-40" cy="-158" rx="18" ry="2.2" fill="#fff0e0" opacity="0.9"/>
     <circle cx="-46" cy="-158" r="10" fill="#ffd0b0" opacity="0.35" filter="url(#glowS)"/>
     <path d="M-52 -158 L-40 -158 M-46 -164 L-46 -152" stroke="#fff6ea" stroke-width="1.2" opacity="0.8"/>
-    <path d="M-104 -160 C-104 -100 -70 -54 -16 -48" stroke="#ffb08a" stroke-width="4" fill="none" opacity="0.75"/>
-    <path d="M-104 -160 A104 18 0 0 1 60 -175" stroke="#ffc8a8" stroke-width="2.5" fill="none" opacity="0.7"/>
-    <path d="M-84 -150 C-82 -120 -72 -96 -56 -80" stroke="#fff0e0" stroke-width="3" fill="none" opacity="0.35"/>
+    <path d="M-102 -160 A102 17 0 0 1 60 -174" stroke="#ffc8a8" stroke-width="2" fill="none" opacity="0.75"/>
   </g>
   <!-- a cut cluster lying on the ledge beside the cup, with its leaf -->
   <g transform="translate(1110 1152) rotate(-62) scale(0.75)">
@@ -469,16 +1333,16 @@
        from the left -->
   <g>
     <!-- back leaves, deep in shade -->
-    <g fill="#0e0710">
-      <use xlink:href="#vleaf" transform="translate(2470 640) rotate(150) scale(1.6)"/>
-      <use xlink:href="#vleaf" transform="translate(2300 660) rotate(185) scale(1.5)"/>
-      <use xlink:href="#vleaf" transform="translate(2560 820) rotate(120) scale(1.7)"/>
-      <use xlink:href="#vleaf" transform="translate(2150 700) rotate(200) scale(1.3)"/>
-      <use xlink:href="#vleaf" transform="translate(1990 720) rotate(170) scale(1.2)"/>
-      <use xlink:href="#vleaf" transform="translate(2560 1060) rotate(100) scale(1.8)"/>
-      <use xlink:href="#vleaf" transform="translate(2480 1260) rotate(80) scale(1.7)"/>
-      <use xlink:href="#vleaf" transform="translate(2300 1340) rotate(20) scale(1.5)"/>
-      <use xlink:href="#vleaf" transform="translate(2100 1400) rotate(-10) scale(1.4)"/>
+    <g>
+      <use xlink:href="#vleaf" transform="translate(2465 636) rotate(150) scale(1.6)" fill="#e89078" opacity="0.18"/><use xlink:href="#vleaf" transform="translate(2470 640) rotate(150) scale(1.6)" fill="url(#leafDeep)"/><use xlink:href="#vveins" transform="translate(2470 640) rotate(150) scale(1.6)" stroke="#5a4a3a" stroke-width="1.2" opacity="0.5"/>
+      <use xlink:href="#vleaf" transform="translate(2295 656) rotate(185) scale(1.5)" fill="#e89078" opacity="0.18"/><use xlink:href="#vleaf" transform="translate(2300 660) rotate(185) scale(1.5)" fill="url(#leafDeep)"/><use xlink:href="#vveins" transform="translate(2300 660) rotate(185) scale(1.5)" stroke="#5a4a3a" stroke-width="1.3" opacity="0.5"/>
+      <use xlink:href="#vleaf" transform="translate(2555 816) rotate(120) scale(1.7)" fill="#e89078" opacity="0.18"/><use xlink:href="#vleaf" transform="translate(2560 820) rotate(120) scale(1.7)" fill="url(#leafDeep)"/><use xlink:href="#vveins" transform="translate(2560 820) rotate(120) scale(1.7)" stroke="#5a4a3a" stroke-width="1.2" opacity="0.5"/>
+      <use xlink:href="#vleaf" transform="translate(2145 696) rotate(200) scale(1.3)" fill="#e89078" opacity="0.18"/><use xlink:href="#vleaf" transform="translate(2150 700) rotate(200) scale(1.3)" fill="url(#leafDeep)"/><use xlink:href="#vveins" transform="translate(2150 700) rotate(200) scale(1.3)" stroke="#5a4a3a" stroke-width="1.5" opacity="0.5"/>
+      <use xlink:href="#vleaf" transform="translate(1985 716) rotate(170) scale(1.2)" fill="#e89078" opacity="0.18"/><use xlink:href="#vleaf" transform="translate(1990 720) rotate(170) scale(1.2)" fill="url(#leafDeep)"/><use xlink:href="#vveins" transform="translate(1990 720) rotate(170) scale(1.2)" stroke="#5a4a3a" stroke-width="1.7" opacity="0.5"/>
+      <use xlink:href="#vleaf" transform="translate(2555 1056) rotate(100) scale(1.8)" fill="#e89078" opacity="0.18"/><use xlink:href="#vleaf" transform="translate(2560 1060) rotate(100) scale(1.8)" fill="url(#leafDeep)"/><use xlink:href="#vveins" transform="translate(2560 1060) rotate(100) scale(1.8)" stroke="#5a4a3a" stroke-width="1.1" opacity="0.5"/>
+      <use xlink:href="#vleaf" transform="translate(2475 1256) rotate(80) scale(1.7)" fill="#e89078" opacity="0.18"/><use xlink:href="#vleaf" transform="translate(2480 1260) rotate(80) scale(1.7)" fill="url(#leafDeep)"/><use xlink:href="#vveins" transform="translate(2480 1260) rotate(80) scale(1.7)" stroke="#5a4a3a" stroke-width="1.2" opacity="0.5"/>
+      <use xlink:href="#vleaf" transform="translate(2295 1336) rotate(20) scale(1.5)" fill="#e89078" opacity="0.18"/><use xlink:href="#vleaf" transform="translate(2300 1340) rotate(20) scale(1.5)" fill="url(#leafDeep)"/><use xlink:href="#vveins" transform="translate(2300 1340) rotate(20) scale(1.5)" stroke="#5a4a3a" stroke-width="1.3" opacity="0.5"/>
+      <use xlink:href="#vleaf" transform="translate(2095 1396) rotate(-10) scale(1.4)" fill="#e89078" opacity="0.18"/><use xlink:href="#vleaf" transform="translate(2100 1400) rotate(-10) scale(1.4)" fill="url(#leafDeep)"/><use xlink:href="#vveins" transform="translate(2100 1400) rotate(-10) scale(1.4)" stroke="#5a4a3a" stroke-width="1.4" opacity="0.5"/>
     </g>
     <!-- trunk and arms -->
     <path d="M2260 1440 C2250 1380 2290 1330 2266 1270 C2246 1214 2280 1160 2256 1100 C2236 1050 2262 1000 2236 950
@@ -494,25 +1358,25 @@
       <path d="M2400 852 C2412 824 2392 808 2404 790 C2414 778 2424 786 2418 796"/>
     </g>
     <!-- mid leaves, dim -->
-    <g fill="url(#leafDark)">
-      <use xlink:href="#vleaf" transform="translate(1930 820) rotate(195) scale(1.05)"/>
-      <use xlink:href="#vleaf" transform="translate(2080 830) rotate(165) scale(1.15)"/>
-      <use xlink:href="#vleaf" transform="translate(2260 850) rotate(200) scale(1.25)"/>
-      <use xlink:href="#vleaf" transform="translate(2420 860) rotate(150) scale(1.2)"/>
-      <use xlink:href="#vleaf" transform="translate(2380 1000) rotate(110) scale(1.2)"/>
-      <use xlink:href="#vleaf" transform="translate(2400 1160) rotate(70) scale(1.25)"/>
+    <g>
+      <use xlink:href="#vleaf" transform="translate(1925 816) rotate(195) scale(1.05)" fill="#e89078" opacity="0.18"/><use xlink:href="#vleaf" transform="translate(1930 820) rotate(195) scale(1.05)" fill="url(#leafDeep)"/><use xlink:href="#vveins" transform="translate(1930 820) rotate(195) scale(1.05)" stroke="#5a4a3a" stroke-width="1.9" opacity="0.5"/>
+      <use xlink:href="#vleaf" transform="translate(2075 826) rotate(165) scale(1.15)" fill="#e89078" opacity="0.18"/><use xlink:href="#vleaf" transform="translate(2080 830) rotate(165) scale(1.15)" fill="url(#leafDeep)"/><use xlink:href="#vveins" transform="translate(2080 830) rotate(165) scale(1.15)" stroke="#5a4a3a" stroke-width="1.7" opacity="0.5"/>
+      <use xlink:href="#vleaf" transform="translate(2255 846) rotate(200) scale(1.25)" fill="#e89078" opacity="0.18"/><use xlink:href="#vleaf" transform="translate(2260 850) rotate(200) scale(1.25)" fill="url(#leafDeep)"/><use xlink:href="#vveins" transform="translate(2260 850) rotate(200) scale(1.25)" stroke="#5a4a3a" stroke-width="1.6" opacity="0.5"/>
+      <use xlink:href="#vleaf" transform="translate(2415 856) rotate(150) scale(1.2)" fill="#e89078" opacity="0.18"/><use xlink:href="#vleaf" transform="translate(2420 860) rotate(150) scale(1.2)" fill="url(#leafDeep)"/><use xlink:href="#vveins" transform="translate(2420 860) rotate(150) scale(1.2)" stroke="#5a4a3a" stroke-width="1.7" opacity="0.5"/>
+      <use xlink:href="#vleaf" transform="translate(2375 996) rotate(110) scale(1.2)" fill="#e89078" opacity="0.18"/><use xlink:href="#vleaf" transform="translate(2380 1000) rotate(110) scale(1.2)" fill="url(#leafDeep)"/><use xlink:href="#vveins" transform="translate(2380 1000) rotate(110) scale(1.2)" stroke="#5a4a3a" stroke-width="1.7" opacity="0.5"/>
+      <use xlink:href="#vleaf" transform="translate(2395 1156) rotate(70) scale(1.25)" fill="#e89078" opacity="0.18"/><use xlink:href="#vleaf" transform="translate(2400 1160) rotate(70) scale(1.25)" fill="url(#leafDeep)"/><use xlink:href="#vveins" transform="translate(2400 1160) rotate(70) scale(1.25)" stroke="#5a4a3a" stroke-width="1.6" opacity="0.5"/>
     </g>
     <!-- clusters -->
     <use xlink:href="#cluster" transform="translate(1960 856) scale(1)"/>
     <use xlink:href="#cluster" transform="translate(2150 884) scale(1.35)"/>
     <use xlink:href="#cluster" transform="translate(2350 900) scale(1.15)"/>
     <!-- front leaves, catching the light on their left edges -->
-    <g fill="url(#leaf)" filter="url(#leafVein)">
-      <use xlink:href="#vleaf" transform="translate(1860 846) rotate(232) scale(0.9)"/>
-      <use xlink:href="#vleaf" transform="translate(2060 870) rotate(150) scale(0.95)"/>
-      <use xlink:href="#vleaf" transform="translate(2260 870) rotate(214) scale(1.05)"/>
-      <use xlink:href="#vleaf" transform="translate(2500 940) rotate(120) scale(1.1)"/>
-      <use xlink:href="#vleaf" transform="translate(2360 1220) rotate(40) scale(1.2)"/>
+    <g>
+      <use xlink:href="#vleaf" transform="translate(1855 842) rotate(232) scale(0.9)" fill="#e89078" opacity="0.5"/><use xlink:href="#vleaf" transform="translate(1860 846) rotate(232) scale(0.9)" fill="url(#leafBack)"/><use xlink:href="#vveins" transform="translate(1860 846) rotate(232) scale(0.9)" stroke="#a89050" stroke-width="2.2" opacity="0.4"/>
+      <use xlink:href="#vleaf" transform="translate(2055 866) rotate(150) scale(0.95)" fill="#e89078" opacity="0.5"/><use xlink:href="#vleaf" transform="translate(2060 870) rotate(150) scale(0.95)" fill="url(#leafBack)"/><use xlink:href="#vveins" transform="translate(2060 870) rotate(150) scale(0.95)" stroke="#a89050" stroke-width="2.1" opacity="0.4"/>
+      <use xlink:href="#vleaf" transform="translate(2255 866) rotate(214) scale(1.05)" fill="#e89078" opacity="0.5"/><use xlink:href="#vleaf" transform="translate(2260 870) rotate(214) scale(1.05)" fill="url(#leafBack)"/><use xlink:href="#vveins" transform="translate(2260 870) rotate(214) scale(1.05)" stroke="#a89050" stroke-width="1.9" opacity="0.4"/>
+      <use xlink:href="#vleaf" transform="translate(2495 936) rotate(120) scale(1.1)" fill="#e89078" opacity="0.5"/><use xlink:href="#vleaf" transform="translate(2500 940) rotate(120) scale(1.1)" fill="url(#leafBack)"/><use xlink:href="#vveins" transform="translate(2500 940) rotate(120) scale(1.1)" stroke="#a89050" stroke-width="1.8" opacity="0.4"/>
+      <use xlink:href="#vleaf" transform="translate(2355 1216) rotate(40) scale(1.2)" fill="#e89078" opacity="0.5"/><use xlink:href="#vleaf" transform="translate(2360 1220) rotate(40) scale(1.2)" fill="url(#leafBack)"/><use xlink:href="#vveins" transform="translate(2360 1220) rotate(40) scale(1.2)" stroke="#a89050" stroke-width="1.7" opacity="0.4"/>
     </g>
   </g>
 

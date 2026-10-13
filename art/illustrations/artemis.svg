@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Olymparch · Artemis: a hind with golden antlers stands in a moonlit forest clearing by a still pool; the crescent
+<!-- Olymparch · Artemis: a hind stands in a moonlit forest clearing by a still pool; the crescent
      moon is the key light, its rays fall through the pines; the huntress' bow and quiver lean on the old oak in front.
      Light: the crescent (silver), upper left. 2560×1440, everything that matters inside x 140…2420.
      Drawn by hand for Olymparch; MIT. -->
@@ -111,13 +111,13 @@
       <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.1" k2="0" k3="0" k4="0"/>
     </filter>
     <filter id="fur" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.05 0.1" numOctaves="3" seed="3" result="h"/>
-      <feDiffuseLighting in="h" surfaceScale="3" diffuseConstant="1" lighting-color="#fff" result="l">
+      <feTurbulence type="fractalNoise" baseFrequency="0.09 0.32" numOctaves="2" seed="3" result="h"/>
+      <feDiffuseLighting in="h" surfaceScale="1.4" diffuseConstant="1" lighting-color="#fff" result="l">
         <feDistantLight azimuth="210" elevation="45"/>
       </feDiffuseLighting>
       <feComponentTransfer in="l" result="lt">
-        <feFuncR type="linear" slope="0.7" intercept="0.42"/><feFuncG type="linear" slope="0.7" intercept="0.42"/>
-        <feFuncB type="linear" slope="0.7" intercept="0.42"/>
+        <feFuncR type="linear" slope="0.45" intercept="0.62"/><feFuncG type="linear" slope="0.45" intercept="0.62"/>
+        <feFuncB type="linear" slope="0.45" intercept="0.62"/>
       </feComponentTransfer>
       <feComposite in="lt" in2="SourceGraphic" operator="arithmetic" k1="1.1" k2="0" k3="0" k4="0"/>
     </filter>
@@ -133,15 +133,6 @@
     <!-- a fir, tiered, 400 tall, base at 0 -->
     <path id="fir" d="M0 -400 L16 -350 L8 -348 L36 -290 L20 -288 L56 -214 L34 -212 L76 -130 L50 -128 L96 -36 L60 -34 L70 0
       L-70 0 L-60 -34 L-96 -36 L-50 -128 L-76 -130 L-34 -212 L-56 -214 L-20 -288 L-36 -290 L-8 -348 L-16 -350 Z"/>
-    <!-- the hind, facing left (toward the moon), hooves at y 0 -->
-    <path id="hind" d="M-90 -300 C-40 -290 20 -284 70 -290 C110 -296 140 -302 162 -290 C184 -278 194 -262 188 -244 L200 -254 L198 -240 L188 -236
-      C186 -210 182 -190 176 -170 C172 -150 176 -128 168 -108 L160 -60 L162 -18 L168 0 L150 0 L148 -18 L146 -60 L148 -104
-      C140 -124 134 -140 126 -152 C100 -160 60 -158 20 -152 C-20 -146 -46 -146 -58 -146 L-68 -106 L-56 -76 L-48 -54 L-50 -44 L-64 -46 L-74 -68
-      L-90 -98 L-98 -120 L-108 -148 C-142 -164 -158 -206 -152 -240 C-160 -280 -176 -320 -196 -352 L-223 -366 L-263 -369 L-276 -377
-      L-278 -390 C-258 -398 -234 -408 -212 -417 L-202 -439 L-180 -462 L-188 -429 L-171 -454 L-173 -418
-      C-168 -384 -140 -334 -90 -300 Z"/>
-    <path id="hindFar" d="M-40 -160 L-30 -110 L-36 -60 L-34 -18 L-28 0 L-44 0 L-48 -18 L-50 -60 L-54 -120 Z
-      M100 -160 C110 -140 118 -120 112 -100 L104 -60 L106 -18 L112 0 L96 0 L92 -18 L90 -60 L92 -104 C88 -130 84 -150 80 -170 Z"/>
     <!-- a fern frond -->
     <g id="frond">
       <path d="M0 0 C60 -40 140 -70 240 -80" fill="none" stroke="#0a0f1a" stroke-width="5"/>
@@ -239,8 +230,8 @@
 
   <!-- ── light shafts from the crescent into the clearing -->
   <g filter="url(#haze)">
-    <path d="M700 420 L860 420 L1700 1180 L1300 1200 Z" fill="url(#ray)"/>
-    <path d="M760 440 L820 440 L1280 1180 L1120 1190 Z" fill="url(#ray)" opacity="0.8"/>
+    <path d="M690 420 L840 410 L1780 1100 L1400 1150 Z" fill="url(#ray)"/>
+    <path d="M740 440 L800 432 L1660 1100 L1500 1120 Z" fill="url(#ray)" opacity="0.7"/>
   </g>
 
   <!-- ── the clearing: meadow, mist, the pool with the moon in it -->
@@ -268,43 +259,79 @@
     <path d="M940 1196 L1060 1196 M960 1206 L1040 1206 M1150 1186 L1290 1186 M1180 1200 L1260 1200"/>
   </g>
 
-  <!-- ── the hind, alert, golden antlers catching the moon -->
-  <g transform="translate(1560 1120) scale(1.05)">
-    <ellipse cx="20" cy="4" rx="200" ry="14" fill="#04060c" opacity="0.6" filter="url(#glowS)"/>
-    <use xlink:href="#hindFar" fill="#262b3e"/>
-    <g filter="url(#fur)">
-      <use xlink:href="#hind" fill="url(#deer)"/>
-      <!-- pale throat, chest and belly; darker saddle; shaded haunch -->
-      <path d="M-196 -352 C-176 -320 -160 -280 -148 -240 C-150 -200 -136 -164 -108 -148 C-136 -190 -150 -260 -176 -330 Z" fill="#dfe5f0" opacity="0.55"/>
-      <path d="M-58 -146 C-46 -146 -20 -146 20 -152 C60 -158 100 -160 126 -152 C90 -176 40 -180 0 -174 C-30 -170 -50 -160 -58 -146 Z" fill="#dfe5f0" opacity="0.35" filter="url(#glowS)"/>
-      <path d="M-90 -300 C-40 -290 20 -284 70 -290 C110 -296 140 -302 162 -290 C120 -280 40 -272 -70 -284 Z" fill="#0e1018" opacity="0.5"/>
-      <path d="M150 -292 C178 -286 192 -268 188 -244 C186 -210 182 -190 176 -170 C150 -190 130 -230 120 -280 Z" fill="#0e1018" opacity="0.45"/>
-      <path d="M-262 -356 L-276 -362 L-280 -374 C-270 -380 -262 -384 -254 -388 Z" fill="#0a0c14" opacity="0.7" transform="rotate(10 -190 -370)"/>
+  <!-- ── the hind: deep chest, sloping back, round haunch, one foreleg raised, head turned toward us -->
+  <g transform="translate(1560 1120) scale(1.08)">
+    <ellipse cx="20" cy="2" rx="190" ry="14" fill="#04060c" opacity="0.65" filter="url(#glowS)"/>
+    <g fill="none">
+      <path d="M-104 -212 L-108 -112" stroke="#2a2e40" stroke-width="18" stroke-linecap="round"/>
+      <path d="M-108 -112 L-104 -24" stroke="#2a2e40" stroke-width="10" stroke-linecap="round"/>
+      <path d="M-104 -24 L-102 -4" stroke="#2a2e40" stroke-width="8" stroke-linecap="round"/>
+      <circle cx="-108" cy="-112" r="8" fill="#2a2e40"/>
+      <path d="M-109 -10 L-96 -10 L-97 0 L-111 0 Z" fill="#06070c"/>
+      <path d="M108 -200 L140 -104" stroke="#2a2e40" stroke-width="22" stroke-linecap="round"/>
+      <path d="M140 -104 L124 -24" stroke="#2a2e40" stroke-width="10" stroke-linecap="round"/>
+      <path d="M124 -24 L124 -4" stroke="#2a2e40" stroke-width="8" stroke-linecap="round"/>
+      <circle cx="140" cy="-104" r="8" fill="#2a2e40"/>
+      <path d="M117 -10 L130 -10 L129 0 L115 0 Z" fill="#06070c"/>
     </g>
-    <g transform="rotate(10 -190 -370)">
-    <!-- antlers (the Ceryneian hind's are gold) -->
-    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-      <g stroke="#4a3a14" stroke-width="12">
-        <path d="M-204 -440 C-210 -490 -196 -530 -168 -560 M-200 -500 L-164 -508 M-186 -536 L-200 -574 M-172 -552 L-140 -578
-          M-188 -432 C-180 -480 -170 -514 -140 -540 M-176 -490 L-144 -486"/>
-      </g>
-      <g stroke="#d8b860" stroke-width="6">
-        <path d="M-204 -440 C-210 -490 -196 -530 -168 -560 M-200 -500 L-164 -508 M-186 -536 L-200 -574 M-172 -552 L-140 -578
-          M-188 -432 C-180 -480 -170 -514 -140 -540 M-176 -490 L-144 -486"/>
-      </g>
-      <path d="M-206 -470 C-208 -500 -196 -528 -172 -554" stroke="#fff4c8" stroke-width="2" opacity="0.9"/>
+    <g filter="url(#fur)" transform="translate(0 -50)">
+      <!-- neck -->
+      <path d="M-118 -298 C-140 -332 -158 -372 -170 -404 L-212 -396 C-196 -340 -182 -288 -164 -232 C-150 -262 -136 -284 -118 -298 Z" fill="url(#deer)"/>
+      <!-- body -->
+      <path d="M-120 -300 C-60 -292 20 -282 90 -286 C130 -290 160 -284 178 -262 C196 -236 196 -196 182 -172 C172 -160 150 -150 126 -152
+        C80 -146 20 -140 -30 -138 C-70 -138 -100 -144 -120 -156 C-150 -170 -168 -200 -166 -236 C-160 -270 -146 -292 -120 -300 Z" fill="url(#deer)"/>
+      <!-- haunch and shoulder masses, darker saddle, pale belly and throat -->
+      <ellipse cx="128" cy="-210" rx="62" ry="70" fill="#1c1e2c" opacity="0.35"/>
+      <path d="M150 -270 C178 -250 188 -214 176 -178 C168 -210 160 -240 140 -262 Z" fill="#0e1018" opacity="0.5"/>
+      <ellipse cx="-118" cy="-226" rx="48" ry="62" fill="#a8b0c4" opacity="0.18"/>
+      <path d="M-120 -300 C-60 -292 20 -282 90 -286 C130 -290 160 -284 178 -262 C140 -272 60 -270 -20 -276 C-70 -280 -100 -288 -120 -300 Z" fill="#0e1018" opacity="0.4"/>
+      <path d="M-120 -156 C-100 -144 -70 -138 -30 -138 C20 -140 80 -146 126 -152 C80 -162 20 -156 -30 -152 C-70 -152 -100 -158 -120 -170 Z" fill="#e6ebf5" opacity="0.3"/>
+      <path d="M-212 -396 C-196 -340 -182 -288 -164 -232 C-176 -290 -186 -340 -194 -390 Z" fill="#e6ebf5" opacity="0.5"/>
+      <!-- head, turned three-quarters toward us -->
+      <path d="M-226 -440 C-210 -454 -184 -454 -168 -440 C-160 -420 -166 -398 -178 -380 C-190 -362 -206 -348 -222 -342
+        C-234 -340 -244 -346 -246 -356 C-248 -374 -240 -402 -226 -440 Z" fill="#7a8096"/>
+      <path d="M-168 -440 C-160 -420 -166 -398 -178 -380 C-190 -362 -206 -348 -222 -342 C-206 -360 -190 -390 -182 -440 Z" fill="#2a2e40" opacity="0.55"/>
+      <path d="M-236 -372 C-230 -360 -224 -352 -222 -342 C-232 -340 -242 -346 -246 -356 Z" fill="#c8cede" opacity="0.6"/>
+      <!-- ears: large, the near one out to the left, the far one up -->
+      <path d="M-222 -438 C-256 -458 -288 -470 -302 -462 C-294 -444 -262 -430 -228 -426 Z" fill="#6a7088"/>
+      <path d="M-232 -436 C-258 -452 -280 -460 -292 -458 C-282 -446 -258 -438 -234 -432 Z" fill="#d8c8cc" opacity="0.55"/>
+      <path d="M-172 -442 C-152 -470 -136 -494 -122 -498 C-120 -478 -138 -452 -168 -428 Z" fill="#4a5066"/>
+      <path d="M-166 -444 C-152 -466 -140 -484 -130 -488 C-130 -474 -144 -456 -166 -436 Z" fill="#b8a8b0" opacity="0.4"/>
+      <!-- tail -->
+      <path d="M180 -262 C196 -254 202 -236 196 -224 C186 -230 180 -246 176 -258 Z" fill="#e6ebf5"/>
     </g>
-    <g fill="#e8c870" opacity="0.18" filter="url(#glow)"><circle cx="-180" cy="-520" r="44"/></g>
-    <!-- ear inner, eye, nose, rim light from the moon (left) -->
-    <path d="M-196 -462 L-198 -428 L-206 -440 Z" fill="#c2a8a8" opacity="0.6"/>
-    <circle cx="-234" cy="-392" r="6" fill="#05060a"/>
-    <circle cx="-236" cy="-394" r="2" fill="#f3f6fc"/>
-    <circle cx="-276" cy="-370" r="4" fill="#05060a"/>
-    <path d="M-280 -374 C-262 -386 -240 -400 -220 -412 L-214 -436" fill="none" stroke="#f3f6fc" stroke-width="3" opacity="0.85"/>
+    <path d="M118 -236 C150 -246 186 -236 194 -206 L192 -110 L172 -100 C160 -140 140 -180 118 -200 Z" fill="#2a2e40"/>
+    <path d="M194 -206 L192 -110" stroke="#2a2e40" stroke-width="3" fill="none" opacity="0.6"/>
+    <path d="M-156 -236 C-140 -244 -116 -240 -110 -226 C-118 -190 -140 -150 -152 -126 L-170 -134 C-168 -170 -164 -210 -156 -236 Z" fill="#50566c"/>
+    <path d="M-156 -236 C-164 -210 -168 -170 -170 -134" stroke="#c2cde0" stroke-width="2" fill="none" opacity="0.6"/>
+    <g fill="none">
+      <path d="M144 -200 L184 -104" stroke="#2a2e40" stroke-width="26" stroke-linecap="round"/>
+      <path d="M184 -104 L164 -24" stroke="#343849" stroke-width="11" stroke-linecap="round"/>
+      <path d="M164 -24 L164 -4" stroke="#343849" stroke-width="8" stroke-linecap="round"/>
+      <circle cx="184" cy="-104" r="9" fill="#343849"/>
+      <path d="M157 -10 L170 -10 L169 0 L155 0 Z" fill="#06070c"/>
+      <path d="M135 -200 L175 -104 L155 -24" stroke="#9aa6c0" stroke-width="2" opacity="0.6"/>
+      <path d="M-136 -226 L-160 -130" stroke="#5c6276" stroke-width="20" stroke-linecap="round"/>
+      <path d="M-160 -130 L-126 -96" stroke="#5c6276" stroke-width="10" stroke-linecap="round"/>
+      <path d="M-126 -96 L-114 -82" stroke="#5c6276" stroke-width="8" stroke-linecap="round"/>
+      <circle cx="-160" cy="-130" r="8" fill="#5c6276"/>
+      <path d="M-121 -88 L-108 -88 L-109 -78 L-123 -78 Z" fill="#06070c"/>
+      <path d="M-143 -226 L-167 -130 L-133 -96" stroke="#c2cde0" stroke-width="2" opacity="0.6"/>
     </g>
-    <path d="M-196 -352 C-176 -320 -160 -280 -148 -240 C-150 -200 -136 -164 -108 -148" fill="none" stroke="#f3f6fc" stroke-width="3" opacity="0.7"/>
-    <path d="M-173 -418 C-168 -384 -140 -334 -90 -300 C-40 -290 20 -284 70 -290 C110 -296 140 -302 162 -290" fill="none" stroke="#c2cde0" stroke-width="2.5" opacity="0.6"/>
-    <path d="M-108 -148 L-98 -120 L-90 -98 L-74 -68" fill="none" stroke="#c2cde0" stroke-width="2.5" opacity="0.55"/>
+    <g transform="translate(0 -50)">
+    <!-- face: eyes, nose -->
+    <ellipse cx="-222" cy="-410" rx="7" ry="6" fill="#05060a"/>
+    <circle cx="-224" cy="-412" r="2" fill="#f3f6fc"/>
+    <ellipse cx="-180" cy="-412" rx="5" ry="5" fill="#05060a"/>
+    <ellipse cx="-238" cy="-352" rx="9" ry="7" fill="#05060a"/>
+    <!-- moon rim light from the upper left -->
+    <g fill="none" stroke="#f3f6fc" stroke-linecap="round">
+      <path d="M-246 -356 C-248 -374 -240 -402 -226 -440 C-210 -454 -184 -454 -168 -440" stroke-width="3" opacity="0.85"/>
+      <path d="M-302 -462 C-294 -444 -262 -430 -228 -426" stroke-width="2.5" opacity="0.6"/>
+      <path d="M-212 -396 C-196 -340 -182 -288 -164 -232 C-168 -200 -150 -170 -120 -156" stroke-width="3" opacity="0.75"/>
+      <path d="M-170 -404 C-158 -372 -140 -332 -118 -298 C-60 -292 20 -282 90 -286 C130 -290 160 -284 178 -262" stroke-width="2.5" opacity="0.55"/>
+    </g>
+    </g>
   </g>
   <!-- grass in front of the hind's hooves -->
   <g stroke="#2a3656" stroke-width="3" fill="none" stroke-linecap="round">

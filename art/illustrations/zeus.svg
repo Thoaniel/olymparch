@@ -5,11 +5,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2560" height="1440" viewBox="0 0 2560 1440">
   <defs>
     <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#050508"/>
-      <stop offset="0.3" stop-color="#0e0e18"/>
-      <stop offset="0.55" stop-color="#1f1d2e"/>
-      <stop offset="0.75" stop-color="#3a3245"/>
-      <stop offset="1" stop-color="#4c3f45"/>
+      <stop offset="0" stop-color="#05050c"/>
+      <stop offset="0.3" stop-color="#0c0d22"/>
+      <stop offset="0.55" stop-color="#1c1b3c"/>
+      <stop offset="0.75" stop-color="#33294c"/>
+      <stop offset="1" stop-color="#4a3650"/>
     </linearGradient>
     <radialGradient id="flash" cx="1620" cy="620" r="1000" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#f4d35e" stop-opacity="0.42"/>
@@ -17,7 +17,7 @@
       <stop offset="0.55" stop-color="#5a4466" stop-opacity="0.1"/>
       <stop offset="1" stop-color="#1a1828" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="strike" cx="1700" cy="790" r="300" gradientUnits="userSpaceOnUse">
+    <radialGradient id="strike" cx="1700" cy="740" r="300" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#fff4cc" stop-opacity="0.85"/>
       <stop offset="0.25" stop-color="#f4d35e" stop-opacity="0.4"/>
       <stop offset="1" stop-color="#d4a73a" stop-opacity="0"/>
@@ -77,11 +77,6 @@
       <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
       <stop offset="1" stop-color="#000" stop-opacity="0.6"/>
     </radialGradient>
-    <linearGradient id="wingLight" x1="1" y1="0" x2="0" y2="0.6">
-      <stop offset="0" stop-color="#4a3e30"/>
-      <stop offset="0.5" stop-color="#2a2420"/>
-      <stop offset="1" stop-color="#121014"/>
-    </linearGradient>
 
     <!-- cloud body: noise eats into the shape for a painted, broken edge -->
     <filter id="cloud" x="-15%" y="-30%" width="130%" height="160%" filterUnits="objectBoundingBox">
@@ -138,22 +133,41 @@
       <feColorMatrix type="matrix" values="0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0.05 0"/>
     </filter>
 
-    <!-- the eagle seen from below: a right wing (mirrored for the left) with seven fingered primaries and scalloped
-         secondaries, a body with a hooked head and a fanned tail -->
-    <path id="wing" d="M16 -28 C60 -54 110 -72 166 -76 C206 -79 242 -88 272 -98 Q366 -128 318 -104 Q384 -104 326 -88
-      Q392 -82 330 -72 Q390 -58 326 -56 Q380 -36 316 -40 Q362 -14 300 -26 Q338 0 288 -8 Q276 8 262 -2 Q248 14 232 4
-      Q218 18 202 8 Q188 22 172 12 Q158 24 142 14 Q128 26 112 16 Q98 28 82 18 Q68 28 52 20 Q36 30 16 30 Z"/>
-    <path id="eagleBody" d="M-11 -74 C-13 -92 -4 -100 2 -100 C9 -100 14 -92 12 -74 C16 -60 22 -44 22 -24 C24 0 22 24 16 40
-      L32 108 Q0 122 -32 108 L-16 40 C-22 24 -24 0 -22 -24 C-22 -44 -16 -60 -11 -74 Z"/>
-    <linearGradient id="wingTone" x1="0" y1="-100" x2="0" y2="30" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#0a090d"/>
-      <stop offset="0.55" stop-color="#15131b"/>
-      <stop offset="1" stop-color="#2c2633"/>
+    <!-- the golden eagle in three-quarter view, gliding toward the strike with its wings raised: far wing, body,
+         near wing; light from the right (the bolt) -->
+    <linearGradient id="eNear" x1="-40" y1="-60" x2="-260" y2="-300" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5a3e26"/>
+      <stop offset="0.45" stop-color="#2e2014"/>
+      <stop offset="1" stop-color="#0e0907"/>
     </linearGradient>
-    <linearGradient id="primTone" x1="260" y1="0" x2="390" y2="0" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#000" stop-opacity="0"/>
-      <stop offset="1" stop-color="#000" stop-opacity="0.5"/>
+    <linearGradient id="eFar" x1="80" y1="-40" x2="20" y2="-340" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2a1d14"/>
+      <stop offset="1" stop-color="#0c0806"/>
     </linearGradient>
+    <linearGradient id="eBody" x1="200" y1="-20" x2="-200" y2="40" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5a3e24"/>
+      <stop offset="0.4" stop-color="#2c1e14"/>
+      <stop offset="1" stop-color="#100b08"/>
+    </linearGradient>
+    <linearGradient id="eNape" x1="190" y1="-20" x2="110" y2="-10" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d9a84c"/>
+      <stop offset="1" stop-color="#8a6230" stop-opacity="0"/>
+    </linearGradient>
+    <!-- feather texture: fine strokes along the vanes (not the rock noise) -->
+    <pattern id="vanes" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(-52)">
+      <path d="M0 4.5 H9" stroke="#000" stroke-width="1.1" stroke-opacity="0.35"/>
+    </pattern>
+    <path id="eFarWing" d="M70 -30 C72 -90 84 -150 102 -200 C108 -232 102 -262 88 -290 Q78 -360 60 -376 Q64 -330 66 -300
+      Q46 -352 28 -364 Q36 -326 44 -292 Q20 -330 2 -344 Q14 -310 20 -282 Q-4 -310 -20 -320 Q-10 -292 0 -268
+      Q-22 -284 -38 -290 Q-48 -230 -40 -150 Q-34 -80 -20 -30 Z"/>
+    <path id="eNearWing" d="M40 -24 C22 -100 -8 -168 -58 -228 C-88 -264 -118 -298 -150 -330 Q-150 -400 -172 -434
+      Q-178 -380 -176 -340 Q-196 -394 -214 -414 Q-212 -366 -202 -330 Q-232 -370 -250 -384 Q-238 -344 -224 -318
+      Q-256 -340 -274 -348 Q-258 -320 -242 -300 Q-272 -310 -290 -308 Q-272 -288 -252 -282 Q-280 -272 -294 -264
+      Q-270 -250 -246 -244 Q-262 -226 -238 -222 Q-238 -196 -210 -192 Q-206 -164 -180 -158 Q-172 -128 -146 -122
+      Q-136 -92 -110 -86 Q-98 -56 -72 -52 Q-60 -22 -40 -16 Q-10 10 20 0 Z"/>
+    <path id="eBodyP" d="M150 -30 C168 -34 184 -28 192 -18 L214 -12 C226 -9 229 4 216 9 L213 2 C206 4 199 4 192 3
+      C186 11 174 18 156 22 C120 40 70 58 10 60 C-40 62 -90 54 -130 42 L-150 48 L-236 66 L-250 46 L-242 26 L-150 22
+      C-100 6 -40 -16 20 -26 C70 -34 110 -38 150 -30 Z"/>
   </defs>
 
   <!-- ── sky and the flash behind everything -->
@@ -177,7 +191,7 @@
 
   <!-- ── Olympus -->
   <g transform="translate(0 70)">
-  <g filter="url(#reliefRock)">
+  <g filter="url(#reliefRock)" transform="translate(1700 1370) scale(1.25 1.06) translate(-1700 -1370)">
   <g filter="url(#rock)">
     <path id="olympus" d="M940 1440 L1010 1270 L1060 1250 L1110 1190 L1150 1180 L1195 1120 L1240 1108 L1275 1050 L1320 1035 L1350 985
       L1385 962 L1410 905 L1440 880 L1462 892 L1490 912 L1520 900 L1555 858 L1590 842 L1612 812 L1640 798 L1786 798
@@ -199,12 +213,22 @@
       <path d="M1620 820 L1590 900 L1560 980 L1540 1080" stroke="#f0c860" stroke-width="5" opacity="0.4"/>
       <path d="M1430 900 L1400 980 L1350 1050 L1320 1130" stroke="#d8ad55" stroke-width="4" opacity="0.32"/>
       <path d="M1950 830 L1930 900 L1915 960" stroke="#d8ad55" stroke-width="3" opacity="0.3"/>
+      <path d="M1480 1000 L1452 1080 L1470 1150 L1430 1240" stroke="#c99a48" stroke-width="4" opacity="0.3"/>
+      <path d="M1250 1120 L1220 1190 L1180 1250" stroke="#b88a44" stroke-width="3" opacity="0.28"/>
     </g>
   </g>
   </g>
+  <!-- the ridge that faces the strike, rimmed in gold -->
+  <g transform="translate(1700 1370) scale(1.25 1.06) translate(-1700 -1370)" fill="none" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M1240 1108 L1275 1050 L1320 1035 L1350 985 L1385 962 L1410 905 L1440 880" stroke="#f4d35e" stroke-width="6" opacity="0.35" filter="url(#glowS)"/>
+    <path d="M1240 1108 L1275 1050 L1320 1035 L1350 985 L1385 962 L1410 905 L1440 880" stroke="#f0cc64" stroke-width="2.2" opacity="0.55"/>
+    <path d="M1490 912 L1520 900 L1555 858 L1590 842 L1612 812 L1640 798" stroke="#f4d35e" stroke-width="8" opacity="0.45" filter="url(#glowS)"/>
+    <path d="M1490 912 L1520 900 L1555 858 L1590 842 L1612 812 L1640 798" stroke="#ffe7a0" stroke-width="2.5" opacity="0.75"/>
+    <path d="M1905 866 L1938 838 L1962 812" stroke="#f0cc64" stroke-width="2" opacity="0.45"/>
+  </g>
 
   <!-- ── the temple on the summit, its front lit by the strike -->
-  <g>
+  <g transform="translate(0 -34)">
     <path d="M1628 800 L1798 800 L1806 812 L1620 812 Z" fill="#1f1c25"/>
     <rect x="1636" y="788" width="154" height="14" fill="#2c2833"/>
     <rect x="1640" y="784" width="146" height="5" fill="#d9b252" opacity="0.6"/>
@@ -249,22 +273,27 @@
 
   <!-- ── the bolt: halo, branches, body, white core -->
   <rect width="2560" height="1440" fill="url(#strike)"/>
+  <!-- the flash spreading through the storm's belly -->
+  <ellipse cx="1470" cy="470" rx="420" ry="90" fill="#f4d35e" opacity="0.32" filter="url(#haze)"/>
+  <ellipse cx="1460" cy="470" rx="160" ry="40" fill="#fff4cc" opacity="0.45" filter="url(#glow)"/>
   <g fill="none" stroke-linejoin="miter" stroke-linecap="round">
-    <path filter="url(#glow)" stroke="#f4d35e" stroke-width="36" opacity="0.75"
-          d="M1452 470 L1461 492 L1455 503 L1474 522 L1490 548 L1478 552 L1470 566 L1488 584 L1503 592 L1512 612 L1540 640 L1531 646 L1520 656 L1546 676 L1561 680 L1578 700 L1600 714 L1592 720 L1584 728 L1611 738 L1630 744 L1660 760 L1683 762 L1712 768"/>
+    <path filter="url(#glow)" stroke="#f4d35e" stroke-width="64" opacity="0.7"
+          d="M1452 470 L1461 489 L1455 498 L1474 514 L1490 536 L1478 539 L1470 551 L1488 566 L1503 573 L1512 590 L1540 614 L1531 619 L1520 627 L1546 644 L1561 648 L1578 664 L1600 676 L1592 681 L1584 688 L1611 697 L1630 702 L1660 715 L1683 717 L1712 722"/>
     <g stroke="#f4d35e" filter="url(#glowS)" opacity="0.6">
-      <path d="M1490 548 L1462 566 L1448 568 L1420 600 L1426 610 L1432 616 L1404 640 L1396 662 L1378 672 L1360 690" stroke-width="9"/>
-      <path d="M1540 640 L1572 642 L1590 652 L1612 650 L1608 658 L1604 664 L1640 668 L1652 676 L1676 676" stroke-width="7"/>
+      <path d="M1490 536 L1462 551 L1448 553 L1420 580 L1426 588 L1432 593 L1404 614 L1396 632 L1378 641 L1360 656" stroke-width="13"/>
+      <path d="M1540 614 L1572 615 L1590 624 L1612 622 L1608 629 L1604 634 L1640 637 L1652 644 L1676 644" stroke-width="7"/>
     </g>
-    <path d="M1490 548 L1462 566 L1448 568 L1420 600 L1426 610 L1432 616 L1404 640 L1396 662 L1378 672 L1360 690 M1396 650 L1376 712" stroke="#f4d35e" stroke-width="3.5"/>
-    <path d="M1540 640 L1572 642 L1590 652 L1612 650 L1608 658 L1604 664 L1640 668 L1652 676 L1676 676" stroke="#f4d35e" stroke-width="3"/>
-    <path d="M1452 470 L1461 492 L1455 503 L1474 522 L1490 548 L1478 552 L1470 566 L1488 584 L1503 592 L1512 612 L1540 640 L1531 646 L1520 656 L1546 676 L1561 680 L1578 700 L1600 714 L1592 720 L1584 728 L1611 738 L1630 744 L1660 760 L1683 762 L1712 768" stroke="#f4d35e" stroke-width="12"/>
-    <path d="M1452 470 L1461 492 L1455 503 L1474 522 L1490 548 L1478 552 L1470 566 L1488 584 L1503 592 L1512 612 L1540 640 L1531 646 L1520 656 L1546 676 L1561 680 L1578 700 L1600 714 L1592 720 L1584 728 L1611 738 L1630 744 L1660 760 L1683 762 L1712 768" stroke="#fffbea" stroke-width="4.5"/>
+    <path d="M1490 536 L1462 551 L1448 553 L1420 580 L1426 588 L1432 593 L1404 614 L1396 632 L1378 641 L1360 656 M1396 622 L1376 675" stroke="#f4d35e" stroke-width="5"/>
+    <path d="M1540 614 L1572 615 L1590 624 L1612 622 L1608 629 L1604 634 L1640 637 L1652 644 L1676 644" stroke="#f4d35e" stroke-width="3"/>
+    <path d="M1452 470 L1461 489 L1455 498 L1474 514 L1490 536 L1478 539 L1470 551 L1488 566 L1503 573 L1512 590 L1540 614 L1531 619 L1520 627 L1546 644 L1561 648 L1578 664 L1600 676 L1592 681 L1584 688 L1611 697 L1630 702 L1660 715 L1683 717 L1712 722" stroke="#f4d35e" stroke-width="17"/>
+    <path d="M1452 470 L1461 489 L1455 498 L1474 514 L1490 536 L1478 539 L1470 551 L1488 566 L1503 573 L1512 590 L1540 614 L1531 619 L1520 627 L1546 644 L1561 648 L1578 664 L1600 676 L1592 681 L1584 688 L1611 697 L1630 702 L1660 715 L1683 717 L1712 722" stroke="#fffbea" stroke-width="7"/>
   </g>
   <!-- the strike lighting the pediment -->
-  <circle cx="1712" cy="768" r="16" fill="#fffbea" filter="url(#glowS)"/>
+  <circle cx="1712" cy="722" r="20" fill="#fffbea" filter="url(#glowS)"/>
 
   <!-- ── sea of cloud: lit crests near the mountain, darker toward the edges -->
+  <path d="M-120 1200 C300 1170 700 1180 1100 1170 C1500 1165 1900 1200 2700 1210 L2700 1520 L-120 1520 Z" fill="#2a2538"
+        filter="url(#cloudSoft)"/>
   <g filter="url(#reliefCloud)"><g filter="url(#cloud)">
     <path d="M-120 1150 C40 1110 180 1120 300 1100 C420 1080 520 1110 640 1095 C760 1080 860 1120 980 1105 C1100 1090 1180 1130
       1300 1120 C1420 1110 1500 1150 1620 1140 C1740 1130 1840 1170 1960 1160 C2100 1150 2200 1180 2340 1170 C2460 1160 2560 1180
@@ -272,9 +301,9 @@
   </g></g>
   <g filter="url(#cloudSoft)">
     <path d="M-120 1250 C120 1220 300 1240 520 1228 C720 1215 900 1255 1120 1248 C1340 1240 1520 1280 1760 1270 C1980 1262
-      2200 1290 2700 1275 L2700 1520 L-120 1520 Z" fill="#1d1a25"/>
+      2200 1290 2700 1275 L2700 1520 L-120 1520 Z" fill="#1c1a2e"/>
     <path d="M-120 1340 C200 1320 500 1345 800 1335 C1100 1325 1400 1360 1700 1350 C2000 1340 2300 1370 2700 1355 L2700 1520
-      L-120 1520 Z" fill="#121118"/>
+      L-120 1520 Z" fill="#131226"/>
   </g>
   <g filter="url(#glow)">
     <ellipse cx="1560" cy="1140" rx="420" ry="26" fill="#e0b450" opacity="0.38"/>
@@ -288,29 +317,43 @@
     <path d="M30 1135 L90 1175 L150 1170 L120 1200 L60 1196 Z" fill="#8a7050" opacity="0.35"/>
   </g>
 
-  <!-- ── the eagle, rim-lit from the bolt (light from the right) -->
-  <g transform="translate(720 700) rotate(-3) scale(0.85)">
-    <g transform="rotate(-7 16 -28) translate(0 -28) scale(1 1.4) translate(0 28)">
-      <use xlink:href="#wing" fill="url(#wingTone)"/>
-      <use xlink:href="#wing" fill="url(#primTone)"/>
-      <path d="M40 -6 C110 -22 200 -30 290 -40 M60 -36 C130 -52 200 -60 270 -70" fill="none" stroke="#000" stroke-opacity="0.35" stroke-width="3"/>
-      <path d="M16 -28 C60 -54 110 -72 166 -76 C206 -79 242 -88 272 -98 L330 -114" fill="none" stroke="#f4d35e" stroke-width="3" opacity="0.75"/>
+  <!-- ── the eagle, gliding toward the strike, rim-lit from it -->
+  <g transform="translate(720 740) rotate(-6) scale(0.92)">
+    <!-- far wing, behind the body -->
+    <use xlink:href="#eFarWing" fill="url(#eFar)"/>
+    <use xlink:href="#eFarWing" fill="url(#vanes)" opacity="0.6"/>
+    <path d="M70 -30 C72 -90 84 -150 102 -200 C108 -232 102 -262 88 -290 L60 -376" fill="none" stroke="#f4d35e" stroke-width="2.4" opacity="0.6"/>
+    <!-- tail and body -->
+    <use xlink:href="#eBodyP" fill="url(#eBody)"/>
+    <path d="M-150 22 L-242 26 M-150 34 L-246 46 M-150 46 L-238 64" stroke="#000" stroke-opacity="0.4" stroke-width="2" fill="none"/>
+    <path d="M150 -30 C168 -34 184 -28 192 -18 L190 4 C176 16 150 22 120 22 C130 4 136 -14 150 -30 Z" fill="url(#eNape)" opacity="0.8"/>
+    <!-- feathered legs tucked under, talons drawn up -->
+    <path d="M-10 52 C-20 74 -46 84 -70 80 C-60 70 -40 60 -30 50 Z" fill="#20160f"/>
+    <path d="M-66 80 l-10 8 M-60 82 l-6 10 M-54 81 l-2 10" stroke="#d4a73a" stroke-width="2.4" opacity="0.8"/>
+    <!-- beak: yellow cere, dark hooked tip; amber eye under a brow -->
+    <path d="M192 -18 L204 -15 C204 -6 200 0 193 3 Z" fill="#e0b040"/>
+    <path d="M204 -15 L214 -12 C226 -9 229 4 216 9 L213 2 C209 3 204 2 200 0 C203 -4 205 -9 204 -15 Z" fill="#2a2420"/>
+    <circle cx="176" cy="-17" r="4.2" fill="#e8a838"/><circle cx="177" cy="-17" r="2" fill="#0a0806"/>
+    <path d="M166 -24 C172 -27 182 -26 188 -22" stroke="#1a120c" stroke-width="3" fill="none"/>
+    <!-- rim light along the head, throat and breast, facing the bolt -->
+    <path d="M150 -30 C168 -34 184 -28 192 -18 L214 -12 C226 -9 229 4 216 9" fill="none" stroke="#ffe08a" stroke-width="2.4" opacity="0.85"/>
+    <path d="M192 3 C186 11 174 18 156 22 C120 40 70 58 10 60" fill="none" stroke="#f4d35e" stroke-width="2.6" opacity="0.6"/>
+    <!-- near wing, in front: coverts in rows, fingered primaries, scalloped secondaries -->
+    <use xlink:href="#eNearWing" fill="url(#eNear)"/>
+    <use xlink:href="#eNearWing" fill="url(#vanes)" opacity="0.7"/>
+    <g fill="none" stroke-linecap="round">
+      <path d="M22 -40 Q4 -48 -10 -40 Q-24 -52 -40 -44 Q-54 -58 -70 -52 Q-84 -66 -100 -62" stroke="#7a5a36" stroke-width="2.4" opacity="0.7"/>
+      <path d="M8 -90 Q-10 -96 -24 -88 Q-40 -100 -56 -92 Q-72 -106 -90 -100 Q-106 -112 -124 -108" stroke="#6a4c2e" stroke-width="2.2" opacity="0.6"/>
+      <path d="M-20 -150 Q-38 -156 -52 -148 Q-68 -160 -84 -152 Q-100 -166 -118 -160 Q-134 -172 -152 -170" stroke="#5a4028" stroke-width="2" opacity="0.55"/>
+      <path d="M-150 -330 L-176 -340 M-152 -322 L-202 -330 M-156 -314 L-224 -318 M-162 -304 L-242 -300 M-168 -294 L-252 -282 M-172 -284 L-246 -244"
+            stroke="#000" stroke-width="2.2" opacity="0.5"/>
     </g>
-    <g transform="scale(-1 1) rotate(-7 16 -28) translate(0 -28) scale(1 1.4) translate(0 28)">
-      <use xlink:href="#wing" fill="url(#wingTone)"/>
-      <use xlink:href="#wing" fill="url(#primTone)"/>
-      <path d="M40 -6 C110 -22 200 -30 290 -40 M60 -36 C130 -52 200 -60 270 -70" fill="none" stroke="#000" stroke-opacity="0.35" stroke-width="3"/>
-      <path d="M16 -28 C60 -54 110 -72 166 -76" fill="none" stroke="#8a7050" stroke-width="2" opacity="0.4"/>
-    </g>
-    <use xlink:href="#eagleBody" fill="#100e14"/>
-    <path d="M12 -74 C16 -60 22 -44 22 -24 C24 0 22 24 16 40 L32 108" fill="none" stroke="#f4d35e" stroke-width="2.5" opacity="0.6"/>
-    <path d="M-4 -98 C2 -112 12 -108 10 -96 L4 -92 Z" fill="#c9a040"/>
-    <path d="M-11 -74 C-13 -92 -4 -100 2 -100 C9 -100 14 -92 12 -74" fill="none" stroke="#e8c868" stroke-width="2" opacity="0.7"/>
-    <path d="M-20 60 L-24 104 M-8 62 L-9 112 M6 62 L8 112 M18 60 L22 104" stroke="#2c2633" stroke-width="2" opacity="0.7"/>
+    <path d="M40 -24 C22 -100 -8 -168 -58 -228 C-88 -264 -118 -298 -150 -330 Q-150 -400 -172 -434" fill="none" stroke="#f4d35e" stroke-width="3" opacity="0.75"/>
+    <path d="M40 -24 C22 -100 -8 -168 -58 -228" fill="none" stroke="#fff0b8" stroke-width="1.2" opacity="0.7"/>
   </g>
-  <g fill="#18161f" opacity="0.85">
-    <g transform="translate(430 840) rotate(4) scale(0.13)"><use xlink:href="#wing"/><use xlink:href="#wing" transform="scale(-1 1)"/><use xlink:href="#eagleBody"/></g>
-    <g transform="translate(530 890) rotate(-3) scale(0.1)"><use xlink:href="#wing"/><use xlink:href="#wing" transform="scale(-1 1)"/><use xlink:href="#eagleBody"/></g>
+  <g fill="#1a1622" opacity="0.85">
+    <g transform="translate(430 860) rotate(-4) scale(0.13)"><use xlink:href="#eFarWing"/><use xlink:href="#eBodyP"/><use xlink:href="#eNearWing"/></g>
+    <g transform="translate(540 910) rotate(3) scale(-0.1 0.1)"><use xlink:href="#eFarWing"/><use xlink:href="#eBodyP"/><use xlink:href="#eNearWing"/></g>
   </g>
 
   <!-- ── rain veils hanging from the storm on the right: dark and quiet -->

@@ -228,6 +228,12 @@
       L1810 920 L1770 900 L1760 870 L1720 856 L1700 840 Z"
       fill="url(#shore)"/>
   </g></g>
+  <!-- the ledge Cerberus keeps -->
+  <g filter="url(#reliefFar)"><g filter="url(#rock)">
+    <path d="M1640 830 L1660 800 L1700 786 L1760 780 L1830 784 L1900 780 L1960 792 L1990 812 L2000 846 L1640 850 Z" fill="#1c1326"/>
+  </g></g>
+  <path d="M1660 800 L1700 786 L1760 780 L1830 784 L1900 780 L1960 792" fill="none" stroke="#b896f4" stroke-width="2.2" opacity="0.45"/>
+  <ellipse cx="1806" cy="792" rx="150" ry="9" fill="#050307" opacity="0.8" filter="url(#glowS)"/>
   <g transform="translate(1800 790) scale(1.2)">
     <path fill="#0a070d" d="M-84 0 L-64 0 L-60 -20 L-56 -54 L-46 -56 L-42 -20 L-44 0 L-26 0 L-28 -22 L-30 -58
       C-10 -62 20 -60 44 -56 L56 -48 L64 -28 L58 -12 L60 0 L76 0 L76 -14 L82 -34 L90 -44 L98 -30 L94 -12 L96 0 L112 0
@@ -237,13 +243,13 @@
     <path d="M144 -164 C150 -170 156 -160 152 -150 C146 -124 130 -108 114 -98" fill="none" stroke="#c8a8ff" stroke-width="1.8" opacity="0.55"/>
     <path d="M116 -66 L114 -40 L110 -14" fill="none" stroke="#c8a8ff" stroke-width="1.6" opacity="0.4"/>
     <g fill="#0a070d" stroke="#b896f4" stroke-width="1.6" stroke-opacity="0.3">
-      <use xlink:href="#dogHead" transform="translate(-14 -142) rotate(26) scale(0.96)"/>
-      <use xlink:href="#dogHead" transform="translate(-36 -122) rotate(-2) scale(1.04)"/>
-      <use xlink:href="#dogHead" transform="translate(-60 -96) rotate(-26) scale(0.96)"/>
+      <use xlink:href="#dogHead" transform="translate(-6 -152) rotate(34) scale(0.94)"/>
+      <use xlink:href="#dogHead" transform="translate(-36 -124) rotate(-1) scale(1.04)"/>
+      <use xlink:href="#dogHead" transform="translate(-68 -88) rotate(-34) scale(0.92)"/>
     </g>
-    <use xlink:href="#dogEye" transform="translate(-14 -142) rotate(26) scale(0.96)"/>
-    <use xlink:href="#dogEye" transform="translate(-36 -122) rotate(-2) scale(1.04)"/>
-    <use xlink:href="#dogEye" transform="translate(-60 -96) rotate(-26) scale(0.96)"/>
+    <use xlink:href="#dogEye" transform="translate(-6 -152) rotate(34) scale(0.94)"/>
+    <use xlink:href="#dogEye" transform="translate(-36 -124) rotate(-1) scale(1.04)"/>
+    <use xlink:href="#dogEye" transform="translate(-68 -88) rotate(-34) scale(0.92)"/>
   </g>
 
   <!-- mist lying on the river -->
@@ -291,7 +297,7 @@
     <path d="M1262 930 L1262 958" stroke="#2a1410" stroke-width="3"/>
     <circle cx="1262" cy="944" r="10" fill="#fff4e0"/>
     <!-- Charon, hooded, at the stern, with his pole -->
-    <g transform="translate(690 1070)">
+    <g transform="translate(690 1070) scale(1.2)">
       <path d="M100 -300 L-60 140" stroke="#140a0a" stroke-width="7" stroke-linecap="round"/>
       <path d="M100 -300 L66 -206" stroke="#e08a58" stroke-width="2.2" opacity="0.7"/>
       <path d="M-40 0 C-36 -50 -40 -110 -30 -160 C-26 -190 -20 -210 -8 -228 C2 -244 20 -252 40 -248 C52 -244 58 -232 56 -218

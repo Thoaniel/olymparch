@@ -278,8 +278,22 @@
       <path d="M1132 330 L1228 330 L1220 350 L1140 350 Z"/><rect x="1126" y="318" width="108" height="14"/>
       <path d="M1550 330 L1666 330 L1656 352 L1560 352 Z"/><rect x="1542" y="316" width="132" height="16"/>
     </g>
-    <!-- tops fade into the dark -->
-    <rect x="200" y="0" width="1520" height="760" fill="url(#colFade)"/>
+    <!-- the architrave the columns carry, and the ceiling beams above it, sinking into the dark -->
+    <g filter="url(#reliefStone)">
+      <rect x="0" y="252" width="1840" height="66" fill="#2a180c"/>
+    </g>
+    <rect x="0" y="312" width="1840" height="6" fill="#e09a50" opacity="0.4"/>
+    <rect x="0" y="282" width="1840" height="3" fill="#120a05" opacity="0.7"/>
+    <g fill="#0e0805">
+      <rect x="0" y="196" width="1840" height="56"/>
+      <rect x="180" y="120" width="70" height="76"/><rect x="620" y="120" width="70" height="76"/>
+      <rect x="1060" y="120" width="70" height="76"/><rect x="1500" y="120" width="70" height="76"/>
+    </g>
+    <g fill="#c07a3a" opacity="0.18">
+      <rect x="0" y="248" width="1840" height="3"/>
+    </g>
+    <!-- everything above the capitals fades into the dark -->
+    <rect x="0" y="0" width="1840" height="700" fill="url(#colFade)" opacity="0.8"/>
   </g>
 
   <!-- ── the floor: stone slabs in perspective, warm near the fire -->
@@ -372,6 +386,7 @@
 
   <!-- ── an amphora in the left foreground, its fire side lit, its shadow thrown away to the left -->
   <path d="M430 1330 L60 1400 L40 1430 L420 1380 Z" fill="#000" opacity="0.35" filter="url(#glowS)"/>
+  <ellipse cx="470" cy="1342" rx="50" ry="9" fill="#000" opacity="0.7" filter="url(#glowS)"/>
   <g transform="translate(470 1340)">
     <path d="M-30 -420 L30 -420 L26 -380 C90 -360 130 -300 130 -220 C130 -120 70 -40 22 0 L-22 0 C-70 -40 -130 -120 -130 -220
       C-130 -300 -90 -360 -26 -380 Z" fill="url(#amphora)"/>

@@ -13,15 +13,15 @@
       <stop offset="0.78" stop-color="#1b1d48"/>
       <stop offset="1" stop-color="#0b0b20"/>
     </linearGradient>
-    <radialGradient id="moonHalo" cx="860" cy="500" r="620" gradientUnits="userSpaceOnUse">
+    <radialGradient id="moonHalo" cx="820" cy="560" r="700" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#d8d8ff" stop-opacity="0.35"/>
       <stop offset="0.2" stop-color="#8587ff" stop-opacity="0.16"/>
       <stop offset="1" stop-color="#141538" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="milky" gradientUnits="userSpaceOnUse" x1="-100" y1="1100" x2="1400" y2="200">
       <stop offset="0" stop-color="#9aa0ff" stop-opacity="0.0"/>
-      <stop offset="0.25" stop-color="#9aa0ff" stop-opacity="0.35"/>
-      <stop offset="0.6" stop-color="#b8b0ff" stop-opacity="0.28"/>
+      <stop offset="0.25" stop-color="#9aa0ff" stop-opacity="0.45"/>
+      <stop offset="0.6" stop-color="#b8b0ff" stop-opacity="0.36"/>
       <stop offset="1" stop-color="#b8b0ff" stop-opacity="0"/>
     </linearGradient>
     <radialGradient id="fanBack" cx="1720" cy="1010" r="600" gradientUnits="userSpaceOnUse">
@@ -158,29 +158,53 @@
       <path d="M0 16 C-8 11 -9 3 -4.5 0 C-2 -2 0 -1 0 1 C0 -1 2 -2 4.5 0 C9 3 8 11 0 16 Z" fill="#0b0b30"/>
       <ellipse cx="-8" cy="-12" rx="6" ry="4" fill="#e8f0ff" opacity="0.35" transform="rotate(-30 -8 -12)"/>
     </g>
-    <!-- a lily seen from the front: six petals and the stamens -->
-    <radialGradient id="throat"><stop offset="0" stop-color="#4a4ca8" stop-opacity="0.9"/><stop offset="1" stop-color="#8587ff" stop-opacity="0"/></radialGradient>
-    <path id="petalP" d="M0 0 C14 -20 16 -56 0 -92 C-16 -56 -14 -20 0 0 Z" fill="url(#petal)"/>
+    <!-- a trumpet lily seen from the side, mouth to the right: a long tube flaring into six recurved petal tips -->
+    <linearGradient id="trumpet" gradientUnits="userSpaceOnUse" x1="0" y1="-40" x2="0" y2="40">
+      <stop offset="0" stop-color="#f4f2ff"/><stop offset="0.5" stop-color="#cfcbff"/><stop offset="1" stop-color="#6a6cc8"/>
+    </linearGradient>
     <g id="lily">
-      <use xlink:href="#petalP" transform="rotate(-150)"/><use xlink:href="#petalP" transform="rotate(150)"/>
-      <use xlink:href="#petalP" transform="rotate(-90)"/><use xlink:href="#petalP" transform="rotate(90)"/>
-      <use xlink:href="#petalP" transform="rotate(-30)"/><use xlink:href="#petalP" transform="rotate(30)"/>
-      <circle r="34" fill="url(#throat)"/>
-      <g stroke="#8587ff" stroke-width="1.5" opacity="0.45" fill="none">
-        <path d="M0 0 L0 -70" transform="rotate(-150)"/><path d="M0 0 L0 -70" transform="rotate(150)"/>
-        <path d="M0 0 L0 -70" transform="rotate(-90)"/><path d="M0 0 L0 -70" transform="rotate(90)"/>
-        <path d="M0 0 L0 -70" transform="rotate(-30)"/><path d="M0 0 L0 -70" transform="rotate(30)"/>
-      </g>
-      <g stroke="#e8e0b0" stroke-width="2" fill="#d8a04a">
-        <line x1="0" y1="0" x2="-14" y2="-40"/><line x1="0" y1="0" x2="2" y2="-46"/><line x1="0" y1="0" x2="16" y2="-38"/>
-        <circle cx="-14" cy="-40" r="3.5" stroke="none"/><circle cx="2" cy="-46" r="3.5" stroke="none"/><circle cx="16" cy="-38" r="3.5" stroke="none"/>
+      <path d="M0 0 C30 -4 60 -10 90 -26 C104 -34 116 -48 126 -64 C126 -46 120 -36 112 -28 C126 -30 140 -26 150 -16 C136 -14 124 -10 116 -4
+        C130 2 142 12 148 24 C134 22 122 18 112 14 C118 26 120 40 116 54 C106 40 98 30 88 24 C60 14 30 8 0 8 Z" fill="url(#trumpet)"/>
+      <path d="M112 -28 C126 -30 140 -26 150 -16 C136 -14 124 -10 116 -4 C118 -14 116 -22 112 -28 Z" fill="#8a88e0" opacity="0.6"/>
+      <path d="M116 -4 C130 2 142 12 148 24 C134 22 122 18 112 14 Z" fill="#5a5cb8" opacity="0.6"/>
+      <path d="M10 2 C40 0 70 -6 100 -14" fill="none" stroke="#8587ff" stroke-width="1.5" opacity="0.5"/>
+      <path d="M0 0 C30 -4 60 -10 90 -26 C104 -34 116 -48 126 -64" fill="none" stroke="#ffffff" stroke-width="2.4" opacity="0.7"/>
+      <g stroke="#e8e0b0" stroke-width="1.6" fill="#c8903a">
+        <line x1="100" y1="-6" x2="146" y2="-4"/><line x1="100" y1="-2" x2="150" y2="6"/><line x1="100" y1="2" x2="140" y2="14"/>
+        <ellipse cx="148" cy="-4" rx="5" ry="2.4" stroke="none"/><ellipse cx="152" cy="6" rx="5" ry="2.4" stroke="none"/>
+        <ellipse cx="142" cy="15" rx="5" ry="2.4" stroke="none"/>
       </g>
     </g>
+    <g id="lilyBud">
+      <path d="M0 0 C30 -6 60 -8 92 -4 C70 6 40 10 0 8 Z" fill="url(#trumpet)"/>
+      <path d="M0 0 C30 -6 60 -8 92 -4" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.6"/>
+    </g>
     <path id="leafP" d="M0 0 C20 -10 50 -12 80 0 C50 12 20 10 0 0 Z" fill="url(#leaf)"/>
+    <!-- pomegranate: a round fruit with its crown calyx -->
     <g id="pome">
-      <circle r="42" fill="url(#fruit)"/>
-      <path d="M-12 -38 L-16 -54 L-8 -46 L-2 -58 L4 -46 L12 -56 L14 -38 Z" fill="#7a1838"/>
-      <path d="M-30 -14 C-28 -26 -18 -34 -6 -36" fill="none" stroke="#ffd0dc" stroke-width="4" opacity="0.6" stroke-linecap="round"/>
+      <ellipse cx="0" cy="3" rx="58" ry="55" fill="url(#fruit)"/>
+      <path d="M-20 -46 L-26 -72 L-14 -60 L-8 -80 L0 -62 L8 -80 L14 -60 L26 -72 L20 -46 C10 -52 -10 -52 -20 -46 Z" fill="#6a1430"/>
+      <path d="M-14 -60 L-8 -80 L0 -62" fill="none" stroke="#ff9ab0" stroke-width="1.6" opacity="0.6"/>
+      <path d="M-42 -16 C-40 -32 -26 -44 -8 -48" fill="none" stroke="#ffd0dc" stroke-width="5" opacity="0.55" stroke-linecap="round"/>
+      <path d="M30 40 C40 30 48 14 50 -2" fill="none" stroke="#2a0410" stroke-width="6" opacity="0.4" stroke-linecap="round"/>
+    </g>
+    <!-- a split pomegranate: rind opened on its seeds -->
+    <g id="pomeSplit">
+      <ellipse cx="0" cy="3" rx="58" ry="55" fill="url(#fruit)"/>
+      <path d="M-34 -20 C-20 -36 6 -40 28 -28 C44 -14 48 12 36 32 C20 48 -10 50 -30 34 C-46 18 -46 -6 -34 -20 Z" fill="#f2d8c8"/>
+      <path d="M-28 -14 C-16 -28 6 -32 24 -22 C38 -10 40 10 30 26 C16 38 -8 40 -24 28 C-38 14 -38 -2 -28 -14 Z" fill="#8a1030"/>
+      <g fill="#ff4f78">
+        <circle cx="-18" cy="-12" r="6"/><circle cx="-6" cy="-18" r="6"/><circle cx="8" cy="-18" r="6"/><circle cx="20" cy="-10" r="6"/>
+        <circle cx="-24" cy="2" r="6"/><circle cx="-12" cy="-4" r="6.4"/><circle cx="2" cy="-6" r="6.4"/><circle cx="16" cy="2" r="6"/>
+        <circle cx="28" cy="8" r="5.4"/><circle cx="-20" cy="16" r="6"/><circle cx="-6" cy="10" r="6.4"/><circle cx="8" cy="12" r="6"/>
+        <circle cx="22" cy="20" r="5.6"/><circle cx="-10" cy="26" r="5.6"/><circle cx="6" cy="28" r="5.6"/>
+      </g>
+      <g fill="#ffd0dc" opacity="0.8">
+        <circle cx="-20" cy="-14" r="1.8"/><circle cx="-8" cy="-20" r="1.8"/><circle cx="6" cy="-20" r="1.8"/><circle cx="-14" cy="-6" r="1.8"/>
+        <circle cx="0" cy="-8" r="1.8"/><circle cx="14" cy="0" r="1.6"/><circle cx="-22" cy="14" r="1.6"/><circle cx="-8" cy="8" r="1.8"/>
+        <circle cx="6" cy="10" r="1.6"/><circle cx="-12" cy="24" r="1.6"/>
+      </g>
+      <path d="M-20 -46 L-26 -72 L-14 -60 L-8 -80 L0 -62 L8 -80 L14 -60 L26 -72 L20 -46 C10 -52 -10 -52 -20 -46 Z" fill="#6a1430"/>
     </g>
   </defs>
 
@@ -274,16 +298,14 @@
     <circle cx="1360" cy="380" r="6"/><circle cx="300" cy="380" r="5"/><circle cx="640" cy="760" r="5"/>
   </g>
 
-  <!-- the crescent moon, worn like a diadem -->
+  <!-- the brightest stars of the Milky Way, glowing softly: the key light now -->
   <g>
-    <circle cx="860" cy="500" r="120" fill="#c8c8ff" opacity="0.18" filter="url(#glow)"/>
-    <mask id="crescent" maskUnits="userSpaceOnUse" x="700" y="340" width="320" height="320">
-      <circle cx="860" cy="500" r="78" fill="#fff"/><circle cx="894" cy="478" r="70" fill="#000"/>
-    </mask>
-    <g mask="url(#crescent)">
-      <circle cx="860" cy="500" r="78" fill="#f0f0ff"/>
-      <circle cx="846" cy="514" r="70" fill="none" stroke="#b8b8f0" stroke-width="10" opacity="0.4"/>
-    </g>
+    <circle cx="820" cy="520" r="160" fill="#b8b8ff" opacity="0.14" filter="url(#glow)"/>
+    <circle cx="820" cy="520" r="26" fill="#e8e8ff" opacity="0.5" filter="url(#glowM)"/>
+    <path d="M820 496 L824 516 L844 520 L824 524 L820 544 L816 524 L796 520 L816 516 Z" fill="#f4f4ff"/>
+    <circle cx="820" cy="520" r="4" fill="#ffffff"/>
+    <circle cx="1080" cy="380" r="14" fill="#d8d8ff" opacity="0.45" filter="url(#glowM)"/><circle cx="1080" cy="380" r="3" fill="#fff"/>
+    <circle cx="560" cy="690" r="12" fill="#d8d8ff" opacity="0.4" filter="url(#glowM)"/><circle cx="560" cy="690" r="2.6" fill="#fff"/>
   </g>
 
   <!-- ── far mountains of Olympus in the haze -->
@@ -293,183 +315,248 @@
     <path d="M-60 990 C300 970 700 980 1100 975 C1500 970 1900 990 2620 980 L2620 1040 C1900 1050 1500 1030 1100 1040 C700 1050 300 1030 -60 1040 Z" fill="#3a3c80"/>
   </g>
 
-  <!-- ── the train, fanned -->
-  <g>
-    <path d="M1160 1112 A570 570 0 1 1 2280 1112 Z" fill="#0a1a34" opacity="0.85" filter="url(#feather)"/>
+  <!-- ── the train, fanned: the feathers themselves make its edge -->
+  <g opacity="0.85">
     <g filter="url(#feather)">
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-95.4) scale(1.00 1.013)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-85.8) scale(1.00 1.012)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-82.4) scale(1.00 0.998)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-71.3) scale(1.00 1.021)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-64.2) scale(1.00 0.987)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-55.6) scale(1.00 0.975)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-49.1) scale(1.00 1.022)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-41.7) scale(1.00 1.015)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-31.4) scale(1.00 0.981)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-22.1) scale(1.00 0.985)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-13.6) scale(1.00 1.019)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-5.7) scale(1.00 1.002)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-1.5) scale(1.00 1.023)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(10.3) scale(1.00 1.020)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(15.3) scale(1.00 0.983)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(21.8) scale(1.00 0.990)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(29.5) scale(1.00 1.009)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(39.0) scale(1.00 1.017)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(47.1) scale(1.00 0.999)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(53.8) scale(1.00 1.025)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(65.2) scale(1.00 1.018)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(73.4) scale(1.00 0.993)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(77.5) scale(1.00 0.976)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(90.3) scale(1.00 0.984)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(98.1) scale(1.00 1.023)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-95.5) scale(0.90 0.779)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-86.2) scale(0.90 0.791)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-71.9) scale(0.90 0.754)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-65.2) scale(0.90 0.770)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-50.5) scale(0.90 0.769)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-41.9) scale(0.90 0.768)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-33.2) scale(0.90 0.756)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-20.1) scale(0.90 0.804)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-12.8) scale(0.90 0.803)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-0.5) scale(0.90 0.764)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(12.2) scale(0.90 0.775)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(18.8) scale(0.90 0.799)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(31.5) scale(0.90 0.795)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(43.3) scale(0.90 0.801)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(54.1) scale(0.90 0.757)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(61.4) scale(0.90 0.796)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(73.4) scale(0.90 0.804)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(86.6) scale(0.90 0.775)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(95.9) scale(0.90 0.777)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-92.8) scale(0.78 0.537)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-74.5) scale(0.78 0.579)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-61.5) scale(0.78 0.547)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-47.3) scale(0.78 0.570)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-31.5) scale(0.78 0.570)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-14.4) scale(0.78 0.564)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(-0.7) scale(0.78 0.566)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(15.3) scale(0.78 0.570)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(29.7) scale(0.78 0.579)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(46.6) scale(0.78 0.530)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(60.3) scale(0.78 0.564)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(78.5) scale(0.78 0.563)"/>
-      <use xlink:href="#vane" transform="translate(1720 1010) rotate(91.5) scale(0.78 0.563)"/>
+      <use xlink:href="#vane" opacity="0.87" transform="translate(1720 1010) rotate(-93.0) scale(0.75 1.057)"/>
+      <use xlink:href="#vane" opacity="0.89" transform="translate(1720 1010) rotate(-86.2) scale(0.60 1.064)"/>
+      <use xlink:href="#vane" opacity="0.78" transform="translate(1720 1010) rotate(-80.8) scale(0.70 1.022)"/>
+      <use xlink:href="#vane" opacity="0.97" transform="translate(1720 1010) rotate(-74.0) scale(0.64 1.004)"/>
+      <use xlink:href="#vane" opacity="0.99" transform="translate(1720 1010) rotate(-63.0) scale(0.74 1.040)"/>
+      <use xlink:href="#vane" opacity="0.90" transform="translate(1720 1010) rotate(-58.7) scale(0.59 1.028)"/>
+      <use xlink:href="#vane" opacity="0.87" transform="translate(1720 1010) rotate(-49.8) scale(0.71 1.026)"/>
+      <use xlink:href="#vane" opacity="0.95" transform="translate(1720 1010) rotate(-45.2) scale(0.65 1.069)"/>
+      <use xlink:href="#vane" opacity="0.94" transform="translate(1720 1010) rotate(-35.7) scale(0.75 1.004)"/>
+      <use xlink:href="#vane" opacity="0.94" transform="translate(1720 1010) rotate(-26.8) scale(0.73 1.027)"/>
+      <use xlink:href="#vane" opacity="0.98" transform="translate(1720 1010) rotate(-19.9) scale(0.65 1.006)"/>
+      <use xlink:href="#vane" opacity="0.79" transform="translate(1720 1010) rotate(-12.4) scale(0.71 1.040)"/>
+      <use xlink:href="#vane" opacity="0.81" transform="translate(1720 1010) rotate(-4.8) scale(0.69 1.014)"/>
+      <use xlink:href="#vane" opacity="0.87" transform="translate(1720 1010) rotate(1.7) scale(0.73 1.034)"/>
+      <use xlink:href="#vane" opacity="0.86" transform="translate(1720 1010) rotate(5.9) scale(0.62 1.052)"/>
+      <use xlink:href="#vane" opacity="0.86" transform="translate(1720 1010) rotate(16.3) scale(0.67 1.023)"/>
+      <use xlink:href="#vane" opacity="1.00" transform="translate(1720 1010) rotate(23.1) scale(0.75 1.036)"/>
+      <use xlink:href="#vane" opacity="0.97" transform="translate(1720 1010) rotate(29.9) scale(0.65 1.037)"/>
+      <use xlink:href="#vane" opacity="0.93" transform="translate(1720 1010) rotate(37.8) scale(0.64 1.055)"/>
+      <use xlink:href="#vane" opacity="0.90" transform="translate(1720 1010) rotate(43.8) scale(0.60 1.055)"/>
+      <use xlink:href="#vane" opacity="0.95" transform="translate(1720 1010) rotate(51.3) scale(0.65 1.020)"/>
+      <use xlink:href="#vane" opacity="0.92" transform="translate(1720 1010) rotate(59.0) scale(0.76 1.053)"/>
+      <use xlink:href="#vane" opacity="0.87" transform="translate(1720 1010) rotate(67.6) scale(0.71 1.038)"/>
+      <use xlink:href="#vane" opacity="0.86" transform="translate(1720 1010) rotate(73.8) scale(0.70 1.052)"/>
+      <use xlink:href="#vane" opacity="0.91" transform="translate(1720 1010) rotate(81.3) scale(0.63 1.046)"/>
+      <use xlink:href="#vane" opacity="0.78" transform="translate(1720 1010) rotate(88.2) scale(0.65 1.046)"/>
+      <use xlink:href="#vane" opacity="0.90" transform="translate(1720 1010) rotate(93.2) scale(0.63 1.017)"/>
+      <use xlink:href="#vane" opacity="0.84" transform="translate(1720 1010) rotate(-94.9) scale(0.71 0.864)"/>
+      <use xlink:href="#vane" opacity="0.95" transform="translate(1720 1010) rotate(-83.7) scale(0.78 0.843)"/>
+      <use xlink:href="#vane" opacity="0.99" transform="translate(1720 1010) rotate(-74.3) scale(0.89 0.880)"/>
+      <use xlink:href="#vane" opacity="0.90" transform="translate(1720 1010) rotate(-66.7) scale(0.73 0.860)"/>
+      <use xlink:href="#vane" opacity="0.99" transform="translate(1720 1010) rotate(-58.1) scale(0.78 0.896)"/>
+      <use xlink:href="#vane" opacity="0.85" transform="translate(1720 1010) rotate(-48.1) scale(0.76 0.898)"/>
+      <use xlink:href="#vane" opacity="0.86" transform="translate(1720 1010) rotate(-39.4) scale(0.76 0.870)"/>
+      <use xlink:href="#vane" opacity="0.95" transform="translate(1720 1010) rotate(-31.8) scale(0.75 0.892)"/>
+      <use xlink:href="#vane" opacity="0.91" transform="translate(1720 1010) rotate(-25.6) scale(0.82 0.847)"/>
+      <use xlink:href="#vane" opacity="0.82" transform="translate(1720 1010) rotate(-14.9) scale(0.81 0.845)"/>
+      <use xlink:href="#vane" opacity="0.86" transform="translate(1720 1010) rotate(-7.6) scale(0.88 0.861)"/>
+      <use xlink:href="#vane" opacity="0.93" transform="translate(1720 1010) rotate(2.7) scale(0.83 0.873)"/>
+      <use xlink:href="#vane" opacity="0.82" transform="translate(1720 1010) rotate(9.5) scale(0.86 0.898)"/>
+      <use xlink:href="#vane" opacity="0.98" transform="translate(1720 1010) rotate(16.2) scale(0.73 0.893)"/>
+      <use xlink:href="#vane" opacity="0.95" transform="translate(1720 1010) rotate(26.5) scale(0.72 0.874)"/>
+      <use xlink:href="#vane" opacity="0.99" transform="translate(1720 1010) rotate(33.9) scale(0.90 0.892)"/>
+      <use xlink:href="#vane" opacity="0.93" transform="translate(1720 1010) rotate(44.5) scale(0.73 0.840)"/>
+      <use xlink:href="#vane" opacity="0.91" transform="translate(1720 1010) rotate(51.2) scale(0.71 0.898)"/>
+      <use xlink:href="#vane" opacity="0.97" transform="translate(1720 1010) rotate(59.0) scale(0.73 0.862)"/>
+      <use xlink:href="#vane" opacity="0.76" transform="translate(1720 1010) rotate(68.9) scale(0.84 0.858)"/>
+      <use xlink:href="#vane" opacity="0.82" transform="translate(1720 1010) rotate(76.2) scale(0.81 0.879)"/>
+      <use xlink:href="#vane" opacity="0.93" transform="translate(1720 1010) rotate(85.2) scale(0.74 0.887)"/>
+      <use xlink:href="#vane" opacity="0.90" transform="translate(1720 1010) rotate(95.7) scale(0.75 0.881)"/>
+      <use xlink:href="#vane" opacity="0.79" transform="translate(1720 1010) rotate(-91.8) scale(1.02 0.692)"/>
+      <use xlink:href="#vane" opacity="0.78" transform="translate(1720 1010) rotate(-80.6) scale(0.95 0.685)"/>
+      <use xlink:href="#vane" opacity="0.78" transform="translate(1720 1010) rotate(-71.7) scale(1.00 0.686)"/>
+      <use xlink:href="#vane" opacity="0.89" transform="translate(1720 1010) rotate(-60.1) scale(0.98 0.724)"/>
+      <use xlink:href="#vane" opacity="0.87" transform="translate(1720 1010) rotate(-50.9) scale(0.98 0.677)"/>
+      <use xlink:href="#vane" opacity="0.77" transform="translate(1720 1010) rotate(-42.3) scale(0.84 0.702)"/>
+      <use xlink:href="#vane" opacity="0.82" transform="translate(1720 1010) rotate(-31.3) scale(0.85 0.695)"/>
+      <use xlink:href="#vane" opacity="0.98" transform="translate(1720 1010) rotate(-20.4) scale(0.96 0.686)"/>
+      <use xlink:href="#vane" opacity="0.92" transform="translate(1720 1010) rotate(-8.4) scale(0.97 0.702)"/>
+      <use xlink:href="#vane" opacity="0.99" transform="translate(1720 1010) rotate(-0.3) scale(0.89 0.684)"/>
+      <use xlink:href="#vane" opacity="0.81" transform="translate(1720 1010) rotate(10.7) scale(0.96 0.702)"/>
+      <use xlink:href="#vane" opacity="0.94" transform="translate(1720 1010) rotate(23.7) scale(0.90 0.713)"/>
+      <use xlink:href="#vane" opacity="0.77" transform="translate(1720 1010) rotate(30.1) scale(1.01 0.707)"/>
+      <use xlink:href="#vane" opacity="0.77" transform="translate(1720 1010) rotate(42.4) scale(0.87 0.733)"/>
+      <use xlink:href="#vane" opacity="0.88" transform="translate(1720 1010) rotate(52.3) scale(0.90 0.691)"/>
+      <use xlink:href="#vane" opacity="0.90" transform="translate(1720 1010) rotate(63.2) scale(1.00 0.676)"/>
+      <use xlink:href="#vane" opacity="0.91" transform="translate(1720 1010) rotate(72.1) scale(0.97 0.672)"/>
+      <use xlink:href="#vane" opacity="0.83" transform="translate(1720 1010) rotate(85.5) scale(0.83 0.691)"/>
+      <use xlink:href="#vane" opacity="0.77" transform="translate(1720 1010) rotate(95.2) scale(0.91 0.725)"/>
+      <use xlink:href="#vane" opacity="0.84" transform="translate(1720 1010) rotate(-91.8) scale(0.92 0.508)"/>
+      <use xlink:href="#vane" opacity="0.94" transform="translate(1720 1010) rotate(-77.0) scale(1.04 0.525)"/>
+      <use xlink:href="#vane" opacity="0.82" transform="translate(1720 1010) rotate(-62.9) scale(1.10 0.558)"/>
+      <use xlink:href="#vane" opacity="0.82" transform="translate(1720 1010) rotate(-49.2) scale(0.92 0.512)"/>
+      <use xlink:href="#vane" opacity="0.96" transform="translate(1720 1010) rotate(-33.5) scale(1.14 0.541)"/>
+      <use xlink:href="#vane" opacity="0.90" transform="translate(1720 1010) rotate(-20.2) scale(1.11 0.519)"/>
+      <use xlink:href="#vane" opacity="0.98" transform="translate(1720 1010) rotate(-5.7) scale(1.10 0.510)"/>
+      <use xlink:href="#vane" opacity="0.94" transform="translate(1720 1010) rotate(5.6) scale(1.13 0.525)"/>
+      <use xlink:href="#vane" opacity="0.76" transform="translate(1720 1010) rotate(21.5) scale(1.14 0.568)"/>
+      <use xlink:href="#vane" opacity="0.82" transform="translate(1720 1010) rotate(33.3) scale(0.95 0.542)"/>
+      <use xlink:href="#vane" opacity="1.00" transform="translate(1720 1010) rotate(49.6) scale(1.11 0.528)"/>
+      <use xlink:href="#vane" opacity="0.76" transform="translate(1720 1010) rotate(64.9) scale(0.94 0.545)"/>
+      <use xlink:href="#vane" opacity="0.92" transform="translate(1720 1010) rotate(75.6) scale(1.12 0.552)"/>
+      <use xlink:href="#vane" opacity="0.80" transform="translate(1720 1010) rotate(91.9) scale(1.00 0.557)"/>
     </g>
-    <g stroke="#9ae0c8" stroke-width="1.2" opacity="0.25" fill="none">
-      <path d="M1720 1010 L1159 1129 M1720 1010 L1173 1097 M1720 1010 L1150 1071 M1720 1010 L1146 1041 M1720 1010 L1152 1012 M1720 1010 L1142 982 M1720 1010 L1145 952 M1720 1010 L1166 925 M1720 1010 L1170 897 M1720 1010 L1191 872 M1720 1010 L1173 837 M1720 1010 L1179 808 M1720 1010 L1207 787 M1720 1010 L1212 757 M1720 1010 L1224 731 M1720 1010 L1239 705 M1720 1010 L1274 694 M1720 1010 L1271 656 M1720 1010 L1296 639 M1720 1010 L1314 615 M1720 1010 L1341 602 M1720 1010 L1358 577 M1720 1010 L1377 554 M1720 1010 L1404 541 M1720 1010 L1427 523 M1720 1010 L1465 533 M1720 1010 L1488 515 M1720 1010 L1510 494 M1720 1010 L1534 476 M1720 1010 L1566 483 M1720 1010 L1589 458 M1720 1010 L1618 454 M1720 1010 L1650 473 M1720 1010 L1677 453 M1720 1010 L1706 461 M1720 1010 L1734 468 M1720 1010 L1762 466 M1720 1010 L1791 462 M1720 1010 L1818 472 M1720 1010 L1846 477 M1720 1010 L1872 490 M1720 1010 L1904 483 M1720 1010 L1930 496 M1720 1010 L1960 499 M1720 1010 L1985 513 M1720 1010 L2003 539 M1720 1010 L2042 532 M1720 1010 L2045 578 M1720 1010 L2077 583 M1720 1010 L2095 606 M1720 1010 L2119 622 M1720 1010 L2130 651 M1720 1010 L2170 655 M1720 1010 L2173 689 M1720 1010 L2177 720 M1720 1010 L2212 733 M1720 1010 L2207 768 M1720 1010 L2235 786 M1720 1010 L2238 816 M1720 1010 L2257 840 M1720 1010 L2280 864 M1720 1010 L2281 894 M1720 1010 L2270 926 M1720 1010 L2290 953 M1720 1010 L2285 983 M1720 1010 L2275 1012 M1720 1010 L2265 1040 M1720 1010 L2281 1070 M1720 1010 L2276 1098 M1720 1010 L2286 1130"/>
+    <g stroke="#9ae0c8" stroke-width="1.2" opacity="0.2" fill="none">
+      <path d="M1720 1010 L1168 1110 M1720 1010 L1146 1090 M1720 1010 L1128 1067 M1720 1010 L1112 1046 M1720 1010 L1114 1017 M1720 1010 L1127 995 M1720 1010 L1121 973 M1720 1010 L1133 953 M1720 1010 L1140 926 M1720 1010 L1165 912 M1720 1010 L1155 890 M1720 1010 L1142 857 M1720 1010 L1170 840 M1720 1010 L1180 816 M1720 1010 L1196 801 M1720 1010 L1178 768 M1720 1010 L1179 740 M1720 1010 L1191 723 M1720 1010 L1212 708 M1720 1010 L1225 697 M1720 1010 L1254 679 M1720 1010 L1256 650 M1720 1010 L1287 655 M1720 1010 L1294 633 M1720 1010 L1286 589 M1720 1010 L1315 580 M1720 1010 L1344 588 M1720 1010 L1349 554 M1720 1010 L1373 547 M1720 1010 L1398 539 M1720 1010 L1409 528 M1720 1010 L1416 487 M1720 1010 L1438 490 M1720 1010 L1474 495 M1720 1010 L1480 473 M1720 1010 L1504 446 M1720 1010 L1533 460 M1720 1010 L1549 449 M1720 1010 L1580 452 M1720 1010 L1591 434 M1720 1010 L1626 449 M1720 1010 L1637 450 M1720 1010 L1663 423 M1720 1010 L1683 442 M1720 1010 L1710 418 M1720 1010 L1734 414 M1720 1010 L1749 426 M1720 1010 L1784 405 M1720 1010 L1800 413 M1720 1010 L1828 413 M1720 1010 L1844 428 M1720 1010 L1871 446 M1720 1010 L1881 463 M1720 1010 L1901 475 M1720 1010 L1931 458 M1720 1010 L1955 460 M1720 1010 L1985 471 M1720 1010 L2004 486 M1720 1010 L2032 488 M1720 1010 L2049 498 M1720 1010 L2039 543 M1720 1010 L2060 552 M1720 1010 L2088 558 M1720 1010 L2118 565 M1720 1010 L2118 588 M1720 1010 L2137 609 M1720 1010 L2157 614 M1720 1010 L2178 631 M1720 1010 L2204 642 M1720 1010 L2185 691 M1720 1010 L2223 691 M1720 1010 L2207 721 M1720 1010 L2229 737 M1720 1010 L2266 748 M1720 1010 L2245 778 M1720 1010 L2274 792 M1720 1010 L2277 820 M1720 1010 L2271 839 M1720 1010 L2288 865 M1720 1010 L2286 879 M1720 1010 L2303 901 M1720 1010 L2287 925 M1720 1010 L2300 947 M1720 1010 L2306 980 M1720 1010 L2327 995 M1720 1010 L2298 1015 M1720 1010 L2279 1045 M1720 1010 L2295 1069 M1720 1010 L2288 1081 M1720 1010 L2290 1110"/>
     </g>
     <g>
-      <use xlink:href="#ocellus" transform="translate(1176 1061) rotate(-95.4) scale(1.03)"/>
-      <use xlink:href="#ocellus" transform="translate(1175 970) rotate(-85.8) scale(1.05)"/>
-      <use xlink:href="#ocellus" transform="translate(1186 938) rotate(-82.4) scale(1.05)"/>
-      <use xlink:href="#ocellus" transform="translate(1198 833) rotate(-71.3) scale(0.94)"/>
-      <use xlink:href="#ocellus" transform="translate(1240 778) rotate(-64.2) scale(1.00)"/>
-      <use xlink:href="#ocellus" transform="translate(1286 713) rotate(-55.6) scale(0.95)"/>
-      <use xlink:href="#ocellus" transform="translate(1303 649) rotate(-49.1) scale(1.03)"/>
-      <use xlink:href="#ocellus" transform="translate(1355 601) rotate(-41.7) scale(0.94)"/>
-      <use xlink:href="#ocellus" transform="translate(1444 558) rotate(-31.4) scale(0.92)"/>
-      <use xlink:href="#ocellus" transform="translate(1520 517) rotate(-22.1) scale(0.95)"/>
-      <use xlink:href="#ocellus" transform="translate(1591 475) rotate(-13.6) scale(0.96)"/>
-      <use xlink:href="#ocellus" transform="translate(1666 472) rotate(-5.7) scale(1.01)"/>
-      <use xlink:href="#ocellus" transform="translate(1706 458) rotate(-1.5) scale(1.02)"/>
-      <use xlink:href="#ocellus" transform="translate(1819 468) rotate(10.3) scale(0.96)"/>
-      <use xlink:href="#ocellus" transform="translate(1860 498) rotate(15.3) scale(0.94)"/>
-      <use xlink:href="#ocellus" transform="translate(1919 514) rotate(21.8) scale(1.00)"/>
-      <use xlink:href="#ocellus" transform="translate(1989 536) rotate(29.5) scale(0.97)"/>
-      <use xlink:href="#ocellus" transform="translate(2066 584) rotate(39.0) scale(0.99)"/>
-      <use xlink:href="#ocellus" transform="translate(2115 643) rotate(47.1) scale(1.02)"/>
-      <use xlink:href="#ocellus" transform="translate(2166 683) rotate(53.8) scale(0.92)"/>
-      <use xlink:href="#ocellus" transform="translate(2219 780) rotate(65.2) scale(0.92)"/>
-      <use xlink:href="#ocellus" transform="translate(2234 857) rotate(73.4) scale(1.00)"/>
-      <use xlink:href="#ocellus" transform="translate(2235 896) rotate(77.5) scale(0.95)"/>
-      <use xlink:href="#ocellus" transform="translate(2251 1013) rotate(90.3) scale(1.03)"/>
-      <use xlink:href="#ocellus" transform="translate(2267 1088) rotate(98.1) scale(0.97)"/>
-      <use xlink:href="#ocellus" transform="translate(1301 1050) rotate(-95.5) scale(0.93)"/>
-      <use xlink:href="#ocellus" transform="translate(1294 981) rotate(-86.2) scale(0.93)"/>
-      <use xlink:href="#ocellus" transform="translate(1333 883) rotate(-71.9) scale(0.95)"/>
-      <use xlink:href="#ocellus" transform="translate(1343 836) rotate(-65.2) scale(0.90)"/>
-      <use xlink:href="#ocellus" transform="translate(1399 746) rotate(-50.5) scale(0.94)"/>
-      <use xlink:href="#ocellus" transform="translate(1443 701) rotate(-41.9) scale(0.87)"/>
-      <use xlink:href="#ocellus" transform="translate(1497 668) rotate(-33.2) scale(0.85)"/>
-      <use xlink:href="#ocellus" transform="translate(1571 603) rotate(-20.1) scale(0.85)"/>
-      <use xlink:href="#ocellus" transform="translate(1624 587) rotate(-12.8) scale(0.90)"/>
-      <use xlink:href="#ocellus" transform="translate(1717 597) rotate(-0.5) scale(0.90)"/>
-      <use xlink:href="#ocellus" transform="translate(1808 601) rotate(12.2) scale(0.88)"/>
-      <use xlink:href="#ocellus" transform="translate(1859 601) rotate(18.8) scale(0.83)"/>
-      <use xlink:href="#ocellus" transform="translate(1945 644) rotate(31.5) scale(0.84)"/>
-      <use xlink:href="#ocellus" transform="translate(2016 695) rotate(43.3) scale(0.91)"/>
-      <use xlink:href="#ocellus" transform="translate(2051 770) rotate(54.1) scale(0.88)"/>
-      <use xlink:href="#ocellus" transform="translate(2097 804) rotate(61.4) scale(0.87)"/>
-      <use xlink:href="#ocellus" transform="translate(2136 886) rotate(73.4) scale(0.94)"/>
-      <use xlink:href="#ocellus" transform="translate(2138 985) rotate(86.6) scale(0.89)"/>
-      <use xlink:href="#ocellus" transform="translate(2137 1053) rotate(95.9) scale(0.86)"/>
-      <use xlink:href="#ocellus" transform="translate(1430 1024) rotate(-92.8) scale(0.76)"/>
-      <use xlink:href="#ocellus" transform="translate(1419 926) rotate(-74.5) scale(0.79)"/>
-      <use xlink:href="#ocellus" transform="translate(1460 869) rotate(-61.5) scale(0.73)"/>
-      <use xlink:href="#ocellus" transform="translate(1494 801) rotate(-47.3) scale(0.81)"/>
-      <use xlink:href="#ocellus" transform="translate(1559 747) rotate(-31.5) scale(0.80)"/>
-      <use xlink:href="#ocellus" transform="translate(1644 715) rotate(-14.4) scale(0.80)"/>
-      <use xlink:href="#ocellus" transform="translate(1716 704) rotate(-0.7) scale(0.75)"/>
-      <use xlink:href="#ocellus" transform="translate(1801 713) rotate(15.3) scale(0.79)"/>
-      <use xlink:href="#ocellus" transform="translate(1875 739) rotate(29.7) scale(0.79)"/>
-      <use xlink:href="#ocellus" transform="translate(1928 813) rotate(46.6) scale(0.78)"/>
-      <use xlink:href="#ocellus" transform="translate(1985 859) rotate(60.3) scale(0.77)"/>
-      <use xlink:href="#ocellus" transform="translate(2018 949) rotate(78.5) scale(0.80)"/>
-      <use xlink:href="#ocellus" transform="translate(2024 1018) rotate(91.5) scale(0.80)"/>
+      <use xlink:href="#ocellus" opacity="0.55" transform="translate(1150 1040) rotate(-89.7) scale(0.72 0.66)"/>
+      <use xlink:href="#ocellus" opacity="0.52" transform="translate(1147 972) rotate(-88.2) scale(0.59 0.59)"/>
+      <use xlink:href="#ocellus" opacity="0.55" transform="translate(1175 922) rotate(-83.6) scale(0.71 0.75)"/>
+      <use xlink:href="#ocellus" opacity="0.49" transform="translate(1199 860) rotate(-76.2) scale(0.71 0.76)"/>
+      <use xlink:href="#ocellus" opacity="0.49" transform="translate(1220 755) rotate(-59.5) scale(0.67 0.70)"/>
+      <use xlink:href="#ocellus" opacity="0.48" transform="translate(1246 722) rotate(-62.2) scale(0.59 0.58)"/>
+      <use xlink:href="#ocellus" opacity="0.56" transform="translate(1297 652) rotate(-49.9) scale(0.62 0.60)"/>
+      <use xlink:href="#ocellus" opacity="0.55" transform="translate(1310 604) rotate(-42.5) scale(0.57 0.53)"/>
+      <use xlink:href="#ocellus" opacity="0.49" transform="translate(1404 569) rotate(-32.0) scale(0.58 0.55)"/>
+      <use xlink:href="#ocellus" opacity="0.53" transform="translate(1470 515) rotate(-24.6) scale(0.62 0.58)"/>
+      <use xlink:href="#ocellus" opacity="0.48" transform="translate(1535 499) rotate(-21.2) scale(0.72 0.73)"/>
+      <use xlink:href="#ocellus" opacity="0.50" transform="translate(1600 461) rotate(-15.0) scale(0.62 0.58)"/>
+      <use xlink:href="#ocellus" opacity="0.58" transform="translate(1674 464) rotate(-4.5) scale(0.58 0.57)"/>
+      <use xlink:href="#ocellus" opacity="0.47" transform="translate(1737 452) rotate(5.0) scale(0.63 0.59)"/>
+      <use xlink:href="#ocellus" opacity="0.54" transform="translate(1778 445) rotate(8.2) scale(0.72 0.67)"/>
+      <use xlink:href="#ocellus" opacity="0.58" transform="translate(1875 480) rotate(19.1) scale(0.64 0.69)"/>
+      <use xlink:href="#ocellus" opacity="0.51" transform="translate(1939 495) rotate(20.2) scale(0.61 0.60)"/>
+      <use xlink:href="#ocellus" opacity="0.48" transform="translate(1999 524) rotate(28.0) scale(0.62 0.65)"/>
+      <use xlink:href="#ocellus" opacity="0.54" transform="translate(2069 560) rotate(39.9) scale(0.68 0.66)"/>
+      <use xlink:href="#ocellus" opacity="0.50" transform="translate(2114 599) rotate(47.3) scale(0.68 0.69)"/>
+      <use xlink:href="#ocellus" opacity="0.52" transform="translate(2150 665) rotate(53.8) scale(0.67 0.69)"/>
+      <use xlink:href="#ocellus" opacity="0.51" transform="translate(2207 717) rotate(61.7) scale(0.70 0.74)"/>
+      <use xlink:href="#ocellus" opacity="0.49" transform="translate(2238 796) rotate(70.3) scale(0.65 0.70)"/>
+      <use xlink:href="#ocellus" opacity="0.55" transform="translate(2266 852) rotate(74.5) scale(0.59 0.61)"/>
+      <use xlink:href="#ocellus" opacity="0.47" transform="translate(2278 925) rotate(78.6) scale(0.68 0.68)"/>
+      <use xlink:href="#ocellus" opacity="0.52" transform="translate(2284 992) rotate(86.0) scale(0.57 0.53)"/>
+      <use xlink:href="#ocellus" opacity="0.52" transform="translate(2268 1041) rotate(92.3) scale(0.57 0.58)"/>
+      <use xlink:href="#ocellus" opacity="0.63" transform="translate(1255 1050) rotate(-98.0) scale(0.72 0.76)"/>
+      <use xlink:href="#ocellus" opacity="0.62" transform="translate(1267 960) rotate(-83.0) scale(0.77 0.83)"/>
+      <use xlink:href="#ocellus" opacity="0.60" transform="translate(1263 881) rotate(-73.5) scale(0.74 0.75)"/>
+      <use xlink:href="#ocellus" opacity="0.58" transform="translate(1293 826) rotate(-69.8) scale(0.84 0.85)"/>
+      <use xlink:href="#ocellus" opacity="0.64" transform="translate(1309 754) rotate(-60.2) scale(0.74 0.72)"/>
+      <use xlink:href="#ocellus" opacity="0.61" transform="translate(1359 686) rotate(-44.2) scale(0.78 0.78)"/>
+      <use xlink:href="#ocellus" opacity="0.64" transform="translate(1422 647) rotate(-42.5) scale(0.72 0.74)"/>
+      <use xlink:href="#ocellus" opacity="0.65" transform="translate(1466 601) rotate(-33.6) scale(0.67 0.72)"/>
+      <use xlink:href="#ocellus" opacity="0.62" transform="translate(1523 597) rotate(-24.7) scale(0.86 0.85)"/>
+      <use xlink:href="#ocellus" opacity="0.62" transform="translate(1602 569) rotate(-14.7) scale(0.81 0.79)"/>
+      <use xlink:href="#ocellus" opacity="0.66" transform="translate(1658 549) rotate(-11.4) scale(0.81 0.78)"/>
+      <use xlink:href="#ocellus" opacity="0.68" transform="translate(1743 539) rotate(2.2) scale(0.67 0.68)"/>
+      <use xlink:href="#ocellus" opacity="0.63" transform="translate(1800 532) rotate(12.3) scale(0.74 0.71)"/>
+      <use xlink:href="#ocellus" opacity="0.64" transform="translate(1854 547) rotate(14.5) scale(0.80 0.84)"/>
+      <use xlink:href="#ocellus" opacity="0.62" transform="translate(1931 588) rotate(23.7) scale(0.76 0.77)"/>
+      <use xlink:href="#ocellus" opacity="0.67" transform="translate(1989 610) rotate(30.1) scale(0.82 0.85)"/>
+      <use xlink:href="#ocellus" opacity="0.61" transform="translate(2038 686) rotate(45.7) scale(0.83 0.89)"/>
+      <use xlink:href="#ocellus" opacity="0.66" transform="translate(2098 706) rotate(50.6) scale(0.70 0.66)"/>
+      <use xlink:href="#ocellus" opacity="0.59" transform="translate(2119 770) rotate(59.6) scale(0.68 0.71)"/>
+      <use xlink:href="#ocellus" opacity="0.64" transform="translate(2152 843) rotate(72.4) scale(0.78 0.77)"/>
+      <use xlink:href="#ocellus" opacity="0.70" transform="translate(2181 897) rotate(76.6) scale(0.77 0.78)"/>
+      <use xlink:href="#ocellus" opacity="0.60" transform="translate(2197 970) rotate(83.0) scale(0.77 0.75)"/>
+      <use xlink:href="#ocellus" opacity="0.67" transform="translate(2193 1057) rotate(92.4) scale(0.69 0.65)"/>
+      <use xlink:href="#ocellus" opacity="0.68" transform="translate(1347 1021) rotate(-90.0) scale(0.95 0.88)"/>
+      <use xlink:href="#ocellus" opacity="0.84" transform="translate(1355 949) rotate(-79.2) scale(0.80 0.84)"/>
+      <use xlink:href="#ocellus" opacity="0.78" transform="translate(1368 894) rotate(-72.9) scale(0.85 0.83)"/>
+      <use xlink:href="#ocellus" opacity="0.82" transform="translate(1381 815) rotate(-59.9) scale(0.87 0.88)"/>
+      <use xlink:href="#ocellus" opacity="0.71" transform="translate(1436 779) rotate(-54.6) scale(0.78 0.83)"/>
+      <use xlink:href="#ocellus" opacity="0.78" transform="translate(1465 730) rotate(-42.9) scale(0.97 0.96)"/>
+      <use xlink:href="#ocellus" opacity="0.82" transform="translate(1525 689) rotate(-34.1) scale(0.86 0.82)"/>
+      <use xlink:href="#ocellus" opacity="0.69" transform="translate(1591 663) rotate(-17.0) scale(0.88 0.86)"/>
+      <use xlink:href="#ocellus" opacity="0.70" transform="translate(1665 635) rotate(-7.0) scale(0.98 0.95)"/>
+      <use xlink:href="#ocellus" opacity="0.72" transform="translate(1718 641) rotate(-3.7) scale(0.78 0.77)"/>
+      <use xlink:href="#ocellus" opacity="0.80" transform="translate(1790 638) rotate(12.4) scale(0.84 0.79)"/>
+      <use xlink:href="#ocellus" opacity="0.84" transform="translate(1875 657) rotate(19.8) scale(0.87 0.81)"/>
+      <use xlink:href="#ocellus" opacity="0.76" transform="translate(1912 680) rotate(28.9) scale(0.99 0.92)"/>
+      <use xlink:href="#ocellus" opacity="0.72" transform="translate(1987 718) rotate(38.8) scale(0.79 0.77)"/>
+      <use xlink:href="#ocellus" opacity="0.69" transform="translate(2015 782) rotate(56.1) scale(0.79 0.74)"/>
+      <use xlink:href="#ocellus" opacity="0.70" transform="translate(2046 845) rotate(63.5) scale(0.84 0.90)"/>
+      <use xlink:href="#ocellus" opacity="0.76" transform="translate(2065 899) rotate(72.7) scale(0.89 0.87)"/>
+      <use xlink:href="#ocellus" opacity="0.81" transform="translate(2092 981) rotate(83.3) scale(0.87 0.82)"/>
+      <use xlink:href="#ocellus" opacity="0.70" transform="translate(2110 1046) rotate(91.9) scale(0.84 0.81)"/>
+      <use xlink:href="#ocellus" opacity="0.77" transform="translate(1446 1019) rotate(-94.2) scale(1.03 0.99)"/>
+      <use xlink:href="#ocellus" opacity="0.87" transform="translate(1444 946) rotate(-73.9) scale(1.04 1.07)"/>
+      <use xlink:href="#ocellus" opacity="0.94" transform="translate(1452 873) rotate(-61.1) scale(1.02 1.05)"/>
+      <use xlink:href="#ocellus" opacity="0.80" transform="translate(1511 829) rotate(-51.1) scale(0.88 0.90)"/>
+      <use xlink:href="#ocellus" opacity="0.77" transform="translate(1559 767) rotate(-36.5) scale(0.87 0.85)"/>
+      <use xlink:href="#ocellus" opacity="0.83" transform="translate(1623 747) rotate(-21.5) scale(0.96 0.89)"/>
+      <use xlink:href="#ocellus" opacity="0.80" transform="translate(1693 736) rotate(-4.0) scale(0.99 0.98)"/>
+      <use xlink:href="#ocellus" opacity="0.85" transform="translate(1748 728) rotate(5.1) scale(1.08 1.07)"/>
+      <use xlink:href="#ocellus" opacity="0.78" transform="translate(1832 724) rotate(24.0) scale(1.00 0.99)"/>
+      <use xlink:href="#ocellus" opacity="0.92" transform="translate(1881 765) rotate(32.4) scale(0.98 0.93)"/>
+      <use xlink:href="#ocellus" opacity="0.81" transform="translate(1937 825) rotate(48.4) scale(1.04 1.00)"/>
+      <use xlink:href="#ocellus" opacity="0.79" transform="translate(1986 885) rotate(67.5) scale(0.96 0.95)"/>
+      <use xlink:href="#ocellus" opacity="0.80" transform="translate(2008 936) rotate(77.9) scale(1.08 1.05)"/>
+      <use xlink:href="#ocellus" opacity="0.77" transform="translate(2021 1020) rotate(92.0) scale(0.95 0.96)"/>
     </g>
-    <!-- moonlight across the upper-left of the train -->
-    <radialGradient id="fanDepth" cx="1720" cy="1010" r="600" gradientUnits="userSpaceOnUse">
+    <radialGradient id="fanDepth" cx="1720" cy="1010" r="620" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#05051a" stop-opacity="0.75"/>
-      <stop offset="0.45" stop-color="#05051a" stop-opacity="0.3"/>
-      <stop offset="0.8" stop-color="#05051a" stop-opacity="0"/>
+      <stop offset="0.4" stop-color="#05051a" stop-opacity="0.3"/>
+      <stop offset="0.75" stop-color="#05051a" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="fanMoon" gradientUnits="userSpaceOnUse" x1="1200" y1="460" x2="2200" y2="1100">
-      <stop offset="0" stop-color="#d8d8ff" stop-opacity="0.16"/>
-      <stop offset="0.5" stop-color="#d8d8ff" stop-opacity="0"/>
-      <stop offset="1" stop-color="#05051a" stop-opacity="0.35"/>
-    </linearGradient>
-    <path d="M1160 1112 A570 570 0 1 1 2280 1112 Z" fill="url(#fanDepth)"/>
-    <path d="M1160 1112 A570 570 0 1 1 2280 1112 Z" fill="url(#fanMoon)"/>
+    <circle cx="1720" cy="1010" r="620" fill="url(#fanDepth)"/>
   </g>
 
-  <!-- ── the peacock, facing the moon -->
+  <!-- ── the peacock, three-quarter to the left: S-curved neck, crest, white face, scaled coverts, legs on the rail -->
+  <pattern id="coverts" patternUnits="userSpaceOnUse" width="16" height="11">
+    <path d="M0 0 C2 7 14 7 16 0" fill="none" stroke="#1a1208" stroke-width="1.6" opacity="0.7"/>
+    <path d="M8 5.5 C10 12.5 22 12.5 24 5.5 M-8 5.5 C-6 12.5 6 12.5 8 5.5" fill="none" stroke="#1a1208" stroke-width="1.6" opacity="0.7"/>
+  </pattern>
+  <pattern id="breastScale" patternUnits="userSpaceOnUse" width="12" height="9">
+    <path d="M0 0 C2 6 10 6 12 0 M6 4.5 C8 10.5 16 10.5 18 4.5 M-6 4.5 C-4 10.5 4 10.5 6 4.5" fill="none" stroke="#0c1050" stroke-width="1.2" opacity="0.5"/>
+  </pattern>
   <g>
-    <!-- folded wings, barred bronze -->
-    <path d="M1744 930 C1786 950 1796 1020 1782 1094 L1748 1094 C1758 1030 1756 970 1744 930 Z" fill="url(#wingG)"/>
-    <path d="M1700 930 C1660 950 1650 1020 1664 1094 L1696 1094 C1688 1030 1690 970 1700 930 Z" fill="url(#wingG)" opacity="0.85"/>
-    <g stroke="#2a1e14" stroke-width="3" opacity="0.6" fill="none">
-      <path d="M1752 960 L1790 972 M1756 990 L1796 1004 M1758 1020 L1798 1036 M1756 1050 L1794 1064"/>
-      <path d="M1690 960 L1654 972 M1686 990 L1648 1004 M1684 1020 L1646 1036"/>
+    <!-- contact shadow on the rail -->
+    <ellipse cx="1722" cy="1102" rx="70" ry="7" fill="#05051a" opacity="0.6" filter="url(#glowS)"/>
+    <!-- legs gripping the rail -->
+    <g fill="none" stroke="#8a7a6a" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M1706 1060 L1702 1080 L1706 1100" stroke-width="6"/>
+      <path d="M1746 1060 L1748 1082 L1744 1100" stroke-width="6"/>
+      <path d="M1706 1100 L1686 1102 M1706 1100 L1700 1108 M1706 1100 L1720 1102" stroke-width="4"/>
+      <path d="M1744 1100 L1726 1103 M1744 1100 L1740 1108 M1744 1100 L1760 1102" stroke-width="4"/>
     </g>
-    <!-- breast -->
-    <path d="M1702 904 C1678 940 1672 1010 1688 1092 L1758 1092 C1772 1010 1766 940 1746 904 C1730 896 1716 896 1702 904 Z" fill="url(#breast)"/>
-    <ellipse cx="1704" cy="970" rx="12" ry="40" fill="#a8b4ff" opacity="0.25" filter="url(#glowS)"/>
-    <!-- neck and head -->
-    <path d="M1700 920 C1684 874 1656 836 1650 796 C1648 786 1646 778 1640 772 L1614 768 L1604 762 L1614 756 L1638 752
-      C1644 736 1666 732 1680 746 C1690 770 1690 800 1704 840 C1714 870 1740 890 1752 914 Z" fill="url(#neckG)"/>
-    <!-- face: white stripes about the eye, the eye -->
-    <path d="M1640 750 C1648 744 1660 744 1668 750" fill="none" stroke="#f4f4ff" stroke-width="3" stroke-linecap="round"/>
-    <path d="M1642 762 C1650 768 1662 766 1670 760" fill="none" stroke="#f4f4ff" stroke-width="3" stroke-linecap="round"/>
-    <circle cx="1654" cy="756" r="3.6" fill="#05051a"/><circle cx="1653" cy="755" r="1" fill="#fff"/>
-    <!-- the crest: little crown of plumes -->
-    <g stroke="#2a6ad0" stroke-width="2">
-      <line x1="1664" y1="738" x2="1640" y2="694"/><line x1="1666" y1="738" x2="1652" y2="688"/><line x1="1668" y1="738" x2="1664" y2="686"/>
-      <line x1="1670" y1="738" x2="1676" y2="688"/><line x1="1672" y1="740" x2="1688" y2="694"/>
+    <path d="M1702 1080 L1706 1100" fill="none" stroke="#d0c8c0" stroke-width="1.6" opacity="0.6"/>
+    <!-- the far wing, a dark edge behind -->
+    <path d="M1700 900 C1664 930 1650 1000 1660 1066 L1700 1066 Z" fill="#2a2018"/>
+    <!-- the near wing: barred coverts, chestnut primaries at the tip -->
+    <path d="M1714 900 C1770 896 1812 940 1816 1000 C1818 1040 1804 1070 1790 1086 L1730 1072 C1722 1020 1712 960 1714 900 Z" fill="url(#wingG)"/>
+    <path d="M1714 900 C1770 896 1812 940 1816 1000 C1818 1040 1804 1070 1790 1086 L1730 1072 C1722 1020 1712 960 1714 900 Z" fill="url(#coverts)"/>
+    <path d="M1760 1040 C1784 1046 1800 1060 1806 1076 L1790 1086 L1756 1076 Z" fill="#5a3418" opacity="0.85"/>
+    <g stroke="#2a1608" stroke-width="2.4" opacity="0.6" fill="none">
+      <path d="M1764 1052 L1800 1062 M1762 1064 L1796 1074"/>
+    </g>
+    <path d="M1714 900 C1770 896 1812 940 1816 1000" fill="none" stroke="#d8d0b8" stroke-width="2.4" opacity="0.5"/>
+    <!-- breast, iridescent and scaled -->
+    <path d="M1704 880 C1676 920 1666 1000 1680 1070 L1738 1070 C1730 1010 1726 950 1736 896 C1726 884 1714 878 1704 880 Z" fill="url(#breast)"/>
+    <path d="M1704 880 C1676 920 1666 1000 1680 1070 L1738 1070 C1730 1010 1726 950 1736 896 C1726 884 1714 878 1704 880 Z" fill="url(#breastScale)"/>
+    <ellipse cx="1694" cy="950" rx="10" ry="38" fill="#a8b4ff" opacity="0.28" filter="url(#glowS)"/>
+    <!-- the S-curved neck and the head -->
+    <path d="M1704 884 C1690 860 1696 826 1690 800 C1684 768 1664 748 1652 724 L1640 718 L1604 710 L1612 702 L1636 696
+      C1640 674 1676 668 1690 686 C1700 708 1708 732 1716 762 C1724 794 1712 830 1726 860 C1732 874 1740 884 1742 896 Z" fill="url(#neckG)"/>
+    <path d="M1704 884 C1690 860 1696 826 1690 800 C1684 768 1664 748 1652 724" fill="none" stroke="#d8e8ff" stroke-width="3.2" opacity="0.7"/>
+    <path d="M1636 696 C1640 674 1676 668 1690 686" fill="none" stroke="#d8e8ff" stroke-width="2.6" opacity="0.7"/>
+    <!-- white face: patches above and below the eye -->
+    <path d="M1644 690 C1652 680 1668 678 1680 684 C1670 686 1656 688 1644 694 Z" fill="#f4f4ff"/>
+    <path d="M1648 704 C1658 710 1672 708 1682 700 C1674 712 1660 716 1648 710 Z" fill="#f4f4ff"/>
+    <circle cx="1662" cy="696" r="4.6" fill="#05051a"/><circle cx="1660.6" cy="694.6" r="1.4" fill="#fff"/>
+    <!-- beak -->
+    <path d="M1636 696 L1604 706 L1610 712 L1640 714 Z" fill="#c8b8a0"/>
+    <path d="M1604 706 L1640 704" stroke="#6a5a48" stroke-width="1.4"/>
+    <!-- the crest: a fan of plumes on bare shafts -->
+    <g stroke="#2a6ad0" stroke-width="2" stroke-linecap="round">
+      <line x1="1672" y1="674" x2="1638" y2="626"/><line x1="1673" y1="674" x2="1648" y2="618"/><line x1="1675" y1="673" x2="1660" y2="614"/>
+      <line x1="1676" y1="673" x2="1672" y2="612"/><line x1="1677" y1="673" x2="1684" y2="614"/><line x1="1678" y1="674" x2="1696" y2="620"/>
+      <line x1="1679" y1="675" x2="1706" y2="630"/>
     </g>
     <g fill="#4fd8bf">
-      <ellipse cx="1640" cy="692" rx="4" ry="6" transform="rotate(-28 1640 692)"/><ellipse cx="1652" cy="686" rx="4" ry="6" transform="rotate(-14 1652 686)"/>
-      <ellipse cx="1664" cy="684" rx="4" ry="6"/><ellipse cx="1676" cy="686" rx="4" ry="6" transform="rotate(12 1676 686)"/>
-      <ellipse cx="1688" cy="692" rx="4" ry="6" transform="rotate(24 1688 692)"/>
+      <ellipse cx="1638" cy="624" rx="4.2" ry="7" transform="rotate(-36 1638 624)"/><ellipse cx="1648" cy="616" rx="4.4" ry="7.2" transform="rotate(-24 1648 616)"/>
+      <ellipse cx="1660" cy="612" rx="4.6" ry="7.6" transform="rotate(-12 1660 612)"/><ellipse cx="1672" cy="610" rx="4.6" ry="7.6"/>
+      <ellipse cx="1684" cy="612" rx="4.4" ry="7.2" transform="rotate(12 1684 612)"/><ellipse cx="1696" cy="618" rx="4.2" ry="7" transform="rotate(24 1696 618)"/>
+      <ellipse cx="1706" cy="628" rx="3.8" ry="6.4" transform="rotate(34 1706 628)"/>
     </g>
-    <!-- moonlight on the left edges -->
-    <path d="M1700 920 C1684 874 1656 836 1650 796 C1648 786 1646 778 1640 772" fill="none" stroke="#d8e8ff" stroke-width="3.2" opacity="0.75"/>
-    <path d="M1702 904 C1678 940 1672 1010 1688 1092" fill="none" stroke="#c8d0ff" stroke-width="3" opacity="0.6"/>
-    <path d="M1638 752 C1644 736 1666 732 1680 746" fill="none" stroke="#d8e8ff" stroke-width="2.4" opacity="0.7"/>
-    <!-- beak -->
-    <path d="M1614 756 L1604 762 L1614 768 L1638 766 L1638 754 Z" fill="#c8b8a0"/>
-    <!-- feet on the rail -->
-    <g stroke="#7a6a5a" stroke-width="5" stroke-linecap="round">
-      <path d="M1700 1084 L1698 1104 M1740 1084 L1744 1104"/>
+    <g fill="#d8e8ff" opacity="0.6">
+      <circle cx="1636" cy="621" r="1.4"/><circle cx="1646" cy="613" r="1.4"/><circle cx="1658" cy="608" r="1.4"/><circle cx="1670" cy="606" r="1.4"/>
     </g>
   </g>
 
@@ -506,20 +593,21 @@
       <use xlink:href="#leafP" transform="translate(520 890) rotate(60)"/><use xlink:href="#leafP" transform="translate(230 760) rotate(100) scale(0.8)"/>
       <use xlink:href="#leafP" transform="translate(500 870) rotate(150) scale(0.8)"/><use xlink:href="#leafP" transform="translate(20 646) rotate(160) scale(0.9)"/>
     </g>
-    <use xlink:href="#pome" transform="translate(254 872)"/>
-    <use xlink:href="#pome" transform="translate(526 922) scale(0.85)"/>
-    <use xlink:href="#pome" transform="translate(96 712) scale(0.75)"/>
+    <use xlink:href="#pomeSplit" transform="translate(262 884) rotate(-8)"/>
+    <use xlink:href="#pome" transform="translate(530 934) rotate(10) scale(0.9)"/>
+    <use xlink:href="#pome" transform="translate(100 730) rotate(-14) scale(0.78)"/>
     <g stroke="#3a3c80" stroke-width="5" fill="none" stroke-linecap="round">
-      <path d="M220 1440 C230 1340 250 1260 260 1180"/><path d="M380 1440 C380 1350 400 1280 420 1220"/><path d="M120 1440 C130 1380 150 1320 170 1280"/>
+      <path d="M220 1440 C230 1340 250 1260 260 1180"/><path d="M380 1440 C380 1350 400 1280 420 1220"/><path d="M300 1440 C304 1380 310 1320 318 1272"/><path d="M120 1440 C130 1380 150 1320 170 1280"/>
     </g>
     <g fill="#1e2a40">
       <path d="M220 1440 C180 1360 170 1300 160 1240 C190 1300 210 1360 236 1440 Z"/>
       <path d="M380 1440 C420 1370 450 1320 480 1280 C460 1330 420 1380 396 1440 Z"/>
       <path d="M300 1440 C290 1380 300 1320 320 1270 C320 1330 316 1390 316 1440 Z"/>
     </g>
-    <use xlink:href="#lily" transform="translate(260 1170) rotate(-10) scale(0.95)"/>
-    <use xlink:href="#lily" transform="translate(424 1210) rotate(12) scale(0.8)"/>
-    <use xlink:href="#lily" transform="translate(172 1270) rotate(-20) scale(0.7)"/>
+    <use xlink:href="#lily" transform="translate(260 1180) rotate(-40) scale(1.05)"/>
+    <use xlink:href="#lily" transform="translate(420 1220) rotate(-14) scale(0.88)"/>
+    <use xlink:href="#lily" transform="translate(170 1280) rotate(-62) scale(0.72)"/>
+    <use xlink:href="#lilyBud" transform="translate(318 1272) rotate(-76) scale(0.8)"/>
   </g>
 
   <!-- ── finish -->

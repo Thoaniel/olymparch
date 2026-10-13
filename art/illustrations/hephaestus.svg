@@ -5,6 +5,7 @@
      Drawn by hand for Olymparch; MIT. -->
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2560" height="1440" viewBox="0 0 2560 1440">
   <defs>
+    <clipPath id="belowLedge"><rect x="1000" y="694" width="600" height="300"/></clipPath>
     <linearGradient id="cave" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#050404"/>
       <stop offset="0.4" stop-color="#0f0b09"/>
@@ -186,18 +187,37 @@
         L1700 730 L1740 770 L1790 790 L1840 800 L1880 900 Z" fill="#4a2012"/>
     </g>
   </g>
-  <!-- the lava fall from a crack in the far spire, the source of the river -->
-  <g>
-    <path d="M1222 640 C1228 680 1216 720 1226 760 C1234 800 1222 830 1230 860 L1312 860 C1300 832 1296 800 1290 768
-      C1282 726 1294 690 1262 640 Z" fill="#ff9a2e" filter="url(#glowL)" opacity="0.9"/>
-    <path d="M1226 650 C1232 686 1220 724 1230 762 C1238 800 1226 830 1234 860 L1308 860 C1296 832 1292 800 1286 768
-      C1278 728 1288 692 1260 650 C1252 646 1236 646 1226 650 Z" fill="#ffb547"/>
-    <path d="M1226 650 C1232 686 1220 724 1230 762 C1238 800 1226 830 1234 860 L1308 860 C1296 832 1292 800 1286 768
-      C1278 728 1288 692 1260 650 C1252 646 1236 646 1226 650 Z" fill="#fff" filter="url(#lavaFar)" opacity="0.75"/>
-    <path d="M1242 660 C1248 700 1240 740 1252 780 C1260 810 1258 836 1268 858" fill="none" stroke="#fff3d6" stroke-width="6" opacity="0.85" filter="url(#glowXS)"/>
-    <ellipse cx="1270" cy="860" rx="130" ry="30" fill="#ffd27a" filter="url(#glow)" opacity="0.9"/>
-    <g fill="#ffd27a"><circle cx="1210" cy="842" r="3"/><circle cx="1328" cy="836" r="2.5"/><circle cx="1222" cy="824" r="2"/>
-      <circle cx="1316" cy="816" r="2"/></g>
+  <!-- the lava fall: a cascade out of a crack in the far spire, branching and widening, crusted, splashing into the lake -->
+  <g transform="translate(200 4)" clip-path="url(#belowLedge)">
+    <path d="M1236 640 C1224 690 1196 740 1180 800 C1172 830 1166 846 1160 862 L1360 862 C1350 840 1338 816 1330 790
+      C1314 740 1296 690 1280 640 Z" fill="#ff7b1c" filter="url(#glowL)" opacity="0.85"/>
+    <!-- the sheet pouring over the ledge, widening a little as it falls -->
+    <path id="fallMain" d="M1212 696 C1214 740 1208 790 1198 862 L1334 862 C1322 806 1312 748 1306 696 Z" fill="#ff9a2e"/>
+    <use xlink:href="#fallMain" fill="#fff" filter="url(#lavaFar)" opacity="0.5"/>
+    <!-- a thinner tongue breaking away on the left -->
+    <path d="M1198 700 C1192 744 1180 800 1168 862 L1186 862 C1194 806 1202 752 1208 700 Z" fill="#ff7b1c"/>
+    <!-- crust: darker cooled streaks running down the sheet -->
+    <g fill="none" stroke="#5a1806" stroke-linecap="round" opacity="0.75">
+      <path d="M1230 700 C1234 730 1226 760 1230 790 C1234 816 1226 840 1222 860" stroke-width="5"/>
+      <path d="M1286 700 C1282 734 1292 766 1290 800 C1288 826 1298 846 1302 860" stroke-width="6"/>
+      <path d="M1262 720 C1260 750 1266 790 1262 830" stroke-width="2.5" opacity="0.6"/>
+      <path d="M1310 760 C1314 800 1320 830 1326 858" stroke-width="3"/>
+    </g>
+    <!-- hot bands between the crust -->
+    <g fill="none" stroke="#fff3d6" stroke-linecap="round" filter="url(#glowXS)" opacity="0.85">
+      <path d="M1250 700 C1252 740 1246 790 1246 850" stroke-width="5"/>
+      <path d="M1272 740 C1274 780 1276 820 1280 856" stroke-width="3"/>
+    </g>
+    <!-- where it spills over the spire's ledge -->
+    <ellipse cx="1258" cy="698" rx="56" ry="8" fill="#ffd27a" filter="url(#glowS)"/>
+    <!-- splash where it meets the lake -->
+    <ellipse cx="1256" cy="864" rx="150" ry="30" fill="#ffd27a" filter="url(#glow)" opacity="0.9"/>
+    <g fill="none" stroke="#ffd27a" stroke-width="3" stroke-linecap="round" opacity="0.9">
+      <path d="M1170 860 C1158 840 1146 836 1134 842 M1340 858 C1352 838 1366 834 1378 842 M1210 858 C1204 840 1196 830 1188 828
+        M1300 858 C1308 842 1316 834 1326 832"/>
+    </g>
+    <g fill="#ffd27a"><circle cx="1128" cy="846" r="3"/><circle cx="1384" cy="846" r="3"/><circle cx="1182" cy="822" r="2.5"/>
+      <circle cx="1334" cy="824" r="2.5"/><circle cx="1150" cy="812" r="2"/><circle cx="1362" cy="810" r="2"/></g>
   </g>
   <!-- the lava lake at the foot of the spires -->
   <path d="M760 896 C900 862 1100 852 1300 856 C1500 852 1720 858 1980 892 C1800 912 1500 918 1300 916 C1100 918 900 914 760 896 Z" fill="#fff" filter="url(#lavaFar)"/>
@@ -253,7 +273,7 @@
       <path d="M-60 -60 L2640 -60 L2640 250 C2520 262 2420 262 2330 280 L2270 440 L2190 306 C2100 322 2020 340 1960 356
         L1930 420 L1890 372 C1800 390 1720 404 1640 412 L1600 540 L1540 420 C1460 426 1380 428 1300 432 L1270 480 L1240 436
         C1160 440 1080 444 1000 444 L940 600 L880 438 C800 432 720 420 640 404 L600 470 L560 396 C460 380 360 366 260 362
-        L220 520 L170 362 C100 362 20 368 -60 376 Z" fill="#0c0908"/>
+        L220 520 L170 362 C100 362 20 368 -60 376 Z" fill="#140f0c"/>
     </g>
   </g>
   <!-- warm light on the tips of the hanging rocks -->
@@ -263,6 +283,12 @@
   <path d="M840 430 C920 440 1000 450 1082 444 C1200 430 1280 440 1360 432 C1480 420 1560 425 1640 415 C1760 400 1840 390 1925 370"
         fill="none" stroke="#c0501a" stroke-width="8" opacity="0.15" filter="url(#glowS)"/>
 
+  <!-- smoke pooled under the roof, catching a little of the glow -->
+  <g filter="url(#smoke)" opacity="0.6">
+    <path d="M300 200 C600 150 900 170 1200 210 C1500 250 1800 220 2100 250 C2000 330 1700 330 1400 320 C1100 310 800 330 500 300
+      C400 290 330 250 300 200 Z" fill="#4a3226"/>
+    <path d="M700 330 C900 300 1100 310 1300 340 C1500 370 1700 350 1850 370 C1700 420 1400 420 1200 400 C1000 390 800 400 700 330 Z" fill="#5a3a26"/>
+  </g>
   <!-- ── left: the cavern wall with the forge built into it -->
   <rect width="2560" height="1440" fill="url(#furnaceLight)"/>
   <g filter="url(#reliefRock)">
@@ -321,10 +347,17 @@
         fill="none" stroke="#ffb547" stroke-width="6" opacity="0.7" filter="url(#glowXS)"/>
 
   <!-- ── a stack of bronze ingots by the forge, catching its light -->
-  <g transform="translate(240 1210)">
-    <g fill="#5a3218"><path d="M0 0 L90 0 L100 22 L-10 22 Z"/><path d="M104 0 L194 0 L204 22 L94 22 Z"/><path d="M52 -24 L142 -24 L152 -2 L42 -2 Z"/></g>
-    <g fill="#ffb547" opacity="0.75"><path d="M0 0 L90 0 L88 4 L2 4 Z"/><path d="M104 0 L194 0 L192 4 L106 4 Z"/><path d="M52 -24 L142 -24 L140 -20 L54 -20 Z"/></g>
-    <g fill="#ff7b1c" opacity="0.5"><path d="M-10 22 L0 0 L6 0 L-2 22 Z"/><path d="M94 22 L104 0 L110 0 L102 22 Z"/><path d="M42 -2 L52 -24 L58 -24 L50 -2 Z"/></g>
+  <g transform="translate(250 1222)">
+    <g id="ingot">
+      <path d="M0 0 L100 0 L88 -20 L12 -20 Z" fill="#7a4a22"/>
+      <path d="M12 -20 L88 -20 L80 -28 L20 -28 Z" fill="#c8843a"/>
+      <path d="M12 -20 L50 -20 L46 -28 L20 -28 Z" fill="#ffc070" opacity="0.6"/>
+      <path d="M0 0 L12 -20 L20 -28 L8 -6 Z" fill="#e0904a" opacity="0.7"/>
+      <path d="M0 0 L100 0" stroke="#2a1810" stroke-width="2"/>
+    </g>
+    <use xlink:href="#ingot" transform="translate(104 0)"/>
+    <use xlink:href="#ingot" transform="translate(52 -28)"/>
+    <ellipse cx="102" cy="4" rx="120" ry="8" fill="#000" opacity="0.4" filter="url(#glowS)"/>
   </g>
 
   <!-- ── the anvil on its block: the hero -->
@@ -357,10 +390,10 @@
       <path d="M-150 -262 L80 -268 L170 -252" fill="none" stroke="#ffe6a8" stroke-width="1.5"/>
       <path d="M-150 -258 L-250 -256 L-250 -250 L-150 -250 Z" fill="#a84a1c"/>
     </g>
-    <!-- hammer: head on the floor, handle leaning on the block -->
-    <g transform="translate(232 30)">
-      <path d="M-14 -26 L-150 -128 L-138 -142 L0 -40 Z" fill="#3a2418"/>
-      <path d="M-14 -26 L-150 -128 L-146 -134 L-8 -32 Z" fill="#b0642c" opacity="0.6"/>
+    <!-- hammer: head on the floor, handle leaning on the block's right edge -->
+    <g transform="translate(262 30)">
+      <path d="M-12 -28 L-118 -78 L-112 -90 L-4 -40 Z" fill="#3a2418"/>
+      <path d="M-12 -28 L-118 -78 L-116 -84 L-9 -34 Z" fill="#b0642c" opacity="0.6"/>
       <path d="M-46 -54 C-36 -66 -4 -66 34 -60 C58 -56 62 -6 40 6 C10 12 -30 10 -46 2 C-56 -12 -56 -40 -46 -54 Z" fill="url(#iron)"/>
       <path d="M-46 -54 C-36 -66 -4 -66 34 -60 L30 -54 C-2 -58 -30 -58 -40 -48 C-48 -36 -48 -12 -42 0 L-46 2 C-56 -12 -56 -40 -46 -54 Z"
             fill="#ff9a3a" opacity="0.65"/>
