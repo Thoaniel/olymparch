@@ -35,6 +35,10 @@ for f in tests/hw/fixtures/*.fixture; do
         if [[ $matched == *" $id "* ]] || grep -qx "$id" <<<"$lost"; then HIT[$id]+="$name "; else MISS[$id]+="$name "; fi
     done
 done
+# what the installer refuses to finish without (the screen): GPU firmware and drivers, also under nomodeset
+for name in amd-desktop-nomodeset rtx-desktop hybrid-laptop; do
+    golden "$name.essential" < <(OLYMPARCH_SYSROOT=$tmp/$name "$HW" plan --list essential 2>&1)
+done
 golden intel-laptop.plan.nb < <(OLYMPARCH_SYSROOT=$tmp/intel-laptop LANG=nb_NO.UTF-8 LC_ALL=nb_NO.UTF-8 "$HW" plan 2>&1)
 golden hybrid-laptop.explain < <(OLYMPARCH_SYSROOT=$tmp/hybrid-laptop "$HW" explain gpu-hybrid-prime 2>&1 | sed "s#$PWD/##")
 

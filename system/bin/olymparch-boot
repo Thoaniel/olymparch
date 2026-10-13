@@ -3,6 +3,7 @@
 #   olymparch-boot sync     run by the pacman hook after every transaction, and by olymparch-rollback
 # Each snapshot boots with the kernel it was taken with: kernels are kept per version in /boot/olymparch/k/<ver>.
 # Snapshot entries boot read-only with a writable overlay in RAM (systemd.volatile=overlay).
+# «Recovery (text mode)» boots the system without the boot screen and GPU driver, to a text shell.
 set -euo pipefail
 [ "${1:-}" = sync ] || { echo "bruk: olymparch-boot sync" >&2; exit 2; }
 [ "$(id -u)" = 0 ] || { echo "olymparch-boot må kjøres som root" >&2; exit 1; }
@@ -33,6 +34,10 @@ fi
     cat /etc/olymparch/limine-header.conf
     printf '\n/Olymparch\n    protocol: linux\n    path: boot():/vmlinuz-%s\n    cmdline: %s rootflags=subvol=@ rw %s\n    module_path: boot():/initramfs-%s.img\n' \
         "$KERNEL" "$ROOTARGS" "$CMDLINE" "$KERNEL"
+    # Recovery: no boot screen, no GPU driver (the firmware's framebuffer), boot messages and a text shell on
+    # tty1 instead of the desktop (the session script reads olymparch.recovery). Not the hardware options.
+    printf '\n/Recovery (text mode)\n    protocol: linux\n    path: boot():/vmlinuz-%s\n    cmdline: %s rootflags=subvol=@ rw nomodeset plymouth.enable=0 olymparch.recovery\n    module_path: boot():/initramfs-%s.img\n' \
+        "$KERNEL" "$ROOTARGS" "$KERNEL"
     entries=0
     while read -r num date time desc; do
         snap=/.snapshots/$num/snapshot

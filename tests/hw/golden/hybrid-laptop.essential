@@ -1,0 +1,5 @@
+linux-firmware-intel
+vulkan-intel
+nvidia-open-dkms
+nvidia-utils
+linux-headers

@@ -218,11 +218,14 @@ MORE=$(echo "$MORE" | tr -d '"' | tr ' ' ',')
 whiptail --backtitle "$BT" --title Olymparch --yes-button "$(t install)" --no-button "$(t cancel)" \
     --yesno "$(printf "$(t summary)" "$DISK" "$size" "$USERNAME" "$KEYMAP" "$TIMEZONE" "${OPTIONS:--}")" 18 $W || bail
 
-umask 077
-{
-    printf 'DISK=%q\nDISK_SERIAL=%q\nUSERNAME=%q\nPASSWORD=%q\n' "$DISK" "$DISK_SERIAL" "$USERNAME" "$PASSWORD"
-    printf 'KEYMAP=%q\nLOCALE=%q\nTIMEZONE=%q\nOPTIONS=%q\nLANGUAGE=%q\n' "$KEYMAP" "$LOCALE" "$TIMEZONE" "$OPTIONS" "$lang"
-} >"$ANSWERS"
+# 0600 for the answers file (it holds the password); the umask stays in this subshell, olymparch-install must not inherit it
+(
+    umask 077   # the redirection is inside the subshell, so the file is created with this umask
+    {
+        printf 'DISK=%q\nDISK_SERIAL=%q\nUSERNAME=%q\nPASSWORD=%q\n' "$DISK" "$DISK_SERIAL" "$USERNAME" "$PASSWORD"
+        printf 'KEYMAP=%q\nLOCALE=%q\nTIMEZONE=%q\nOPTIONS=%q\nLANGUAGE=%q\n' "$KEYMAP" "$LOCALE" "$TIMEZONE" "$OPTIONS" "$lang"
+    } >"$ANSWERS"
+)
 KEYFILE=/run/olymparch-recovery-key
 olymparch-install --answers "$ANSWERS" --recovery-key-file "$KEYFILE" || { printf '\n%s\n' "$(t failed)"; exit 1; }
 key=$(cat "$KEYFILE")

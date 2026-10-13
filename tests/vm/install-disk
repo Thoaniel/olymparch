@@ -1,6 +1,7 @@
 #!/bin/bash
 # VM test 2: install Olymparch from the ISO onto an empty 24 GB NVMe disk, reboot into it, type the disk
 # password at the boot prompt and reach the login of the installed system. Screenshot of every step.
+# The installer is started with umask 077: it must still give the new system normal modes (755 / 644).
 #   tests/vm/install-disk [ISO]
 set -uo pipefail
 cd "$(dirname "$0")/../.."
@@ -66,7 +67,7 @@ qemu live.log -cdrom "$ISO" -boot d \
 wait_for 'login:' 120 || { shot live-feil "Live-miljøet kom ikke opp"; finish "FAIL · live-miljøet startet ikke"; }
 sleep 4
 shot live "Live-miljøet fra ISO-en, logget inn som root"
-keys 'modprobe qemu_fw_cfg && cp /sys/firmware/qemu_fw_cfg/by_name/opt/olymparch/answers/raw /tmp/answers.env && mount -t 9p -o trans=virtio pkgcache /var/cache/pacman/pkg && OLYMPARCH_TEST=1 OLYMPARCH_HOST_CACHE=1 olymparch-install --answers /tmp/answers.env; echo "<2>INSTALL-EXIT=$?" > /dev/kmsg\n'
+keys 'umask 077 && modprobe qemu_fw_cfg && cp /sys/firmware/qemu_fw_cfg/by_name/opt/olymparch/answers/raw /tmp/answers.env && mount -t 9p -o trans=virtio pkgcache /var/cache/pacman/pkg && OLYMPARCH_TEST=1 OLYMPARCH_HOST_CACHE=1 olymparch-install --answers /tmp/answers.env; echo "<2>INSTALL-EXIT=$?" > /dev/kmsg\n'
 sleep 3
 shot start "Installasjonen startes med svarfila (disk OLYTEST1)"
 
@@ -86,6 +87,8 @@ for ((i = 0; i < 1500; i++)); do
 done
 code=$(grep -aoE 'INSTALL-EXIT=[0-9]+' "$O/$LOG" | tail -n 1 | cut -d= -f2)
 [ "$code" = 0 ] || { shot feil "Installasjonen stoppet"; finish "FAIL · installasjonen stoppet (kode ${code:-ingen}) etter $((SECONDS - t0)) s"; }
+# started with umask 077 (above): the installer's own check of modes, /etc/profile for the user and alpm's /etc
+seen 'TARGET-CHECK-OK' || finish "FAIL · installerens egenkontroll av rettigheter kjørte ikke"
 keys 'poweroff\n'
 for ((i = 0; i < 60; i++)); do kill -0 "$QPID" 2>/dev/null || break; sleep 1; done
 kill "$QPID" 2>/dev/null; wait "$QPID" 2>/dev/null

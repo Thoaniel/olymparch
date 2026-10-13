@@ -1,0 +1,38 @@
+#!/bin/bash
+# The installer must not depend on the umask it is started with. A `umask 077` in olymparch-setup once leaked
+# into olymparch-install, and the new system got 0700 /etc, /var/lib and /usr/share/olymparch (no /etc/profile for
+# the user, no DNS for pacman's alpm user, and so no GPU firmware). No VM needed.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+fail=0
+bad() { echo "  FAIL  $1"; fail=1; }
+ok() { echo "  ok    $1"; }
+
+# 1. olymparch-install resets the umask before it creates anything
+first_write=$(grep -nE '^(mkdir|mount|wipefs|sfdisk|cp|install|printf|echo).*(/mnt|\$DISK)' bin/olymparch-install | head -n 1 | cut -d: -f1)
+reset=$(grep -n '^umask 022$' bin/olymparch-install | head -n 1 | cut -d: -f1)
+if [ -n "$reset" ] && [ "$reset" -lt "${first_write:-0}" ]; then ok "olymparch-install sets umask 022 (line $reset) before writing (line $first_write)"
+else bad "olymparch-install must set 'umask 022' near the top, before line ${first_write:-?}"; fi
+if [ -n "$reset" ]; then   # (only the header up to that line is run, never the installer itself)
+    got=$(bash -c 'umask 077; source <(sed -n "1,/^umask 022$/p" bin/olymparch-install); umask' 2>&1)
+    [ "$got" = 0022 ] && ok "started with umask 077, it runs with 0022" || bad "started with umask 077, it runs with $got"
+fi
+
+# 2. no installer script changes the umask for everything after it (only inside a subshell or a function)
+for f in bin/olymparch-setup bin/olymparch-install; do
+    if lines=$(grep -nE '^umask 0?[0-7][0-7]7' "$f"); then bad "$f: top-level umask leaks into what it runs: $lines"
+    else ok "$f: no top-level restrictive umask"; fi
+done
+
+# 3. the answers file is still private: the umask 077 subshell wraps its redirection
+tmp=$(mktemp -d); trap 'rm -rf -- "$tmp"' EXIT
+block=$(awk '/^# 0600 for the answers file/ {on = 1; next} on && /^KEYFILE=/ {exit} on' bin/olymparch-setup)
+if [ -z "$block" ]; then bad "olymparch-setup: answers-file block not found"
+else
+    ( umask 022; ANSWERS=$tmp/answers DISK=/dev/x DISK_SERIAL=s USERNAME=u PASSWORD=p KEYMAP=no LOCALE=l TIMEZONE=t OPTIONS='' lang=nb
+      eval "$block"; umask >"$tmp/after" )
+    m=$(stat -c %a "$tmp/answers" 2>/dev/null)
+    [ "$m" = 600 ] && ok "answers file is 0600" || bad "answers file is ${m:-missing}, not 0600"
+    [ "$(cat "$tmp/after")" = 0022 ] && ok "the umask after writing it is unchanged (0022)" || bad "the umask after writing it is $(cat "$tmp/after")"
+fi
+exit $fail
