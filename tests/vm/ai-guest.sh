@@ -18,7 +18,7 @@ restart_shell() {
 case $1 in
 setup)
     cp -r "$src/default/shell/." /usr/share/olymparch/shell/
-    cp -r "$src/default/i18n" "$src/default/settings" "$src/default/agents" "$src/default/skills" /usr/share/olymparch/
+    cp -r "$src/default/i18n" "$src/default/settings" "$src/default/agents" "$src/default/skills" "$src/default/hypr" /usr/share/olymparch/
     for b in olymparch-agent olymparch-keys olymparch-mcp olymparch-settings olymparch-sysinfo olymparch-doctor; do
         install -m755 "$src/system/bin/$b" /usr/bin/
     done
@@ -93,6 +93,11 @@ bar-log)   # what the shell sent Olympus' stub (approve, deny …)
     mark BAR-LOG-DONE
     ;;
 status)
+    for d in "${XDG_STATE_HOME:-$HOME/.local/state}"/olymparch/agents/fakerunner-*/; do
+        [ -d "$d" ] || continue
+        mark "RUNNER-EXIT $(cat "$d/exit" 2>/dev/null || echo none)"
+        tail -n 4 "$d/log" 2>/dev/null | while IFS= read -r l; do mark "RUNNER-LOG $l"; done
+    done
     python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(" ".join(t["agent"]+"="+t["status"] for t in d["tasks"]))' \
         "$XDG_RUNTIME_DIR/olymparch/agents.json" | while read -r l; do mark "TASKS $l"; done
     ;;

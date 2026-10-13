@@ -174,7 +174,7 @@ Row {
     Cell {
         id: agentsCell
         visible: Agents.available && Agents.present && (Agents.tasks.length > 0 || Agents.list.some(a => a.installed))
-        icon: "\uf544"
+        icon: "\u{F06A9}"
         label: Agents.active > 0 ? String(Agents.active) : ""
         dot: Agents.waiting
         tint: Agents.active > 0 ? status.theme.gold : status.theme.muted

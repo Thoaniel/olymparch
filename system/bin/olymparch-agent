@@ -382,7 +382,8 @@ def cmd_new(args):
                  f"echo ${{PIPESTATUS[0]}} > {shlex.quote(os.path.join(td, 'exit'))}")
         # the keys are in env (agent_env), handed to tmux' server through its environment, never on a command line
         r = subprocess.run(["systemd-run", "--user", "--scope", "--quiet", f"--unit=olymparch-agent-{tid}", "--collect",
-                            *tmux(tid), "new-session", "-d", "-s", tid, "-c", d, "bash", "-c", inner],
+                            # one string: tmux hands it to sh -c, so bash's ${PIPESTATUS[0]} must reach bash quoted
+                            *tmux(tid), "new-session", "-d", "-s", tid, "-c", d, "bash -c " + shlex.quote(inner)],
                            env=env, capture_output=True, text=True, timeout=30)
         if r.returncode != 0:
             die((r.stderr or "").strip()[-400:] or L("the task did not start", "oppgaven startet ikke"), 1)

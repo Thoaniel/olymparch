@@ -8,7 +8,7 @@ import Quickshell
 Dropdown {
     id: p
     name: "agents"
-    icon: ""
+    icon: "󰚩"
     title: t("agents.title", "Agents")
     en: "Agents"
     nb: "Agenter"
