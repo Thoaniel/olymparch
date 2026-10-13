@@ -33,7 +33,7 @@ local RUNTIME = os.getenv("XDG_RUNTIME_DIR") or (HOME .. "/.local/state/olymparc
 local SELF = arg[0]
 
 local function script_dir() return (SELF:match("^(.*)/[^/]*$") or ".") end
-local ZEUS_COMMIT = "741dbb0520f3ebffed781d2e0b135e37d1e42d64"   -- the Olympus release the installer uses too
+local ZEUS_COMMIT = "f3730588c6355c6e12caae962def88419c27f997"   -- the Olympus release the installer uses too
 local SCHEMA = os.getenv("OLYMPARCH_SETTINGS_SCHEMA") or "/usr/share/olymparch/settings/schema.json"
 do -- running from the repo (tests): use the schema next to it
     local f = io.open(SCHEMA)

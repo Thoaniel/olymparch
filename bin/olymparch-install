@@ -27,7 +27,7 @@ die() { step "$(L ERROR FEIL): $*"; exit 1; }
 
 # ---- Options (OPTIONS=games,emu,zeus,discord,spotify,obs,code,hibernate from the wizard) ----------------------
 # Kept in one block: called once after the desktop is in place, before the boot menu and the first snapshot.
-OLYMPUS_COMMIT=741dbb0520f3ebffed781d2e0b135e37d1e42d64   # Zeus: the public Olympus release this ISO installs
+OLYMPUS_COMMIT=f3730588c6355c6e12caae962def88419c27f997   # Zeus: the public Olympus release this ISO installs
 has_opt() { [[ ",${OPTIONS:-}," == *",$1,"* ]]; }
 gpu_vendors() {  # vendor IDs of every display controller (PCI class 0x03xxxx): amd intel nvidia other
     local d
