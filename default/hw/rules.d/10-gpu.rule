@@ -9,6 +9,8 @@ support=supported
 modalias=pci:v00001002d*bc03*
 module=amdgpu
 packages=vulkan-radeon lib32-vulkan-radeon
+# the installer stops if these are not installed (essential=)
+essential=vulkan-radeon
 when=install boot
 
 id=gpu-intel
@@ -17,6 +19,8 @@ name.nb=Intel-grafikk: Vulkan og videoavspilling
 support=beta
 modalias=pci:v00008086d*bc03*
 packages=vulkan-intel lib32-vulkan-intel intel-media-driver
+# the installer stops if these are not installed (essential=)
+essential=vulkan-intel
 when=install boot
 
 # oneVPL runtime for Tiger Lake and newer (Xe): TGL, RKL, ADL, RPL, DG1, Arc (DG2, Battlemage), MTL/ARL, LNL, PTL
@@ -48,6 +52,8 @@ pci.range=10de:1e00-ffff:03
 group=nvidia-driver
 priority=60
 packages=nvidia-open-dkms nvidia-utils lib32-nvidia-utils {kernel}-headers
+# the installer stops if these are not installed (essential=)
+essential=nvidia-open-dkms nvidia-utils {kernel}-headers
 initramfs-modules=nvidia nvidia_modeset nvidia_uvm nvidia_drm
 # nouveau's firmware (linux-firmware-nvidia, 100 MiB) is not needed once the NVIDIA driver takes over
 replaces-driver=nouveau
@@ -64,6 +70,8 @@ pci.range=10de:1340-1dff:03
 group=nvidia-driver
 priority=40
 packages=vulkan-nouveau lib32-vulkan-nouveau
+# the installer stops if these are not installed (essential=)
+essential=vulkan-nouveau
 when=install boot
 
 # A desktop with only an NVIDIA card: video decoding and the session settings Hyprland wants

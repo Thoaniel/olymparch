@@ -1,0 +1,67 @@
+#!/bin/bash
+# VM test: the boot menu's «Recovery (text mode)» entry on the system tests/vm/install-disk installed. It must
+# boot without the boot screen and GPU driver (nomodeset plymouth.enable=0), ask for the disk password as text,
+# and give a shell on tty1 with the recovery message instead of the desktop. Screenshot of every step; the
+# text on screen is read with tesseract. Runs on a throwaway overlay, so install-disk's disk is not changed.
+#   tests/vm/recovery            (after tests/vm/install-disk)
+set -uo pipefail
+cd "$(dirname "$0")/../.."
+. dev/env
+SRC=tests/vm/out/install-disk
+[ -f "$SRC/disk.qcow2" ] && [ -f "$SRC/vars.fd" ] || { echo "run tests/vm/install-disk first" >&2; exit 2; }
+command -v tesseract >/dev/null || { echo "tesseract is needed to read the screen" >&2; exit 2; }
+O=tests/vm/out/recovery
+rm -rf -- "$O"; mkdir -p "$O"
+qemu-img create -q -f qcow2 -b "$PWD/$SRC/disk.qcow2" -F qcow2 "$O/disk.qcow2"
+cp "$SRC/vars.fd" "$O/vars.fd"
+PW='olymp-test-123'
+QMP=$O/qmp.sock
+n=0
+shot() {
+    n=$((n + 1))
+    local f; f=$(printf '%02d-%s.png' "$n" "$1")
+    python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/$f" 2>/dev/null && printf '%s\t%s\n' "$f" "$2" >>"$O/steps.txt"
+}
+keys() { python3 -I tests/vm/qmp.py "$QMP" keys "$1"; }
+press() { python3 -I tests/vm/qmp.py "$QMP" press "$@"; }
+screen_text() { python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/ocr.ppm" 2>/dev/null && tesseract "$O/ocr.ppm" - 2>/dev/null; }
+wait_text() {  # wait_text REGEX SECONDS: the screen shows text matching REGEX (case-insensitive)
+    local i
+    for ((i = 0; i < $2; i += 3)); do screen_text | grep -qiE "$1" && return 0; kill -0 "$QPID" 2>/dev/null || return 1; sleep 3; done
+    return 1
+}
+finish() {
+    echo "$1" >"$O/result.txt"
+    python3 -I tests/vm/qmp.py "$QMP" quit 2>/dev/null
+    echo "recovery: $1"
+    [[ $1 == PASS* ]]
+    exit
+}
+qemu-system-x86_64 -L "$OLYMPARCH_QEMU_DATA" -machine q35,accel=kvm -cpu host -smp 4 -m 4096 \
+    -drive if=pflash,format=raw,readonly=on,file="$OLYMPARCH_OVMF_CODE" -drive if=pflash,format=raw,file="$O/vars.fd" \
+    -drive id=d0,if=none,format=qcow2,file="$O/disk.qcow2" -device nvme,serial=OLYTEST1,drive=d0 \
+    -nic user,model=virtio-net-pci -device virtio-vga -display none \
+    -serial file:"$O/serial.log" -qmp unix:"$QMP",server=on,wait=off -no-reboot &
+QPID=$!
+trap 'kill "$QPID" 2>/dev/null' EXIT
+sleep 2
+t0=$SECONDS
+for ((i = 0; i < 40; i++)); do grep -qa 'BdsDxe: starting' "$O/serial.log" && break; sleep 0.25; done
+sleep 1.2
+press down
+sleep 0.5
+shot meny "Limine-menyen med «Recovery (text mode)» valgt"
+press ret
+wait_text 'passphrase|password|Please enter' 90 || { shot passord-feil "Ingen passordspørsmål"; finish "FAIL · ingen tekstspørsmål om diskpassordet"; }
+shot passord "Diskpassordet spørres om som tekst (ingen oppstartsskjerm)"
+keys "$PW\n"
+wait_text 'Olymparch recovery' 120 || { shot skall-feil "Ikke recovery-skallet"; finish "FAIL · recovery-meldingen kom ikke på tty1"; }
+shot skall "Tekstskall på tty1 med recovery-meldingen, uten skrivebord"
+# the shell works and the desktop is not running
+keys 'clear; pgrep -x Hyprland >/dev/null && echo DESKTOP-RUNNING || echo NO-DESKTOP; tr " " "\n" </proc/cmdline | grep -E "^(nomodeset|plymouth.enable=0|olymparch.recovery)$" | paste -sd" "\n'
+sleep 3
+txt=$(screen_text)
+shot kommando "Skallet svarer: ikke noe skrivebord, og kjerneparameterne for recovery"
+grep -q NO-DESKTOP <<<"$txt" || finish "FAIL · skrivebordet kjører i recovery (eller skallet svarte ikke)"
+grep -q 'nomodeset' <<<"$txt" && grep -q 'olymparch.recovery' <<<"$txt" || finish "FAIL · recovery-oppføringen mangler parametere"
+finish "PASS · recovery-oppføringen ga tekstskall uten skrivebord på $((SECONDS - t0)) s"

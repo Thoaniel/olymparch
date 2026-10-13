@@ -42,7 +42,7 @@ t0=$SECONDS
 for ((i = 0; i < 120; i++)); do seen 'login:' && break; sleep 1; done
 sleep 4
 shot live "Live-miljøet med Olymparch-velkomsten"
-keys 'mount -t 9p -o trans=virtio pkgcache /var/cache/pacman/pkg; OLYMPARCH_TEST=1 OLYMPARCH_HOST_CACHE=1 olymparch-setup; echo "<2>INSTALL-EXIT=$?" > /dev/kmsg\n'
+keys 'umask 077; mount -t 9p -o trans=virtio pkgcache /var/cache/pacman/pkg; OLYMPARCH_TEST=1 OLYMPARCH_HOST_CACHE=1 olymparch-setup; echo "<2>INSTALL-EXIT=$?" > /dev/kmsg\n'
 sleep 2
 shot sprak "Veiviseren: språk"
 press down ret

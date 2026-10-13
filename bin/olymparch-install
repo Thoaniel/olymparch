@@ -12,6 +12,9 @@
 # lutris,moonlight,minecraft,cloud,obsidian,localsend,neovim,helix,zed,shelltools,tuis,alacritty,kitty,ghostty)
 # Safety: DISK_SERIAL must match the disk's serial number, or nothing is touched.
 set -euo pipefail
+# Everything this script creates must be readable by the new system's users and pacman's download user (alpm),
+# whatever umask it was started with: a 077 here once made /etc, /var/lib and /usr/share/olymparch 0700.
+umask 022
 
 step() {  # progress line on screen; in tests also on the serial console via the kernel log
     printf '\n\033[1;33m==> %s\033[0m\n' "$*"
@@ -237,12 +240,19 @@ pacstrap "${pacstrap_opts[@]}" /mnt base "$KERNEL" mkinitcpio btrfs-progs crypts
 step "$(L "Hardware (olymparch-hw)" "Maskinvare (olymparch-hw)")"
 # 32-bit drivers (lib32-vulkan-*) are in [multilib]: on for every install, so the plan can be applied in full
 sed -i '/^#\[multilib\]$/,/^#Include/ s/^#//' /mnt/etc/pacman.conf
-# (a network hiccup here only costs the hardware packages: they are offered after boot)
+# Most of it may wait until after boot (offered with one click), but not what the screen needs: the GPU
+# firmware and driver (olymparch-hw plan --list essential). Without them the install stops with a clear error,
+# instead of finishing a machine that boots to a black screen after the disk password.
+sync_db() {
+    local try
+    for try in 1 2 3 4 5; do
+        arch-chroot /mnt pacman -Sy --noconfirm >/dev/null && return 0
+        sleep $((try * 3))
+    done
+    return 1
+}
 synced=0
-for try in 1 2 3; do
-    arch-chroot /mnt pacman -Sy --noconfirm >/dev/null && { synced=1; break; }
-    sleep 5
-done
+sync_db && synced=1
 (( synced )) || step "$(L "Warning: could not reach the package mirrors" "Advarsel: fikk ikke kontakt med pakkespeilene")"
 hw=/usr/share/olymparch/system/bin/olymparch-hw
 if [ ! -x "$hw" ]; then
@@ -250,8 +260,25 @@ if [ ! -x "$hw" ]; then
 else
     mkdir -p /mnt/var/log
     "$hw" plan --root /mnt | tee /mnt/var/log/olymparch-hw-install.txt
-    "$hw" apply --root /mnt --when install 2>&1 | tee -a /mnt/var/log/olymparch-hw-install.txt ||
-        step "$(L "Warning: some drivers were not installed. They are offered after boot (see /var/log/olymparch-hw-install.txt)." "Advarsel: noen drivere ble ikke installert. De tilbys etter oppstart (se /var/log/olymparch-hw-install.txt).")"
+    essential=$("$hw" plan --root /mnt --list essential | paste -sd' ')
+    hw_apply() {
+        set +e
+        "$hw" apply --root /mnt --when install 2>&1 | tee -a /mnt/var/log/olymparch-hw-install.txt
+        local rc=${PIPESTATUS[0]}
+        set -e
+        return "$rc"
+    }
+    rc=0; hw_apply || rc=$?
+    if [ "$rc" = 3 ]; then   # something the screen needs is missing: fresh databases and one more try
+        step "$(L "The graphics drivers did not install; trying again" "Grafikkdriverne ble ikke installert; prøver igjen")"
+        arch-chroot /mnt pacman -Syy --noconfirm >/dev/null 2>&1 || sync_db || true
+        rc=0; hw_apply || rc=$?
+    fi
+    [ "$rc" = 0 ] || step "$(L "Warning: some drivers were not installed. They are offered after boot (see /var/log/olymparch-hw-install.txt)." "Advarsel: noen drivere ble ikke installert. De tilbys etter oppstart (se /var/log/olymparch-hw-install.txt).")"
+    missing=''
+    for p in $essential; do arch-chroot /mnt pacman -Q "$p" >/dev/null 2>&1 || missing+=" $p"; done
+    [ -z "$missing" ] || die "$(L "the graphics card needs packages that could not be installed:$missing. The screen would stay black after the disk password. Check the network (nmtui) and run olymparch-setup again; the log is in /mnt/var/log/olymparch-hw-install.txt" \
+        "skjermkortet trenger pakker som ikke kunne installeres:$missing. Skjermen ville blitt svart etter diskpassordet. Sjekk nettet (nmtui) og kjør olymparch-setup på nytt; loggen ligger i /mnt/var/log/olymparch-hw-install.txt")"
     "$hw" setup-system --root /mnt || step "$(L "Warning: the hardware check at boot was not set up" "Advarsel: maskinvaresjekken ved oppstart ble ikke satt opp")"
 fi
 
@@ -352,8 +379,15 @@ UNIT
 # no motd or «Last login» printed over it either
 arch-chroot /mnt sudo -u "$USERNAME" touch "/home/$USERNAME/.hushlogin"
 cat >/mnt/etc/profile.d/zz-olymparch-session.sh <<'SESSION'
-# Olymparch: a login on tty1 starts the desktop
-if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ "$(id -u)" != 0 ]; then
+# Olymparch: a login on tty1 starts the desktop. The boot menu's «Recovery (text mode)» entry
+# (olymparch.recovery) gives a plain shell instead. A desktop that stops with an error logs out; the next
+# login (with the password: autologin is once per boot) then gets a plain shell instead of the desktop.
+if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ "$(id -u)" != 0 ] && grep -qw olymparch.recovery /proc/cmdline; then
+    printf '\n  Olymparch recovery (text mode). The desktop is not started.\n  Check the system: olymparch-doctor · drivers: olymparch-hw plan · log: journalctl -b -p err\n  Back to normal: reboot and pick Olymparch in the boot menu.\n\n'
+elif [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ "$(id -u)" != 0 ] && [ -e "$HOME/.cache/olymparch/desktop-failed" ]; then
+    printf '\n  The desktop stopped with an error last time (code %s). This is a plain shell.\n  Check the system: olymparch-doctor · log: journalctl -b -1 -p err · start the desktop: start-hyprland\n\n' "$(cat "$HOME/.cache/olymparch/desktop-failed" 2>/dev/null)"
+    rm -f -- "$HOME/.cache/olymparch/desktop-failed"
+elif [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ "$(id -u)" != 0 ]; then
     # keys that reach this tty must never signal the session: Ctrl+C here would end the whole desktop
     stty -isig -echo 2>/dev/null
     # ask the boot screen for the display (it keeps its last frame until Hyprland draws): at most 5 s
@@ -365,7 +399,13 @@ if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ "$(id -u)" != 0 ];
         done
         rm -f -- "$XDG_RUNTIME_DIR/olymparch-want-screen"
     fi
-    if command -v start-hyprland >/dev/null 2>&1; then exec start-hyprland; else exec Hyprland; fi
+    if command -v start-hyprland >/dev/null 2>&1; then start-hyprland; else Hyprland; fi
+    rc=$?
+    # The session always ends here, also on an error: autologin is once per boot, so the next login on tty1
+    # asks for the password. A crashed (possibly locked) desktop must never leave a logged-in shell behind.
+    # An error is noted, and that next, password-checked login gets a plain shell instead of a desktop loop.
+    if [ "$rc" != 0 ]; then mkdir -p "$HOME/.cache/olymparch" && echo "$rc" >"$HOME/.cache/olymparch/desktop-failed"; fi
+    exit "$rc"
 fi
 SESSION
 
@@ -455,6 +495,31 @@ arch-chroot /mnt snapper --no-dbus -c root set-config TIMELINE_CREATE=no NUMBER_
 arch-chroot /mnt systemctl enable snapper-cleanup.timer >/dev/null 2>&1
 arch-chroot /mnt snapper --no-dbus -c root create --type single --description "installert" --cleanup-algorithm number
 arch-chroot /mnt olymparch-boot sync
+
+# Self-check before the disk is closed: what every user and pacman's download user (alpm) must be able to read.
+# A umask leak once made all of this 0700/0600: no /etc/profile for the user, no DNS for pacman in the chroot.
+step "$(L "Checking the installed system" "Sjekker det installerte systemet")"
+bad=''
+mode_is() {  # mode_is MODE PATH...: each existing path has exactly that mode
+    local want=$1 f m; shift
+    for f in "$@"; do [ -e "/mnt$f" ] || continue; m=$(stat -c %a "/mnt$f"); [ "$m" = "$want" ] || bad+=" $f ($m)"; done
+}
+mode_is 755 /etc /etc/profile.d /etc/pacman.d /etc/systemd /var /var/lib /var/lib/pacman /usr /usr/bin /usr/lib /usr/share \
+    /usr/share/olymparch /usr/lib/olymparch /usr/share/plymouth/themes/olymparch /etc/olymparch
+mode_is 644 /etc/profile /etc/profile.d/zz-olymparch-session.sh /etc/fstab /etc/locale.conf /etc/hostname /etc/vconsole.conf \
+    /etc/passwd /etc/group /etc/pacman.conf /usr/lib/locale/locale-archive /usr/lib/os-release
+# and nothing Olymparch put in place is closed to other users
+while IFS= read -r f; do bad+=" ${f#/mnt} ($(stat -c %a "$f"))"; done < <(find /mnt/usr/share/olymparch /mnt/usr/lib/olymparch \
+    /mnt/usr/share/plymouth/themes/olymparch /mnt/etc/olymparch /mnt/etc/xdg/foot -xdev \( -type d ! -perm -005 -o -type f ! -perm -004 \) 2>/dev/null | head -n 20)
+# as the user and as alpm, without PAM (setpriv, not runuser: no login session in the chroot). stdin is
+# /dev/null: the installer runs on tty1, and a login shell on tty1 is the one the session script turns into the
+# desktop (it would try to start Hyprland, and switch off echo on the installer's console).
+as_user() { local u=$1; shift; arch-chroot /mnt setpriv --reuid "$u" --regid "$u" --init-groups env -i HOME=/ PATH=/usr/bin "$@" </dev/null 2>&1; }
+me=$(as_user "$USERNAME" sh -c '. /etc/profile >/dev/null 2>&1; id -un' | tail -n 1)
+[ "$me" = "$USERNAME" ] || bad+=" ($USERNAME cannot read /etc/profile or has no name: «$me»)"
+as_user alpm test -r /etc/pacman.conf >/dev/null || bad+=" (pacman's user alpm cannot read /etc)"
+[ -z "$bad" ] || die "$(L "wrong permissions in the installed system:$bad" "feil rettigheter i det installerte systemet:$bad")"
+[ "${OLYMPARCH_TEST:-0}" = 1 ] && echo '<2>TARGET-CHECK-OK' >/dev/kmsg
 
 rm -f -- "$2"   # the answers file holds the password in plain text
 if [ -z "$KEYFILE" ]; then

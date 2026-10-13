@@ -1,7 +1,8 @@
 #!/bin/bash
 # olymparch-hw: find out what hardware this is (sysfs only) and what it needs, from data rules.
 #   olymparch-hw scan                      what was found
-#   olymparch-hw plan [--root DIR] [--list packages|optional|rules|initramfs] [--summary]
+#   olymparch-hw plan [--root DIR] [--list packages|optional|rules|initramfs|essential] [--summary]
+#                                           essential: what the screen needs (GPU firmware, 64-bit GPU drivers)
 #   olymparch-hw explain [RULE]            why each rule matched or not
 #   olymparch-hw dump                      anonymised fixture of this machine, for bug reports and tests
 #   olymparch-hw apply [--root DIR] [--user NAME] [--when W] [RULE...]    as root (pkexec: hw-apply)
@@ -36,7 +37,7 @@ declare -A EN=(
     [multilib]="32-bit packages need [multilib] in pacman.conf; skipped: %s"
     [kbd]="Keyboard" [kbd_init]="modules needed at the disk password" [battery]="Battery" [yes]="yes" [no]="no" [devices]="Devices"
     [needs_root]="apply must run as root (or through pkexec /usr/lib/olymparch/hw-apply)"
-    [unknown_rule]="no matching rule with id %s" [installing]="Installing: %s" [done]="Done."
+    [unknown_rule]="no matching rule with id %s" [notinstalled]="Not installed: %s" [installing]="Installing: %s" [done]="Done."
     [n_install]="Install" [n_later]="Not now" [n_installing]="Installing …" [n_ok]="Installed"
     [n_fail]="Installation failed. See /var/log/olymparch-hw.log" [n_fw]="Missing firmware"
     [n_fw_body]="The kernel asked for firmware that is not installed (%s)."
@@ -54,7 +55,7 @@ declare -A NO=(
     [multilib]="32-bits pakker trenger [multilib] i pacman.conf; hoppet over: %s"
     [kbd]="Tastatur" [kbd_init]="moduler som trengs ved diskpassordet" [battery]="Batteri" [yes]="ja" [no]="nei" [devices]="Enheter"
     [needs_root]="apply må kjøres som root (eller via pkexec /usr/lib/olymparch/hw-apply)"
-    [unknown_rule]="ingen regel som passer, med id %s" [installing]="Installerer: %s" [done]="Ferdig."
+    [unknown_rule]="ingen regel som passer, med id %s" [notinstalled]="Ikke installert: %s" [installing]="Installerer: %s" [done]="Ferdig."
     [n_install]="Installer" [n_later]="Ikke nå" [n_installing]="Installerer …" [n_ok]="Installert"
     [n_fail]="Installasjonen feilet. Se /var/log/olymparch-hw.log" [n_fw]="Fastvare mangler"
     [n_fw_body]="Kjernen ba om fastvare som ikke er installert (%s)."
@@ -156,7 +157,7 @@ RULE_IDS=()
 declare -A R=() RFILE=()
 MATCH_KEYS='modalias driver module chassis cpu.vendor pci.range battery vm keyboard'
 ACTION_KEYS='packages optional ourrepo replaces-driver modules-load modprobe cmdline initramfs-modules udev-file groups user-unit hypr-env services'
-META_KEYS='id name name.nb note note.nb support priority group when'
+META_KEYS='id name name.nb note note.nb support priority group when essential'
 valid_key() {
     local k=${1#!}
     [[ " $MATCH_KEYS $ACTION_KEYS $META_KEYS " == *" $k "* ]] || [[ $k == dmi.* ]]
@@ -365,6 +366,25 @@ missing_fw() {  # "Direct firmware load for X failed" → "package file" for pac
 # --- the plan --------------------------------------------------------------------------------------------
 # PKG_NEW / PKG_HAVE: what the active rules plus firmware need; OPT / REPO: offered only
 PKG_NEW=() PKG_HAVE=() PKG_SKIP=() OPT=() REPO=()
+# essential_pkgs: the installer stops without these: the firmware the display devices' drivers load, and the
+# active rules' essential= packages (the GPU driver itself; not lib32-*, VA-API or PRIME). Installed or not.
+essential_pkgs() {
+    local j m p id mods=' '
+    for ((j = 0; j < ${#DEV_ID[@]}; j++)); do
+        [ "${DEV_BUS[$j]}" = pci ] && [[ ${DEV_CLASS[$j]} == 03* ]] || continue
+        for m in ${DEV_MOD[$j]} ${DEV_AMOD[$j]}; do mods+="$m "; done
+    done
+    for p in "${FW_PKGS[@]}"; do
+        for m in ${FW_FOR[$p]}; do [[ $mods == *" $m "* ]] && { echo "$p"; break; }; done
+    done
+    for id in $(active); do
+        for p in $(expand_pkgs $(words "$id" essential)); do echo "$p"; done
+    done | awk '!seen[$0]++'
+}
+pkg_install() {  # pkg_install PKG...: one pacman transaction in $ROOT
+    if [ "$ROOT" = / ]; then pacman -S --needed --noconfirm "$@"; else arch-chroot "$ROOT" pacman -S --needed --noconfirm "$@"; fi
+}
+
 build_plan() {  # build_plan [ID...]: only those rules (and their optional packages) when IDs are given
     local ids=("$@") id p all=() want_fw=1 explicit=0
     if [ ${#ids[@]} -gt 0 ]; then
@@ -464,8 +484,9 @@ cmd_plan() {
         optional) printf '%s\n' "${OPT[@]}" | sed '/^$/d'; return ;;
         rules) active; return ;;
         initramfs) gen_files $(active) | awk -F'\t' '$1 ~ /mkinitcpio/ {print $2}'; return ;;
+        essential) essential_pkgs; return ;;
         '') ;;
-        *) die "plan --list: packages, optional, rules or initramfs" ;;
+        *) die "plan --list: packages, optional, rules, initramfs or essential" ;;
     esac
     local ind='  '
     if ((summary)); then  # the installer screen: a clear warning first when something is not tested
@@ -691,10 +712,21 @@ cmd_apply() {
         [[ $act == *" $id "* ]] || die "$(printf "$(t unknown_rule)" "$id")"
     done
     build_plan "${ids[@]}"
+    local failed=()
     if [ ${#PKG_NEW[@]} -gt 0 ]; then
         printf "$(t installing)\n" "${PKG_NEW[*]}"
-        if [ "$ROOT" = / ]; then pacman -S --needed --noconfirm "${PKG_NEW[@]}"
-        else arch-chroot "$ROOT" pacman -S --needed --noconfirm "${PKG_NEW[@]}"; fi
+        # One transaction first. If it fails (one package missing aborts them all), the firmware goes in on
+        # its own and then every other package one by one, so a missing lib32-* never costs the firmware.
+        if ! pkg_install "${PKG_NEW[@]}"; then
+            local fw=() rest=() p
+            for p in "${PKG_NEW[@]}"; do
+                if [[ " ${FW_PKGS[*]} " == *" $p "* ]]; then fw+=("$p"); else rest+=("$p"); fi
+            done
+            if [ ${#fw[@]} -gt 0 ] && ! pkg_install "${fw[@]}"; then
+                for p in "${fw[@]}"; do pkg_install "$p" || failed+=("$p"); done
+            fi
+            for p in "${rest[@]}"; do pkg_install "$p" || failed+=("$p"); done
+        fi
     fi
     [ ${#PKG_SKIP[@]} -gt 0 ] && printf "$(t multilib)\n" "${PKG_SKIP[*]}" >&2
     read_applied
@@ -704,6 +736,12 @@ cmd_apply() {
     mkdir -p "$(state_dir)"
     printf '%s\n' "${APPLIED[@]}" >"$(state_dir)/applied"
     if write_files && [ "$ROOT" = / ]; then mkinitcpio -P; fi
+    if [ ${#failed[@]} -gt 0 ]; then
+        printf "$(t notinstalled)\n" "${failed[*]}" >&2
+        local e; e=" $(essential_pkgs | paste -sd' ') "
+        for p in "${failed[@]}"; do [[ $e == *" $p "* ]] && return 3; done   # 3: the screen may stay black
+        return 1
+    fi
     t done; echo
 }
 
@@ -821,6 +859,9 @@ cmd_lint() {
         done <<<"$(rget "$id" modalias)"
         for p in $(expand_pkgs $(words "$id" packages) $(words "$id" optional)); do
             pacman -Si "$p" >/dev/null 2>&1 || { echo "$id: package not found: $p"; err=1; }
+        done
+        for p in $(words "$id" essential); do
+            [[ " $(words "$id" packages) " == *" $p "* ]] || { echo "$id: essential=$p is not in packages="; err=1; }
         done
         for p in $(words "$id" when); do [[ $p =~ ^(install|boot|hotplug)$ ]] || { echo "$id: bad when=$p"; err=1; }; done
         for p in $(words "$id" udev-file); do [ -f "$DATA/udev/$p" ] || { echo "$id: missing udev file $p"; err=1; }; done
