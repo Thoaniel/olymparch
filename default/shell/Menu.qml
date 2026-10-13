@@ -1,5 +1,5 @@
 // The Olymparch menu (Super+Alt+Space, or a click on the bolt in the bar): everything in one short list.
-// Apps · Style · Install · Remove · Tools · Setup · Update · System · Help. Keyboard first: ↑/↓ choose, Enter or →
+// Apps · Panels · Style · Install · Remove · Tools · Setup · Update · System · Help. Keyboard first: ↑/↓ choose, Enter or →
 // opens, Esc or ← goes back (Backspace too when the search is empty), and typing searches every level at once.
 // Install → Package searches the official Arch repositories (read-only) and installs one package through the narrow
 // helper /usr/lib/olymparch/packages after you confirmed what it pulls in; Remove only lists what you installed
@@ -108,8 +108,18 @@ Scope {
         });
         const tools = menu.tools.filter(x => have["olymparch-tool"]).map(x => node("tool-" + x.id, x.icon, x.en, x.nb, { act: () => run(["olymparch-tool", x.id]) }));
         const coming = (id, icon, en, nb) => node(id, icon, en, nb, { disabled: true, hint: t("coming", "kommer") });
+        // the bar's dropdown panels (Dropdown.qml, Panels.qml): the same panel the bar item, a hotkey and IPC open
+        const panelNodes = Object.keys(Panels.registry).sort().map(name => {
+            const p = Panels.registry[name];
+            return node("panel-" + name, p.icon || "\u{F056E}", p.en || name, p.nb || p.en || name, {
+                hint: p.setting ? prettyKeys(Settings.get(p.setting)) : "",
+                act: () => { open = false; Panels.open(name, ""); }
+            });
+        });
         const top = [
             node("apps", "", "Apps", "Apper", { hint: t("search and start", "søk og start"), act: () => openLauncher() }),
+            node("panels", "\u{F056E}", "Panels", "Paneler", { hint: t("the bar's dropdowns", "nedtrekkspanelene i baren"),
+                children: panelNodes.length ? panelNodes : [coming("panels-none", "\u{F056E}", "No panels yet", "Ingen paneler ennå")] }),
             node("style", "", "Style", "Stil", { children: [
                 node("theme", "", "Theme", "Tema", { hint: themeIpc ? "" : t("in Settings", "i Innstillinger"), act: () => openTheme() }),
                 node("background", "", "Background", "Bakgrunn", { children: bg })
