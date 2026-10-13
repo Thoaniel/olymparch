@@ -13,6 +13,7 @@
   "zeus.chat.empty": "Ask Zeus anything. Zeus can use your PC's tools, but asks you first.",
   "zeus.chat.retry": "(trying again …)",
   "zeus.chat.you": "You",
+  "zeus.fallback": "If it does not answer",
   "zeus.model.group.free": "Free",
   "zeus.model.group.local": "Local",
   "zeus.model.group.other": "Other",

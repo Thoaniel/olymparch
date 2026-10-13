@@ -240,6 +240,15 @@ Dropdown {
         hint: Zeus.cloud ? Zeus.provider : p.t("zeus.model.local", "on this PC")
         onActivated: p.showModels = !p.showModels
     }
+    // the fallback chain (Olympus' general.fallback): who answers when this one hits its free quota or is down
+    PanelLine {
+        theme: p.theme
+        visible: !p.showModels && Zeus.cloud && p.chain.length > 0   // a local model has no fallback
+        label: p.t("zeus.fallback", "If it does not answer")
+        value: p.chain.join("  →  ")
+    }
+    readonly property var chain: (Zeus.models.fallback || []).filter(f => f.available && f.id !== Zeus.model)
+        .map(f => f.cloud ? f.label : p.t("zeus.model.group.local", "Local"))
     readonly property string modelLabel: {
         const c = (Zeus.models.choices || []).find(x => x.id === Zeus.model);
         return c ? c.label : Zeus.model;

@@ -117,6 +117,7 @@
   "zeus.chat.empty": "Spør Zeus om hva som helst. Zeus kan bruke verktøyene på PC-en, men spør deg først.",
   "zeus.chat.retry": "(prøver igjen …)",
   "zeus.chat.you": "Du",
+  "zeus.fallback": "Svarer den ikke",
   "zeus.model.group.free": "Gratis",
   "zeus.model.group.local": "Lokal",
   "zeus.model.group.other": "Andre",
