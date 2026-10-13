@@ -4,7 +4,18 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 fail=0
-check() { if "$@"; then :; else echo "FAIL: $*" >&2; fail=1; fi; }
+check() {
+    local out
+    if out=$("$@" 2>&1); then printf '%s\n' "$out" | grep -v '^$' | tail -n 3; return; fi
+    printf '%s\n' "$out"
+    echo "FAIL: $*" >&2
+    fail=1
+    # on GitHub: an annotation with the end of the output, readable from the run's page and its public API
+    if [ -n "${GITHUB_ACTIONS:-}" ]; then
+        local msg; msg=$(printf '%s\n' "$out" | grep -E 'FAIL|Error|error|differ|^[-+] ' | tail -n 15 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')
+        echo "::error title=FAIL: ${1##*/}::${msg:-exit code only}"
+    fi
+}
 mapfile -t scripts < <(grep -rlE '^#!/bin/(ba)?sh' bin system default dev repo tests 2>/dev/null | grep -v '/out/')
 for f in "${scripts[@]}"; do check bash -n "$f"; done
 command -v shellcheck >/dev/null && check shellcheck -S error "${scripts[@]}"
