@@ -70,8 +70,8 @@ if have_pacman:
     r = run("preview", "install", "sl")
     if r.returncode or not re.match(r"^extra/sl\t", r.stdout):
         bad(f"packages preview install sl should list extra/sl (rc {r.returncode}): {r.stdout}{r.stderr}")
-    r = run("install", "sl")
-    if r.returncode != 1 or "pkexec" not in r.stderr:
+    r = run("install", "sl") if os.geteuid() != 0 else None   # as root (CI containers) it would really install
+    if r is not None and (r.returncode != 1 or "pkexec" not in r.stderr):
         bad(f"packages install sl as a user should stop at the root check (rc {r.returncode}): {r.stderr}")
     r = run("search", "cowsay")
     if r.returncode or not any(l.startswith("extra/cowsay\t") for l in r.stdout.splitlines()):

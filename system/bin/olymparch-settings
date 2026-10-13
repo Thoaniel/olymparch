@@ -1643,6 +1643,7 @@ elseif cmd == "items" or cmd == "pick" then
     -- ── audio.per_app: every app playing sound (PipeWire output streams), ID = the node id; STATE «level» makes the
     --    window show − / + next to it. pick audio.per_app ID up|down|mute: only ids that are such a stream right now.
     elseif key == "audio.per_app" then
+        if cmd == "pick" and not ({ up = true, down = true, mute = true })[arg[4] or "mute"] then die("expected up, down or mute", 2) end
         if not have("wpctl") then print("! nowp PipeWire (wpctl) is not installed"); os.exit(0) end
         local function streams()
             local ok, dump = pcall(json.decode, capture("pw-dump"))

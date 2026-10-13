@@ -130,7 +130,7 @@ icon_from_file() {  # icon_from_file FILE OUT: a checked PNG at OUT, or failure
     if [ -z "${OLYMPARCH_WEBAPP_NO_MAGICK:-}" ] && command -v magick >/dev/null 2>&1; then   # (the variable: tests)
         # the coder is named, so ImageMagick never guesses a format (no MVG/MSL/delegates); decoding is the check
         magick -limit memory 64MiB -limit map 128MiB -limit disk 0 -limit width 4096 -limit height 4096 \
-            "$kind:$in[0]" -resize '256x256>' "png:$out" 2>/dev/null && png_ok "$out" && return 0
+            "${kind}:${in}[0]" -resize '256x256>' "png:$out" 2>/dev/null && png_ok "$out" && return 0
         rm -f -- "$out"
         return 1
     fi
