@@ -124,8 +124,9 @@ Row {
     MediaPanel { theme: status.theme; anchorItem: mediaCell.visible ? mediaCell : clockItem; screenName: status.screenName }
     // Settings → Privacy → «Camera and microphone indicator» can hide these two
     readonly property bool privacyIndicator: Settings.get("privacy.indicator") !== false
-    Cell { visible: status.micInUse && status.privacyIndicator; icon: "\u{F036C}"; alert: true }
-    Cell { visible: status.camInUse && status.privacyIndicator; icon: "\u{F0100}"; alert: true }
+    Cell { id: micCell; visible: status.micInUse && status.privacyIndicator; icon: "\u{F036C}"; alert: true; clickable: true; onClicked: Panels.toggle("privacy", status.screenName) }
+    Cell { id: camCell; visible: status.camInUse && status.privacyIndicator; icon: "\u{F0100}"; alert: true; clickable: true; onClicked: Panels.toggle("privacy", status.screenName) }
+    PrivacyPanel { theme: status.theme; anchorItem: micCell.visible ? micCell : camCell.visible ? camCell : clockItem; screenName: status.screenName }
     // ── screen recording (olymparch-tool record, Super+Shift+R): red with the time; a click stops it
     Cell {
         id: recCell
@@ -136,13 +137,14 @@ Row {
         labelChars: 5
         alert: true
         clickable: true
-        onClicked: Tools.stopRecording()
+        onClicked: Panels.toggle("recording", status.screenName)   // Stop and the folder are in the panel
         Timer {
             running: Tools.recording
             interval: 1000; repeat: true; triggeredOnStart: true
             onTriggered: recCell.secs = Math.max(0, Math.round((Date.now() - Tools.recordingSince.getTime()) / 1000))
         }
     }
+    RecordPanel { theme: status.theme; anchorItem: recCell.visible ? recCell : clockItem; screenName: status.screenName }
     // ── Zeus (Zeus.qml, `olympus bar`): what it is doing and who answers; a click opens its panel (ZeusPanel.qml)
     Cell {
         id: zeusCell
@@ -208,7 +210,10 @@ Row {
     }
     SoundPanel { theme: status.theme; anchorItem: soundCell.visible ? soundCell : clockItem; screenName: status.screenName }
     Cell {
+        id: batteryCell
         visible: status.hasBattery
+        clickable: true
+        onClicked: Panels.toggle("power", status.screenName)
         readonly property real pct: status.battery ? status.battery.percentage : 0
         readonly property bool charging: status.battery && status.battery.state === UPowerDeviceState.Charging
         icon: charging ? "\u{F0084}" : pct >= 0.95 ? "\u{F0079}" : String.fromCodePoint(0xF007A + Math.max(0, Math.floor(pct * 10) - 1))
@@ -227,12 +232,17 @@ Row {
         onClicked: Panels.toggle("devices", status.screenName)
     }
     DevicesPanel { theme: status.theme; anchorItem: phoneCell.visible ? phoneCell : clockItem; screenName: status.screenName }
+    PowerPanel { theme: status.theme; anchorItem: batteryCell.visible ? batteryCell : clockItem; screenName: status.screenName }
+    // the bell: notifications (do not disturb is in its panel); a gold dot for ones you have not seen
     Cell {
+        id: bellCell
+        dot: NotifyHistory.unseen > 0 && Panels.current !== "notifications"
         icon: status.theme.dndSetting ? "\u{F009B}" : "\u{F009A}"
         tint: status.theme.dndSetting ? status.theme.gold : status.theme.muted
         clickable: true
-        onClicked: status.theme.toggleDnd()
+        onClicked: Panels.toggle("notifications", status.screenName)
     }
+    NotificationsPanel { theme: status.theme; anchorItem: bellCell; screenName: status.screenName }
     SystemClock { id: clock; precision: SystemClock.Minutes }
     // the clock opens the Plan panel; the System panel (menu, IPC) hangs under it too
     Item {

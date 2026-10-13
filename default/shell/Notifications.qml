@@ -48,7 +48,9 @@ Scope {
         onNotification: n => {
             const critical = n.urgency === NotificationUrgency.Critical;
             notes.remember(n.appName || "");
-            if (notes.dnd && !critical) return;   // not tracked: dropped quietly
+            const held = (notes.dnd && !critical) || (!critical && notes.muted.includes(n.appName || ""));
+            NotifyHistory.add(n, held);   // the bell's panel lists it, held back or not
+            if (notes.dnd && !critical) return;   // not shown: in the bell's list only
             if (!critical && notes.muted.includes(n.appName || "")) return;   // a muted app (Settings → Notifications)
             n.tracked = true;
             // offers with buttons («Install driver», «Undo» …) stay until answered, like critical ones
