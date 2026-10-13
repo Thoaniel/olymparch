@@ -4,7 +4,7 @@
 # their root helpers in /usr/lib/olymparch, the user units, the polkit files and the pacman hooks.
 # (Olymparch's own files are not a package yet, so `olymparch update` does not bring them.)
 #
-#   sudo dev/apply-local [--dry-run]
+#   sudo dev/apply-local [--dry-run]     (or: pkexec dev/apply-local)
 #
 # Only what changed is written, and every file it replaces is kept in /var/backups/olymparch-apply/<time>/ first.
 # Not here: wallpapers, themes' frames, Plymouth and Limine pictures (dev/build-iso makes those), and files the
@@ -63,8 +63,9 @@ systemctl daemon-reload 2>/dev/null || true
 
 # Restart the shell of the user who ran sudo: launch-shell starts it again by itself. A new launch-shell (or new
 # user units) takes effect at the next login.
-if [ -n "${SUDO_UID:-}" ]; then
-    for pid in $(pgrep -u "$SUDO_UID" -x quickshell); do kill "$pid" 2>/dev/null || true; done
+uid=${SUDO_UID:-${PKEXEC_UID:-}}   # sudo or pkexec: the user whose shell is restarted
+if [ -n "$uid" ]; then
+    for pid in $(pgrep -u "$uid" -x quickshell); do kill "$pid" 2>/dev/null || true; done
     echo "The shell restarts in a moment."
     printf '%s\n' "${changed[@]}" | grep -q '^/usr/lib/olymparch/launch-shell$' && echo "launch-shell changed: log out and in to use it."
 fi
