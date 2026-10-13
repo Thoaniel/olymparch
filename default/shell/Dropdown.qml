@@ -66,7 +66,14 @@ PanelWindow {
     function moveFocus(forward) {
         const cur = frame.Window.activeFocusItem || frame;
         const next = cur.nextItemInFocusChain(forward);
-        if (next) next.forceActiveFocus();
+        if (next) { next.forceActiveFocus(); ensureVisible(next); }
+    }
+    function ensureVisible(it) {   // keep what has the keyboard in view when the panel scrolls
+        if (!it || !scroller.interactive) return;
+        const p = it.mapToItem(column, 0, 0);
+        if (p.y < scroller.contentY) scroller.contentY = Math.max(0, p.y - 8);
+        else if (p.y + it.height > scroller.contentY + scroller.height)
+            scroller.contentY = Math.min(scroller.contentHeight - scroller.height, p.y + it.height - scroller.height + 8);
     }
 
     FocusScope {
@@ -74,7 +81,8 @@ PanelWindow {
         x: dd.panelX
         y: dd.panelY
         width: dd.panelWidth
-        height: column.implicitHeight + 2
+        // never taller than the screen below the bar: the content scrolls inside (the wheel, or the keyboard's focus)
+        height: Math.min(column.implicitHeight + 2, dd.height - dd.panelY - 12)
         focus: true
         Keys.onPressed: e => {
             if (e.key === Qt.Key_Escape) Panels.close(dd.name);
@@ -96,10 +104,16 @@ PanelWindow {
             Rectangle { x: parent.width - 1; y: parent.height - 13; width: 2; height: 14; color: dd.theme.gold }
         }
 
+        Flickable {
+            id: scroller
+            anchors { fill: parent; margins: 1 }
+            contentHeight: column.implicitHeight
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            interactive: contentHeight > height
         Column {
             id: column
-            x: 1; y: 1
-            width: parent.width - 2
+            width: parent.width
             topPadding: dd.theme.px(14)
             bottomPadding: dd.theme.px(10)
             spacing: dd.theme.px(10)
@@ -140,6 +154,7 @@ PanelWindow {
                 width: parent.width
                 spacing: dd.theme.px(2)
             }
+        }
         }
     }
 }
