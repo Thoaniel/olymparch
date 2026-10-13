@@ -1,0 +1,23 @@
+# Hermes Agent (Nous Research): one-shot `hermes chat --in DIR -q` in its own tmux session; a single query denies a
+# dangerous command instead of waiting. Its gateway is for messaging apps, not tasks. Docs:
+# hermes-agent.nousresearch.com/docs/reference/cli-commands, user-guide/security (checked 2026-10-14).
+id = "hermes"
+name = "Hermes"
+icon = "f0e8"
+binary = "hermes"
+docs = "https://hermes-agent.nousresearch.com/docs/reference/cli-commands"
+mcp = true            # olymparch-mcp register handles Hermes (a marked block in ~/.hermes/config.yaml)
+
+[install]
+command = ["sh", "-c", "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --skip-setup"]
+
+[login]
+check = ["hermes", "auth", "status"]
+command = ["hermes", "auth", "add"]
+
+[permissions]
+modes = ["smart"]
+default = "smart"
+
+[task]
+command = ["hermes", "chat", "--in", "{dir}", "--oneshot", "-Q", "-q", "{prompt}"]

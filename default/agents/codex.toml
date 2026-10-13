@@ -1,0 +1,29 @@
+# OpenAI Codex CLI: no local background mode, so each task is `codex exec` in its own tmux session. Docs:
+# learn.chatgpt.com/docs/non-interactive-mode, developer-commands, config-reference (checked 2026-10-14).
+id = "codex"
+name = "Codex"
+icon = "f121"
+binary = "codex"
+docs = "https://learn.chatgpt.com/docs/non-interactive-mode"
+
+[install]
+command = ["sh", "-c", "curl -fsSL https://chatgpt.com/codex/install.sh | sh"]
+
+[login]
+check = ["codex", "login", "status"]   # exit 0 when signed in
+command = ["codex", "login"]
+
+[permissions]         # the sandbox: never danger-full-access; approvals «never» = nothing outside it runs
+modes = ["workspace-write", "read-only"]
+default = "workspace-write"
+
+[task]
+command = ["codex", "exec", "--cd", "{dir}", "--sandbox", "{mode}", "--skip-git-repo-check", "-c", "approval_policy=\"never\"", "{prompt}"]
+
+[mcp]                 # Codex' own commands (writes [mcp_servers.olymparch] in ~/.codex/config.toml)
+add = ["codex", "mcp", "add", "olymparch", "--", "olymparch-mcp"]
+remove = ["codex", "mcp", "remove", "olymparch"]
+check = ["codex", "mcp", "get", "olymparch"]
+
+[env]
+OPENAI_API_KEY = "openai"

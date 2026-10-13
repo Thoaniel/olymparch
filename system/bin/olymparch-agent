@@ -1,0 +1,525 @@
+#!/usr/bin/env python3
+"""olymparch-agent: the AI agents' background tasks, the same way for every agent. Python 3 standard library only.
+
+Each agent is ONE data file, default/agents/<id>.toml (/usr/share/olymparch/agents, or ~/.config/olymparch/agents
+for your own): its binary, the official install as the user, the login check, how a task starts, its own
+background mode when it has one, its status hooks and its MCP registration. A new agent is one new file.
+
+  olymparch-agent list [--json] [--write]   the agents (installed, signed in) and the tasks; --write refreshes
+                                            $XDG_RUNTIME_DIR/olymparch/agents.json, which the shell follows
+  olymparch-agent new AGENT DIR "task"      start a task in DIR (the agent's own background mode, or a tmux session
+                                            per task under systemd-run --user); prints the task id
+  olymparch-agent open|logs|stop|rm ID      attach in a terminal | its log in a terminal | stop it | forget it
+  olymparch-agent install AGENT             the agent's official installer, as you, in a terminal (never sudo)
+  olymparch-agent login AGENT               its own sign-in, in a terminal
+  olymparch-agent mode AGENT [MODE]         the permission mode new tasks start with (Settings → AI)
+  olymparch-agent status ID working|waiting|done|error   what a hook reports (the agents' hooks call this)
+  olymparch-agent hooks on|off              add / remove exactly Olymparch's status hooks in the agents that have hooks
+  olymparch-agent watch                     keep agents.json current while tasks run (started by `new`; one at a time)
+
+Keys: an agent gets the API keys its file names ([env] VAR = "key-name") from olymparch-keys as environment
+variables when it starts, never in argv, logs or agents.json. Permission mode: Settings → AI (agent-modes.json),
+the agent file's safe default otherwise; «skip every permission» is never a choice.
+"""
+import fcntl
+import json
+import os
+import re
+import shlex
+import shutil
+import signal
+import subprocess
+import sys
+import time
+import tomllib
+
+HOME = os.path.realpath(os.path.expanduser("~"))
+RUN = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}", "olymparch")
+STATE = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.join(HOME, ".local/state"), "olymparch", "agents")
+SHARE = os.environ.get("OLYMPARCH_AGENTS_DIR") or "/usr/share/olymparch/agents"
+OWN = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.join(HOME, ".config"), "olymparch", "agents")
+OUT = os.path.join(RUN, "agents.json")
+
+
+def tmux(tid):
+    """One tmux server per task (its own socket): it starts with that task's environment, so the agent's keys reach
+    it without ever being on a command line (a shared server would need `-e VAR=value` in argv)."""
+    return ["tmux", "-L", f"olymparch-{tid}"]
+
+
+STATUSES = ("working", "waiting", "done", "error", "stopped")
+IDLE_WAITING = 90   # tmux runner: no new output for this long while it still runs = probably waiting for you
+
+
+def L(en, nb):
+    lang = os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG") or ""
+    return nb if re.match(r"n[bno]", lang) else en
+
+
+def die(msg, code=2):
+    print(f"olymparch-agent: {msg}", file=sys.stderr)
+    sys.exit(code)
+
+
+# ── the agent files ─────────────────────────────────────────────────────────────────────────────────────────────
+def agents():
+    out = {}
+    for d in (SHARE, OWN):
+        if not os.path.isdir(d):
+            continue
+        for f in sorted(os.listdir(d)):
+            if not f.endswith(".toml"):
+                continue
+            try:
+                with open(os.path.join(d, f), "rb") as fh:
+                    a = tomllib.load(fh)
+            except (OSError, tomllib.TOMLDecodeError) as e:
+                print(f"olymparch-agent: {f}: {e}", file=sys.stderr)
+                continue
+            aid = a.get("id") or f[:-5]
+            if re.fullmatch(r"[a-z0-9][a-z0-9-]{0,31}", aid):
+                a["id"] = aid
+                out[aid] = a
+    return out
+
+
+def which(a):
+    b = a.get("binary", "")
+    p = shutil.which(b) if b else None
+    if not p and b:   # the official installers put binaries in ~/.local/bin, which a desktop session may not have yet
+        cand = os.path.join(HOME, ".local", "bin", b)
+        p = cand if os.access(cand, os.X_OK) else None
+    return p
+
+
+def signed_in(a, binary):
+    check = (a.get("login") or {}).get("check") or []
+    if not binary or not check:
+        return None   # unknown, or not needed
+    try:
+        r = subprocess.run([binary, *check[1:]], capture_output=True, timeout=10, env=agent_env(a))
+        return r.returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+def agent_env(a):
+    """The environment an agent starts with: yours, plus the keys its file names, from olymparch-keys."""
+    env = dict(os.environ)
+    env["PATH"] = os.path.join(HOME, ".local", "bin") + ":" + env.get("PATH", "")
+    for var, name in (a.get("env") or {}).items():
+        if not re.fullmatch(r"[A-Z][A-Z0-9_]*", var) or not re.fullmatch(r"[a-z0-9][a-z0-9_-]*", str(name)):
+            continue
+        if env.get(var):
+            continue
+        try:
+            r = subprocess.run(["olymparch-keys", "get", str(name)], capture_output=True, text=True, timeout=5)
+            if r.returncode == 0 and r.stdout:
+                env[var] = r.stdout
+        except (OSError, subprocess.SubprocessError):
+            pass
+    return env
+
+
+MODES = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.join(HOME, ".config"), "olymparch", "agent-modes.json")
+
+
+def chosen_modes():
+    try:
+        with open(MODES) as f:
+            d = json.load(f)
+            return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def permission(a):
+    """The permission mode you chose in Settings → AI (agent-modes.json), if the agent file allows it; else its
+    safe default. Never a «skip every permission» mode: those are not in any file's list."""
+    p = a.get("permissions") or {}
+    allowed = p.get("modes") or []
+    want = chosen_modes().get(a["id"], "")
+    return want if want in allowed else p.get("default", "")
+
+
+def fill(argv, **values):
+    """{prompt}, {dir}, {mode}, {id}, {log} in an argv list; each placeholder stays one argument (no shell)."""
+    out = []
+    for x in argv:
+        x = str(x)
+        for k, v in values.items():
+            x = x.replace("{" + k + "}", str(v))
+        out.append(x)
+    return [x for x in out if x != ""]
+
+
+# ── the tasks ───────────────────────────────────────────────────────────────────────────────────────────────────
+def task_dir(tid):
+    if not re.fullmatch(r"[a-z0-9-]{1,48}", tid or ""):
+        die(f"invalid task id: {tid}")
+    return os.path.join(STATE, tid)
+
+
+def load_task(tid):
+    try:
+        with open(os.path.join(task_dir(tid), "task.json")) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        die(L(f"no task {tid}", f"ingen oppgave {tid}"), 1)
+
+
+def save_task(t):
+    d = task_dir(t["id"])
+    os.makedirs(d, mode=0o700, exist_ok=True)
+    t["updated"] = int(time.time())
+    tmp = os.path.join(d, "task.json.new")
+    with open(tmp, "w") as f:
+        json.dump(t, f)
+    os.replace(tmp, os.path.join(d, "task.json"))
+
+
+def all_tasks():
+    out = []
+    if os.path.isdir(STATE):
+        for tid in sorted(os.listdir(STATE)):
+            try:
+                with open(os.path.join(STATE, tid, "task.json")) as f:
+                    out.append(json.load(f))
+            except (OSError, ValueError):
+                continue
+    return out
+
+
+def tmux_alive(tid):
+    return shutil.which("tmux") is not None and subprocess.run(
+        tmux(tid) + ["has-session", "-t", tid], capture_output=True).returncode == 0
+
+
+def last_line(path, limit=4096):
+    try:
+        with open(path, "rb") as f:
+            f.seek(0, 2)
+            f.seek(max(0, f.tell() - limit))
+            text = f.read().decode(errors="replace")
+    except OSError:
+        return ""
+    text = re.sub(r"\x1b\[[0-9;?]*[A-Za-z]|\x1b\][^\x07]*\x07|\r", "", text)
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    return lines[-1][:200] if lines else ""
+
+
+def refresh(t, a):
+    """The status of a task from what can be seen: a hook's report wins while it is fresh, else the process and the
+    log. Native tasks ask the agent's own list command."""
+    log = os.path.join(task_dir(t["id"]), "log")
+    if t.get("status") in ("done", "error", "stopped"):
+        return t
+    if t.get("native"):
+        st = native_status(t, a)
+        if st:
+            t["status"] = st
+        return t
+    alive = tmux_alive(t["id"])
+    if not alive:
+        code = read_exit(t["id"])
+        t["status"] = "done" if code == 0 else "error"
+        t["last"] = last_line(log)
+        return t
+    t["last"] = last_line(log)
+    hook_age = time.time() - t.get("hook_at", 0)
+    if t.get("hook") and hook_age < 600:
+        t["status"] = t["hook"]
+    else:
+        try:
+            quiet = time.time() - os.path.getmtime(log)
+        except OSError:
+            quiet = 0
+        t["status"] = "waiting" if quiet > IDLE_WAITING else "working"
+    return t
+
+
+def read_exit(tid):
+    try:
+        with open(os.path.join(task_dir(tid), "exit")) as f:
+            return int(f.read().strip() or 1)
+    except (OSError, ValueError):
+        return 1
+
+
+def native_list(a):
+    """The agent's own task list ([native] list: a JSON array of objects), or []."""
+    cmd = (a.get("native") or {}).get("list") or []
+    binary = which(a)
+    if not cmd or not binary:
+        return []
+    try:
+        r = subprocess.run([binary, *cmd[1:]], capture_output=True, text=True, timeout=15, env=agent_env(a))
+        items = json.loads(r.stdout) if r.returncode == 0 else []
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return []
+    return [x for x in items if isinstance(x, dict)] if isinstance(items, list) else []
+
+
+def native_status(t, a):
+    nat = a.get("native") or {}
+    for item in native_list(a):
+        if t.get("native_id") and t["native_id"] in (item.get("id"), item.get("sessionId"), item.get("name")):
+            word = str(item.get(nat.get("state_field", "state"), "")).lower()
+            return (nat.get("status_map") or {}).get(word) or (word if word in STATUSES else None)
+    return None
+
+
+def native_find_new(a, d, since):
+    """The task the agent just started in folder d: its newest background session there since `since` (ms)."""
+    best = None
+    for item in native_list(a):
+        if item.get("kind", "background") != "background" or os.path.realpath(item.get("cwd", "")) != d:
+            continue
+        started = int(item.get("startedAt") or 0)
+        if started >= since - 5000 and (best is None or started > int(best.get("startedAt") or 0)):
+            best = item
+    return (best or {}).get("id", "")
+
+
+def write_state(ag=None):
+    ag = ag or agents()
+    rows = []
+    for a in ag.values():
+        b = which(a)
+        rows.append({"id": a["id"], "name": a.get("name", a["id"]), "icon": a.get("icon", ""), "installed": b is not None,
+                     "native": bool((a.get("native") or {}).get("new")), "docs": a.get("docs", ""),
+                     "modes": (a.get("permissions") or {}).get("modes") or [], "mode": permission(a),
+                     "can_install": bool((a.get("install") or {}).get("command")),
+                     "can_login": bool((a.get("login") or {}).get("command")), "mcp": bool(a.get("mcp"))})
+    tasks = []
+    for t in all_tasks():
+        a = ag.get(t.get("agent"), {"id": t.get("agent")})
+        t = refresh(t, a)
+        save_task(t)
+        tasks.append({k: t.get(k) for k in ("id", "agent", "dir", "prompt", "status", "started", "updated", "last")})
+    os.makedirs(RUN, mode=0o700, exist_ok=True)
+    tmp = OUT + ".new"
+    with open(tmp, "w") as f:
+        json.dump({"agents": rows, "tasks": tasks}, f)
+    os.chmod(tmp, 0o600)
+    os.replace(tmp, OUT)
+    return rows, tasks
+
+
+# ── commands ────────────────────────────────────────────────────────────────────────────────────────────────────
+def cmd_list(args):
+    ag = agents()
+    rows, tasks = write_state(ag)   # listing always refreshes agents.json (--write is accepted for clarity)
+    if "--json" in args:
+        for r in rows:
+            r["login"] = signed_in(ag[r["id"]], which(ag[r["id"]])) if r["installed"] else None
+        print(json.dumps({"agents": rows, "tasks": tasks}))
+        return
+    for r in rows:
+        print(f"{r['name']:<16} {L('installed', 'installert') if r['installed'] else L('not installed', 'ikke installert')}")
+    for t in tasks:
+        print(f"  {t['id']}  {t['agent']:<12} {t['status']:<8} {t['dir']}  {t['prompt'][:60]}")
+
+
+def new_id(aid):
+    return f"{aid}-{time.strftime('%m%d-%H%M%S')}"[:48]
+
+
+def cmd_new(args):
+    if len(args) < 3:
+        die('usage: new AGENT DIR "task"')
+    aid, d, prompt = args[0], os.path.expanduser(args[1]), " ".join(args[2:]).strip()
+    ag = agents()
+    a = ag.get(aid) or die(L(f"unknown agent {aid}", f"ukjent agent {aid}"))
+    binary = which(a) or die(L(f"{a.get('name', aid)} is not installed (olymparch-agent install {aid})",
+                               f"{a.get('name', aid)} er ikke installert (olymparch-agent install {aid})"), 1)
+    d = os.path.realpath(d)
+    if not os.path.isdir(d):
+        die(L(f"no such folder: {d}", f"mappen finnes ikke: {d}"), 1)
+    if d in ("/", HOME) or not (d == HOME or d.startswith(HOME + "/")):
+        die(L("pick a project folder inside your home folder, not ~ or / itself",
+              "velg en prosjektmappe i hjemmemappen din, ikke ~ eller / selv"), 1)
+    if not prompt or len(prompt) > 8000:
+        die(L("write the task", "skriv oppgaven"))
+    tid = new_id(aid)
+    td = task_dir(tid)
+    os.makedirs(td, mode=0o700, exist_ok=True)
+    log = os.path.join(td, "log")
+    mode = permission(a)
+    t = {"id": tid, "agent": aid, "dir": d, "prompt": prompt, "status": "working", "started": int(time.time()),
+         "mode": mode, "native": False}
+    env = agent_env(a)
+    env["OLYMPARCH_AGENT_TASK"] = tid   # the agent's hooks report through this
+    native = (a.get("native") or {}).get("new")
+    if native:
+        r = subprocess.run([binary, *fill(native[1:], prompt=prompt, dir=d, mode=mode, id=tid)], cwd=d, env=env,
+                           capture_output=True, text=True, timeout=60)
+        if r.returncode != 0:
+            die((r.stderr or r.stdout).strip()[-400:] or L("the agent did not start", "agenten startet ikke"), 1)
+        t.update(native=True, native_id=native_find_new(a, d, t["started"] * 1000))
+        with open(log, "w") as f:
+            f.write(r.stdout)
+    else:
+        if not shutil.which("tmux"):
+            die(L("tmux is missing: install it from the menu (Install → Package → tmux)",
+                  "tmux mangler: installer den fra menyen (Installer → Pakke → tmux)"), 1)
+        argv = [binary, *fill((a.get("task") or {}).get("command", ["{prompt}"])[1:], prompt=prompt, dir=d, mode=mode, id=tid)]
+        # the agent in tmux (so «Open» can attach), its output also to the log; the exit code to a file
+        inner = (f"{shlex.join(argv)} 2>&1 | tee -a {shlex.quote(log)}; "
+                 f"echo ${{PIPESTATUS[0]}} > {shlex.quote(os.path.join(td, 'exit'))}")
+        # the keys are in env (agent_env), handed to tmux' server through its environment, never on a command line
+        r = subprocess.run(["systemd-run", "--user", "--scope", "--quiet", f"--unit=olymparch-agent-{tid}", "--collect",
+                            *tmux(tid), "new-session", "-d", "-s", tid, "-c", d, "bash", "-c", inner],
+                           env=env, capture_output=True, text=True, timeout=30)
+        if r.returncode != 0:
+            die((r.stderr or "").strip()[-400:] or L("the task did not start", "oppgaven startet ikke"), 1)
+    save_task(t)
+    write_state(ag)
+    start_watch()
+    print(tid)
+
+
+def terminal(argv, hold=False):
+    subprocess.Popen(["foot", *(["-H"] if hold else []), "--", *argv], start_new_session=True,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def cmd_open(args):
+    t = load_task(args[0] if args else "")
+    a = agents().get(t["agent"], {})
+    if t.get("native"):
+        cmd = (a.get("native") or {}).get("attach")
+        if cmd:
+            return terminal([which(a) or cmd[0], *fill(cmd[1:], id=t.get("native_id", ""), dir=t["dir"])])
+    if tmux_alive(t["id"]):
+        return terminal(tmux(t["id"]) + ["attach", "-t", t["id"]])
+    return cmd_logs(args)
+
+
+def cmd_logs(args):
+    t = load_task(args[0] if args else "")
+    a = agents().get(t["agent"], {})
+    cmd = (a.get("native") or {}).get("logs") if t.get("native") else None
+    if cmd:
+        return terminal([which(a) or cmd[0], *fill(cmd[1:], id=t.get("native_id", ""))], hold=True)
+    terminal(["less", "-R", "+F", os.path.join(task_dir(t["id"]), "log")])
+
+
+def cmd_stop(args):
+    t = load_task(args[0] if args else "")
+    a = agents().get(t["agent"], {})
+    if t.get("native"):
+        cmd = (a.get("native") or {}).get("stop")
+        if cmd and which(a):
+            subprocess.run([which(a), *fill(cmd[1:], id=t.get("native_id", ""))], capture_output=True, timeout=30,
+                           env=agent_env(a))
+    elif tmux_alive(t["id"]):
+        subprocess.run(tmux(t["id"]) + ["kill-server"], capture_output=True)
+    t["status"] = "stopped"
+    save_task(t)
+    write_state()
+
+
+def cmd_rm(args):
+    t = load_task(args[0] if args else "")
+    if t.get("status") in ("working", "waiting"):
+        cmd_stop(args)
+    shutil.rmtree(task_dir(t["id"]), ignore_errors=True)
+    write_state()
+
+
+def cmd_status(args):
+    if len(args) < 2 or args[1] not in STATUSES:
+        die("usage: status ID working|waiting|done|error")
+    t = load_task(args[0])
+    t["hook"], t["hook_at"] = args[1], int(time.time())
+    if args[1] in ("done", "error") and t.get("native"):
+        t["status"] = args[1]
+    save_task(t)
+    write_state()
+
+
+def cmd_install(args):
+    a = agents().get(args[0] if args else "") or die("usage: install AGENT")
+    cmd = (a.get("install") or {}).get("command")
+    if not cmd:
+        die(L(f"{a.get('name')} has no installer here; see {a.get('docs', '')}", f"{a.get('name')} har ingen installasjon her; se {a.get('docs', '')}"), 1)
+    if os.geteuid() == 0 or "sudo" in cmd:
+        die(L("agents are installed as you, never as root", "agenter installeres som deg, aldri som root"))
+    terminal(cmd, hold=True)
+
+
+def cmd_mode(args):
+    """mode AGENT [MODE]: show or choose the permission mode a new task of AGENT starts with."""
+    a = agents().get(args[0] if args else "") or die("usage: mode AGENT [MODE]")
+    if len(args) < 2:
+        print(permission(a))
+        return
+    allowed = (a.get("permissions") or {}).get("modes") or []
+    if args[1] not in allowed:
+        die(L(f"{a.get('name')}: one of {', '.join(allowed)}", f"{a.get('name')}: en av {', '.join(allowed)}"))
+    d = chosen_modes()
+    d[a["id"]] = args[1]
+    os.makedirs(os.path.dirname(MODES), exist_ok=True)
+    with open(MODES + ".new", "w") as f:
+        json.dump(d, f)
+    os.replace(MODES + ".new", MODES)
+    write_state()
+
+
+def cmd_login(args):
+    a = agents().get(args[0] if args else "") or die("usage: login AGENT")
+    cmd = (a.get("login") or {}).get("command") or die(L("nothing to sign in to", "ingenting å logge inn på"), 1)
+    terminal([which(a) or cmd[0], *cmd[1:]], hold=True)
+
+
+def cmd_watch(_args):
+    """One watcher: keeps agents.json current every 5 s while a task runs, then ends."""
+    os.makedirs(RUN, mode=0o700, exist_ok=True)
+    lock = open(os.path.join(RUN, "agents-watch.lock"), "w")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        return
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+    while True:
+        _, tasks = write_state()
+        if not any(t["status"] in ("working", "waiting") for t in tasks):
+            return
+        time.sleep(5)
+
+
+def start_watch():
+    subprocess.Popen([sys.executable, os.path.abspath(__file__), "watch"], start_new_session=True,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def main():
+    args = sys.argv[1:]
+    cmd = args[0] if args else ""
+    rest = args[1:]
+    table = {"list": cmd_list, "new": cmd_new, "open": cmd_open, "logs": cmd_logs, "stop": cmd_stop, "rm": cmd_rm,
+             "status": cmd_status, "install": cmd_install, "watch": cmd_watch, "mode": cmd_mode, "login": cmd_login}
+    if cmd == "hooks":
+        return cmd_hooks(rest)
+    if cmd not in table:
+        print(__doc__.strip())
+        sys.exit(2)
+    table[cmd](rest)
+
+
+def cmd_hooks(args):
+    """Where each agent's status comes from. No agent here needs a hook written into its own config: Claude Code
+    reports its state itself (claude agents --json), and every other task runs in its own tmux session, whose
+    process and output show working, waiting and done. `on` and `off` are kept for agents whose file adds a
+    [hooks] block later; today they change nothing."""
+    if (args[:1] or ["status"])[0] not in ("on", "off", "status"):
+        die("usage: hooks on|off")
+    for a in agents().values():
+        src = L("its own task list", "sin egen oppgaveliste") if (a.get("native") or {}).get("list") else \
+              L("the task's process and output (tmux)", "oppgavens prosess og utdata (tmux)")
+        print(f"{a.get('name', a['id']):<22} {src}")
+
+
+if __name__ == "__main__":
+    main()

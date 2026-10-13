@@ -1,0 +1,23 @@
+# Aider: `aider --message` in its own tmux session, without auto-commits and never --yes-always (it would say yes
+# to everything). No MCP support. Docs: aider.chat/docs/install.html, config/options.html (checked 2026-10-14).
+id = "aider"
+name = "Aider"
+icon = "f1c9"
+binary = "aider"
+docs = "https://aider.chat/docs/usage.html"
+
+[install]
+command = ["uv", "tool", "install", "--force", "--python", "python3.12", "--with", "pip", "aider-chat@latest"]
+
+[permissions]
+modes = ["ask"]
+default = "ask"
+
+[task]
+command = ["aider", "--no-auto-commits", "--message", "{prompt}"]
+
+[env]                 # Aider reads the providers' keys from the environment
+GROQ_API_KEY = "groq"
+OPENROUTER_API_KEY = "openrouter"
+MISTRAL_API_KEY = "mistral"
+GEMINI_API_KEY = "gemini"

@@ -1,0 +1,30 @@
+# Google Antigravity CLI (agy): replaces Gemini CLI for free and Google AI Pro/Ultra accounts since 2026-06-18.
+# Headless `agy -p` in its own tmux session; actions that need approval are refused (soft-denied), never run.
+# Docs: antigravity.google/docs/cli/install, cli/headless, mcp?tab=cli (checked 2026-10-14). Sign in by running
+# `agy` once; it has no status command.
+id = "antigravity"
+name = "Antigravity (Gemini)"
+icon = "f1a0"
+binary = "agy"
+docs = "https://antigravity.google/docs/cli/headless/"
+
+[install]
+command = ["sh", "-c", "curl -fsSL https://antigravity.google/cli/install.sh | bash"]
+
+[login]
+command = ["agy"]
+
+[permissions]
+modes = ["ask"]
+default = "ask"
+
+[task]
+command = ["agy", "-p", "{prompt}"]
+
+[mcp]                 # no CLI command: a key in its JSON file, removed again exactly
+file = "~/.gemini/config/mcp_config.json"
+key = "mcpServers.olymparch"
+value = { command = "olymparch-mcp", args = [] }
+
+[env]
+GEMINI_API_KEY = "gemini"

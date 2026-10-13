@@ -38,7 +38,7 @@ tree() {   # tree SRCDIR DESTDIR: every regular file, 755 when executable in the
 }
 
 # /usr/share/olymparch: the same folders dev/build-iso puts on the ISO (art made by build-iso is left alone)
-for d in hypr shell lock idle branding foot i18n systemd apps audio games hw settings menu webapps nvim shell-tools skills; do
+for d in hypr shell lock idle branding foot i18n systemd apps audio games hw settings menu webapps nvim shell-tools skills agents; do
     tree "$repo/default/$d" "$share/$d"
 done
 tree "$repo/system" "$share/system"

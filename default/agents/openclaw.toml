@@ -1,0 +1,23 @@
+# OpenClaw: an isolated run in the folder (`openclaw agent exec --cwd DIR`) in its own tmux session. Its exec policy
+# is unrestricted by default: set `openclaw exec-policy set --security allowlist --ask on-miss --ask-fallback deny`.
+# Docs: docs.openclaw.ai/cli/agent, cli/models, tools/exec-approvals (checked 2026-10-14).
+id = "openclaw"
+name = "OpenClaw"
+icon = "f1b0"
+binary = "openclaw"
+docs = "https://docs.openclaw.ai/cli/agent"
+mcp = true            # olymparch-mcp register handles OpenClaw (openclaw mcp set/unset)
+
+[install]
+command = ["sh", "-c", "curl -fsSL https://openclaw.ai/install.sh | bash"]
+
+[login]
+check = ["openclaw", "models", "status", "--check"]   # exit 0 = ready
+command = ["openclaw", "onboard"]
+
+[permissions]
+modes = ["allowlist"]
+default = "allowlist"
+
+[task]
+command = ["openclaw", "agent", "exec", "--cwd", "{dir}", "{prompt}"]

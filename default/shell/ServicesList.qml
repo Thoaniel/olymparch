@@ -2,7 +2,9 @@
 // One line each: the name, Free / Subscription, and its state (ready, needs a key, not signed in, not installed),
 // with the one action that state calls for. Keys are typed into a hidden field and go to `olymparch-keys set`
 // on its stdin (Secret Service, else a 0600 file): never argv, a log or the audit. «Sign in» opens the tool's own
-// login in foot. Data: `olympus providers --json` (one block per provider in Olympus' config.toml).
+// login in foot. Data: `olympus providers --json` (one block per provider in Olympus' config.toml), then the
+// agents from `olymparch-agent list --json` (one file each in default/agents): install as you, sign in, and the
+// permission mode new tasks start with (one click steps through the agent's safe modes).
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -19,7 +21,23 @@ Column {
     function t(key, en) { return I18n.t(key, en); }
     readonly property string bin: Quickshell.env("OLYMPARCH_OLYMPUS") || Quickshell.env("HOME") + "/.local/bin/olympus"
 
-    function load() { probe.running = false; probe.running = true; }
+    property var agents: []            // olymparch-agent list --json: the agents and how they stand
+    function load() { probe.running = false; probe.running = true; agentProbe.running = false; agentProbe.running = true; }
+    Process {
+        id: agentProbe
+        command: ["olymparch-agent", "list", "--json"]
+        stdout: StdioCollector {
+            onStreamFinished: { try { list.agents = (JSON.parse(text) || {}).agents || []; } catch (e) { list.agents = []; } }
+        }
+    }
+    function agentRun(args) { Quickshell.execDetached(["olymparch-agent"].concat(args)); }
+    Process { id: modeProc; onExited: list.load() }
+    function nextMode(a) {
+        const i = a.modes.indexOf(a.mode);
+        const next = a.modes[(i + 1) % a.modes.length];
+        modeProc.command = ["olymparch-agent", "mode", a.id, next];
+        modeProc.running = true;
+    }
     Component.onCompleted: load()
     onVisibleChanged: if (visible) load()
 
@@ -157,6 +175,65 @@ Column {
                         text: list.t("services.key_hint", "Paste the key, Enter saves it")
                         font: keyField.font
                         color: list.theme.muted
+                    }
+                }
+            }
+        }
+    }
+
+    // ── the agents: one data file each (default/agents/*.toml)
+    Text {
+        visible: list.agents.length > 0
+        topPadding: list.theme.px(10)
+        text: list.t("services.agents", "AGENTS")
+        font { family: list.theme.mono; pixelSize: list.theme.px(11); letterSpacing: 1.5 }
+        color: list.theme.muted
+    }
+    Repeater {
+        model: list.agents
+        delegate: Item {
+            id: ag
+            required property var modelData
+            readonly property var a: modelData
+            readonly property string state: !a.installed ? "not_installed" : a.login === false ? "not_logged_in" : "ready"
+            width: list.width
+            height: list.theme.px(28)
+            Row {
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 10
+                Text { text: ag.a.name; font { family: list.theme.mono; pixelSize: list.theme.px(13); bold: true } color: list.theme.text }
+                Text {
+                    text: "·  " + (list.words[ag.state] || ag.state) + (ag.a.installed && ag.a.modes.length > 1 ? "  ·  " + list.t("services.mode", "permissions") + ": " + ag.a.mode : "")
+                    font { family: list.theme.mono; pixelSize: list.theme.px(12) }
+                    color: ag.state === "ready" ? list.theme.goldHi : list.theme.muted
+                }
+            }
+            Row {
+                anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                spacing: 14
+                Repeater {
+                    model: [
+                        !ag.a.installed && ag.a.can_install ? { id: "install", text: list.t("services.install", "Install") } : null,
+                        ag.a.installed && ag.a.login === false && ag.a.can_login ? { id: "login", text: list.t("services.login", "Sign in") } : null,
+                        ag.a.installed && ag.a.modes.length > 1 ? { id: "mode", text: list.t("services.change_mode", "Change permissions") } : null,
+                        ag.a.docs ? { id: "docs", text: list.t("services.docs", "Docs ↗") } : null
+                    ].filter(x => x)
+                    delegate: Text {
+                        id: aact
+                        required property var modelData
+                        text: modelData.text
+                        activeFocusOnTab: true
+                        font { family: list.theme.mono; pixelSize: list.theme.px(12); underline: am.containsMouse || activeFocus }
+                        color: am.containsMouse || activeFocus ? list.theme.goldHi : list.theme.gold
+                        function go() {
+                            if (modelData.id === "install") list.agentRun(["install", ag.a.id]);
+                            else if (modelData.id === "login") list.agentRun(["login", ag.a.id]);
+                            else if (modelData.id === "mode") list.nextMode(ag.a);
+                            else if (/^https:\/\//.test(ag.a.docs)) Quickshell.execDetached(["xdg-open", ag.a.docs]);
+                        }
+                        Keys.onReturnPressed: go()
+                        Keys.onSpacePressed: go()
+                        MouseArea { id: am; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: aact.go() }
                     }
                 }
             }

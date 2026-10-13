@@ -1746,6 +1746,116 @@ def link_skills(base, m, key):
     return out
 
 
+# ── the other agents, from their data files (default/agents/<id>.toml, [mcp]): their own CLI command (add / remove /
+# check), or one key in their JSON config file (file / key / value). Only what was added here is ever removed.
+def agent_files():
+    import tomllib
+    out = []
+    for d in (os.environ.get("OLYMPARCH_AGENTS_DIR") or "/usr/share/olymparch/agents",
+              os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.join(HOME, ".config"), "olymparch", "agents")):
+        if not os.path.isdir(d):
+            continue
+        for f in sorted(os.listdir(d)):
+            if f.endswith(".toml"):
+                try:
+                    with open(os.path.join(d, f), "rb") as fh:
+                        a = tomllib.load(fh)
+                except (OSError, ValueError):
+                    continue
+                a.setdefault("id", f[:-5])
+                if isinstance(a.get("mcp"), dict) and re.fullmatch(r"[a-z0-9][a-z0-9-]{0,31}", a["id"]):
+                    out.append(a)
+    return out
+
+
+def with_exe(v, command):
+    """The agent file says «olymparch-mcp»; the installed path goes in."""
+    if isinstance(v, str):
+        return command if v == "olymparch-mcp" else v
+    if isinstance(v, list):
+        return [with_exe(x, command) for x in v]
+    if isinstance(v, dict):
+        return {k: with_exe(x, command) for k, x in v.items()}
+    return v
+
+
+def json_key(path, key, value=None, remove=False):
+    """Read / set / remove one dotted key in a JSON file. → (state, current): state is gone, same, other, added,
+    removed or unreadable. The file is only written when it changes, atomically, keeping its mode."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            doc = json.load(f)
+    except FileNotFoundError:
+        doc = {}
+    except (OSError, ValueError):
+        return "unreadable", None
+    if not isinstance(doc, dict):
+        return "unreadable", None
+    parts = key.split(".")
+    node = doc
+    for k in parts[:-1]:
+        nxt = node.get(k)
+        if nxt is None and not remove:
+            nxt = node[k] = {}
+        if not isinstance(nxt, dict):
+            return ("gone" if remove else "unreadable"), None
+        node = nxt
+    cur = node.get(parts[-1])
+    if remove:
+        if cur is None:
+            return "gone", None
+        if cur != value:
+            return "other", cur
+        del node[parts[-1]]
+        state = "removed"
+    else:
+        if cur is not None:
+            return ("same" if cur == value else "other"), cur
+        node[parts[-1]] = value
+        state = "added"
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    atomic_write(path, json.dumps(doc, indent=2, ensure_ascii=False) + "\n")
+    return state, cur
+
+
+def register_agent_files(m, command, lines):
+    for a in agent_files():
+        mcp, name, key = a["mcp"], a.get("name", a["id"]), "agent:" + a["id"]
+        if not have(a.get("binary", "")) and not os.access(os.path.join(HOME, ".local/bin", a.get("binary", "-")), os.X_OK):
+            continue
+        if mcp.get("add"):
+            if mcp.get("check") and run(mcp["check"], timeout=60)[0] == 0:
+                lines.append(f"{name}: " + ("registered" if m.get(key) else "exists (yours; left alone)"))
+                continue
+            rc, out, err = run(with_exe(mcp["add"], command), timeout=60)
+            if rc == 0:
+                m[key] = {"kind": "command"}
+            lines.append(f"{name}: " + ("added" if rc == 0 else f"failed: {short(err or out, 100)}"))
+        elif mcp.get("file") and mcp.get("key") and isinstance(mcp.get("value"), dict):
+            path = os.path.expanduser(mcp["file"])
+            value = with_exe(mcp["value"], command)
+            state, _ = json_key(path, mcp["key"], value)
+            if state == "added":
+                m[key] = {"kind": "file", "path": path, "key": mcp["key"], "value": value}
+            lines.append(f"{name}: " + {"added": "added", "same": "registered" if m.get(key) else "exists (yours; left alone)",
+                                         "other": "exists (yours; left alone)", "unreadable": f"{path}: unreadable, left alone"}[state])
+
+
+def unregister_agent_files(m, lines):
+    files = {a["id"]: a for a in agent_files()}
+    for key in [k for k in m if k.startswith("agent:")]:
+        rec, aid = m.pop(key), key[6:]
+        a = files.get(aid, {})
+        name = a.get("name", aid)
+        if rec.get("kind") == "command" and (a.get("mcp") or {}).get("remove"):
+            rc, out, err = run(a["mcp"]["remove"], timeout=60)
+            lines.append(f"{name}: " + ("removed" if rc == 0 else f"failed: {short(err or out, 100)}"))
+        elif rec.get("kind") == "file":
+            state, _ = json_key(rec["path"], rec["key"], rec.get("value"), remove=True)
+            lines.append(f"{name}: " + {"removed": "removed", "gone": "already gone", "other": "changed by you; left alone",
+                                         "unreadable": "unreadable; left alone"}.get(state, state))
+
+
 def register(auto):
     if auto and (setting("ai.enabled", True) is not True or setting("ai.auto_register", True) is not True):
         print(L("automatic registration is off (Settings → AI agents)", "automatisk registrering er av (Innstillinger → AI-agenter)"))
@@ -1789,6 +1899,7 @@ def register(auto):
                 m["openclaw"] = True
             lines.append("OpenClaw: " + ("added" if rc == 0 else f"failed (tried again at next login): {short(err or out, 100)}"))
         lines += link_skills(os.path.join(os.environ.get("OPENCLAW_STATE_DIR") or os.path.join(HOME, ".openclaw"), "skills"), m, "openclaw_skills")
+    register_agent_files(m, command, lines)   # Codex, Antigravity, OpenCode … (default/agents/*.toml, [mcp])
     # Olympus (Zeus) finds /usr/bin/olymparch-mcp by itself ([mcp] autodetect); nothing to write
     if have("olympus") or os.path.exists(os.path.join(HOME, ".local/bin/olympus")):
         lines.append("Olympus (Zeus): " + L("finds olymparch-mcp by itself", "finner olymparch-mcp selv"))
@@ -1809,6 +1920,7 @@ def unregister():
     if m.pop("openclaw", None) and have("openclaw"):
         rc, out, err = run(["openclaw", "mcp", "unset", "olymparch"], timeout=60)
         lines.append("OpenClaw: " + ("removed" if rc == 0 else f"failed: {short(err or out, 100)}"))
+    unregister_agent_files(m, lines)
     src = os.path.realpath(skills_src())
     for key in ("claude_skills", "hermes_skills", "openclaw_skills"):
         for link in m.pop(key, []):
@@ -1841,7 +1953,8 @@ def status():
     print(f"stdio: {exe()}")
     state = run(["systemctl", "--user", "is-active", "olymparch-mcp.socket"])[1].strip() if have("systemctl") else "?"
     print(f"http: http://127.0.0.1:{PORT}/mcp ({state}); token: {TOKEN or '-'}")
-    print(f"{L('registered with', 'registrert hos')}: " + (", ".join(k for k in ("claude", "hermes", "openclaw") if m.get(k)) or "-"))
+    print(f"{L('registered with', 'registrert hos')}: " + (", ".join([k for k in ("claude", "hermes", "openclaw") if m.get(k)]
+                                                                      + [k[6:] for k in m if k.startswith("agent:")]) or "-"))
     print(f"{L('audit log', 'logg')}: {AUDIT}")
     return 0
 
