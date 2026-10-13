@@ -88,7 +88,7 @@ press meta_l+3; sleep 2.5
 torch=$(frames)
 shot bakgrunn-fakkel "Levende bakgrunn: Fakkel ($torch ulike bilder på 2 s)"
 press meta_l+1; sleep 1
-search bakgrunn
+search levende   # «bakgrunn» alone now finds the background shortcut first
 press right; sleep 1
 shot bakgrunn-rolig-valgt "Levende bakgrunn satt til Rolig"
 press meta_l+3; sleep 2.5
