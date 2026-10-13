@@ -114,12 +114,14 @@ Row {
     }
 
     Cell {
+        id: mediaCell
         visible: status.player !== null
         icon: status.player && status.player.isPlaying ? "\u{F075A}" : "\u{F03E4}"
         label: status.player ? [status.player.trackArtist, status.player.trackTitle].filter(s => s).join(" – ") : ""
-        clickable: status.player && status.player.canTogglePlaying
-        onClicked: status.player.togglePlaying()
+        clickable: true
+        onClicked: Panels.toggle("media", status.screenName)   // play/pause, next … are in the panel
     }
+    MediaPanel { theme: status.theme; anchorItem: mediaCell.visible ? mediaCell : clockItem; screenName: status.screenName }
     // Settings → Privacy → «Camera and microphone indicator» can hide these two
     readonly property bool privacyIndicator: Settings.get("privacy.indicator") !== false
     Cell { visible: status.micInUse && status.privacyIndicator; icon: "\u{F036C}"; alert: true }
@@ -182,14 +184,17 @@ Row {
     }
     AgentsPanel { theme: status.theme; anchorItem: agentsCell; screenName: status.screenName }
     Cell {
+        id: netCell
         icon: !status.netDevice ? (status.hasWifi ? "\u{F092D}" : "\u{F0319}")
             : status.wifiStrength < 0 ? "\u{F0318}"
             : ["\u{F091F}", "\u{F0922}", "\u{F0925}", "\u{F0928}"][Math.min(3, Math.floor(status.wifiStrength * 4))]
         tint: status.netDevice ? status.theme.muted : status.theme.red
         clickable: true
-        onClicked: Quickshell.execDetached(["foot", "-e", "nmtui"])
+        onClicked: Panels.toggle("network", status.screenName)
     }
+    NetPanel { theme: status.theme; anchorItem: netCell; screenName: status.screenName }
     Cell {
+        id: soundCell
         visible: status.sink && status.sink.audio
         readonly property bool muted: !status.sink || !status.sink.audio || status.sink.audio.muted
         readonly property real level: status.sink && status.sink.audio ? status.sink.audio.volume : 0
@@ -198,9 +203,10 @@ Row {
         labelChars: 4
         labelTint: muted ? status.theme.muted : status.theme.text
         clickable: true
-        onClicked: status.sink.audio.muted = !status.sink.audio.muted
+        onClicked: Panels.toggle("sound", status.screenName)   // mute, outputs and the microphone are in the panel
         onWheel: d => status.sink.audio.volume = Math.max(0, Math.min(1, status.sink.audio.volume + (d > 0 ? 0.05 : -0.05)))
     }
+    SoundPanel { theme: status.theme; anchorItem: soundCell.visible ? soundCell : clockItem; screenName: status.screenName }
     Cell {
         visible: status.hasBattery
         readonly property real pct: status.battery ? status.battery.percentage : 0
@@ -211,6 +217,16 @@ Row {
         tint: pct < 0.2 && !charging ? status.theme.red : status.theme.muted
         alert: pct < 0.1 && !charging
     }
+    // ── phones paired with Zeus: the Devices panel (also from the menu, under the clock, when there is none)
+    Cell {
+        id: phoneCell
+        visible: Zeus.enabled && (Zeus.phones || []).length > 0
+        icon: "\u{F011C}"
+        tint: (Zeus.phones || []).some(x => x.online) ? status.theme.gold : status.theme.muted
+        clickable: true
+        onClicked: Panels.toggle("devices", status.screenName)
+    }
+    DevicesPanel { theme: status.theme; anchorItem: phoneCell.visible ? phoneCell : clockItem; screenName: status.screenName }
     Cell {
         icon: status.theme.dndSetting ? "\u{F009B}" : "\u{F009A}"
         tint: status.theme.dndSetting ? status.theme.gold : status.theme.muted
@@ -218,12 +234,22 @@ Row {
         onClicked: status.theme.toggleDnd()
     }
     SystemClock { id: clock; precision: SystemClock.Minutes }
-    Text {
-        anchors.verticalCenter: parent.verticalCenter
-        text: Qt.locale().toString(clock.date, status.clockFormat)
-        leftPadding: 6
-        font { family: status.theme.mono; pixelSize: status.theme.px(13) }
-        color: status.theme.text
+    // the clock opens the Plan panel; the System panel (menu, IPC) hangs under it too
+    Item {
+        id: clockItem
+        width: clockText.implicitWidth
+        height: 34
+        Text {
+            id: clockText
+            anchors.verticalCenter: parent.verticalCenter
+            text: Qt.locale().toString(clock.date, status.clockFormat)
+            leftPadding: 6
+            font { family: status.theme.mono; pixelSize: status.theme.px(13) }
+            color: clockMouse.containsMouse ? status.theme.goldHi : status.theme.text
+        }
+        MouseArea { id: clockMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Panels.toggle("plan", status.screenName) }
     }
+    PlanPanel { theme: status.theme; anchorItem: clockItem; screenName: status.screenName }
+    SystemPanel { theme: status.theme; anchorItem: clockItem; screenName: status.screenName }
 
 }

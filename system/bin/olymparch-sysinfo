@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+"""olymparch-sysinfo --json: the System panel's glance, read once: olymparch-doctor's problems, updates waiting
+(checkupdates, no root), free space on /, and the hottest CPU and GPU sensor (sensors -j). Nothing is changed."""
+import json
+import re
+import shutil
+import subprocess
+import sys
+
+
+def out(argv, timeout=60):
+    try:
+        return subprocess.run(argv, capture_output=True, text=True, timeout=timeout).stdout
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
+def temps():
+    cpu, gpu = [], []
+    try:
+        data = json.loads(out(["sensors", "-j"], 10) or "{}")
+    except ValueError:
+        data = {}
+    for chip, v in data.items():
+        if not isinstance(v, dict):
+            continue
+        for x in v.values():
+            if isinstance(x, dict):
+                for k, t in x.items():
+                    if k.startswith("temp") and k.endswith("_input") and isinstance(t, (int, float)) and 0 < t < 130:
+                        (gpu if re.match(r"amdgpu|nouveau|nvidia|xe-|i915", chip) else cpu).append(t)
+    return (round(max(cpu)) if cpu else None), (round(max(gpu)) if gpu else None)
+
+
+def main():
+    if sys.argv[1:] != ["--json"]:
+        print(__doc__.strip())
+        return 2
+    disk = shutil.disk_usage("/")
+    cpu, gpu = temps()
+    info = {"problems": sum(1 for ln in out(["olymparch-doctor"]).splitlines() if ln.startswith("✗")),
+            "updates": len([ln for ln in out(["checkupdates"], 120).splitlines() if ln.strip()]) if shutil.which("checkupdates") else None,
+            "free_gb": round(disk.free / 1024**3), "free_pct": round(100 * disk.free / disk.total),
+            "cpu": cpu, "gpu": gpu}
+    print(json.dumps(info))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -24,6 +24,10 @@ Singleton {
     property string state: "idle"         // off | approval | thinking | idle
     property var approvals: []            // [{ id, tool, reason, danger, preview }]
     property var lastError: null          // { text, at }
+    property var plan: null               // today's events [{ id, title, start, end, all_day }] (null: unknown)
+    property var media: null              // what the PC plays through Olympus { title, artist, playing … }
+    property var downloads: null          // { active, progress, items }
+    property var phones: null             // [{ id, name, last_seen, online }]
     // ── the conversation: [{ kind: "user"|"agent", text, model, tools: [{ id, name, detail, ok, summary }], rejected }]
     property var messages: []
     property string notice: ""
@@ -76,6 +80,8 @@ Singleton {
     function loadModels() {
         http("GET", "/api/v1/models", null, r => { if (r.status === 200 && r.json) models = r.json; });
     }
+    function planAdd(text, done) { cmd("plan_add", { text: text }, r => { if (done) done(r); }); }
+    function pair(done) { cmd("pair", {}, r => done(r)); }   // { url, expires_in, qr_svg }
     function warm() { http("POST", "/api/v1/zeus/warm", {}, null); }
 
     // ── what comes back
@@ -94,6 +100,8 @@ Singleton {
             connected = !!m.connected; ai = m.ai; model = m.model || ""; provider = m.provider || "";
             cloud = !!m.cloud; answering = m.answering || ""; state = m.state || "idle";
             approvals = m.approvals || []; lastError = m.last_error || null;
+            plan = m.plan === undefined ? plan : m.plan; media = m.media || null;
+            downloads = m.downloads || null; phones = m.phones === undefined ? phones : m.phones;
             break;
         case "bridge":
             if (m.status === "connected") loadModels();
