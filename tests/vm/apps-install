@@ -53,7 +53,7 @@ for ((i = 0; i < 3600; i++)); do
 done
 code=$(grep -aoE 'INSTALL-EXIT=[0-9]+' "$O/$LOG" | tail -n 1 | cut -d= -f2)
 [ "$code" = 0 ] || { shot feil "Installasjonen stoppet"; finish "FAIL · installasjonen stoppet (kode ${code:-ingen}) etter $((SECONDS - t0)) s"; }
-seen "LocalSend comes from Olymparch's own repo" || fails+=(localsend-skip-message)
+# LocalSend: installed from [olymparch] once it is online, otherwise skipped with a message (checked after the guest script)
 shot ferdig "Installasjonen er ferdig (LocalSend hoppet over: [olymparch] er ikke på nett ennå)"
 keys 'poweroff\n'
 for ((i = 0; i < 60; i++)); do kill -0 "$QPID" 2>/dev/null || break; sleep 1; done
@@ -71,6 +71,7 @@ keys "clear; bash /mnt/tests/vm/apps-guest.sh; pacman -Q $pk | column -c 150; pa
 wait_for 'CHK: DONE' 60
 shot pakker "pacman -Q: alt som ble krysset av er installert; LocalSend, Steam, Discord og Code er ikke"
 for k in PKGS LEAN NVIM SHELL CLOUD; do seen "CHK: $k-OK" || fails+=("$k"); done
+seen "CHK: LOCALSEND-OK" || seen "LocalSend comes from Olymparch's own repo" || fails+=(localsend)
 keys "clear; bash -ic 'type -t z; echo \$STARSHIP_SHELL; type -t __fzf_history__; rg --version | head -n 1'; grep -hE '^(Name|Exec|Icon)=' ~/.local/share/applications/webapp-*.desktop\n" 3
 shot skall-og-webapper "Ny bash: zoxide (z), starship og fzf er på; de to skyspill-webappene"
 keys "clear; nvim /etc/xdg/nvim/init.lua\n" 3
