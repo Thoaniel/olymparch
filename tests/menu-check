@@ -38,12 +38,13 @@ if "REPOS=(core extra multilib olymparch)" not in src:
 if "^[a-z0-9@._+-]+$" not in src or "!= [-.]*" not in src:
     bad("packages: names must match ^[a-z0-9@._+-]+$ and not start with - or .")
 code = re.sub(r"#[^\n]*", "", src)
-for flag in ("-dd", "--overwrite", "-Rc", "-Rdd", "--nodeps", "-U ", "-Syu", "-Sy ", "makepkg", "yay", "paru", "curl", "wget"):
+for flag in ("-dd", "--overwrite", "-Rc", "-Rdd", "--nodeps", "-U ", "-Sy ", "makepkg", "yay", "paru", "curl", "wget"):
     if flag in code:
         bad(f"packages: must never use {flag.strip()}")
+# an install brings the system up to date with it (pacman -Syu … repo/name): never a partial upgrade
 pac = re.findall(r"pacman -(S|R)[a-z]* --noconfirm[^\n]*", code)
-if sorted(pac) != ["R", "S"] or 'pacman -S --noconfirm --needed -- "$repo/$name"' not in code or 'pacman -Rs --noconfirm -- "$name"' not in code:
-    bad(f"packages: exactly one install (pacman -S … repo/name) and one remove (pacman -Rs … name) may run with --noconfirm: {pac}")
+if sorted(pac) != ["R", "S"] or 'pacman -Syu --noconfirm --needed -- "$repo/$name"' not in code or 'pacman -Rs --noconfirm -- "$name"' not in code:
+    bad(f"packages: exactly one install (pacman -Syu … repo/name) and one remove (pacman -Rs … name) may run with --noconfirm: {pac}")
 for p in ("linux", "systemd", "hyprland", "glibc", "pacman", "sudo", "quickshell", "base"):
     if not re.search(rf"PROTECTED=\([^)]*\b{re.escape(p)}\b", src):
         bad(f"packages: {p} must be on the protected list")

@@ -100,7 +100,7 @@ case $action in
         case $2 in
             install)
                 repo=$(repo_of "$3"); install_targets "$repo" "$3"
-                db=${XDG_CACHE_HOME:-$HOME/.cache}/olymparch/checkup-db
+                db=${XDG_CACHE_HOME:-${HOME:-/nonexistent}/.cache}/olymparch/checkup-db
                 u=0
                 [ -d "$db/sync" ] && command -v checkupdates >/dev/null && u=$(CHECKUPDATES_DB=$db checkupdates --nosync 2>/dev/null | grep -c . || true)
                 printf '#updates\t%s\n' "${u:-0}" ;;
