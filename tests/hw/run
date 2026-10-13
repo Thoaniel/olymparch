@@ -39,7 +39,9 @@ done
 for name in amd-desktop-nomodeset rtx-desktop hybrid-laptop; do
     golden "$name.essential" < <(OLYMPARCH_SYSROOT=$tmp/$name "$HW" plan --list essential 2>&1)
 done
-golden intel-laptop.plan.nb < <(OLYMPARCH_SYSROOT=$tmp/intel-laptop LANG=nb_NO.UTF-8 LC_ALL=nb_NO.UTF-8 "$HW" plan 2>&1)
+# Norwegian without needing the nb_NO locale installed (CI has none): the language by OLYMPARCH_LANG, the
+# characters by C.UTF-8, which every glibc has
+golden intel-laptop.plan.nb < <(OLYMPARCH_SYSROOT=$tmp/intel-laptop OLYMPARCH_LANG=nb LANG=C.UTF-8 LC_ALL=C.UTF-8 "$HW" plan 2>&1)
 golden hybrid-laptop.explain < <(OLYMPARCH_SYSROOT=$tmp/hybrid-laptop "$HW" explain gpu-hybrid-prime 2>&1 | sed "s#$PWD/##")
 
 echo "olymparch-hw: every rule has a positive and a negative fixture"
