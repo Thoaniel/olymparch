@@ -49,7 +49,7 @@ Scope {
     // schema key → group, and a shorter name where the schema label is written for Settings
     readonly property var place: ({
         "keys.olymparch_menu": "start", "keys.menu": "start", "keys.terminal": "start", "keys.settings": "start",
-        "keys.cheatsheet": "start", "zeus.hotkey": "start",
+        "keys.cheatsheet": "start", "zeus.hotkey": "start", "keys.agents": "start",
         "keys.close": "windows", "keys.float": "windows", "keys.focus": "windows", "keys.mouse": "windows", "keys.add_game": "windows",
         "keys.workspace": "workspaces", "keys.move_to_workspace": "workspaces",
         "keys.lock": "session", "keys.exit": "session", "keys.media": "media"
@@ -59,7 +59,8 @@ Scope {
             "keys.menu": t("Apps: search and start", "Apper: søk og start"),
             "keys.olymparch_menu": t("Olymparch menu", "Olymparch-menyen"),
             "keys.add_game": t("Mark this window as a game", "Merk vinduet som spill"),
-            "zeus.hotkey": t("Zeus", "Zeus")
+            "zeus.hotkey": t("Zeus panel", "Zeus-panelet"),
+            "keys.agents": t("Agents panel", "Agent-panelet")
         };
         if (special[e.key]) return special[e.key];
         const l = tr(e.label).replace(/^(Shortcut|Hurtigtast): */, "");

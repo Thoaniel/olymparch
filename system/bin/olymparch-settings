@@ -20,7 +20,7 @@
 --                                             firmware, games, proton, proton-games, zeus, controllers,
 --                                             input-devices, bluetooth-adapters, cpu (read-only)
 --   olymparch-settings zeus-install | zeus-setup   in a terminal (Settings → Zeus); never downloads a model
---   olymparch-settings zeus-keys | zeus-open   API keys through Olympus in a terminal; the Zeus window (Super+Z)
+--   olymparch-settings zeus-keys | zeus-open   API keys through Olympus in a terminal; the Zeus panel (Super+Z)
 --   olymparch-settings about | files | check | pending | wired
 --   olymparch-settings add keyboard.custom_keys 'KEYS = COMMAND'   a shortcut of your own (pick … KEYS removes it)
 --   olymparch-settings report                  a prefilled GitHub issue in the browser; you send it yourself
@@ -2082,7 +2082,8 @@ elseif cmd == "zeus-open" then
         os.exit(1)
     end
     if value_of(load_values(), "zeus.enabled") == false then os.exit(0) end   -- Zeus is off in Settings
-    os.execute("setsid -f foot -e " .. sh_quote(OLYMPUS) .. " zeus >/dev/null 2>&1 </dev/null")
+    -- the Zeus panel under the bar's Zeus item (the shell's ZeusPanel.qml); never a terminal
+    os.execute("qs ipc -p /usr/share/olymparch/shell call panel toggle zeus >/dev/null 2>&1 </dev/null")
 -- ── end Zeus
 
 elseif cmd == "open" then

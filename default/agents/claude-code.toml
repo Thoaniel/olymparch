@@ -1,0 +1,32 @@
+# Claude Code (Anthropic): its own background mode, so tasks run as `claude --bg` and are listed, attached,
+# logged and stopped with Claude's own commands. Docs: code.claude.com/docs/en/agent-view, cli-reference,
+# permission-modes, mcp (checked 2026-10-14). Note: in a git repository it edits in a worktree under .claude/worktrees.
+id = "claude-code"
+name = "Claude Code"
+icon = "f0e7"
+binary = "claude"
+docs = "https://code.claude.com/docs/en/agent-view"
+mcp = true            # olymparch-mcp register adds Olymparch's MCP server (its own code for Claude)
+
+[install]             # as you: the official script puts it in ~/.local/bin (never sudo npm -g)
+command = ["sh", "-c", "curl -fsSL https://claude.ai/install.sh | bash"]
+
+[login]
+check = ["claude", "auth", "status"]   # exit 0 = signed in
+command = ["claude", "auth", "login"]
+
+[permissions]         # never bypassPermissions; «default» asks you (the task waits until you open it)
+modes = ["default", "acceptEdits", "plan", "auto"]
+default = "default"
+
+[native]
+new = ["claude", "--bg", "--permission-mode", "{mode}", "{prompt}"]   # run in the task's folder
+list = ["claude", "agents", "--json", "--all"]                       # [{id, cwd, kind, state, startedAt …}]
+state_field = "state"
+status_map = { working = "working", blocked = "waiting", done = "done", failed = "error", stopped = "stopped" }
+attach = ["claude", "attach", "{id}"]
+logs = ["claude", "logs", "{id}"]
+stop = ["claude", "stop", "{id}"]
+
+[env]                 # only when you use an API key instead of the subscription
+ANTHROPIC_API_KEY = "anthropic"

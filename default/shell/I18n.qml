@@ -1,6 +1,6 @@
 pragma Singleton
 // English by default; Norwegian (bokmål) when LANG starts with nb or no. Strings live in
-// /usr/share/olymparch/i18n/<lang>.json; a missing key falls back to the English text given in the code.
+// /usr/share/olymparch/i18n/<lang>.json (the i18n folder next to the shell); a missing key falls back to the English text given in the code.
 //   Text { text: I18n.t("launcher.search", "Search apps …") }
 import QtQuick
 import Quickshell
@@ -15,7 +15,8 @@ Singleton {
     property var dict: ({})
 
     FileView {
-        path: `/usr/share/olymparch/i18n/${i18n.lang}.json`
+        // next to the shell folder: /usr/share/olymparch/i18n, or a checkout's default/i18n in dev mode
+        path: `${Quickshell.shellDir}/../i18n/${i18n.lang}.json`
         blockLoading: true
         onLoaded: {
             try { i18n.dict = JSON.parse(text()); } catch (e) { i18n.dict = {}; }

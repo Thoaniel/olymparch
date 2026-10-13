@@ -1,0 +1,31 @@
+# OpenCode: `opencode run` in its own tmux session. Docs: opencode.ai/docs/cli, permissions, mcp-servers
+# (checked 2026-10-14). Most of its tools are allowed by default: set "permission" in opencode.json to ask.
+id = "opencode"
+name = "OpenCode"
+icon = "f489"
+binary = "opencode"
+docs = "https://opencode.ai/docs/cli/"
+
+[install]             # the official script installs to ~/.opencode/bin
+command = ["sh", "-c", "curl -fsSL https://opencode.ai/install | bash"]
+
+[login]
+command = ["opencode", "auth", "login"]
+
+[permissions]
+modes = ["build", "plan"]
+default = "build"
+
+[task]
+command = ["opencode", "run", "--dir", "{dir}", "--agent", "{mode}", "{prompt}"]
+
+[mcp]
+file = "~/.config/opencode/opencode.json"
+key = "mcp.olymparch"
+value = { type = "local", command = ["olymparch-mcp"], enabled = true }
+
+[env]
+GROQ_API_KEY = "groq"
+OPENROUTER_API_KEY = "openrouter"
+MISTRAL_API_KEY = "mistral"
+GEMINI_API_KEY = "gemini"

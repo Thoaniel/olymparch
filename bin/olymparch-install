@@ -9,7 +9,8 @@
 #
 # Answers (bash syntax): DISK, DISK_SERIAL, HOSTNAME, USERNAME, PASSWORD, KEYMAP, LOCALE, TIMEZONE, KERNEL,
 # OPTIONS (comma list: games,emu,zeus,discord,spotify,obs,code,hibernate, and from the second checklist
-# lutris,moonlight,minecraft,cloud,obsidian,localsend,neovim,helix,zed,shelltools,tuis,alacritty,kitty,ghostty)
+# lutris,moonlight,minecraft,cloud,obsidian,localsend,neovim,helix,zed,shelltools,tuis,alacritty,kitty,ghostty),
+# AGENTS (comma list of default/agents ids: installed as the user at the first login)
 # Safety: DISK_SERIAL must match the disk's serial number, or nothing is touched.
 set -euo pipefail
 # Everything this script creates must be readable by the new system's users and pacman's download user (alpm),
@@ -39,7 +40,7 @@ gpu_vendors() {  # vendor IDs of every display controller (PCI class 0x03xxxx): 
 }
 install_options() {
     install_shell_tools_hook
-    [ -n "${OPTIONS:-}" ] || return 0
+    [ -n "${OPTIONS:-}${AGENTS:-}" ] || return 0
     local pkgs=() conf=/tmp/olymparch-pacman.conf home=/mnt/home/$USERNAME v gpus=''
     step "$(L Options Valg): ${OPTIONS//,/, }"
     if has_opt games; then
@@ -66,7 +67,7 @@ install_options() {
     has_opt obs && pkgs+=(obs-studio)
     has_opt code && pkgs+=(code)
     # zeus: llama.cpp (Vulkan works on AMD, Intel and NVIDIA) and uv; Olympus itself is installed for the user below
-    has_opt zeus && pkgs+=(uv llama-cpp ggml-vulkan)
+    has_opt zeus && pkgs+=(uv llama-cpp ggml-vulkan qrencode)   # qrencode: the QR code for pairing a phone
     extra_option_packages   # the second checklist (more apps and tools): adds to pkgs
     if [ ${#pkgs[@]} -gt 0 ]; then
         sed '/^#\[multilib\]$/,/^#Include/ s/^#//' /etc/pacman.conf >"$conf"
@@ -88,11 +89,30 @@ install_options() {
         [ -f "$home/.config/olymparch/games.conf" ] || install -m644 "$g/games.conf" "$home/.config/olymparch/games.conf"
     fi
     if has_opt zeus; then
-        # Olympus at a pinned commit, as the user (it lives in ~/.local). No model is downloaded here: the first
-        # login offers «olympus setup» (olymparch-welcome), which asks first.
-        arch-chroot /mnt sudo -u "$USERNAME" -H uv tool install -q "git+https://github.com/Thoaniel/olympus@$OLYMPUS_COMMIT" ||
+        # Olympus at a pinned commit, as the user (it lives in ~/.local), and its server as a user service that always
+        # runs (the bar, the phone and the panels talk to it; nothing opens a terminal for it). No model is
+        # downloaded here: the Zeus panel and Settings → Zeus ask first.
+        if arch-chroot /mnt sudo -u "$USERNAME" -H uv tool install -q "git+https://github.com/Thoaniel/olympus@$OLYMPUS_COMMIT"; then
+            # `olympus service install` writes the unit (its systemctl calls fail harmlessly in the chroot); enabled by hand
+            arch-chroot /mnt sudo -u "$USERNAME" -H "/home/$USERNAME/.local/bin/olympus" service install >/dev/null 2>&1 || true
+            if [ -f "$home/.config/systemd/user/olympus-web.service" ]; then
+                arch-chroot /mnt sudo -u "$USERNAME" -H mkdir -p "/home/$USERNAME/.config/systemd/user/default.target.wants"
+                arch-chroot /mnt sudo -u "$USERNAME" -H ln -sf ../olympus-web.service "/home/$USERNAME/.config/systemd/user/default.target.wants/olympus-web.service"
+            fi
+        else
             step "$(L "Zeus could not be installed now; install it later with: uv tool install git+https://github.com/Thoaniel/olympus" \
                       "Zeus kunne ikke installeres nå; installer senere med: uv tool install git+https://github.com/Thoaniel/olympus")"
+        fi
+    fi
+    # AI agents ticked in the wizard (AGENTS): installed as the user at the first login (olymparch-welcome asks), from
+    # each tool's official installer: they need the network and a terminal, never root, never the chroot
+    local ids=() id
+    for id in ${AGENTS//,/ }; do
+        [[ $id =~ ^[a-z0-9][a-z0-9-]{0,31}$ ]] && [ -f "/usr/share/olymparch/agents/$id.toml" ] && ids+=("$id")
+    done
+    if [ ${#ids[@]} -gt 0 ]; then
+        arch-chroot /mnt sudo -u "$USERNAME" -H mkdir -p "/home/$USERNAME/.config/olymparch"
+        printf '%s\n' "${ids[@]}" | arch-chroot /mnt sudo -u "$USERNAME" -H tee "/home/$USERNAME/.config/olymparch/agents-pending" >/dev/null
     fi
     if has_opt hibernate && ls /sys/class/power_supply/BAT* >/dev/null 2>&1; then
         # Swap file as big as RAM on its own subvolume (no snapshots, no compression). systemd finds it on resume
@@ -230,7 +250,7 @@ tools_pkgs=(wl-clipboard cliphist grim slurp satty hyprpicker gpu-screen-recorde
 pacstrap "${pacstrap_opts[@]}" /mnt base "$KERNEL" mkinitcpio btrfs-progs cryptsetup limine sudo networkmanager snapper \
     hyprland hypridle quickshell foot adwaita-cursors ttf-jetbrains-mono ttf-nerd-fonts-symbols-mono libnotify polkit \
     pipewire pipewire-pulse wireplumber xdg-desktop-portal-hyprland plymouth upower \
-    firefox thunar tumbler gvfs gvfs-mtp gvfs-gphoto2 thunar-volman imv mpv xdg-utils xdg-user-dirs udiskie udisks2 clamav pacman-contrib fakeroot \
+    firefox thunar tumbler gvfs gvfs-mtp gvfs-gphoto2 thunar-volman imv mpv xdg-utils xdg-user-dirs udiskie udisks2 clamav pacman-contrib fakeroot tmux \
     "${tools_pkgs[@]}"
 
 # --- Hardware (olymparch-hw): the live system is the same machine, so its plan is the new system's plan.
@@ -383,9 +403,15 @@ cat >/mnt/etc/profile.d/zz-olymparch-session.sh <<'SESSION'
 # (olymparch.recovery) gives a plain shell instead. A desktop that stops with an error logs out; the next
 # login (with the password: autologin is once per boot) then gets a plain shell instead of the desktop.
 if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ "$(id -u)" != 0 ] && grep -qw olymparch.recovery /proc/cmdline; then
-    printf '\n  Olymparch recovery (text mode). The desktop is not started.\n  Check the system: olymparch-doctor · drivers: olymparch-hw plan · log: journalctl -b -p err\n  Back to normal: reboot and pick Olymparch in the boot menu.\n\n'
+    case ${LANG:-} in
+        nb* | nn* | no*) printf '\n  Olymparch gjenoppretting (tekstmodus). Skrivebordet er ikke startet.\n  Sjekk systemet: olymparch-doctor · drivere: olymparch-hw plan · logg: journalctl -b -p err\n  Tilbake til vanlig: start på nytt og velg Olymparch i oppstartsmenyen.\n\n' ;;
+        *) printf '\n  Olymparch recovery (text mode). The desktop is not started.\n  Check the system: olymparch-doctor · drivers: olymparch-hw plan · log: journalctl -b -p err\n  Back to normal: reboot and pick Olymparch in the boot menu.\n\n' ;;
+    esac
 elif [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ "$(id -u)" != 0 ] && [ -e "$HOME/.cache/olymparch/desktop-failed" ]; then
-    printf '\n  The desktop stopped with an error last time (code %s). This is a plain shell.\n  Check the system: olymparch-doctor · log: journalctl -b -1 -p err · start the desktop: start-hyprland\n\n' "$(cat "$HOME/.cache/olymparch/desktop-failed" 2>/dev/null)"
+    case ${LANG:-} in
+        nb* | nn* | no*) printf '\n  Skrivebordet stoppet med en feil sist (kode %s). Dette er et vanlig skall.\n  Sjekk systemet: olymparch-doctor · logg: journalctl -b -1 -p err · start skrivebordet: start-hyprland\n\n' "$(cat "$HOME/.cache/olymparch/desktop-failed" 2>/dev/null)" ;;
+        *) printf '\n  The desktop stopped with an error last time (code %s). This is a plain shell.\n  Check the system: olymparch-doctor · log: journalctl -b -1 -p err · start the desktop: start-hyprland\n\n' "$(cat "$HOME/.cache/olymparch/desktop-failed" 2>/dev/null)" ;;
+    esac
     rm -f -- "$HOME/.cache/olymparch/desktop-failed"
 elif [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ "$(id -u)" != 0 ]; then
     # keys that reach this tty must never signal the session: Ctrl+C here would end the whole desktop

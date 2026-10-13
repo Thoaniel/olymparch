@@ -1,0 +1,191 @@
+#!/bin/bash
+# VM test: the AI in the bar (B6). On a copy of the installed disk (OLYMPARCH_BASE) with this repo's shell, agent
+# files and AI commands copied in (tests/vm/ai-guest.sh), Olympus replaced by its stub (tests/vm/olympus-stub:
+# `olympus bar` scenarios) and two fake agents (one with its own background mode, one in tmux):
+#   the Zeus panel from a click on the bar's bolt, from the menu and from IPC (and Super+Z); an approval answered
+#   yes and no from the panel's keyboard (which starts in the field, never on Yes), the card outside the panel, the
+#   card gone after a timeout, no card while a game runs; the fallback chain (Groq 429 → Gemini, shown in the bar);
+#   the Agents panel, a new task typed into it, a native task and a tmux task to the end, stopped and removed; the
+#   key never in ps or a log; no QML errors in the shell's log. A screenshot of every step (tests/vm/out/ai/).
+set -uo pipefail
+cd "$(dirname "$0")/../.."
+. dev/env
+SRC=${OLYMPARCH_BASE:-tests/vm/out/install-disk}
+[ -f "$SRC/disk.qcow2" ] || { echo "kjør tests/vm/install-disk først (eller sett OLYMPARCH_BASE)" >&2; exit 2; }
+O=tests/vm/out/ai
+rm -rf -- tests/vm/out/ai
+mkdir -p "$O"
+install -m644 "$SRC/vars.fd" "$O/vars.fd"
+qemu-img create -q -f qcow2 -b "$(realpath "$SRC/disk.qcow2")" -F qcow2 "$O/disk.qcow2"
+QMP=$O/qmp.sock
+. tests/vm/lib.sh
+PW='olymp-test-123'
+trap 'kill "$QPID" 2>/dev/null; python3 -I tests/vm/report.py tests/vm/out/report.html "$O" >/dev/null 2>&1' EXIT
+t0=$SECONDS
+ok=()
+fail=()
+vm boot.log -virtfs local,path="$PWD",mount_tag=olysrc,security_model=none,readonly=on,id=src \
+    -device qemu-xhci,id=xhci -device usb-tablet,bus=xhci.0
+unlock_and_desktop "$PW"
+python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/size.ppm"
+read -r W H < <(head -c 20 "$O/size.ppm" | tr -s '\n' ' ' | awk '{print $2, $3}')
+click() { python3 -I tests/vm/qmp.py "$QMP" click "$1" "$2" "$W" "$H"; sleep "${3:-1}"; }
+need() { if wait_for "$2" "$3"; then ok+=("$1"); else fail+=("$1"); fi; }
+# the watcher only reports changes, and wait_for reads the whole log: count first, then wait for one more
+count() { grep -aoE "$1" "$O/$LOG" 2>/dev/null | wc -l; }
+expect() {  # expect NAME REGEX SECONDS BEFORE
+    local i
+    for ((i = 0; i < $3 * 2; i++)); do
+        if [ "$(count "$2")" -gt "$4" ]; then ok+=("$1"); return 0; fi
+        sleep 0.5
+    done
+    fail+=("$1"); return 1
+}
+G='bash /mnt/tests/vm/ai-guest.sh'
+term() {   # a command in a fresh terminal (the panel is closed first, so the keys go to the terminal)
+    press esc
+    press meta_l+ret; sleep 1.5
+    keys "$1; exit\n" 1
+}
+
+# ── setup: this repo's files in place, the stub and the fake agents, the shell in Norwegian, the watcher
+press meta_l+ret; sleep 2
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo bash /mnt/tests/vm/ai-guest.sh setup; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=nb_NO.UTF-8 setsid -f /usr/lib/olymparch/launch-shell; sleep 3; $G stubs; hyprctl reload >/dev/null; setsid -f $G watch; exit\n" 1
+keys "$PW\n" 1
+wait_for 'AI: SETUP-(OK|NO-TMUX)' 180 || { shot oppsett-feil "Oppsettet ble ikke ferdig"; finish "FAIL · fikk ikke lagt inn filene"; }
+seen 'AI: SETUP-NO-TMUX' && fail+=(tmux-mangler)
+need stubs 'AI: STUBS-OK' 60
+wait_for 'ZEUS=.*"connected":true' 20
+sleep 2
+shot bar "Baren: ⚡ Zeus (stubben svarer) og agentikonet"
+
+# ── 1. the Zeus panel: from a click on the bolt, from the menu, from IPC, from Super+Z
+python3 -I tests/vm/qmp.py "$QMP" screendump "$PWD/$O/bar.ppm"
+xy=$(python3 -I tests/vm/bar-gold.py "$O/bar.ppm" 0)
+if [ "$xy" != none ]; then
+    c=$(count 'PANEL=zeus ')
+    click ${xy% *} ${xy#* } 1.5
+    expect panel-klikk 'PANEL=zeus ' 10 "$c"
+    shot panel-klikk "Klikk på lynet i baren: Zeus-panelet åpnes under det"
+    c=$(count 'PANEL= ')
+    click $((W / 2)) $((H / 2)) 1   # outside: it closes
+    expect panel-lukk-klikk 'PANEL= ' 10 "$c"
+    shot panel-lukket "Klikk utenfor: panelet er lukket"
+else fail+=(fant-ikke-lynet); fi
+c=$(count 'PANEL=zeus ')
+press meta_l+alt+spc; sleep 1.2
+keys "zeus" 1
+shot meny-sok "Olymparch-menyen: søk «zeus» viser Paneler › Zeus"
+press ret
+expect panel-meny 'PANEL=zeus ' 10 "$c"
+shot panel-meny "Fra menyen: Zeus-panelet"
+c=$(count 'PANEL= ')
+press esc
+expect panel-esc 'PANEL= ' 10 "$c"
+c=$(count 'PANEL=zeus ')
+term "qs ipc -p /usr/share/olymparch/shell call panel toggle zeus"
+expect panel-ipc 'PANEL=zeus ' 10 "$c"
+shot panel-ipc "Fra IPC (qs ipc call panel toggle zeus)"
+press esc; sleep 0.5
+c=$(count 'PANEL=zeus ')
+press meta_l+z
+expect panel-supz 'PANEL=zeus ' 10 "$c"
+press esc
+
+# ── 2. a conversation in the panel, and an approval answered from the keyboard
+term "$G scenario chat"
+need scenario-chat 'AI: SCENARIO-chat' 30
+press meta_l+z; sleep 2
+shot samtale "Samtalen i panelet: svarene, verktøylinjene, feltet"
+press esc
+term "$G scenario approval"
+c=$(count 'CARD=true')
+need scenario-godkjenning 'AI: SCENARIO-approval' 30
+expect kort-vises 'CARD=true' 15 "$c"
+sleep 2
+shot kort "Zeus venter: kortet under baren (ingen tastatur), gullprikk på lynet"
+c=$(count 'PANEL=zeus CARD=false')
+press meta_l+z; sleep 1.5
+expect kort-borte-med-panel 'PANEL=zeus CARD=false' 10 "$c"
+shot godkjenning-panel "Panelet: kortet står over feltet; tastaturet står i feltet, ikke på Ja"
+press ret; sleep 1   # Enter in the field must not approve anything
+press up; press up; press up; sleep 0.5
+shot godkjenning-ja "Pil opp tre ganger: «Ja, gjør det» er valgt"
+press ret; sleep 2
+press esc
+term "$G scenario approval"
+wait_for 'AI: SCENARIO-approval' 30
+press meta_l+z; sleep 1.5
+press up; sleep 0.5
+shot godkjenning-nei "Pil opp én gang: «Nei»"
+press ret; sleep 2
+press esc
+term "$G bar-log"
+wait_for 'AI: BAR-LOG-DONE' 20
+if seen 'SENT "cmd":"approve" x1' && seen 'SENT "cmd":"deny" x1'; then ok+=(ja-og-nei); else fail+=(ja-og-nei); fi
+
+# ── 3. nobody answers: the card goes away when Zeus gives up; a game: no card at all
+c=$(count 'CARD=false')
+term "$G scenario timeout"
+wait_for 'AI: SCENARIO-timeout' 30
+sleep 3; shot kort-venter "Ingen svarer: kortet står"
+expect kort-tidsavbrudd 'CARD=false' 30 "$c"
+shot kort-tidsavbrudd "Zeus ga opp: kortet er borte"
+term "$G scenario approval; sleep 3; qs ipc -p /usr/share/olymparch/shell call olymparch gamemode on"
+sleep 8
+[ "$(grep -aoE 'CARD=(true|false)' "$O/$LOG" | tail -n 1)" = CARD=false ] && ok+=(spillmodus-uten-kort) || fail+=(spillmodus-uten-kort)
+shot spillmodus "Spillmodus: baren er skjult og kortet vises ikke (Zeus venter)"
+term "qs ipc -p /usr/share/olymparch/shell call olymparch gamemode off"
+sleep 1
+
+# ── 4. the fallback chain: Groq's free quota runs out (429), Gemini answers, and the bar says so
+c=$(count '"answering_provider":"(GoogleGemini|gemini)"')
+term "$G scenario fallback"
+expect reserve '"answering_provider":"(GoogleGemini|gemini)"' 25 "$c"
+seen 'ZEUS=.*429' && ok+=(kvote-vist) || fail+=(kvote-vist)
+sleep 1
+shot reservekjede "Groq svarte 429: Gemini tok over, baren viser «Zeus · Google Gemini»"
+press meta_l+z; sleep 1.5
+shot reservekjede-panel "Panelet: «Klar · Gemini svarte (reserve)», varselet om kvoten, svaret"
+press esc
+
+# ── 5. the Agents panel: a task typed into it, a native task and a tmux task to the end; stop and remove
+c=$(count 'PANEL=agents ')
+term "qs ipc -p /usr/share/olymparch/shell call panel toggle agents"
+expect agentpanel 'PANEL=agents ' 10 "$c"
+shot agenter-tomt "Agent-panelet: ingen oppgaver, «Ny oppgave» med testagentene"
+press up; keys "~/dev/prosjekt" 0.5   # the folder field (the task field has the keyboard first)
+press down; keys "skriv en hilsen" 0.5
+shot agenter-ny "Ny oppgave: agent, mappe og oppgave skrevet inn"
+press ret; sleep 3
+shot agenter-startet "Oppgaven fra panelet kjører (Testagent med egen bakgrunn)"
+press esc
+term "$G task runner"
+need tmux-oppgave 'AI: TASK-runner-fakerunner' 30
+term "$G task native"
+need egen-oppgave 'AI: TASK-native-fakenative' 30
+seen 'AI: KEY-IN-PS' && fail+=(nøkkel-i-ps) || ok+=(nøkkel-ikke-i-ps)
+seen 'AI: KEY-IN-LOGS' && fail+=(nøkkel-i-logg) || ok+=(nøkkel-ikke-i-logg)
+press meta_l+a; sleep 2
+shot agenter-kjorer "Begge oppgavene i panelet: mappe, oppgave, «arbeider», siste linje; Åpne / Logg / Stopp"
+press esc
+sleep 25
+term "$G status"
+need tmux-ferdig 'AI: TASKS .*fakerunner=done' 20
+term "olymparch-agent stop \$(cat ~/.vmtest-task-native); $G status"
+need egen-stoppet 'AI: TASKS .*fakenative=stopped' 20
+press meta_l+a; sleep 2
+shot agenter-ferdig "Tmux-oppgaven er ferdig, den andre stoppet: «Fjern» i stedet for «Stopp»"
+press esc
+term "for t in \$(cat ~/.vmtest-task-native ~/.vmtest-task-runner); do olymparch-agent rm \$t; done; $G status; echo '<2>AI: RM-DONE' > /dev/kmsg"
+wait_for 'AI: RM-DONE' 20
+[ -z "$(grep -aoE 'AI: TASKS [^\r]*' "$O/$LOG" | tail -n 1 | sed 's/AI: TASKS *//')" ] || [ "$(count 'AI: RM-DONE')" -gt 0 ] && ok+=(fjernet)
+
+# ── the shell's log: no QML errors
+term "tail -n 120 ~/.local/state/olymparch/shell.log | while IFS= read -r l; do echo \"<2>QS: \$l\" > /dev/kmsg; done; echo '<2>LOG-DONE' > /dev/kmsg"
+wait_for 'LOG-DONE' 20
+grep -aoE 'QS: .*' "$O/$LOG" | sed 's/\x1b\[[0-9;]*m//g' >"$O/shell-log.txt"
+errors=$(awk '/Launching config/ {n = 0} /ERROR|TypeError|ReferenceError|is not a type|Cannot assign/ {n++} END {print n + 0}' "$O/shell-log.txt")
+((errors == 0)) && ok+=(skall-logg) || fail+=("skall-logg($errors)")
+summary="ok: ${ok[*]:-}; feil: ${fail[*]:-ingen}"
+finish "$([ ${#fail[@]} = 0 ] && echo PASS || echo FAIL) · AI i baren: $summary på $((SECONDS - t0)) s"

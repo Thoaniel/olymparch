@@ -12,6 +12,7 @@ import Quickshell.Services.UPower
 Row {
     id: status
     required property var theme
+    property string screenName: ""   // this bar's monitor: its panels open here
     property string clockFormat: "ddd d MMM  HH:mm"   // day and month in the session's language (shell.qml sets it)
     TextMetrics { id: digits; font { family: status.theme.mono; pixelSize: status.theme.px(13) } text: "0" }
     spacing: 4   // the cells have 6 px padding of their own: 16 px between icons
@@ -57,6 +58,7 @@ Row {
         property color labelTint: status.theme.text
         property bool clickable: false
         property bool alert: false        // a solid red block (microphone, camera, battery nearly empty)
+        property bool dot: false          // a small dot on the icon's corner: something waits for you
         property int labelChars: 0        // > 0: fixed width in characters, so changing numbers do not shift the bar
         property int maxLabelWidth: 200
         readonly property bool hot: hover.containsMouse && clickable
@@ -83,6 +85,12 @@ Row {
                 font { family: "Symbols Nerd Font Mono"; pixelSize: status.theme.px(15) }
                 color: cell.alert ? status.theme.bg : cell.hot ? status.theme.goldHi : cell.tint
                 anchors.verticalCenter: parent.verticalCenter
+                Rectangle {
+                    visible: cell.dot
+                    width: 6; height: 6; radius: 3
+                    color: status.theme.goldHi
+                    x: parent.width - 2; y: -1
+                }
             }
             Text {
                 visible: cell.label.length > 0
@@ -106,12 +114,14 @@ Row {
     }
 
     Cell {
+        id: mediaCell
         visible: status.player !== null
         icon: status.player && status.player.isPlaying ? "\u{F075A}" : "\u{F03E4}"
         label: status.player ? [status.player.trackArtist, status.player.trackTitle].filter(s => s).join(" – ") : ""
-        clickable: status.player && status.player.canTogglePlaying
-        onClicked: status.player.togglePlaying()
+        clickable: true
+        onClicked: Panels.toggle("media", status.screenName)   // play/pause, next … are in the panel
     }
+    MediaPanel { theme: status.theme; anchorItem: mediaCell.visible ? mediaCell : clockItem; screenName: status.screenName }
     // Settings → Privacy → «Camera and microphone indicator» can hide these two
     readonly property bool privacyIndicator: Settings.get("privacy.indicator") !== false
     Cell { visible: status.micInUse && status.privacyIndicator; icon: "\u{F036C}"; alert: true }
@@ -133,23 +143,58 @@ Row {
             onTriggered: recCell.secs = Math.max(0, Math.round((Date.now() - Tools.recordingSince.getTime()) / 1000))
         }
     }
+    // ── Zeus (Zeus.qml, `olympus bar`): what it is doing and who answers; a click opens its panel (ZeusPanel.qml)
     Cell {
-        visible: zeusCheck.installed && Settings.get("zeus.enabled") !== false
-        icon: ""
-        label: "Zeus"
-        tint: status.theme.gold
+        id: zeusCell
+        visible: Zeus.enabled
+        readonly property bool waiting: Zeus.state === "approval"
+        readonly property bool off: !Zeus.connected || Zeus.ai === false
+        icon: "\uf0e7"
+        label: off ? I18n.t("zeus.bar.off", "Zeus off")
+             : waiting ? I18n.t("zeus.bar.waiting", "Zeus · waiting")
+             : Zeus.state === "thinking" ? I18n.t("zeus.bar.thinking", "Zeus · thinking")
+             : Zeus.answeringCloud ? "Zeus · " + Zeus.answeringProvider : "Zeus"   // who answered, after a fallback too
+        dot: waiting
+        tint: off ? status.theme.muted : status.theme.gold
+        labelTint: off ? status.theme.muted : waiting ? status.theme.goldHi : status.theme.text
+        maxLabelWidth: status.theme.px(260)
         clickable: true
-        onClicked: Quickshell.execDetached(["sh", "-c", 'exec foot -e "$HOME/.local/bin/olympus" zeus'])
+        onClicked: Panels.toggle("zeus", status.screenName)
+        // thinking: the cell breathes; waiting for you: a gold dot on the bolt
+        SequentialAnimation on opacity {
+            running: Zeus.state === "thinking" && !zeusCell.off
+            loops: Animation.Infinite
+            NumberAnimation { to: 0.55; duration: 700 }
+            NumberAnimation { to: 1; duration: 700 }
+            onStopped: zeusCell.opacity = 1
+        }
     }
+    ZeusPanel { theme: status.theme; anchorItem: zeusCell; screenName: status.screenName }
+    // ── AI agents (Agents.qml, olymparch-agent): how many tasks run across every agent; a gold dot when one waits
     Cell {
+        id: agentsCell
+        visible: Agents.available && Agents.present && (Agents.tasks.length > 0 || Agents.list.some(a => a.installed))
+        icon: "\u{F06A9}"
+        label: Agents.active > 0 ? String(Agents.active) : ""
+        dot: Agents.waiting
+        tint: Agents.active > 0 ? status.theme.gold : status.theme.muted
+        labelTint: Agents.waiting ? status.theme.goldHi : status.theme.text
+        clickable: true
+        onClicked: Panels.toggle("agents", status.screenName)
+    }
+    AgentsPanel { theme: status.theme; anchorItem: agentsCell; screenName: status.screenName }
+    Cell {
+        id: netCell
         icon: !status.netDevice ? (status.hasWifi ? "\u{F092D}" : "\u{F0319}")
             : status.wifiStrength < 0 ? "\u{F0318}"
             : ["\u{F091F}", "\u{F0922}", "\u{F0925}", "\u{F0928}"][Math.min(3, Math.floor(status.wifiStrength * 4))]
         tint: status.netDevice ? status.theme.muted : status.theme.red
         clickable: true
-        onClicked: Quickshell.execDetached(["foot", "-e", "nmtui"])
+        onClicked: Panels.toggle("network", status.screenName)
     }
+    NetPanel { theme: status.theme; anchorItem: netCell; screenName: status.screenName }
     Cell {
+        id: soundCell
         visible: status.sink && status.sink.audio
         readonly property bool muted: !status.sink || !status.sink.audio || status.sink.audio.muted
         readonly property real level: status.sink && status.sink.audio ? status.sink.audio.volume : 0
@@ -158,9 +203,10 @@ Row {
         labelChars: 4
         labelTint: muted ? status.theme.muted : status.theme.text
         clickable: true
-        onClicked: status.sink.audio.muted = !status.sink.audio.muted
+        onClicked: Panels.toggle("sound", status.screenName)   // mute, outputs and the microphone are in the panel
         onWheel: d => status.sink.audio.volume = Math.max(0, Math.min(1, status.sink.audio.volume + (d > 0 ? 0.05 : -0.05)))
     }
+    SoundPanel { theme: status.theme; anchorItem: soundCell.visible ? soundCell : clockItem; screenName: status.screenName }
     Cell {
         visible: status.hasBattery
         readonly property real pct: status.battery ? status.battery.percentage : 0
@@ -171,6 +217,16 @@ Row {
         tint: pct < 0.2 && !charging ? status.theme.red : status.theme.muted
         alert: pct < 0.1 && !charging
     }
+    // ── phones paired with Zeus: the Devices panel (also from the menu, under the clock, when there is none)
+    Cell {
+        id: phoneCell
+        visible: Zeus.enabled && (Zeus.phones || []).length > 0
+        icon: "\u{F011C}"
+        tint: (Zeus.phones || []).some(x => x.online) ? status.theme.gold : status.theme.muted
+        clickable: true
+        onClicked: Panels.toggle("devices", status.screenName)
+    }
+    DevicesPanel { theme: status.theme; anchorItem: phoneCell.visible ? phoneCell : clockItem; screenName: status.screenName }
     Cell {
         icon: status.theme.dndSetting ? "\u{F009B}" : "\u{F009A}"
         tint: status.theme.dndSetting ? status.theme.gold : status.theme.muted
@@ -178,20 +234,22 @@ Row {
         onClicked: status.theme.toggleDnd()
     }
     SystemClock { id: clock; precision: SystemClock.Minutes }
-    Text {
-        anchors.verticalCenter: parent.verticalCenter
-        text: Qt.locale().toString(clock.date, status.clockFormat)
-        leftPadding: 6
-        font { family: status.theme.mono; pixelSize: status.theme.px(13) }
-        color: status.theme.text
+    // the clock opens the Plan panel; the System panel (menu, IPC) hangs under it too
+    Item {
+        id: clockItem
+        width: clockText.implicitWidth
+        height: 34
+        Text {
+            id: clockText
+            anchors.verticalCenter: parent.verticalCenter
+            text: Qt.locale().toString(clock.date, status.clockFormat)
+            leftPadding: 6
+            font { family: status.theme.mono; pixelSize: status.theme.px(13) }
+            color: clockMouse.containsMouse ? status.theme.goldHi : status.theme.text
+        }
+        MouseArea { id: clockMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Panels.toggle("plan", status.screenName) }
     }
+    PlanPanel { theme: status.theme; anchorItem: clockItem; screenName: status.screenName }
+    SystemPanel { theme: status.theme; anchorItem: clockItem; screenName: status.screenName }
 
-    // Zeus is optional: the module shows only when Olympus is installed for the user (checked once)
-    Process {
-        id: zeusCheck
-        property bool installed: false
-        command: ["sh", "-c", 'test -x "$HOME/.local/bin/olympus"']
-        running: true
-        onExited: code => installed = code === 0
-    }
 }

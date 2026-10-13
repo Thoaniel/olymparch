@@ -42,6 +42,7 @@ declare -A EN=(
     [o_code]="Code (VS Code)"
     [o_hib]="Hibernate (laptops; uses disk space equal to RAM)"
     [more]="More apps and tools? All optional; the menu offers them later too. (Space to tick)"
+    [agents]="AI agents that work in a folder for you? Installed as you at the first login, from each tool's own site. All optional; Settings → AI offers them later too. (Space to tick)"
     [m_lutris]="Games: Lutris (GOG, Epic, emulators)"
     [m_moonlight]="Games: Moonlight (stream from your own PC)"
     [m_minecraft]="Games: Minecraft (Prism Launcher)"
@@ -93,6 +94,7 @@ declare -A NB=(
     [o_code]="Kode (VS Code)"
     [o_hib]="Dvale (bærbare; bruker diskplass lik RAM)"
     [more]="Flere apper og verktøy? Alt er valgfritt; menyen tilbyr dem senere også. (Mellomrom krysser av)"
+    [agents]="AI-agenter som jobber i en mappe for deg? Installeres som deg ved første innlogging, fra verktøyets egen side. Alt er valgfritt; Innstillinger → AI tilbyr dem senere også. (Mellomrom krysser av)"
     [m_lutris]="Spill: Lutris (GOG, Epic, emulatorer)"
     [m_moonlight]="Spill: Moonlight (strøm fra din egen PC)"
     [m_minecraft]="Spill: Minecraft (Prism Launcher)"
@@ -214,16 +216,31 @@ MORE=$(wt --title Olymparch --checklist "$(t more)" 22 $W 14 "${args[@]}") || ba
 MORE=$(echo "$MORE" | tr -d '"' | tr ' ' ',')
 [ -n "$MORE" ] && OPTIONS=${OPTIONS:+$OPTIONS,}$MORE
 
+# 7c. AI agents: one line per file in /usr/share/olymparch/agents (its id and name), nothing ticked
+AGENTS=''
+args=()
+for f in /usr/share/olymparch/agents/*.toml; do
+    [ -f "$f" ] || continue
+    id=$(basename "$f" .toml)
+    [[ $id =~ ^[a-z0-9][a-z0-9-]{0,31}$ ]] || continue
+    name=$(sed -n 's/^name = "\(.*\)"$/\1/p' "$f" | head -n 1)
+    args+=("$id" "${name:-$id}" OFF)
+done
+if [ ${#args[@]} -gt 0 ]; then
+    AGENTS=$(wt --title Olymparch --checklist "$(t agents)" 20 $W 9 "${args[@]}") || bail
+    AGENTS=$(echo "$AGENTS" | tr -d '"' | tr ' ' ',')
+fi
+
 # 8. Summary
 whiptail --backtitle "$BT" --title Olymparch --yes-button "$(t install)" --no-button "$(t cancel)" \
-    --yesno "$(printf "$(t summary)" "$DISK" "$size" "$USERNAME" "$KEYMAP" "$TIMEZONE" "${OPTIONS:--}")" 18 $W || bail
+    --yesno "$(printf "$(t summary)" "$DISK" "$size" "$USERNAME" "$KEYMAP" "$TIMEZONE" "${OPTIONS:--}${AGENTS:+ · AI: $AGENTS}")" 18 $W || bail
 
 # 0600 for the answers file (it holds the password); the umask stays in this subshell, olymparch-install must not inherit it
 (
     umask 077   # the redirection is inside the subshell, so the file is created with this umask
     {
         printf 'DISK=%q\nDISK_SERIAL=%q\nUSERNAME=%q\nPASSWORD=%q\n' "$DISK" "$DISK_SERIAL" "$USERNAME" "$PASSWORD"
-        printf 'KEYMAP=%q\nLOCALE=%q\nTIMEZONE=%q\nOPTIONS=%q\nLANGUAGE=%q\n' "$KEYMAP" "$LOCALE" "$TIMEZONE" "$OPTIONS" "$lang"
+        printf 'KEYMAP=%q\nLOCALE=%q\nTIMEZONE=%q\nOPTIONS=%q\nLANGUAGE=%q\nAGENTS=%q\n' "$KEYMAP" "$LOCALE" "$TIMEZONE" "$OPTIONS" "$lang" "$AGENTS"
     } >"$ANSWERS"
 )
 KEYFILE=/run/olymparch-recovery-key

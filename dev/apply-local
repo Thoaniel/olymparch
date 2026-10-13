@@ -1,0 +1,71 @@
+#!/bin/bash
+# Put this checkout into the Olymparch system you are running, the way the installer does, and restart the shell:
+# the shell, menu, settings, i18n and Hyprland defaults in /usr/share/olymparch, the system commands in /usr/bin,
+# their root helpers in /usr/lib/olymparch, the user units, the polkit files and the pacman hooks.
+# (Olymparch's own files are not a package yet, so `olymparch update` does not bring them.)
+#
+#   sudo dev/apply-local [--dry-run]
+#
+# Only what changed is written, and every file it replaces is kept in /var/backups/olymparch-apply/<time>/ first.
+# Not here: wallpapers, themes' frames, Plymouth and Limine pictures (dev/build-iso makes those), and files the
+# repo no longer has (nothing is deleted).
+set -euo pipefail
+dry=0; [ "${1:-}" = --dry-run ] && dry=1
+[ "$(id -u)" = 0 ] || { echo "Run it with sudo: sudo $0" >&2; exit 2; }
+repo=$(cd "$(dirname "$0")/.." && pwd)
+share=/usr/share/olymparch
+[ -d "$share/shell" ] && [ -x /usr/lib/olymparch/launch-shell ] || { echo "This is not an installed Olymparch system." >&2; exit 1; }
+[ -f "$repo/default/shell/shell.qml" ] && [ -d "$repo/system/bin" ] || { echo "$repo is not an Olymparch checkout." >&2; exit 1; }
+bk=/var/backups/olymparch-apply/$(date +%Y%m%d-%H%M%S)
+changed=()
+
+put() {   # put MODE SRC DEST: install SRC as DEST (root:root) when it differs, keeping the old one in the backup
+    local mode=$1 src=$2 dst=$3
+    [ -f "$src" ] && [ ! -L "$src" ] || return 0
+    if [ -f "$dst" ] && cmp -s -- "$src" "$dst" && [ "$(stat -c %a "$dst")" = "$mode" ]; then return 0; fi
+    changed+=("$dst")
+    ((dry)) && return 0
+    [ -f "$dst" ] && install -D -m 600 -- "$dst" "$bk$dst"
+    install -D -o root -g root -m "$mode" -- "$src" "$dst"
+}
+tree() {   # tree SRCDIR DESTDIR: every regular file, 755 when executable in the repo, else 644
+    local src=$1 dst=$2 f
+    [ -d "$src" ] || return 0
+    while IFS= read -r -d '' f; do
+        case $f in */__pycache__/*) continue ;; esac
+        if [ -x "$src/$f" ]; then put 755 "$src/$f" "$dst/$f"; else put 644 "$src/$f" "$dst/$f"; fi
+    done < <(cd "$src" && find . -type f -printf '%P\0')
+}
+
+# /usr/share/olymparch: the same folders dev/build-iso puts on the ISO (art made by build-iso is left alone)
+for d in hypr shell lock idle branding foot i18n systemd apps audio games hw settings menu webapps nvim shell-tools skills agents; do
+    tree "$repo/default/$d" "$share/$d"
+done
+tree "$repo/system" "$share/system"
+for f in olymparch.plymouth olymparch-mkinitcpio-install olymparch-plymouth-handoff; do
+    [ -f "$share/plymouth/$f" ] && put "$(stat -c %a "$share/plymouth/$f")" "$repo/default/plymouth/$f" "$share/plymouth/$f"
+done
+# the system commands, and the root helpers and policies that are installed already (the installer chose them)
+for f in "$repo"/system/bin/*; do put 755 "$f" "/usr/bin/${f##*/}"; done
+for f in "$repo"/system/lib/*; do [ -e "/usr/lib/olymparch/${f##*/}" ] && put 755 "$f" "/usr/lib/olymparch/${f##*/}"; done
+put 755 "$repo/default/launch-shell" /usr/lib/olymparch/launch-shell
+for f in "$repo"/default/systemd/user/*; do put 644 "$f" "/usr/lib/systemd/user/${f##*/}"; done
+for f in "$repo"/system/polkit/*.policy; do [ -e "/usr/share/polkit-1/actions/${f##*/}" ] && put 644 "$f" "/usr/share/polkit-1/actions/${f##*/}"; done
+for f in "$repo"/system/polkit/*.rules; do [ -e "/usr/share/polkit-1/rules.d/${f##*/}" ] && put 644 "$f" "/usr/share/polkit-1/rules.d/${f##*/}"; done
+for f in "$repo"/system/hooks/*.hook; do [ -e "/etc/pacman.d/hooks/${f##*/}" ] && put 644 "$f" "/etc/pacman.d/hooks/${f##*/}"; done
+
+if [ ${#changed[@]} -eq 0 ]; then echo "Nothing to change: the system already has this checkout."; exit 0; fi
+printf '%s\n' "${changed[@]}"
+if ((dry)); then echo "(dry run: ${#changed[@]} files would change)"; exit 0; fi
+echo "${#changed[@]} files changed. The old ones are in $bk"
+printf '%s\n' "${changed[@]}" >"$bk/changed.txt" 2>/dev/null || true
+systemctl daemon-reload 2>/dev/null || true
+
+# Restart the shell of the user who ran sudo: launch-shell starts it again by itself. A new launch-shell (or new
+# user units) takes effect at the next login.
+if [ -n "${SUDO_UID:-}" ]; then
+    for pid in $(pgrep -u "$SUDO_UID" -x quickshell); do kill "$pid" 2>/dev/null || true; done
+    echo "The shell restarts in a moment."
+    printf '%s\n' "${changed[@]}" | grep -q '^/usr/lib/olymparch/launch-shell$' && echo "launch-shell changed: log out and in to use it."
+fi
+exit 0

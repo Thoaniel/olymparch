@@ -1,0 +1,26 @@
+# OpenClaw: an isolated run in the folder (`openclaw agent exec --cwd DIR`) in its own tmux session. Its exec policy
+# is unrestricted by default, so [task] preflight sets allowlist / ask on-miss / deny before every task.
+# Docs: docs.openclaw.ai/cli/agent, cli/models, tools/exec-approvals (checked 2026-10-14).
+id = "openclaw"
+name = "OpenClaw"
+icon = "f1b0"
+binary = "openclaw"
+docs = "https://docs.openclaw.ai/cli/agent"
+mcp = true            # olymparch-mcp register handles OpenClaw (openclaw mcp set/unset)
+
+[install]
+command = ["sh", "-c", "curl -fsSL https://openclaw.ai/install.sh | bash"]
+
+[login]
+check = ["openclaw", "models", "status", "--check"]   # exit 0 = ready
+command = ["openclaw", "onboard"]
+
+[permissions]
+modes = ["allowlist"]
+default = "allowlist"
+
+[task]
+# OpenClaw runs every command without asking unless its exec policy says otherwise (security=full, ask=off by
+# default): this is set before every task, and the task does not start if it fails (docs.openclaw.ai/tools/exec-approvals)
+preflight = ["openclaw", "exec-policy", "set", "--security", "allowlist", "--ask", "on-miss", "--ask-fallback", "deny"]
+command = ["openclaw", "agent", "exec", "--cwd", "{dir}", "{prompt}"]

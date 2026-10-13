@@ -1,0 +1,26 @@
+#!/bin/bash
+# olymparch-keys without a Secret Service (the file fallback): modes 700/600, get/has/list/rm, `run` puts the key in
+# the environment only, invalid names are refused, and the key never shows in a process's argv. No VM needed.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+K=$PWD/system/bin/olymparch-keys
+t=$(mktemp -d); trap 'rm -rf -- "$t"' EXIT
+export XDG_DATA_HOME=$t DBUS_SESSION_BUS_ADDRESS=unix:path=/nonexistent
+fail=0
+ok() { echo "  ok    $1"; }
+bad() { echo "  FAIL  $1"; fail=1; }
+secret=gsk-test-$RANDOM$RANDOM
+[ "$(printf '%s\n' "$secret" | "$K" set groq)" = file ] && ok "stored in the file (no Secret Service)" || bad "set"
+[ "$(stat -c %a "$t/olymparch/keys")" = 700 ] && [ "$(stat -c %a "$t/olymparch/keys/groq")" = 600 ] && ok "folder 700, key 600" || bad "modes"
+[ "$("$K" get groq)" = "$secret" ] && "$K" has groq && ok "get and has" || bad "get/has"
+[ "$("$K" list)" = "groq file" ] && ok "list names where it is" || bad "list: $("$K" list)"
+# run: the program sees the key in its environment; its argv (what ps shows) does not have it
+out=$("$K" run GROQ_API_KEY=groq MISSING_KEY=nope -- sh -c 'printf "%s|%s|" "$GROQ_API_KEY" "${MISSING_KEY-unset}"; tr "\0" " " </proc/$$/cmdline')
+case $out in
+    "$secret|unset|"*) [[ $out != *"$secret"*"$secret"* ]] && ok "run: key in the environment only, not in argv" || bad "run: key in argv: $out" ;;
+    *) bad "run: $out" ;;
+esac
+"$K" get ../etc 2>/dev/null; [ $? = 2 ] && ok "invalid name refused" || bad "invalid name accepted"
+"$K" run 'X=a b' -- true 2>/dev/null; [ $? = 2 ] && ok "run: VAR=NAME checked" || bad "run accepted a bad pair"
+"$K" rm groq; "$K" has groq; [ $? = 1 ] && [ ! -e "$t/olymparch/keys/groq" ] && ok "rm" || bad "rm"
+exit $fail

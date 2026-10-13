@@ -194,6 +194,7 @@ ShellRoot {
                     BarStatus {
                         id: barStatus
                         theme: root
+                        screenName: modelData.name
                         clockFormat: (Settings.get("appearance.clock_format") === "12h" ? "ddd d%1 MMM  h:mm AP" : "ddd d%1 MMM  HH:mm")
                             .arg(Qt.locale().name.startsWith("nb") || Qt.locale().name.startsWith("nn") ? "." : "")
                         anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
@@ -208,6 +209,8 @@ ShellRoot {
     }
 
     GameMode { id: gameMode }
+    // the bar panels' own hotkeys (Zeus' Super+Z goes through olymparch-settings zeus-open)
+    GlobalShortcut { appid: "olymparch"; name: "panel-agents"; description: "The Agents panel"; onPressed: Panels.toggle("agents", "") }
     Launcher { id: launcher; theme: root }
     // ── the Olymparch menu (Super+Alt+Space, the bolt in the bar) and the list of shortcuts (Super+K)
     Menu { id: olymparchMenu; theme: root; launcher: launcher; cheatsheet: cheatsheet }
@@ -231,5 +234,7 @@ ShellRoot {
     ThemePicker { theme: root }   // Super+Ctrl+Shift+Space
     // ── AI agents (olymparch-mcp): the approval card for what an agent wants to change; none while a game runs
     McpApproval { theme: root; gameActive: gameMode.active }
+    // ── Zeus: its approval card when the Zeus panel is not open (never in a game, never the keyboard)
+    ZeusApproval { theme: root; gameActive: gameMode.active }
     BackgroundPicker { theme: root }   // Super+Ctrl+Space
 }

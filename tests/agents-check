@@ -1,0 +1,127 @@
+#!/bin/bash
+# olymparch-agent with fake agents, no VM: every agent file in default/agents parses and asks for no sudo; a
+# native agent (like Claude Code: --bg + agents --json) is started, found, followed (working → waiting → done) and
+# stopped through its own commands; a runner agent (tmux, when tmux is here) runs in its own session, gets its key
+# in the environment only, and ends as done with its last line. Writes nothing outside a temporary folder.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+A=$PWD/system/bin/olymparch-agent
+t=$(mktemp -d); trap 'for s in "$t"/tmux/*; do :; done; rm -rf -- "$t"' EXIT
+fail=0
+ok() { echo "  ok    $1"; }
+bad() { echo "  FAIL  $1"; fail=1; }
+
+# every shipped agent file
+python3 - <<'PY' && ok "default/agents: every file parses, has a binary, an install as the user and a safe default" || bad "agent files"
+import glob, sys, tomllib
+for f in sorted(glob.glob("default/agents/*.toml")):
+    a = tomllib.load(open(f, "rb"))
+    assert a.get("binary") and a.get("name"), f
+    inst = " ".join((a.get("install") or {}).get("command") or [])
+    assert "sudo" not in inst, f + ": sudo in the installer"
+    p = a.get("permissions") or {}
+    assert p.get("default") in (p.get("modes") or []), f + ": default mode not in modes"
+    if a["id"] == "openclaw":   # unrestricted by default: its safe policy must be set before every task
+        assert "--security" in (a.get("task") or {}).get("preflight", []), f + ": OpenClaw without its exec-policy preflight"
+    bad = ("bypass", "dangerously", "yolo", "full-access", "--yes-always")
+    assert not any(b in str(p.get("default")) for b in bad), f
+    assert not any(b in " ".join(map(str, (a.get("task") or {}).get("command") or (a.get("native") or {}).get("new") or [])) for b in bad), f
+PY
+
+mkdir -p "$t/agents" "$t/bin" "$t/home/proj" "$t/run" "$t/state"
+export HOME=$t/home XDG_RUNTIME_DIR=$t/run XDG_STATE_HOME=$t/state OLYMPARCH_AGENTS_DIR=$t/agents PATH=$t/bin:$PATH
+export XDG_DATA_HOME=$t/data DBUS_SESSION_BUS_ADDRESS=unix:path=/nonexistent
+# a fake native agent: `fake --bg PROMPT` records a session; `fake agents --json` lists it with the state in a file
+cat >"$t/bin/fakenative" <<'SH'
+#!/bin/sh
+db=$HOME/.fakenative
+case $1 in
+    --bg) shift 3; printf '[{"id":"bg1","cwd":"%s","kind":"background","state":"working","startedAt":%s}]' "$PWD" "$(date +%s)000" >"$db"; echo "started bg1" ;;
+    agents) cat "$db" 2>/dev/null || echo '[]' ;;
+    stop) sed -i 's/"state":"[a-z]*"/"state":"stopped"/' "$db" ;;
+esac
+SH
+chmod +x "$t/bin/fakenative"
+cat >"$t/agents/fakenative.toml" <<'TOML'
+id = "fakenative"
+name = "Fake native"
+binary = "fakenative"
+[permissions]
+modes = ["default"]
+default = "default"
+[native]
+new = ["fakenative", "--bg", "--permission-mode", "{mode}", "{prompt}"]
+list = ["fakenative", "agents", "--json", "--all"]
+status_map = { working = "working", blocked = "waiting", done = "done", failed = "error", stopped = "stopped" }
+stop = ["fakenative", "stop", "{id}"]
+TOML
+id=$("$A" new fakenative "$HOME/proj" "rydd i README" 2>&1)
+[[ $id == fakenative-* ]] && ok "native: started ($id)" || bad "native start: $id"
+st() { python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(next((t["status"] for t in d["tasks"] if t["id"]==sys.argv[2]), "?"))' "$XDG_RUNTIME_DIR/olymparch/agents.json" "$1"; }
+"$A" list --json >/dev/null; [ "$(st "$id")" = working ] && ok "native: working from its own list" || bad "native working: $(st "$id")"
+sed -i 's/"state":"working"/"state":"blocked"/' "$HOME/.fakenative"
+"$A" list >/dev/null; [ "$(st "$id")" = waiting ] && ok "native: blocked → waiting for you" || bad "native waiting: $(st "$id")"
+"$A" stop "$id"; [ "$(st "$id")" = stopped ] && grep -q '"state":"stopped"' "$HOME/.fakenative" && ok "native: stop through its own command" || bad "native stop"
+"$A" rm "$id"; [ "$(st "$id")" = "?" ] && ok "native: removed" || bad "native rm"
+"$A" new fakenative "$HOME" "x" >/dev/null 2>&1 && bad "a task in ~ itself was allowed" || ok "refuses ~ itself as the folder"
+# preflight (what makes a safe mode real, like OpenClaw's exec policy): no task when it fails
+printf '%s\n' '#!/bin/sh' '[ "$1" = policy ] && exit 3' 'echo should-not-run' >"$t/bin/fakepre"; chmod +x "$t/bin/fakepre"
+printf '%s\n' 'id = "fakepre"' 'name = "Fake preflight"' 'binary = "fakepre"' '[permissions]' 'modes = ["safe"]' 'default = "safe"' \
+    '[task]' 'preflight = ["fakepre", "policy", "--safe"]' 'command = ["fakepre", "{prompt}"]' >"$t/agents/fakepre.toml"
+out=$("$A" new fakepre "$HOME/proj" "x" 2>&1); [ $? = 1 ] && [[ $out == *"safe permissions"* || $out == *"trygge tillatelsene"* ]] && [ -z "$(ls "$XDG_STATE_HOME/olymparch/agents" | grep fakepre)" ] &&
+    ok "preflight failed: the task was not started" || bad "preflight: $out"
+"$A" new fakenative / "x" >/dev/null 2>&1 && bad "a task in / was allowed" || ok "refuses /"
+
+# MCP registration from the agent files: a JSON-key agent (like OpenCode) gets exactly one key, and unregister
+# removes only that; a key you changed yourself is left alone
+cat >"$t/bin/fakejson" <<'SH'
+#!/bin/sh
+exit 0
+SH
+chmod +x "$t/bin/fakejson"
+printf '%s\n' 'id = "fakejson"' 'name = "Fake JSON"' 'binary = "fakejson"' '[mcp]' 'file = "~/.config/fakejson/config.json"' \
+    'key = "mcp.olymparch"' 'value = { type = "local", command = ["olymparch-mcp"], enabled = true }' >"$t/agents/fakejson.toml"
+mkdir -p "$HOME/.config/fakejson"; echo '{"theme": "dark", "mcp": {"mine": {"type": "local"}}}' >"$HOME/.config/fakejson/config.json"
+M=$PWD/system/bin/olymparch-mcp
+PATH=$t/bin:/usr/bin "$M" register >"$t/reg.out" 2>&1
+python3 - "$HOME/.config/fakejson/config.json" <<'PY' && ok "mcp: one key added next to yours" || { bad "mcp register"; cat "$t/reg.out"; }
+import json, sys
+d = json.load(open(sys.argv[1]))
+assert d["theme"] == "dark" and "mine" in d["mcp"] and d["mcp"]["olymparch"]["command"][0].endswith("olymparch-mcp")
+PY
+PATH=$t/bin:/usr/bin "$M" unregister >/dev/null 2>&1
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert "olymparch" not in d["mcp"] and "mine" in d["mcp"] and d["theme"]=="dark"' \
+    "$HOME/.config/fakejson/config.json" && ok "mcp: unregister removed exactly that key" || bad "mcp unregister"
+PATH=$t/bin:/usr/bin "$M" register >/dev/null 2>&1
+python3 -c 'import json,sys; p=sys.argv[1]; d=json.load(open(p)); d["mcp"]["olymparch"]["enabled"]=False; json.dump(d,open(p,"w"))' "$HOME/.config/fakejson/config.json"
+PATH=$t/bin:/usr/bin "$M" unregister >/dev/null 2>&1
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert "olymparch" in d["mcp"]' "$HOME/.config/fakejson/config.json" &&
+    ok "mcp: a key you changed is left alone" || bad "mcp removed a changed key"
+
+if command -v tmux >/dev/null && command -v systemd-run >/dev/null && systemctl --user is-system-running >/dev/null 2>&1 || [ "$(systemctl --user is-system-running 2>/dev/null)" = degraded ]; then
+    cat >"$t/bin/fakerunner" <<'SH'
+#!/bin/sh
+echo "working on: $1"
+echo "key seen: ${FAKE_KEY:+yes}"
+tr '\0' ' ' </proc/$$/cmdline | grep -q "$FAKE_KEY" && echo "KEY IN ARGV"
+sleep 2
+echo "all done"
+SH
+    chmod +x "$t/bin/fakerunner"
+    printf '%s\n' 'id = "fakerunner"' 'name = "Fake runner"' 'binary = "fakerunner"' '[permissions]' 'modes = ["ask"]' 'default = "ask"' \
+        '[task]' 'command = ["fakerunner", "{prompt}"]' '[env]' 'FAKE_KEY = "fakekey"' >"$t/agents/fakerunner.toml"
+    printf 'sk-fake-%s\n' "$RANDOM" | system/bin/olymparch-keys set fakekey >/dev/null
+    PATH=$PWD/system/bin:$PATH id=$("$A" new fakerunner "$HOME/proj" "lag en test" 2>&1)
+    [[ $id == fakerunner-* ]] && ok "runner: started in tmux ($id)" || bad "runner start: $id"
+    for i in 1 2 3 4 5 6 7 8; do sleep 1; "$A" list >/dev/null 2>&1; [ "$(st "$id")" = done ] && break; done
+    [ "$(st "$id")" = done ] && ok "runner: done when it ended" || bad "runner status: $(st "$id")"
+    log=$XDG_STATE_HOME/olymparch/agents/$id/log
+    grep -q "key seen: yes" "$log" && ! grep -q "KEY IN ARGV" "$log" && ok "runner: key in the environment only" || bad "runner key: $(cat "$log")"
+    python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert any(t["last"]=="all done" for t in d["tasks"])' "$XDG_RUNTIME_DIR/olymparch/agents.json" &&
+        ok "runner: last line shown" || bad "runner last line"
+    ! grep -rq "sk-fake" "$XDG_RUNTIME_DIR/olymparch/agents.json" "$XDG_STATE_HOME/olymparch/agents/$id/task.json" && ok "no key in agents.json or task.json" || bad "key leaked"
+    "$A" rm "$id"
+else
+    echo "  skip  runner: no tmux / no systemd user manager here (the VM test covers it)"
+fi
+exit $fail
