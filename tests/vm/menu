@@ -50,9 +50,13 @@ if [ "${OLYMPARCH_TEST_HOLD:-0}" = 1 ]; then   # debugging: keep the prepared VM
     exit 0
 fi
 
-# ── every level (top: Apper, Stil, Installer, Fjern, Verktøy («kommer»: skipped by the arrows), Oppsett, Oppdater, System, Hjelp)
+# ── every level (top: Apper, Paneler, Stil, Installer, Fjern, Verktøy («kommer»: skipped by the arrows), Oppsett,
+#    Oppdater, System, Hjelp)
 menu_open
 shot meny "Super+Alt+Space: Olymparch-menyen, øverste nivå"
+press down; press ret; sleep 0.5
+shot paneler "Paneler: nedtrekkspanelene i baren (Zeus, Lyd, Nett, Plan, System …)"
+press esc
 press down; press ret; sleep 0.5
 shot stil "Stil: Tema og Bakgrunn"
 press down; press ret; sleep 0.5
@@ -135,7 +139,7 @@ keys "clear\n" 0.3
 
 # ── Remove: cowsay, typed to find it
 menu_open
-press down; press down; press down; press ret; sleep 3
+press down; press down; press down; press down; press ret; sleep 3
 keys "cowsay" 1
 shot fjern-sok "Fjern: «cowsay» filtrerer listen"
 press ret; sleep 3

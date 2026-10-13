@@ -53,6 +53,7 @@ press meta_l+ret; sleep 2
 keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo bash /mnt/tests/vm/ai-guest.sh setup; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=nb_NO.UTF-8 setsid -f /usr/lib/olymparch/launch-shell; sleep 3; $G stubs; hyprctl reload >/dev/null; setsid -f $G watch; exit\n" 1
 keys "$PW\n" 1
 wait_for 'AI: SETUP-(OK|NO-TMUX)' 180 || { shot oppsett-feil "Oppsettet ble ikke ferdig"; finish "FAIL · fikk ikke lagt inn filene"; }
+need watcher 'AI: WATCH-START' 60
 seen 'AI: SETUP-NO-TMUX' && fail+=(tmux-mangler)
 need stubs 'AI: STUBS-OK' 60
 wait_for 'ZEUS=.*"connected":true' 20

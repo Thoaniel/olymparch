@@ -14,7 +14,9 @@ for t in "${tests[@]}"; do
     [ "$t" = install-disk ] || [ "$t" = install-wizard ] || [ "$t" = games-install ] ||
         base=(env OLYMPARCH_BASE="${OLYMPARCH_BASE:-tests/vm/out/install-disk}")
     echo "==> $t"
-    timeout 3600 "${base[@]}" "tests/vm/$t" >"tests/vm/out/$t-run.log" 2>&1
+    # settings installs packages from the mirrors (night light, Tailscale …): it gets two hours
+    limit=3600; [ "$t" = settings ] && limit=7200
+    timeout "$limit" "${base[@]}" "tests/vm/$t" >"tests/vm/out/$t-run.log" 2>&1
     r=$(cat "tests/vm/out/$t/result.txt" 2>/dev/null || echo "FAIL · no result (exit $?)")
     printf '%s\t%s\n' "$t" "$r" | tee -a "$summary"
 done

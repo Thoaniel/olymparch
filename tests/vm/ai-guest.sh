@@ -81,8 +81,9 @@ task)
     ;;
 watch)   # in the background: which panel is open, whether Zeus' card is up and what Zeus says, when it changes
     last=''
+    mark WATCH-START
+    q() { timeout 3 qs ipc -p /usr/share/olymparch/shell call "$@" 2>/dev/null; }
     while true; do
-        q() { qs ipc -p /usr/share/olymparch/shell call "$@" 2>/dev/null; }
         now="PANEL=$(q panel current) CARD=$(q zeuscard shown) ZEUS=$(q zeus status | tr -d ' ')"
         [ "$now" != "$last" ] && mark "$now" && last=$now
         sleep 0.5
