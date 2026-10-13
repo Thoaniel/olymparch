@@ -17,6 +17,7 @@ bad() { printf '  FAIL  %s\n' "$1"; fail=1; }
 golden() {  # golden NAME < output
     local g=tests/hw/golden/$1
     if ((update)); then cat >"$g"; ok "$1 (updated)"; return; fi
+    [ -f "$g" ] || { cat >/dev/null; bad "$1: no golden file (tests/hw/run --update)"; return; }
     if diff -u "$g" - >"$tmp/diff"; then ok "$1"; else bad "$1"; sed 's/^/        /' "$tmp/diff" | head -40; fi
 }
 
@@ -26,7 +27,7 @@ mapfile -t ids < <(OLYMPARCH_SYSROOT=$tmp/none "$HW" explain | awk '/^[a-z0-9-]+
 for f in tests/hw/fixtures/*.fixture; do
     name=$(basename "$f" .fixture)
     tests/hw/expand "$f" "$tmp/$name" || { bad "$name: expand"; continue; }
-    OLYMPARCH_SYSROOT=$tmp/$name "$HW" plan 2>&1 | golden "$name.plan"
+    golden "$name.plan" < <(OLYMPARCH_SYSROOT=$tmp/$name "$HW" plan 2>&1)
     matched=" $(OLYMPARCH_SYSROOT=$tmp/$name "$HW" plan --list rules | paste -sd' ') "
     # a rule that matched but lost its group still counts as matching
     lost=$(OLYMPARCH_SYSROOT=$tmp/$name "$HW" explain | awk '/^[a-z0-9-]+  .*\[no \(/ {print $1}')
@@ -34,8 +35,8 @@ for f in tests/hw/fixtures/*.fixture; do
         if [[ $matched == *" $id "* ]] || grep -qx "$id" <<<"$lost"; then HIT[$id]+="$name "; else MISS[$id]+="$name "; fi
     done
 done
-OLYMPARCH_SYSROOT=$tmp/intel-laptop LANG=nb_NO.UTF-8 LC_ALL=nb_NO.UTF-8 "$HW" plan 2>&1 | golden intel-laptop.plan.nb
-OLYMPARCH_SYSROOT=$tmp/hybrid-laptop "$HW" explain gpu-hybrid-prime 2>&1 | sed "s#$PWD/##" | golden hybrid-laptop.explain
+golden intel-laptop.plan.nb < <(OLYMPARCH_SYSROOT=$tmp/intel-laptop LANG=nb_NO.UTF-8 LC_ALL=nb_NO.UTF-8 "$HW" plan 2>&1)
+golden hybrid-laptop.explain < <(OLYMPARCH_SYSROOT=$tmp/hybrid-laptop "$HW" explain gpu-hybrid-prime 2>&1 | sed "s#$PWD/##")
 
 echo "olymparch-hw: every rule has a positive and a negative fixture"
 for id in "${ids[@]}"; do

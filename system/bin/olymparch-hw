@@ -27,7 +27,7 @@ NB=0
 case ${OLYMPARCH_LANG:-${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}} in nb* | nn* | no*) NB=1 ;; esac
 declare -A EN=(
     [plan]="Olymparch hardware plan" [machine]="Machine" [cpu]="CPU" [gpu]="Graphics" [none]="none"
-    [primary]="primary" [desktop]="desktop" [laptop]="laptop" [vm]="virtual machine"
+    [primary]="primary" [notloaded]="not loaded" [desktop]="desktop" [laptop]="laptop" [vm]="virtual machine"
     [rules]="Matched rules" [fw]="Firmware" [for]="for" [install]="To install" [have]="Already installed"
     [optional]="Offered, not installed automatically" [ourrepo]="From the Olymparch repo (not available yet)"
     [files]="Configuration" [notes]="Notes" [nothing]="Nothing to install." [lost]="not used, %s wins"
@@ -45,7 +45,7 @@ declare -A EN=(
 )
 declare -A NO=(
     [plan]="Olymparch maskinvareplan" [machine]="Maskin" [cpu]="Prosessor" [gpu]="Grafikk" [none]="ingen"
-    [primary]="hoved" [desktop]="stasjonær" [laptop]="bærbar" [vm]="virtuell maskin"
+    [primary]="hoved" [notloaded]="ikke lastet" [desktop]="stasjonær" [laptop]="bærbar" [vm]="virtuell maskin"
     [rules]="Regler som passer" [fw]="Fastvare" [for]="for" [install]="Installeres" [have]="Allerede installert"
     [optional]="Tilbys, installeres ikke automatisk" [ourrepo]="Fra Olymparch-repoet (ikke tilgjengelig ennå)"
     [files]="Oppsett" [notes]="Merknader" [nothing]="Ingenting å installere." [lost]="brukes ikke, %s vinner"
@@ -67,12 +67,18 @@ rd() { local v=''; [ -r "$S$1" ] && IFS= read -r v <"$S$1" 2>/dev/null; printf '
 
 # --- facts ---------------------------------------------------------------------------------------------
 # DEV_*: one entry per device with a modalias (pci, usb interfaces, hid, i2c, sdio, spi, bound platform devices)
-DEV_BUS=() DEV_ID=() DEV_ALIAS=() DEV_DRV=() DEV_MOD=() DEV_CLASS=() DEV_VD=() DEV_VGA=()
+# DEV_AMOD: for a PCI device no driver is bound to, the modules its modalias points to (modprobe -R). With
+# nomodeset the GPU driver is not loaded, and the drivers and firmware for it must be found anyway.
+DEV_BUS=() DEV_ID=() DEV_ALIAS=() DEV_DRV=() DEV_MOD=() DEV_AMOD=() DEV_CLASS=() DEV_VD=() DEV_VGA=()
 declare -A DMI=() LOADABLE=()
 CPU_VENDOR='' CPU_NAME='' VM=no BATTERY=no CHASSIS=desktop KBD_MODS=''
 loadable() {  # a module that can go into the initramfs (built-ins have no initstate)
     [ -n "${LOADABLE[$1]+x}" ] || { if [ -e "$S/sys/module/$1/initstate" ]; then LOADABLE[$1]=1; else LOADABLE[$1]=0; fi; }
     [ "${LOADABLE[$1]}" = 1 ]
+}
+alias_modules() {  # alias_modules BUS ID MODALIAS → the modules that would bind it, space-separated
+    if [ -n "$S" ]; then [ -r "$S/.hw/resolve/$1-$2" ] && cat "$S/.hw/resolve/$1-$2"; return 0; fi
+    modprobe -R "$3" 2>/dev/null | sort -u | paste -sd' ' || true
 }
 collect() {
     local bus d alias drv mod l
@@ -87,6 +93,7 @@ collect() {
             [ "$bus" = platform ] && [ -z "$drv" ] && continue
             IFS= read -r alias <"$d/modalias" || true
             DEV_BUS+=("$bus") DEV_ID+=("${d##*/}") DEV_ALIAS+=("$alias") DEV_DRV+=("$drv") DEV_MOD+=("$mod")
+            if [ "$bus" = pci ] && [ -z "$drv" ]; then DEV_AMOD+=("$(alias_modules "$bus" "${d##*/}" "$alias")"); else DEV_AMOD+=(''); fi
             if [ "$bus" = pci ]; then
                 local c v dv b=''
                 IFS= read -r c <"$d/class"; IFS= read -r v <"$d/vendor"; IFS= read -r dv <"$d/device"
@@ -147,7 +154,7 @@ internal_keyboard() {
 # --- rules -----------------------------------------------------------------------------------------------
 RULE_IDS=()
 declare -A R=() RFILE=()
-MATCH_KEYS='modalias driver chassis cpu.vendor pci.range battery vm keyboard'
+MATCH_KEYS='modalias driver module chassis cpu.vendor pci.range battery vm keyboard'
 ACTION_KEYS='packages optional ourrepo replaces-driver modules-load modprobe cmdline initramfs-modules udev-file groups user-unit hypr-env services'
 META_KEYS='id name name.nb note note.nb support priority group when'
 valid_key() {
@@ -203,6 +210,14 @@ match_one() {
             for ((j = 0; j < ${#DEV_ID[@]}; j++)); do
                 # shellcheck disable=SC2053
                 [ -n "${DEV_DRV[$j]}" ] && [[ ${DEV_DRV[$j]} == $pat ]] && { echo "${DEV_BUS[$j]} ${DEV_ID[$j]} (${DEV_DRV[$j]})"; return 0; }
+            done ;;
+        module)   # the bound driver's module, or (nothing bound) a module the modalias points to
+            local m
+            for ((j = 0; j < ${#DEV_ID[@]}; j++)); do
+                for m in ${DEV_MOD[$j]} ${DEV_AMOD[$j]}; do
+                    # shellcheck disable=SC2053
+                    [[ $m == $pat ]] && { echo "${DEV_BUS[$j]} ${DEV_ID[$j]} ($m${DEV_DRV[$j]:+ bound}${DEV_DRV[$j]:- not loaded})"; return 0; }
+                done
             done ;;
         pci.range)
             local ven=${pat%%:*} rest=${pat#*:} cls='' lo hi dev
@@ -325,13 +340,14 @@ firmware() {  # the split firmware packages the bound drivers ask for (not those
     local j m p seen=' ' id
     for id in $(active); do for m in $(words "$id" replaces-driver); do seen+="$m "; done; done
     for ((j = 0; j < ${#DEV_ID[@]}; j++)); do
-        m=${DEV_MOD[$j]}
-        [ -n "$m" ] && [[ $seen != *" $m "* ]] || continue
-        seen+="$m "
-        while read -r p; do
-            [ -n "${FW_FOR[$p]+x}" ] || FW_PKGS+=("$p")
-            [[ " ${FW_FOR[$p]-} " == *" $m "* ]] || FW_FOR[$p]+="${FW_FOR[$p]:+ }$m"
-        done < <(modinfo_fw "$m" | fw_map | awk '!seen[$2]++ {print $2}')
+        for m in ${DEV_MOD[$j]} ${DEV_AMOD[$j]}; do   # bound, or what would bind (nomodeset)
+            [[ $seen != *" $m "* ]] || continue
+            seen+="$m "
+            while read -r p; do
+                [ -n "${FW_FOR[$p]+x}" ] || FW_PKGS+=("$p")
+                [[ " ${FW_FOR[$p]-} " == *" $m "* ]] || FW_FOR[$p]+="${FW_FOR[$p]:+ }$m"
+            done < <(modinfo_fw "$m" | fw_map | awk '!seen[$2]++ {print $2}')
+        done
     done
     return 0
 }
@@ -422,7 +438,9 @@ gpu_lines() {
         [ "${DEV_BUS[$j]}" = pci ] && [[ ${DEV_CLASS[$j]} == 03* ]] || continue
         any=1 extra=''
         [ "${DEV_VGA[$j]}" = 1 ] && extra=", $(t primary)"
-        printf '%s %s (%s%s)\n' "${DEV_ID[$j]}" "${DEV_VD[$j]}" "${DEV_DRV[$j]:-?}" "$extra"
+        local drv=${DEV_DRV[$j]:-?}
+        [ -z "${DEV_DRV[$j]}" ] && [ -n "${DEV_AMOD[$j]}" ] && drv="${DEV_AMOD[$j]// /, }: $(t notloaded)"
+        printf '%s %s (%s%s)\n' "${DEV_ID[$j]}" "${DEV_VD[$j]}" "$drv" "$extra"
     done
     ((any)) || t none
 }
@@ -569,6 +587,7 @@ cmd_dump() {
         [ -n "${DEV_MOD[$j]}" ] && { printf ' module=%s' "${DEV_MOD[$j]}"; loadable "${DEV_MOD[$j]}" || printf ' builtin=1'; }
         [ "$b" = pci ] && printf ' class=%s vd=%s' "${DEV_CLASS[$j]}" "${DEV_VD[$j]}"
         [ -n "${DEV_VGA[$j]}" ] && printf ' boot_vga=%s' "${DEV_VGA[$j]}"
+        [ -n "${DEV_AMOD[$j]}" ] && printf ' resolves=%s' "${DEV_AMOD[$j]// /,}"
         printf ' modalias=%s\n' "${DEV_ALIAS[$j]}"
     done
     # keyboards with every ancestor that has a driver (for the initramfs rule)
@@ -593,10 +612,11 @@ cmd_dump() {
     # firmware: one file per package each module asks for (enough to map it)
     local seen=' '
     for ((j = 0; j < ${#DEV_ID[@]}; j++)); do
-        m=${DEV_MOD[$j]}
-        [ -n "$m" ] && [[ $seen != *" $m "* ]] || continue
-        seen+="$m "
-        modinfo_fw "$m" | fw_map | awk -v m="$m" '!seen[$2]++ {print "fw", m, $1}'
+        for m in ${DEV_MOD[$j]} ${DEV_AMOD[$j]}; do
+            [[ $seen != *" $m "* ]] || continue
+            seen+="$m "
+            modinfo_fw "$m" | fw_map | awk -v m="$m" '!seen[$2]++ {print "fw", m, $1}'
+        done
     done
     kernel_log | sed -nE 's/.*(Direct firmware load for [^ ]+ failed.*)/kmsg \1/p' | sort -u
 }

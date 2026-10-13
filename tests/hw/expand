@@ -2,13 +2,13 @@
 # Turn a fixture (the text `olymparch-hw dump` writes) into a small sysroot that looks like sysfs:
 #   tests/hw/expand FIXTURE DIR
 # Lines: dmi KEY VALUE · cpu vendor_id|model_name|flags VALUE · power NAME TYPE · pkg NAME
-#        dev BUS ID path=P [driver=D module=M builtin=1 class=C vd=V:D boot_vga=B] modalias=A
+#        dev BUS ID path=P [driver=D module=M builtin=1 class=C vd=V:D boot_vga=B resolves=M1,M2] modalias=A
 #        kbd INPUT path=P · node path=P driver=D [module=M builtin=1] · fw MODULE FILE · kmsg TEXT
 #        repo olymparch (the [olymparch] repo is configured)
 set -euo pipefail
 fix=$1 T=$2
 rm -rf -- "$T"
-mkdir -p "$T/sys/devices" "$T/sys/class/dmi/id" "$T/sys/class/input" "$T/sys/class/power_supply" "$T/proc" "$T/.hw/modinfo"
+mkdir -p "$T/sys/devices" "$T/sys/class/dmi/id" "$T/sys/class/input" "$T/sys/class/power_supply" "$T/proc" "$T/.hw/modinfo" "$T/.hw/resolve"
 : >"$T/.hw/kmsg"
 : >"$T/.hw/pkgs"
 cpu_vendor='' cpu_name='' cpu_flags='fpu'
@@ -55,6 +55,7 @@ while IFS= read -r line || [ -n "$line" ]; do
                     echo "0x${f[class]}" >"$d/class"; echo "0x${f[vd]%:*}" >"$d/vendor"; echo "0x${f[vd]#*:}" >"$d/device"
                 fi
                 [ -n "${f[boot_vga]:-}" ] && echo "${f[boot_vga]}" >"$d/boot_vga"
+                [ -n "${f[resolves]:-}" ] && echo "${f[resolves]//,/ }" >"$T/.hw/resolve/$a-$(read -r id _ <<<"$rest"; echo "$id")"
                 [ -n "${f[driver]:-}" ] && bind "$d" "$a" "${f[driver]}" "${f[module]:-}" "${f[builtin]:-0}"
             elif [ "$kind" = node ]; then
                 bind "$d" node "${f[driver]}" "${f[module]:-}" "${f[builtin]:-0}"

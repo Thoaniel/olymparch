@@ -7,7 +7,7 @@ name=AMD graphics: Vulkan (64- and 32-bit)
 name.nb=AMD-grafikk: Vulkan (64- og 32-bit)
 support=supported
 modalias=pci:v00001002d*bc03*
-driver=amdgpu
+module=amdgpu
 packages=vulkan-radeon lib32-vulkan-radeon
 when=install boot
 

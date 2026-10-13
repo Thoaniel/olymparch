@@ -1,0 +1,106 @@
+# The owner's PC (amd-desktop) booted with nomodeset (the ISO's «safe graphics» entry): amdgpu is not loaded,
+# so nothing is bound to the GPU. Drivers and firmware must still be found from the modalias (resolves=).
+dmi chassis_type 3
+dmi sys_vendor Micro-Star International Co., Ltd.
+dmi product_name MS-7D96
+dmi product_family Default string
+dmi board_vendor Micro-Star International Co., Ltd.
+dmi board_name MAG B760 TOMAHAWK WIFI (MS-7D96)
+cpu vendor_id GenuineIntel
+cpu model_name Intel(R) Core(TM) i7-14700F
+dev pci 0000:00:00.0 path=pci0000:00/0000:00:00.0 class=060000 vd=8086:a740 modalias=pci:v00008086d0000A740sv00001462sd00007D96bc06sc00i00
+dev pci 0000:00:01.0 path=pci0000:00/0000:00:01.0 driver=pcieport module=pcieportdrv builtin=1 class=060400 vd=8086:a70d modalias=pci:v00008086d0000A70Dsv00001462sd00007D96bc06sc04i00
+dev pci 0000:00:06.0 path=pci0000:00/0000:00:06.0 driver=pcieport module=pcieportdrv builtin=1 class=060400 vd=8086:a74d modalias=pci:v00008086d0000A74Dsv00000000sd00000000bc06sc04i00
+dev pci 0000:00:08.0 path=pci0000:00/0000:00:08.0 class=088000 vd=8086:a74f modalias=pci:v00008086d0000A74Fsv00001462sd00007D96bc08sc80i00
+dev pci 0000:00:0a.0 path=pci0000:00/0000:00:0a.0 driver=intel_vsec module=intel_vsec class=118000 vd=8086:a77d modalias=pci:v00008086d0000A77Dsv00000000sd00000000bc11sc80i00
+dev pci 0000:00:14.0 path=pci0000:00/0000:00:14.0 driver=xhci_hcd module=xhci_pci builtin=1 class=0c0330 vd=8086:7a60 modalias=pci:v00008086d00007A60sv00001462sd00007D96bc0Csc03i30
+dev pci 0000:00:14.2 path=pci0000:00/0000:00:14.2 class=050000 vd=8086:7a27 modalias=pci:v00008086d00007A27sv00000000sd00000000bc05sc00i00
+dev pci 0000:00:14.3 path=pci0000:00/0000:00:14.3 driver=iwlwifi module=iwlwifi class=028000 vd=8086:7a70 modalias=pci:v00008086d00007A70sv00008086sd00000094bc02sc80i00
+dev pci 0000:00:16.0 path=pci0000:00/0000:00:16.0 driver=mei_me module=mei_me class=078000 vd=8086:7a68 modalias=pci:v00008086d00007A68sv00001462sd00007D96bc07sc80i00
+dev pci 0000:00:17.0 path=pci0000:00/0000:00:17.0 driver=ahci module=ahci builtin=1 class=010601 vd=8086:7a62 modalias=pci:v00008086d00007A62sv00001462sd00007D96bc01sc06i01
+dev pci 0000:00:1d.0 path=pci0000:00/0000:00:1d.0 driver=pcieport module=pcieportdrv builtin=1 class=060400 vd=8086:7a36 modalias=pci:v00008086d00007A36sv00001462sd00007D96bc06sc04i00
+dev pci 0000:00:1f.0 path=pci0000:00/0000:00:1f.0 class=060100 vd=8086:7a06 modalias=pci:v00008086d00007A06sv00001462sd00007D96bc06sc01i00
+dev pci 0000:00:1f.3 path=pci0000:00/0000:00:1f.3 driver=snd_hda_intel module=snd_hda_intel class=040300 vd=8086:7a50 modalias=pci:v00008086d00007A50sv00001462sd0000ED96bc04sc03i00
+dev pci 0000:00:1f.4 path=pci0000:00/0000:00:1f.4 driver=i801_smbus module=i2c_i801 class=0c0500 vd=8086:7a23 modalias=pci:v00008086d00007A23sv00001462sd00007D96bc0Csc05i00
+dev pci 0000:00:1f.5 path=pci0000:00/0000:00:1f.5 driver=intel-spi module=spi_intel_pci class=0c8000 vd=8086:7a24 modalias=pci:v00008086d00007A24sv00001462sd00007D96bc0Csc80i00
+dev pci 0000:01:00.0 path=pci0000:00/0000:00:01.0/0000:01:00.0 driver=pcieport module=pcieportdrv builtin=1 class=060400 vd=1002:1478 modalias=pci:v00001002d00001478sv00001025sd00001478bc06sc04i00
+dev pci 0000:02:00.0 path=pci0000:00/0000:00:01.0/0000:01:00.0/0000:02:00.0 driver=pcieport module=pcieportdrv builtin=1 class=060400 vd=1002:1479 modalias=pci:v00001002d00001479sv00001002sd00001479bc06sc04i00
+dev pci 0000:03:00.0 path=pci0000:00/0000:00:01.0/0000:01:00.0/0000:02:00.0/0000:03:00.0 class=030000 vd=1002:7550 boot_vga=1 resolves=amdgpu modalias=pci:v00001002d00007550sv00001025sd00001878bc03sc00i00
+dev pci 0000:03:00.1 path=pci0000:00/0000:00:01.0/0000:01:00.0/0000:02:00.0/0000:03:00.1 driver=snd_hda_intel module=snd_hda_intel class=040300 vd=1002:ab40 modalias=pci:v00001002d0000AB40sv00001002sd0000AB40bc04sc03i00
+dev pci 0000:04:00.0 path=pci0000:00/0000:00:06.0/0000:04:00.0 driver=nvme module=nvme class=010802 vd=2646:501f modalias=pci:v00002646d0000501Fsv00002646sd0000501Fbc01sc08i02
+dev pci 0000:05:00.0 path=pci0000:00/0000:00:1d.0/0000:05:00.0 driver=r8169 module=r8169 class=020000 vd=10ec:8125 modalias=pci:v000010ECd00008125sv00001462sd00007D96bc02sc00i00
+dev usb 1-0:1.0 path=pci0000:00/0000:00:14.0/usb1/1-0:1.0 driver=hub module=usbcore builtin=1 modalias=usb:v1D6Bp0002d0702dc09dsc00dp01ic09isc00ip00in00
+dev usb 1-11:1.0 path=pci0000:00/0000:00:14.0/usb1/1-11/1-11:1.0 driver=usbhid module=usbhid builtin=1 modalias=usb:v1462p7D96d0001dc00dsc00dp00ic03isc00ip00in00
+dev usb 1-14:1.0 path=pci0000:00/0000:00:14.0/usb1/1-14/1-14:1.0 driver=btusb module=btusb modalias=usb:v8087p0033d0000dcE0dsc01dp01icE0isc01ip01in00
+dev usb 1-14:1.1 path=pci0000:00/0000:00:14.0/usb1/1-14/1-14:1.1 driver=btusb module=btusb modalias=usb:v8087p0033d0000dcE0dsc01dp01icE0isc01ip01in01
+dev usb 1-2:1.0 path=pci0000:00/0000:00:14.0/usb1/1-2/1-2:1.0 driver=hub module=usbcore builtin=1 modalias=usb:v05E3p0608d6070dc09dsc00dp01ic09isc00ip00in00
+dev usb 1-3:1.0 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3:1.0 driver=hub module=usbcore builtin=1 modalias=usb:v05E3p0610d7820dc09dsc00dp02ic09isc00ip02in00
+dev usb 1-3.2:1.0 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.2/1-3.2:1.0 driver=snd-usb-audio module=snd_usb_audio modalias=usb:v1395p008Ad0302dc00dsc00dp00ic01isc01ip00in00
+dev usb 1-3.2:1.1 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.2/1-3.2:1.1 driver=snd-usb-audio module=snd_usb_audio modalias=usb:v1395p008Ad0302dc00dsc00dp00ic01isc02ip00in01
+dev usb 1-3.2:1.2 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.2/1-3.2:1.2 driver=snd-usb-audio module=snd_usb_audio modalias=usb:v1395p008Ad0302dc00dsc00dp00ic01isc02ip00in02
+dev usb 1-3.2:1.3 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.2/1-3.2:1.3 driver=snd-usb-audio module=snd_usb_audio modalias=usb:v1395p008Ad0302dc00dsc00dp00ic01isc01ip00in03
+dev usb 1-3.2:1.4 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.2/1-3.2:1.4 driver=snd-usb-audio module=snd_usb_audio modalias=usb:v1395p008Ad0302dc00dsc00dp00ic01isc02ip00in04
+dev usb 1-3.2:1.5 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.2/1-3.2:1.5 driver=usbhid module=usbhid builtin=1 modalias=usb:v1395p008Ad0302dc00dsc00dp00ic03isc00ip00in05
+dev usb 1-3.3:1.0 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.3/1-3.3:1.0 driver=usbhid module=usbhid builtin=1 modalias=usb:v0951p1734d2104dc00dsc00dp00ic03isc01ip01in00
+dev usb 1-3.3:1.1 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.3/1-3.3:1.1 driver=usbhid module=usbhid builtin=1 modalias=usb:v0951p1734d2104dc00dsc00dp00ic03isc00ip00in01
+dev usb 1-3.3:1.2 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.3/1-3.3:1.2 driver=usbhid module=usbhid builtin=1 modalias=usb:v0951p1734d2104dc00dsc00dp00ic03isc00ip00in02
+dev usb 1-3.3:1.3 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.3/1-3.3:1.3 modalias=usb:v0951p1734d2104dc00dsc00dp00ic03isc00ip00in03
+dev usb 1-3.4:1.0 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.4/1-3.4:1.0 driver=usbhid module=usbhid builtin=1 modalias=usb:v0951p16D7d1123dc00dsc00dp00ic03isc01ip02in00
+dev usb 1-3.4:1.1 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.4/1-3.4:1.1 driver=usbhid module=usbhid builtin=1 modalias=usb:v0951p16D7d1123dc00dsc00dp00ic03isc01ip01in01
+dev usb 1-3.4:1.2 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.4/1-3.4:1.2 driver=usbhid module=usbhid builtin=1 modalias=usb:v0951p16D7d1123dc00dsc00dp00ic03isc00ip00in02
+dev usb 1-9:1.0 path=pci0000:00/0000:00:14.0/usb1/1-9/1-9:1.0 driver=snd-usb-audio module=snd_usb_audio modalias=usb:v1395p0300d0314dc00dsc00dp00ic01isc01ip00in00
+dev usb 1-9:1.1 path=pci0000:00/0000:00:14.0/usb1/1-9/1-9:1.1 driver=snd-usb-audio module=snd_usb_audio modalias=usb:v1395p0300d0314dc00dsc00dp00ic01isc02ip00in01
+dev usb 1-9:1.2 path=pci0000:00/0000:00:14.0/usb1/1-9/1-9:1.2 driver=snd-usb-audio module=snd_usb_audio modalias=usb:v1395p0300d0314dc00dsc00dp00ic01isc01ip00in02
+dev usb 1-9:1.3 path=pci0000:00/0000:00:14.0/usb1/1-9/1-9:1.3 driver=snd-usb-audio module=snd_usb_audio modalias=usb:v1395p0300d0314dc00dsc00dp00ic01isc02ip00in03
+dev usb 1-9:1.4 path=pci0000:00/0000:00:14.0/usb1/1-9/1-9:1.4 driver=snd-usb-audio module=snd_usb_audio modalias=usb:v1395p0300d0314dc00dsc00dp00ic01isc02ip00in04
+dev usb 1-9:1.5 path=pci0000:00/0000:00:14.0/usb1/1-9/1-9:1.5 driver=usbhid module=usbhid builtin=1 modalias=usb:v1395p0300d0314dc00dsc00dp00ic03isc00ip00in05
+dev usb 2-0:1.0 path=pci0000:00/0000:00:14.0/usb2/2-0:1.0 driver=hub module=usbcore builtin=1 modalias=usb:v1D6Bp0003d0702dc09dsc00dp03ic09isc00ip00in00
+dev usb 2-2:1.0 path=pci0000:00/0000:00:14.0/usb2/2-2/2-2:1.0 driver=hub module=usbcore builtin=1 modalias=usb:v05E3p0625d7820dc09dsc00dp03ic09isc00ip00in00
+dev hid 0003:0951:16D7.0007 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.4/1-3.4:1.0/0003:0951:16D7.0007 driver=hid-generic module=hid_generic builtin=1 modalias=hid:b0003g0001v00000951p000016D7
+dev hid 0003:0951:16D7.0008 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.4/1-3.4:1.1/0003:0951:16D7.0008 driver=hid-generic module=hid_generic builtin=1 modalias=hid:b0003g0001v00000951p000016D7
+dev hid 0003:0951:16D7.0009 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.4/1-3.4:1.2/0003:0951:16D7.0009 driver=hid-generic module=hid_generic builtin=1 modalias=hid:b0003g0001v00000951p000016D7
+dev hid 0003:0951:1734.0004 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.3/1-3.3:1.0/0003:0951:1734.0004 driver=hid-generic module=hid_generic builtin=1 modalias=hid:b0003g0001v00000951p00001734
+dev hid 0003:0951:1734.0005 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.3/1-3.3:1.1/0003:0951:1734.0005 driver=hid-generic module=hid_generic builtin=1 modalias=hid:b0003g0001v00000951p00001734
+dev hid 0003:0951:1734.0006 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.3/1-3.3:1.2/0003:0951:1734.0006 driver=hid-generic module=hid_generic builtin=1 modalias=hid:b0003g0001v00000951p00001734
+dev hid 0003:1395:008A.0002 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.2/1-3.2:1.5/0003:1395:008A.0002 driver=hid-generic module=hid_generic builtin=1 modalias=hid:b0003g0001v00001395p0000008A
+dev hid 0003:1395:0300.0001 path=pci0000:00/0000:00:14.0/usb1/1-9/1-9:1.5/0003:1395:0300.0001 driver=hid-generic module=hid_generic builtin=1 modalias=hid:b0003g0001v00001395p00000300
+dev hid 0003:1462:7D96.0003 path=pci0000:00/0000:00:14.0/usb1/1-11/1-11:1.0/0003:1462:7D96.0003 driver=hid-generic module=hid_generic builtin=1 modalias=hid:b0003g0001v00001462p00007D96
+dev i2c 10-0051 path=pci0000:00/0000:00:1f.4/i2c-10/10-0051 driver=spd5118 module=spd5118 modalias=i2c:spd5118
+dev i2c 10-0053 path=pci0000:00/0000:00:1f.4/i2c-10/10-0053 driver=spd5118 module=spd5118 modalias=i2c:spd5118
+dev spi spi0.0 path=pci0000:00/0000:00:1f.5/spi_master/spi0/spi0.0 driver=spi-nor module=spi_nor modalias=spi:spi-nor
+dev platform ACPI000C:00 path=platform/ACPI000C:00 driver=processor_aggregator module=acpi_pad modalias=acpi:ACPI000C:
+dev platform ACPI000E:00 path=platform/ACPI000E:00 driver=acpi-tad module=acpi_tad modalias=acpi:ACPI000E:
+dev platform alarmtimer.0.auto path=platform/rtc_cmos/rtc/rtc0/alarmtimer.0.auto driver=alarmtimer module=alarmtimer builtin=1 modalias=platform:alarmtimer
+dev platform INT33A1:00 path=platform/INT33A1:00 driver=intel_pmc_core module=intel_pmc_core modalias=acpi:INT33A1:PNP0D80:
+dev platform INTC1085:00 path=platform/INTC1085:00 driver=alderlake-pinctrl module=pinctrl_alderlake modalias=acpi:INTC1085:
+dev platform intel_rapl_msr.0 path=platform/intel_rapl_msr.0 driver=intel_rapl_msr module=intel_rapl_msr modalias=platform:intel_rapl_msr
+dev platform iTCO_wdt path=pci0000:00/0000:00:1f.4/iTCO_wdt driver=iTCO_wdt module=iTCO_wdt modalias=platform:iTCO_wdt
+dev platform LNXPWRBN:00 path=platform/LNXPWRBN:00 driver=acpi-button module=button builtin=1 modalias=acpi:LNXPWRBN:
+dev platform LNXTHERM:00 path=platform/LNXTHERM:00 driver=acpi-thermal module=thermal builtin=1 modalias=acpi:LNXTHERM:
+dev platform MSFT0101:00 path=platform/MSFT0101:00 driver=tpm_crb_acpi module=tpm_crb builtin=1 modalias=acpi:MSFT0101:
+dev platform pcspkr path=platform/pcspkr driver=pcspkr module=pcspkr modalias=platform:pcspkr
+dev platform PNP0C0B:00 path=platform/PNP0C0B:00 driver=acpi-fan module=fan builtin=1 modalias=acpi:PNP0C0B:
+dev platform PNP0C0B:01 path=platform/PNP0C0B:01 driver=acpi-fan module=fan builtin=1 modalias=acpi:PNP0C0B:
+dev platform PNP0C0B:02 path=platform/PNP0C0B:02 driver=acpi-fan module=fan builtin=1 modalias=acpi:PNP0C0B:
+dev platform PNP0C0B:03 path=platform/PNP0C0B:03 driver=acpi-fan module=fan builtin=1 modalias=acpi:PNP0C0B:
+dev platform PNP0C0B:04 path=platform/PNP0C0B:04 driver=acpi-fan module=fan builtin=1 modalias=acpi:PNP0C0B:
+dev platform PNP0C0C:00 path=platform/PNP0C0C:00 driver=acpi-button module=button builtin=1 modalias=acpi:PNP0C0C:
+dev platform PNP0C0E:00 path=platform/PNP0C0E:00 driver=acpi-button module=button builtin=1 modalias=acpi:PNP0C0E:
+dev platform PNP0C14:00 path=pci0000:00/PNP0C14:00 driver=acpi-wmi module=wmi modalias=acpi:PNP0C14:
+dev platform PNP0C14:01 path=platform/PNP0C14:01 driver=acpi-wmi module=wmi modalias=acpi:PNP0C14:
+dev platform PNP0C14:02 path=platform/PNP0C14:02 driver=acpi-wmi module=wmi modalias=acpi:PNP0C14:
+dev platform PNP0C14:03 path=platform/PNP0C14:03 driver=acpi-wmi module=wmi modalias=acpi:PNP0C14:
+dev platform PNP0C14:04 path=platform/PNP0C14:04 driver=acpi-wmi module=wmi modalias=acpi:PNP0C14:
+dev platform rtc_cmos path=platform/rtc_cmos driver=rtc_cmos module=rtc_cmos builtin=1 modalias=platform:rtc_cmos
+dev platform serial8250 path=platform/serial8250 driver=serial8250 module=8250 builtin=1 modalias=platform:serial8250
+kbd input13 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.3/1-3.3:1.2/0003:0951:1734.0006/input/input13
+node path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.3 driver=usb
+node path=pci0000:00/0000:00:14.0/usb1/1-3 driver=usb
+node path=pci0000:00/0000:00:14.0/usb1 driver=usb
+kbd input15 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.4/1-3.4:1.1/0003:0951:16D7.0008/input/input15
+node path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.4 driver=usb
+kbd input8 path=pci0000:00/0000:00:14.0/usb1/1-3/1-3.3/1-3.3:1.0/0003:0951:1734.0004/input/input8
+fw iwlwifi iwlwifi-100-5.ucode
+fw amdgpu amdgpu/cyan_skillfish_gpu_info.bin
+fw r8169 rtl_nic/rtl8127a-1.fw
+kmsg Direct firmware load for regulatory.db failed with error -2
