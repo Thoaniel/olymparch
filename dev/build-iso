@@ -5,9 +5,13 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 . dev/env
 mkdir -p cache out
-# a stopped build leaves read-only folders (dr-xr-xr-x airootfs) that rm alone cannot remove
-[ -d work ] && chmod -R u+w -- work 2>/dev/null
-rm -rf -- work profile
+# A stopped build leaves read-only folders (dr-xr-xr-x) and files owned by sub-UIDs from the build's user
+# namespace (nfs-utils' statd): removed from inside such a namespace, where they are ours.
+if [ -d work ]; then
+    unshare --map-auto --map-root-user -- sh -c 'chmod -R u+w work 2>/dev/null; rm -rf work' 2>/dev/null ||
+        { chmod -R u+w -- work 2>/dev/null; rm -rf -- work; }
+fi
+rm -rf -- profile
 # Build from a staged copy of the profile, so the olymparch-* commands come from bin/ without being copied into git
 cp -r iso profile
 # Packages downloaded for earlier builds are reused (the second cache is this checkout's, so it works for anyone)
