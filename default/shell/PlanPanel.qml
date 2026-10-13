@@ -135,8 +135,7 @@ Dropdown {
     PanelAction {
         theme: p.theme; visible: p.weatherPlace === ""
         icon: "\u{F0590}"
-        label: p.t("plan.weather_set", "Show the weather here")
-        hint: p.t("plan.weather_where", "a place in Settings")
+        label: p.t("plan.weather_set", "Choose a place in Settings to see the weather")
         onActivated: { Panels.close("plan"); Quickshell.execDetached(["olymparch-settings", "open", "appearance"]); }
     }
 
@@ -230,7 +229,7 @@ Dropdown {
     }
     PanelField {
         theme: p.theme
-        hint: p.t("plan.remind", "Remind me: «10m Take a break» or «14:30 Call Ola»")
+        hint: p.t("plan.remind", "Remind: «10m Break» or «14:30 Call mum»")
         onAccepted: {
             const m = text.trim().match(/^(\d{1,2}:\d{2}|\d+[smhd]?(?:\d+[smh])?)\s+(.{1,200})$/);
             if (!m) { result.ok = false; result.text = p.t("plan.remind_bad", "Write a time first: 10m, 1h30m or 14:30, then the text."); return; }

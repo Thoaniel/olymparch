@@ -10,7 +10,7 @@ import Quickshell.Io
 Dropdown {
     id: p
     name: "system"
-    icon: ""
+    icon: ""
     title: t("system.title", "System")
     en: "System"
     nb: "System"
@@ -38,7 +38,7 @@ Dropdown {
     property string memText: ""; property string vramText: ""; property string uptime: ""
     function push(arr, v) { const a = arr.concat([v]); return a.length > keep ? a.slice(a.length - keep) : a; }
     function last(a) { return a.length ? a[a.length - 1] : 0; }
-    function gb(bytes) { return (bytes / 1073741824).toFixed(1); }
+    function gb(bytes) { return Number(bytes / 1073741824).toLocaleString(Qt.locale(), "f", 1); }
     function sample() { live.running = false; live.running = true; }
     Timer { running: p.visible; interval: 1500; repeat: true; onTriggered: p.sample() }
     Process {
@@ -69,7 +69,7 @@ Dropdown {
                         else if (/^(k10temp|coretemp|zenpower|cpu_thermal|acpitz)/.test(f[1])) cpuMax = Math.max(cpuMax, c);
                     } else if (f[0] === "up") {
                         const s = Math.floor(Number(f[1])), d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
-                        p.uptime = (d ? d + " " + p.t("system.days", "d") + " " : "") + h + " h " + m + " min";
+                        p.uptime = (d ? d + " " + p.t("system.days", "d") + " " : "") + h + " " + p.t("system.hours", "h") + " " + m + " min";
                     }
                 }
                 if (memTotal > 0) { p.memH = p.push(p.memH, Math.round(100 * (memTotal - memAvail) / memTotal)); p.memText = p.gb(memTotal - memAvail) + " / " + p.gb(memTotal) + " GB"; }
@@ -93,17 +93,18 @@ Dropdown {
         readonly property bool hot: values.length > 0 && values[values.length - 1] >= warn
         Text { x: p.theme.px(18); width: p.theme.px(120); anchors.verticalCenter: parent.verticalCenter; text: m.label; elide: Text.ElideRight
                font { family: p.theme.mono; pixelSize: p.theme.px(13) } color: p.theme.muted }
-        Text { anchors { right: graph.left; rightMargin: 12; verticalCenter: parent.verticalCenter } text: m.value
+        Text { anchors { right: graph.left; rightMargin: p.theme.px(10); verticalCenter: parent.verticalCenter } text: m.value
                font { family: p.theme.mono; pixelSize: p.theme.px(13) } color: m.hot ? p.theme.red : p.theme.text }
-        Sparkline { id: graph; theme: p.theme; anchors { right: parent.right; rightMargin: p.theme.px(18); verticalCenter: parent.verticalCenter }
+        Sparkline { id: graph; theme: p.theme; width: p.theme.px(120); height: p.theme.px(20); anchors { right: parent.right; rightMargin: p.theme.px(18); verticalCenter: parent.verticalCenter }
                     values: m.values; max: m.max; tint: m.hot ? p.theme.red : p.theme.gold }
     }
     Meter { label: p.t("system.cpu_use", "CPU"); values: p.cpuH; value: p.last(p.cpuH) + " %" }
-    Meter { label: p.t("system.gpu_use", "Graphics card"); values: p.gpuH; value: p.last(p.gpuH) + " %" + (p.vramText ? "  ·  " + p.vramText : "") }
+    Meter { label: p.t("system.gpu_use", "Graphics card"); values: p.gpuH; value: p.last(p.gpuH) + " %" }
+    PanelLine { theme: p.theme; visible: p.vramText !== ""; label: p.t("system.vram", "Graphics memory"); value: p.vramText }
     Meter { label: p.t("system.memory", "Memory"); values: p.memH; value: p.memText; warn: 90 }
     Meter { label: p.t("system.cpu_temp", "CPU temperature"); values: p.cpuT; value: p.last(p.cpuT) + " °C"; max: 100; warn: 90 }
     Meter { label: p.t("system.gpu_temp", "GPU temperature"); values: p.gpuT; value: p.last(p.gpuT) + " °C"; max: 110; warn: 95 }
-    PanelLine { theme: p.theme; visible: p.uptime !== ""; label: p.t("system.uptime", "On for"); value: p.uptime }
+    PanelLine { theme: p.theme; visible: p.uptime !== ""; label: p.t("system.uptime", "Uptime"); value: p.uptime }
 
     // ── what uses the most CPU, and the disks (read when the panel opens)
     property var procs: []            // [{ pid, user, cpu, mem, name }]
@@ -140,11 +141,12 @@ Dropdown {
             required property var modelData
             readonly property bool mine: modelData.user === p.me && p.me !== ""
             theme: p.theme
-            icon: ""
+            icon: "\u{F0156}"
             danger: p.confirmPid === modelData.pid
             enabledAction: mine
-            label: modelData.name + "  " + modelData.cpu + " %  ·  " + modelData.mem + " MB"
-            hint: !mine ? modelData.user : p.confirmPid === modelData.pid ? p.t("system.kill_sure", "again to end it") : p.t("system.kill", "end")
+            label: modelData.name + (p.procs.filter(o => o.name === modelData.name).length > 1 ? "  #" + modelData.pid : "")
+            hint: p.confirmPid === modelData.pid ? p.t("system.kill_sure", "Enter again ends it")
+                  : String(modelData.cpu).padStart(3) + " %  " + String(modelData.mem).padStart(6) + " MB" + (mine ? "" : "  · " + modelData.user)
             onActivated: {
                 if (!mine || !/^\d+$/.test(modelData.pid)) return;
                 if (p.confirmPid !== modelData.pid) { p.confirmPid = modelData.pid; return; }
@@ -159,8 +161,8 @@ Dropdown {
         delegate: PanelLine {
             required property var modelData
             theme: p.theme
-            label: modelData.mount
-            value: p.gb(modelData.size - modelData.used) + " " + p.t("system.gb_free", "GB free of") + " " + p.gb(modelData.size) + "  (" + modelData.pct + " %)"
+            label: modelData.mount.startsWith("/run/media/") ? modelData.mount.split("/").pop() : modelData.mount
+            value: p.t("system.disk_free", "%1 GB free of %2 GB · %3 % used").replace("%1", p.gb(modelData.size - modelData.used)).replace("%2", p.gb(modelData.size)).replace("%3", modelData.pct)
             valueTint: modelData.pct >= 90 ? p.theme.red : p.theme.text
         }
     }
@@ -192,8 +194,8 @@ Dropdown {
         hint: p.gaming ? p.t("system.gaming", "a game is running") : p.t("system.gamemode_auto", "game mode: on by itself in games")
         onActivated: { gmSet.command = ["qs", "ipc", "-p", "/usr/share/olymparch/shell", "call", "olymparch", "dnd", p.dnd ? "off" : "on"]; gmSet.running = true; }
     }
-    PanelAction { theme: p.theme; icon: ""; label: p.t("system.doctor", "Check the system"); hint: "olymparch-doctor"; onActivated: { Panels.close("system"); Quickshell.execDetached(["foot", "-H", "olymparch-doctor"]); } }
-    PanelAction { theme: p.theme; visible: p.info.updates > 0; icon: ""; label: p.t("system.update", "Update now"); onActivated: { Panels.close("system"); Quickshell.execDetached(["foot", "-H", "olymparch", "update"]); } }
-    PanelAction { theme: p.theme; icon: ""; label: p.t("system.rollback", "Roll back to a snapshot"); onActivated: { Panels.close("system"); Quickshell.execDetached(["foot", "-e", "olymparch-rollback"]); } }
-    PanelAction { theme: p.theme; icon: ""; label: p.t("system.settings", "All settings"); onActivated: { Panels.close("system"); Quickshell.execDetached(["olymparch-settings", "open"]); } }
+    PanelAction { theme: p.theme; icon: ""; label: p.t("system.doctor", "Check the system"); hint: "olymparch-doctor"; onActivated: { Panels.close("system"); Quickshell.execDetached(["foot", "-H", "olymparch-doctor"]); } }
+    PanelAction { theme: p.theme; visible: p.info.updates > 0; icon: ""; label: p.t("system.update", "Update now"); onActivated: { Panels.close("system"); Quickshell.execDetached(["foot", "-H", "olymparch", "update"]); } }
+    PanelAction { theme: p.theme; icon: ""; label: p.t("system.rollback", "Roll back to a snapshot"); onActivated: { Panels.close("system"); Quickshell.execDetached(["foot", "-e", "olymparch-rollback"]); } }
+    PanelAction { theme: p.theme; icon: ""; label: p.t("system.settings", "All settings"); onActivated: { Panels.close("system"); Quickshell.execDetached(["olymparch-settings", "open"]); } }
 }

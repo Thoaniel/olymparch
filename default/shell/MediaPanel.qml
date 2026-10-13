@@ -18,6 +18,7 @@ Dropdown {
     status: player ? (player.identity || "") : t("media.nothing", "Nothing is playing")
     // MPRIS does not push the position while playing: ask once a second while the panel is open
     Timer { running: p.visible && p.player && p.player.isPlaying; interval: 1000; repeat: true; onTriggered: p.player.positionChanged() }
+    readonly property bool timed: !!(player && player.lengthSupported && player.positionSupported && player.length > 0)
     function clock(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
 
     // the cover and what it is, side by side
@@ -58,25 +59,25 @@ Dropdown {
     }
     PanelSlider {
         theme: p.theme
-        visible: !!(p.player && p.player.lengthSupported && p.player.length > 0)
-        label: p.player ? p.clock(p.player.position) : ""
-        value: p.player && p.player.length > 0 ? p.player.position / p.player.length : 0
-        valueText: p.player ? p.clock(p.player.length) : ""
-        enabled: !!(p.player && p.player.canSeek)
+        visible: !!p.player
+        label: p.timed ? p.clock(p.player.position) : "--:--"
+        value: p.timed ? p.player.position / p.player.length : 0
+        valueText: p.timed ? p.clock(p.player.length) : p.t("media.live", "live")
+        enabled: p.timed && p.player.canSeek
         onMoved: v => { if (p.player.canSeek) p.player.position = v * p.player.length; }
     }
     PanelAction {
-        theme: p.theme; visible: !!(p.player && p.player.canTogglePlaying)
+        theme: p.theme; visible: !!p.player; enabledAction: !!(p.player && p.player.canTogglePlaying)
         icon: p.player && p.player.isPlaying ? "\u{F03E4}" : "\u{F040A}"
         label: p.player && p.player.isPlaying ? p.t("media.pause", "Pause") : p.t("media.play", "Play")
         onActivated: p.player.togglePlaying()
     }
-    PanelAction { theme: p.theme; visible: !!(p.player && p.player.canGoNext); icon: "\u{F04AD}"; label: p.t("media.next", "Next"); onActivated: p.player.next() }
-    PanelAction { theme: p.theme; visible: !!(p.player && p.player.canGoPrevious); icon: "\u{F04AE}"; label: p.t("media.previous", "Previous"); onActivated: p.player.previous() }
+    PanelAction { theme: p.theme; visible: !!p.player; enabledAction: !!(p.player && p.player.canGoNext); icon: "\u{F04AD}"; label: p.t("media.next", "Next"); onActivated: p.player.next() }
+    PanelAction { theme: p.theme; visible: !!p.player; enabledAction: !!(p.player && p.player.canGoPrevious); icon: "\u{F04AE}"; label: p.t("media.previous", "Previous"); onActivated: p.player.previous() }
     PanelSlider {
         theme: p.theme
         visible: !!(p.player && p.player.volumeSupported)
-        label: p.t("media.volume", "Player volume")
+        label: p.t("media.volume", "Volume")
         value: p.player ? p.player.volume : 0
         onMoved: v => p.player.volume = v
     }

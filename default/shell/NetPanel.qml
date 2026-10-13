@@ -42,7 +42,7 @@ Dropdown {
                 let ip = "", ts = "";
                 for (const l of text.split("\n")) {
                     const f = l.split(" ");
-                    if (f[0] === "ip" && !ip) ip = f[2].split("/")[0] + "  (" + f[1] + ")";
+                    if (f[0] === "ip" && !ip) ip = f[2].split("/")[0];
                     else if (f[0] === "vpn") v.push({ active: f[1] === "yes", name: f.slice(2).join(" ") });
                     else if (f[0] === "ts") ts = f[1];
                 }
@@ -58,7 +58,7 @@ Dropdown {
     Process { id: act; onExited: { info.running = false; info.running = true; } }
 
     PanelLine { theme: p.theme; visible: p.address !== ""; label: p.t("net.address", "Address"); value: p.address }
-    PanelLine { theme: p.theme; visible: p.ping !== ""; label: p.t("net.internet", "Internet"); value: p.ping
+    PanelLine { theme: p.theme; visible: p.ping !== ""; label: p.t("net.internet", "Ping"); value: p.ping
                 valueTint: /ms$/.test(p.ping) ? (parseInt(p.ping) > 150 ? p.theme.gold : p.theme.text) : p.theme.red }
 
     PanelAction {
@@ -108,7 +108,8 @@ Dropdown {
     PanelAction {
         theme: p.theme
         icon: "\u{F001D}"
-        label: Networking.wifiEnabled ? p.t("net.airplane_on", "Airplane mode (Wi-Fi and Bluetooth off)") : p.t("net.airplane_off", "Airplane mode off")
+        label: Networking.wifiEnabled ? p.t("net.airplane_on", "Airplane mode") : p.t("net.airplane_off", "Airplane mode off")
+        hint: Networking.wifiEnabled ? p.t("net.airplane_hint", "Wi-Fi and Bluetooth off") : ""
         onActivated: {
             const on = Networking.wifiEnabled;
             Networking.wifiEnabled = !on;

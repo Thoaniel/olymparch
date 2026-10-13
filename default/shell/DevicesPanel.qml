@@ -23,7 +23,7 @@ Dropdown {
     status: (btOn ? t("devices.bt_connected", "%1 connected over Bluetooth").replace("%1", btOn) + "  ·  " : "")
           + (!Zeus.enabled ? t("devices.no_zeus", "Phones pair with Zeus (Olympus), which is not installed")
           : phones.length === 0 ? t("devices.none", "No phone paired yet")
-          : t("devices.count", "%1 paired").replace("%1", phones.length))
+          : t("devices.count", "%1 phone(s)").replace("%1", phones.length))
     property var pairing: null          // { url, expires_in, qr_svg }
     property string pairError: ""
     property var tailscale: null        // { online, ip, name }
@@ -31,7 +31,7 @@ Dropdown {
 
     function ago(t) {
         const s = Math.max(0, Date.now() / 1000 - Number(t || 0));
-        return s < 120 ? p.t("devices.now", "just now") : s < 7200 ? Math.round(s / 60) + " min" : s < 172800 ? Math.round(s / 3600) + " h" : Math.round(s / 86400) + " d";
+        return s < 120 ? p.t("devices.now", "just now") : s < 7200 ? Math.round(s / 60) + " min" : s < 172800 ? Math.round(s / 3600) + " " + p.t("system.hours", "h") : Math.round(s / 86400) + " " + p.t("system.days", "d");
     }
     // ── Bluetooth
     PanelLine { theme: p.theme; heading: true; visible: !!p.adapter; label: "Bluetooth" }
@@ -57,18 +57,19 @@ Dropdown {
     PanelAction {
         theme: p.theme; visible: !!(p.adapter && p.adapter.enabled)
         icon: ""
-        label: p.t("devices.bt_pair", "Pair a new Bluetooth device")
+        label: p.t("devices.bt_pair", "Connect a new Bluetooth device")
         onActivated: { Panels.close("devices"); Quickshell.execDetached(["olymparch-settings", "open", "bluetooth"]); }
     }
     PanelLine { theme: p.theme; heading: true; visible: p.phones.length > 0 || Zeus.enabled; label: p.t("devices.phones", "Phones") }
     Repeater {
         model: p.phones
-        delegate: PanelLine {
+        delegate: PanelAction {
             required property var modelData
             theme: p.theme
+            enabledAction: false
+            icon: "\u{F011C}"
             label: modelData.name || "?"
-            value: modelData.online ? p.t("devices.online", "online") : p.t("devices.seen", "seen") + " " + p.ago(modelData.last_seen)
-            valueTint: modelData.online ? p.theme.goldHi : p.theme.muted
+            hint: modelData.online ? p.t("devices.online", "online") : p.t("devices.seen_ago", "seen %1 ago").replace("%1", p.ago(modelData.last_seen))
         }
     }
     PanelLine {
@@ -95,7 +96,7 @@ Dropdown {
         theme: p.theme
         visible: Zeus.enabled && Zeus.connected && p.pairing === null
         icon: "\u{F011C}"
-        label: p.t("devices.pair", "Pair a new phone")
+        label: p.t("devices.pair", "Connect a new phone")
         hint: p.t("devices.pair_hint", "QR code for the Zeus app")
         onActivated: Zeus.pair(r => { if (r.ok && r.result) p.pairing = r.result; else p.pairError = r.error || p.t("devices.pair_failed", "No pairing code"); })
     }
