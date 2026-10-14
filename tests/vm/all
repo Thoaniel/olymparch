@@ -1,22 +1,46 @@
 #!/bin/bash
-# Every VM test, one VM at a time (no parallel VMs: heat). install-disk first; its disk becomes the base the
-# other tests start from. Results in tests/vm/out/all.txt, one line per test.
+# Every VM test, up to 3 VMs at a time (OLYMPARCH_VM_JOBS, default 3). install-disk runs first and alone: its disk
+# becomes the base the other tests start from. The tests that share the host's package cache (install-disk,
+# install-wizard, games-install, apps-install) never run at the same time as each other. Results in
+# tests/vm/out/all.txt, one line per test, in the order given (each test's log: tests/vm/out/TEST-run.log).
 #   tests/vm/all [TEST …]      default: all of them
 set -uo pipefail
 cd "$(dirname "$0")/../.."
 tests=("$@")
 [ ${#tests[@]} -gt 0 ] || tests=(install-disk boot-live recovery install-wizard snapshots update shell events settings displays hw games games-install ctrl-c ai menu themes backgrounds tools mcp apps-install webapps)
+jobs=${OLYMPARCH_VM_JOBS:-3}
 summary=tests/vm/out/all.txt
 mkdir -p tests/vm/out
 : >"$summary"
-for t in "${tests[@]}"; do
-    base=()
+cache_lock=tests/vm/out/.pkgcache.lock
+
+run_one() {  # run_one TEST: one test with its time limit; its result line goes to tests/vm/out/TEST.line
+    local t=$1 limit=3600 base=()
+    [ "$t" = settings ] && limit=7200   # settings installs packages from the mirrors (night light, Tailscale …)
     [ "$t" = install-disk ] || [ "$t" = install-wizard ] || [ "$t" = games-install ] ||
         base=(env OLYMPARCH_BASE="${OLYMPARCH_BASE:-tests/vm/out/install-disk}")
-    echo "==> $t"
-    # settings installs packages from the mirrors (night light, Tailscale …): it gets two hours
-    limit=3600; [ "$t" = settings ] && limit=7200
-    timeout "$limit" "${base[@]}" "tests/vm/$t" >"tests/vm/out/$t-run.log" 2>&1
+    case $t in
+        install-disk | install-wizard | games-install | apps-install)
+            # the package cache is shared over 9p: one of these at a time
+            flock "$cache_lock" timeout "$limit" "${base[@]}" "tests/vm/$t" >"tests/vm/out/$t-run.log" 2>&1 ;;
+        *) timeout "$limit" "${base[@]}" "tests/vm/$t" >"tests/vm/out/$t-run.log" 2>&1 ;;
+    esac
+    local r
     r=$(cat "tests/vm/out/$t/result.txt" 2>/dev/null || echo "FAIL · no result (exit $?)")
-    printf '%s\t%s\n' "$t" "$r" | tee -a "$summary"
+    printf '%s\t%s\n' "$t" "$r" >"tests/vm/out/$t.line"
+    echo "==> $t: ${r%% ·*}"
+}
+
+rest=()
+for t in "${tests[@]}"; do
+    rm -f -- "tests/vm/out/$t.line"
+    if [ "$t" = install-disk ]; then run_one install-disk; else rest+=("$t"); fi
 done
+# the rest, up to $jobs at a time
+for t in "${rest[@]}"; do
+    while [ "$(jobs -rp | wc -l)" -ge "$jobs" ]; do wait -n; done
+    run_one "$t" &
+    sleep 5   # VMs that start in the same second compete for the first boot
+done
+wait
+for t in "${tests[@]}"; do cat "tests/vm/out/$t.line" 2>/dev/null; done | tee "$summary"
