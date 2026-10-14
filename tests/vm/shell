@@ -22,7 +22,7 @@ unlock_and_desktop "$PW"
 
 # Put the shell from the repo in place and restart it
 press meta_l+ret; sleep 2
-keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /usr/share/olymparch/ && sudo cp -r /mnt/default/lock /mnt/default/idle /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -Dm644 /mnt/default/foot/foot.ini /etc/xdg/foot/foot.ini && sudo install -Dm644 /mnt/default/idle/olymparch-lock.pam /etc/pam.d/olymparch-lock && sudo install -m755 /mnt/system/bin/olymparch-lock /usr/bin/ && hyprctl reload >/dev/null; pkill -x quickshell; echo '<2>SHELL-UPDATED' | sudo tee /dev/kmsg; exit\n" 1
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /usr/share/olymparch/ && sudo cp -r /mnt/default/lock /mnt/default/idle /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -Dm644 /mnt/default/foot/foot.ini /etc/xdg/foot/foot.ini && sudo install -Dm644 /mnt/default/idle/olymparch-lock.pam /etc/pam.d/olymparch-lock && sudo install -m755 /mnt/system/bin/olymparch-lock /usr/bin/ && sudo chmod 666 /dev/kmsg && hyprctl reload >/dev/null; pkill -x quickshell; echo '<2>SHELL-UPDATED' > /dev/kmsg; exit\n" 1
 keys "$PW\n" 1
 wait_for 'SHELL-UPDATED' 30 || finish "FAIL · fikk ikke kopiert skallet inn"
 sleep 5
@@ -70,11 +70,11 @@ sleep 5
 keys "clear\n" 1
 # Super+M maximizes the window in focus and Super+F makes it fullscreen (each again to go back)
 press meta_l+m; sleep 1
-keys "hyprctl activewindow -j | grep -o '\"fullscreen\": [0-9]*' | sed 's/^/<2>KEYMAX /' | sudo tee /dev/kmsg >/dev/null\n" 1.5
+keys "hyprctl activewindow -j | grep -o '\"fullscreen\": [0-9]*' | sed 's/^/<2>KEYMAX /' > /dev/kmsg\n" 1.5
 shot super-m "Super+M: terminalen er maksimert (baren står)"
 press meta_l+m; sleep 0.8
 press meta_l+f; sleep 1
-keys "hyprctl activewindow -j | grep -o '\"fullscreen\": [0-9]*' | sed 's/^/<2>KEYFS /' | sudo tee /dev/kmsg >/dev/null\n" 1.5
+keys "hyprctl activewindow -j | grep -o '\"fullscreen\": [0-9]*' | sed 's/^/<2>KEYFS /' > /dev/kmsg\n" 1.5
 shot super-f "Super+F: terminalen i fullskjerm (baren er borte)"
 press meta_l+f; sleep 0.8
 keys "clear\n" 1
@@ -89,7 +89,7 @@ press ret; sleep 4
 shot las-feil "Feil passord: boksen blir rød"
 keys "$PW\n" 4
 shot las-opp "Riktig passord: skrivebordet er tilbake"
-keys "pgrep -f share/olymparch/lock >/dev/null || echo '<2>UNLOCKED' | sudo tee /dev/kmsg\n" 1
+keys "pgrep -f share/olymparch/lock >/dev/null || echo '<2>UNLOCKED' > /dev/kmsg\n" 1
 keys "$PW\n" 1
 wait_for 'UNLOCKED' 15 || finish "FAIL · låseskjermen slapp ikke etter riktig passord"
 

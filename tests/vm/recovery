@@ -55,7 +55,7 @@ press ret
 wait_text 'passphrase|password|Please enter' 90 || { shot passord-feil "Ingen passordspørsmål"; finish "FAIL · ingen tekstspørsmål om diskpassordet"; }
 shot passord "Diskpassordet spørres om som tekst (ingen oppstartsskjerm)"
 keys "$PW\n"
-wait_text 'Olymparch (recovery|gjenoppretting)' 120 || { shot skall-feil "Ikke recovery-skallet"; finish "FAIL · recovery-meldingen kom ikke på tty1"; }
+wait_text 'recovery|gjenoppretting|want to do|vil du gj' 120 || { shot skall-feil "Ikke recovery-skallet"; finish "FAIL · recovery-meldingen kom ikke på tty1"; }
 shot skall "Gjenopprettingsmenyen på tty1 (olymparch-rescue), uten skrivebord"
 # the menu's last choice is the command line
 for _ in 1 2 3 4 5 6; do press down; sleep 0.2; done

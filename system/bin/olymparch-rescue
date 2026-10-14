@@ -9,7 +9,13 @@ set -uo pipefail
 . /usr/lib/olymparch/lang.sh 2>/dev/null || . "${BASH_SOURCE[0]%/*}/../lib/lang.sh" 2>/dev/null || L() { printf '%s' "$1"; }
 why=${1:-failed}
 code=${2:-}
-W=72
+W=78
+# black and gold, like the installer
+export NEWT_COLORS='root=yellow,black border=yellow,black window=white,black shadow=black,black
+title=yellow,black button=black,yellow actbutton=black,yellow compactbutton=yellow,black
+checkbox=white,black actcheckbox=black,yellow entry=white,black disentry=gray,black label=white,black
+listbox=white,black actlistbox=black,yellow sellistbox=black,yellow actsellistbox=black,yellow
+textbox=white,black acttextbox=black,yellow helpline=yellow,black roottext=yellow,black'
 ui() { command -v whiptail >/dev/null; }
 pause() { read -r -p "$(L "Press Enter to go back." "Trykk Enter for å gå tilbake.")" _ </dev/tty; }
 
@@ -21,15 +27,18 @@ while true; do
         head=$(L "The desktop stopped with an error last time${code:+ (code $code)}. What do you want to do?" \
                  "Skrivebordet stoppet med en feil sist${code:+ (kode $code)}. Hva vil du gjøre?")
     fi
-    items=(again "$(L "Try the desktop again" "Prøv skrivebordet igjen")"
-           defaults "$(L "Start with the default desktop settings (yours are kept aside)" "Start med standardoppsettet (ditt legges til side)")"
+    items=()
+    # recovery mode has no graphics driver: «try again» there would only say «restart», so it is left out
+    [ "$why" = recovery ] || items+=(again "$(L "Try the desktop again" "Prøv skrivebordet igjen")")
+    items+=(defaults "$(L "Start with the default desktop settings (yours are kept aside)" "Start med standardoppsettet (ditt legges til side)")"
            back "$(L "Go back to before the last update" "Gå tilbake til før siste oppdatering")"
            check "$(L "Check the system" "Sjekk systemet")"
            reboot "$(L "Restart" "Start på nytt")"
            off "$(L "Shut down" "Slå av")"
            shell "$(L "Command line (advanced)" "Kommandolinje (avansert)")")
+    n_items=$(( ${#items[@]} / 2 ))
     if ui; then
-        choice=$(whiptail --title Olymparch --nocancel --menu "$head" 18 $W 7 "${items[@]}" 3>&1 1>&2 2>&3 </dev/tty) || choice=shell
+        choice=$(whiptail --title Olymparch --nocancel --menu "$head" 18 $W "$n_items" "${items[@]}" 3>&1 1>&2 2>&3 </dev/tty) || choice=shell
     else
         printf '\n%s\n\n' "$head"
         for ((i = 0; i < ${#items[@]}; i += 2)); do printf '  %d  %s\n' $((i / 2 + 1)) "${items[i + 1]}"; done
