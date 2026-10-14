@@ -81,13 +81,19 @@ press down; press ret; sleep 2
 shot endret "Oppdater › Hva som er endret (olymparch-changes)"
 press esc; press esc
 press down; press ret; sleep 0.5
-shot system "System: Lås, Logg ut, Start på nytt, Slå av, Rull tilbake"
-press down; press down; press ret; sleep 0.5
+shot system "System: Lås, Dvale, Logg ut, Start på nytt, Slå av, Rull tilbake"
+press down; press down; press down; press ret; sleep 0.5
 shot system-bekreft "Start på nytt: bekreftelse, Avbryt er valgt"
 press esc; press esc
 press down; press ret; sleep 0.5
 shot hjelp "Hjelp: hurtigtaster, brukerveiledning, meld fra om en feil"
 press esc
+press esc; press esc; sleep 0.5
+# Super+Shift+M logs out only after asking (it used to log out at once)
+press meta_l+shift+m; sleep 1.2
+shot logg-ut-sporsmal "Super+Shift+M: «Logge ut?» – Avbryt er valgt, ingenting lukkes uten svar"
+press esc; press esc; press esc; sleep 0.5
+menu_open
 
 # ── search across every level
 keys "blue" 1

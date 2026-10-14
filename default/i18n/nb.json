@@ -166,6 +166,8 @@
   "power.saver": "Strømsparing",
   "power.saver.body": "Batteriet er under 20 %. Det slås av igjen når du kobler til laderen.",
   "power.settings": "Strøminnstillinger",
+  "power.sleep": "Dvale",
+  "power.sleep_hint": "åpne apper blir som de er",
   "power.title": "Strøm",
   "privacy.cam": "Filmer",
   "privacy.camera": "kamera",

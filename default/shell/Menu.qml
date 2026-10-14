@@ -54,6 +54,18 @@ Scope {
     FileView { id: catalogFile; path: "/usr/share/olymparch/menu/catalog.json"; blockLoading: true; printErrors: false }
 
     function toggle() { open = !open; }
+    // log out asks first, from the menu and from its shortcut (keys.exit: open apps would close without a word)
+    function askLogout() {
+        open = true;
+        confirm(t("Log out?", "Logge ut?"), [t("Open apps are closed.", "Åpne apper lukkes.")], t("Log out", "Logg ut"), true,
+                () => { open = false; Hyprland.dispatch("hl.dsp.exit()"); });
+    }
+    GlobalShortcut {
+        appid: "olymparch"
+        name: "logout"
+        description: "Log out (asks first)"
+        onPressed: menu.askLogout()
+    }
     GlobalShortcut {
         appid: "olymparch"
         name: "menu"
@@ -147,7 +159,8 @@ Scope {
             ] }),
             node("system", "", "System", "System", { children: [
                 node("lock", "", "Lock", "Lås", { act: () => run(["olymparch-lock"]) }),
-                node("logout", "", "Log out", "Logg ut", { act: () => confirm(t("Log out?", "Logge ut?"), [t("Open apps are closed.", "Åpne apper lukkes.")], t("Log out", "Logg ut"), true, () => { open = false; Hyprland.dispatch("hl.dsp.exit()"); }) }),
+                node("sleep", "\u{F04B2}", "Sleep", "Dvale", { hint: t("open apps stay as they are", "åpne apper blir som de er"), act: () => { open = false; run(["systemctl", "suspend"]); } }),
+                node("logout", "", "Log out", "Logg ut", { act: () => askLogout() }),
                 node("restart", "", "Restart", "Start på nytt", { act: () => confirm(t("Restart now?", "Starte på nytt nå?"), [t("Open apps are closed.", "Åpne apper lukkes.")], t("Restart", "Start på nytt"), true, () => run(["systemctl", "reboot"])) }),
                 node("shutdown", "", "Shut down", "Slå av", { act: () => confirm(t("Shut down now?", "Slå av nå?"), [t("Open apps are closed.", "Åpne apper lukkes.")], t("Shut down", "Slå av"), true, () => run(["systemctl", "poweroff"])) }),
                 node("rollback", "", "Snapshot rollback", "Rull tilbake til et øyeblikksbilde", { hint: t("in a terminal", "i en terminal"), act: () => run(["foot", "-e", "olymparch-rollback"]) })

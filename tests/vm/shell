@@ -68,6 +68,17 @@ shot maksimert "Et maksimert vindu: baren står"
 bar_seen && max_bar=1 || max_bar=0
 sleep 5
 keys "clear\n" 1
+# Super+M maximizes the window in focus and Super+F makes it fullscreen (each again to go back)
+press meta_l+m; sleep 1
+keys "hyprctl activewindow -j | grep -o '\"fullscreen\": [0-9]*' | sed 's/^/<2>KEYMAX /' | sudo tee /dev/kmsg >/dev/null\n" 1.5
+shot super-m "Super+M: terminalen er maksimert (baren står)"
+press meta_l+m; sleep 0.8
+press meta_l+f; sleep 1
+keys "hyprctl activewindow -j | grep -o '\"fullscreen\": [0-9]*' | sed 's/^/<2>KEYFS /' | sudo tee /dev/kmsg >/dev/null\n" 1.5
+shot super-f "Super+F: terminalen i fullskjerm (baren er borte)"
+press meta_l+f; sleep 0.8
+keys "clear\n" 1
+wait_for 'KEYMAX "fullscreen": 1' 10 && wait_for 'KEYFS "fullscreen": 2' 10 && keys_ok=1 || keys_ok=0
 
 # The lock screen: its own process. Wrong password first, then the right one.
 press meta_l+l; sleep 2
@@ -90,5 +101,5 @@ grep -aoE 'QS: .*' "$O/$LOG" | sed 's/\x1b\[[0-9;]*m//g' >"$O/shell-log.txt"
 # only what happened after the shell's last start counts
 errors=$(awk '/Launching config/ {n = 0} /ERROR|TypeError|ReferenceError/ {n++} END {print n + 0}' "$O/shell-log.txt")
 mic_ok=$(( ${red_mic:-0} > ${red_before:-0} + 20 ))
-fs_ok=$(( ${fs_hidden:-0} == 1 && ${max_bar:-0} == 1 ))
-finish "$([ "$errors" = 0 ] && [ $mic_ok = 1 ] && [ $fs_ok = 1 ] && echo PASS || echo FAIL) · skallet: meny, varsler, volum og mikrofon i linjen (røde piksler ${red_before:-?} → ${red_mic:-?}), baren borte i fullskjerm ${fs_hidden:-?} og synlig maksimert ${max_bar:-?}; $errors feil i skall-loggen; på $((SECONDS - t0)) s"
+fs_ok=$(( ${fs_hidden:-0} == 1 && ${max_bar:-0} == 1 && ${keys_ok:-0} == 1 ))
+finish "$([ "$errors" = 0 ] && [ $mic_ok = 1 ] && [ $fs_ok = 1 ] && echo PASS || echo FAIL) · skallet: meny, varsler, volum og mikrofon i linjen (røde piksler ${red_before:-?} → ${red_mic:-?}), baren borte i fullskjerm ${fs_hidden:-?} og synlig maksimert ${max_bar:-?}, Super+M/F ${keys_ok:-?}; $errors feil i skall-loggen; på $((SECONDS - t0)) s"

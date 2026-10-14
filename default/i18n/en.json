@@ -166,6 +166,8 @@
   "power.saver": "Power saver",
   "power.saver.body": "The battery is below 20 %. It switches back when you plug in.",
   "power.settings": "Power settings",
+  "power.sleep": "Sleep",
+  "power.sleep_hint": "open apps stay as they are",
   "power.title": "Power",
   "privacy.cam": "Filming",
   "privacy.camera": "camera",

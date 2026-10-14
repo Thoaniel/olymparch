@@ -40,5 +40,6 @@ Dropdown {
             onActivated: { set.command = ["powerprofilesctl", "set", modelData[0]]; set.running = true; }
         }
     }
+    PanelAction { theme: p.theme; icon: "\u{F04B2}"; label: p.t("power.sleep", "Sleep"); hint: p.t("power.sleep_hint", "open apps stay as they are"); onActivated: { Panels.close("power"); Quickshell.execDetached(["systemctl", "suspend"]); } }
     PanelAction { theme: p.theme; icon: ""; label: p.t("power.settings", "Power settings"); onActivated: { Panels.close("power"); Quickshell.execDetached(["olymparch-settings", "open", "power"]); } }
 }

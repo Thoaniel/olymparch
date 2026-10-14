@@ -28,7 +28,7 @@ hl.config({
         gaps_out = 8,
         border_size = 2,
         col = { active_border = gold, inactive_border = line },
-        resize_on_border = false,
+        resize_on_border = true,   -- a window's edge can be dragged to resize it, as people expect
         allow_tearing = true,
         layout = "dwindle",
     },
@@ -97,7 +97,9 @@ shortcut("keys.backgrounds", mod .. " + CTRL + SPACE", nil, function(k) hl.bind(
 shortcut("keys.lock", mod .. " + L", nil, function(k) hl.bind(k, hl.dsp.exec_cmd("olymparch-lock")) end)
 shortcut("keys.close", mod .. " + Q", nil, function(k) hl.bind(k, hl.dsp.window.close()) end)
 shortcut("keys.float", mod .. " + V", nil, function(k) hl.bind(k, hl.dsp.window.float({ action = "toggle" })) end)
-shortcut("keys.exit", mod .. " + SHIFT + M", nil, function(k) hl.bind(k, hl.dsp.exit()) end)
+shortcut("keys.exit", mod .. " + SHIFT + M", nil, function(k) hl.bind(k, hl.dsp.global("olymparch:logout")) end)   -- asks first (Menu.qml)
+shortcut("keys.fullscreen", mod .. " + F", nil, function(k) hl.bind(k, hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" })) end)
+shortcut("keys.maximize", mod .. " + M", nil, function(k) hl.bind(k, hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })) end)
 shortcut("keys.add_game", mod .. " + SHIFT + G", nil, function(k) hl.bind(k, hl.dsp.exec_cmd("olymparch-game add-focused")) end)   -- this window is a game
 shortcut("zeus.hotkey", mod .. " + Z", nil, function(k) hl.bind(k, hl.dsp.exec_cmd("olymparch-settings zeus-open")) end)   -- Zeus, when installed
 shortcut("keys.agents", mod .. " + A", nil, function(k) hl.bind(k, hl.dsp.global("olymparch:panel-agents")) end)   -- the Agents panel
@@ -123,6 +125,7 @@ local function tool(args) return function(k) hl.bind(k, hl.dsp.exec_cmd("olympar
 shortcut("keys.screenshot", "PRINT", nil, tool("screenshot region"))
 shortcut("keys.screenshot_screen", "SHIFT + PRINT", nil, tool("screenshot screen"))
 shortcut("keys.screenshot_window", mod .. " + PRINT", nil, tool("screenshot window"))
+shortcut("keys.screenshot_alt", mod .. " + SHIFT + S", nil, tool("screenshot region"))   -- for keyboards without Print (and Windows habits)
 shortcut("keys.record", mod .. " + SHIFT + R", nil, tool("record region"))
 shortcut("keys.colorpicker", mod .. " + SHIFT + C", nil, tool("colorpicker"))
 shortcut("keys.ocr", mod .. " + SHIFT + T", nil, tool("ocr"))
