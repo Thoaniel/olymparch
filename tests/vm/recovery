@@ -1,7 +1,7 @@
 #!/bin/bash
 # VM test: the boot menu's «Recovery (text mode)» entry on the system tests/vm/install-disk installed. It must
 # boot without the boot screen and GPU driver (nomodeset plymouth.enable=0), ask for the disk password as text,
-# and give a shell on tty1 with the recovery message instead of the desktop. Screenshot of every step; the
+# and give the recovery menu (olymparch-rescue) on tty1 instead of the desktop; its last choice gives a shell. Screenshot of every step; the
 # text on screen is read with tesseract. Runs on a throwaway overlay, so install-disk's disk is not changed.
 #   tests/vm/recovery            (after tests/vm/install-disk)
 set -uo pipefail
@@ -56,7 +56,10 @@ wait_text 'passphrase|password|Please enter' 90 || { shot passord-feil "Ingen pa
 shot passord "Diskpassordet spørres om som tekst (ingen oppstartsskjerm)"
 keys "$PW\n"
 wait_text 'Olymparch (recovery|gjenoppretting)' 120 || { shot skall-feil "Ikke recovery-skallet"; finish "FAIL · recovery-meldingen kom ikke på tty1"; }
-shot skall "Tekstskall på tty1 med recovery-meldingen, uten skrivebord"
+shot skall "Gjenopprettingsmenyen på tty1 (olymparch-rescue), uten skrivebord"
+# the menu's last choice is the command line
+for _ in 1 2 3 4 5 6; do press down; sleep 0.2; done
+press ret; sleep 1.5
 # the shell works and the desktop is not running
 keys 'clear; pgrep -x Hyprland >/dev/null && echo DESKTOP-RUNNING || echo NO-DESKTOP; tr " " "\n" </proc/cmdline | grep -E "^(nomodeset|plymouth.enable=0|olymparch.recovery)$" | paste -sd" "\n'
 sleep 3

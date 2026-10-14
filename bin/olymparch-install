@@ -251,7 +251,7 @@ tools_pkgs=(wl-clipboard cliphist grim slurp satty hyprpicker gpu-screen-recorde
 #    the file picker in apps (the GTK portal next to Hyprland's), a plain text editor, and iPhones (photos, files)
 everyday_pkgs=(cups cups-filters cups-pdf system-config-printer avahi nss-mdns sane-airscan simple-scan
     xdg-desktop-portal-gtk gnome-text-editor libimobiledevice usbmuxd gvfs-afc)
-pacstrap "${pacstrap_opts[@]}" /mnt base "$KERNEL" mkinitcpio btrfs-progs cryptsetup limine sudo networkmanager snapper \
+pacstrap "${pacstrap_opts[@]}" /mnt base "$KERNEL" mkinitcpio btrfs-progs cryptsetup limine sudo networkmanager snapper libnewt \
     hyprland hypridle quickshell foot adwaita-cursors ttf-jetbrains-mono ttf-nerd-fonts-symbols-mono libnotify polkit \
     pipewire pipewire-pulse wireplumber xdg-desktop-portal-hyprland plymouth upower \
     firefox thunar tumbler gvfs gvfs-mtp gvfs-gphoto2 thunar-volman imv mpv xdg-utils xdg-user-dirs udiskie udisks2 clamav pacman-contrib fakeroot tmux \
@@ -415,16 +415,18 @@ cat >/mnt/etc/profile.d/zz-olymparch-session.sh <<'SESSION'
 # (olymparch.recovery) gives a plain shell instead. A desktop that stops with an error logs out; the next
 # login (with the password: autologin is once per boot) then gets a plain shell instead of the desktop.
 if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ "$(id -u)" != 0 ] && grep -qw olymparch.recovery /proc/cmdline; then
-    case ${LANG:-} in
-        nb* | nn* | no*) printf '\n  Olymparch gjenoppretting (tekstmodus). Skrivebordet er ikke startet.\n  Sjekk systemet: olymparch-doctor · drivere: olymparch-hw plan · logg: journalctl -b -p err\n  Tilbake til vanlig: start på nytt og velg Olymparch i oppstartsmenyen.\n\n' ;;
-        *) printf '\n  Olymparch recovery (text mode). The desktop is not started.\n  Check the system: olymparch-doctor · drivers: olymparch-hw plan · log: journalctl -b -p err\n  Back to normal: reboot and pick Olymparch in the boot menu.\n\n' ;;
-    esac
+    # a menu, not a prompt: check, go back to before the last update, default settings, restart (olymparch-rescue)
+    olymparch-rescue recovery
 elif [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ "$(id -u)" != 0 ] && [ -e "$HOME/.cache/olymparch/desktop-failed" ]; then
-    case ${LANG:-} in
-        nb* | nn* | no*) printf '\n  Skrivebordet stoppet med en feil sist (kode %s). Dette er et vanlig skall.\n  Sjekk systemet: olymparch-doctor · logg: journalctl -b -1 -p err · start skrivebordet: start-hyprland\n\n' "$(cat "$HOME/.cache/olymparch/desktop-failed" 2>/dev/null)" ;;
-        *) printf '\n  The desktop stopped with an error last time (code %s). This is a plain shell.\n  Check the system: olymparch-doctor · log: journalctl -b -1 -p err · start the desktop: start-hyprland\n\n' "$(cat "$HOME/.cache/olymparch/desktop-failed" 2>/dev/null)" ;;
-    esac
+    code=$(cat "$HOME/.cache/olymparch/desktop-failed" 2>/dev/null)
     rm -f -- "$HOME/.cache/olymparch/desktop-failed"
+    # the same menu; «try again» or «default settings» start the desktop from here
+    if olymparch-rescue failed "$code"; then
+        if command -v start-hyprland >/dev/null 2>&1; then start-hyprland; else Hyprland; fi
+        rc=$?
+        if [ "$rc" != 0 ]; then mkdir -p "$HOME/.cache/olymparch" && echo "$rc" >"$HOME/.cache/olymparch/desktop-failed"; fi
+        exit "$rc"
+    fi
 elif [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ "$(id -u)" != 0 ]; then
     # keys that reach this tty must never signal the session: Ctrl+C here would end the whole desktop
     stty -isig -echo 2>/dev/null

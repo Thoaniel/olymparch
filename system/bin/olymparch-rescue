@@ -1,0 +1,69 @@
+#!/bin/bash
+# When the desktop does not start, or in «Recovery (text mode)»: a plain menu instead of a command line.
+#   olymparch-rescue failed CODE   the desktop stopped with an error last time (the session script runs this)
+#   olymparch-rescue recovery      the recovery entry in the boot menu
+# Choices: try the desktop again · start with the default desktop settings (yours are moved aside, not deleted) ·
+# go back to before the last update (the newest «important» snapshot, after a yes) · check the system · restart ·
+# shut down · command line. Exit 0 = start the desktop now, 1 = the command line.
+set -uo pipefail
+. /usr/lib/olymparch/lang.sh 2>/dev/null || . "${BASH_SOURCE[0]%/*}/../lib/lang.sh" 2>/dev/null || L() { printf '%s' "$1"; }
+why=${1:-failed}
+code=${2:-}
+W=72
+ui() { command -v whiptail >/dev/null; }
+pause() { read -r -p "$(L "Press Enter to go back." "Trykk Enter for å gå tilbake.")" _ </dev/tty; }
+
+while true; do
+    if [ "$why" = recovery ]; then
+        head=$(L "Olymparch recovery: the desktop is not started. What do you want to do?" \
+                 "Olymparch gjenoppretting: skrivebordet er ikke startet. Hva vil du gjøre?")
+    else
+        head=$(L "The desktop stopped with an error last time${code:+ (code $code)}. What do you want to do?" \
+                 "Skrivebordet stoppet med en feil sist${code:+ (kode $code)}. Hva vil du gjøre?")
+    fi
+    items=(again "$(L "Try the desktop again" "Prøv skrivebordet igjen")"
+           defaults "$(L "Start with the default desktop settings (yours are kept aside)" "Start med standardoppsettet (ditt legges til side)")"
+           back "$(L "Go back to before the last update" "Gå tilbake til før siste oppdatering")"
+           check "$(L "Check the system" "Sjekk systemet")"
+           reboot "$(L "Restart" "Start på nytt")"
+           off "$(L "Shut down" "Slå av")"
+           shell "$(L "Command line (advanced)" "Kommandolinje (avansert)")")
+    if ui; then
+        choice=$(whiptail --title Olymparch --nocancel --menu "$head" 18 $W 7 "${items[@]}" 3>&1 1>&2 2>&3 </dev/tty) || choice=shell
+    else
+        printf '\n%s\n\n' "$head"
+        for ((i = 0; i < ${#items[@]}; i += 2)); do printf '  %d  %s\n' $((i / 2 + 1)) "${items[i + 1]}"; done
+        read -r -p "> " n </dev/tty
+        choice=${items[$(( (n - 1) * 2 ))]:-shell}
+    fi
+    case $choice in
+        again)
+            [ "$why" = recovery ] && { L "Recovery mode starts without the graphics driver: restart and pick Olymparch in the boot menu." "Gjenopprettingsmodus starter uten skjermdriveren: start på nytt og velg Olymparch i oppstartsmenyen."; echo; pause; continue; }
+            exit 0 ;;
+        defaults)
+            # the user's own desktop settings move to a dated folder; Olymparch's defaults apply on the next start
+            d=$HOME/.config/olymparch-aside-$(date +%Y%m%d-%H%M%S)
+            mkdir -p "$d"
+            for f in "$HOME/.config/olymparch/hypr.lua" "$HOME/.config/olymparch/monitors.lua" "$HOME/.config/hypr/hyprland.lua" "$HOME/.config/olymparch/settings.json"; do
+                [ -e "$f" ] && mv -- "$f" "$d/"
+            done
+            printf '%s %s\n' "$(L "Your settings are kept in" "Innstillingene dine ligger i")" "$d"
+            [ "$why" = recovery ] && { L "Restart and pick Olymparch to start the desktop." "Start på nytt og velg Olymparch for å starte skrivebordet."; echo; pause; continue; }
+            sleep 2
+            exit 0 ;;
+        back)
+            snap=$(snapper -c root list --columns number,userdata 2>/dev/null | awk -F'|' '$2 ~ /important=yes/ { gsub(/ /, "", $1); n = $1 } END { print n }')
+            if [ -z "$snap" ]; then L "There is no snapshot from before an update yet." "Det finnes ikke noe øyeblikksbilde fra før en oppdatering ennå."; echo; pause; continue; fi
+            desc=$(snapper -c root list --columns number,date,description 2>/dev/null | awk -F'|' -v n="$snap" '{ gsub(/^ +| +$/, "", $1) } $1 == n { print $2 "·" $3 }')
+            q="$(L "Go back to snapshot $snap ($desc)? The system as it is now is kept, and the PC restarts." "Gå tilbake til øyeblikksbilde $snap ($desc)? Systemet slik det er nå tas vare på, og PC-en starter på nytt.")"
+            if ui; then whiptail --title Olymparch --yesno "$q" 12 $W </dev/tty || continue
+            else read -r -p "$q [y/N] " a </dev/tty; [[ $a == [yYjJ]* ]] || continue; fi
+            sudo olymparch-rollback "$snap" && sudo systemctl reboot
+            pause ;;
+        check)
+            clear; olymparch-doctor; echo; pause ;;
+        reboot) systemctl reboot ;;
+        off) systemctl poweroff ;;
+        shell) exit 1 ;;
+    esac
+done
