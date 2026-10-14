@@ -169,6 +169,13 @@ Scope {
                 node("rollback", "", "Snapshot rollback", "Rull tilbake til et øyeblikksbilde", { hint: t("in a terminal", "i en terminal"), act: () => run(["foot", "-e", "olymparch-rollback"]) })
             ] }),
             node("help", "", "Help", "Hjelp", { children: [
+                node("trouble", "\u{F0026}", "Something's wrong", "Noe er galt", { hint: t("check and fix", "sjekk og fiks"), children: [
+                    node("trouble-sound", "\u{F057E}", "No sound", "Ingen lyd", { act: () => troubleCheck("sound", t("No sound", "Ingen lyd")) }),
+                    node("trouble-network", "\u{F05A9}", "No internet or Wi-Fi", "Ikke internett eller Wi-Fi", { act: () => troubleCheck("network", t("No internet or Wi-Fi", "Ikke internett eller Wi-Fi")) }),
+                    node("trouble-bluetooth", "\u{F00AF}", "Bluetooth", "Bluetooth", { act: () => troubleCheck("bluetooth", "Bluetooth") }),
+                    node("trouble-games", "\u{F0297}", "A game won't start", "Et spill vil ikke starte", { act: () => troubleCheck("games", t("A game won't start", "Et spill vil ikke starte")) }),
+                    node("trouble-disk", "\u{F02CA}", "The disk is full", "Disken er full", { act: () => troubleCheck("disk", t("The disk is full", "Disken er full")) })
+                ] }),
                 node("keys", "", "Keyboard shortcuts", "Hurtigtaster", { hint: prettyKeys(Settings.get("keys.cheatsheet")), act: () => { open = false; if (cheatsheet) cheatsheet.open = true; } }),
                 node("manual", "", "Manual", "Brukerveiledning", { hint: "github.com/Thoaniel/olymparch", act: () => run(["xdg-open", repoUrl]) }),
                 node("report", "", "Report a bug", "Meld fra om en feil", { hint: t("you see the report before it is sent", "du ser rapporten før den sendes"), act: () => run(["olymparch-settings", "run", "about.report"]) })
@@ -307,6 +314,62 @@ Scope {
         rows.push({ id: "no", icon: "", label: t("Cancel", "Avbryt"), act: () => back() });
         view = { kind: "confirm", title: title, rows: rows, focus: danger ? rows.length - 1 : rows.length - 2 };
         current = view.focus;
+    }
+    // ── «Something's wrong»: olymparch-fix checks a topic; problems get a Fix button, which runs that fixed fix and
+    //    checks again (ok ✓, problem ✗ + button, info ·, action → button)
+    property string troubleTopic: ""
+    property string troubleTitle: ""
+    property string troubleNote: ""
+    function troubleCheck(topic, title) {
+        troubleTopic = topic; troubleTitle = title;
+        view = { kind: "text", title: title, rows: [{ text: t("Checking …", "Sjekker …"), dim: true }] };
+        trouble.command = ["olymparch-fix", topic];
+        trouble.running = true;
+    }
+    function troubleFix(fix) {
+        if (fix === "settings" || fix === "cleanup" || fix === "portal") open = false;   // a window opens: step aside
+        view = Object.assign({}, view, { rows: [{ text: t("Fixing …", "Fikser …"), big: true }] });
+        troubleRun.command = ["olymparch-fix", troubleTopic, "fix", fix];
+        troubleRun.running = true;
+    }
+    Process {
+        id: trouble
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (!menu.view || menu.view.title !== menu.troubleTitle) return;   // gone back in the meantime
+                const rows = [];
+                if (menu.troubleNote) rows.push({ text: menu.troubleNote, big: true, ok: !menu.troubleNote.startsWith("✗"), error: menu.troubleNote.startsWith("✗") });
+                menu.troubleNote = "";
+                let problems = 0;
+                for (const l of text.split("\n")) {
+                    const f = l.split("\t");
+                    if (f[0] === "ok") rows.push({ text: "✓  " + f[1], ok: true });
+                    else if (f[0] === "info") rows.push({ text: "·  " + f[1], dim: true });
+                    else if (f[0] === "problem") {
+                        problems++;
+                        rows.push({ text: "✗  " + f[2], error: true });
+                        rows.push({ id: "fix-" + f[1], icon: "\u{F0AD}", label: f[3], act: (fix => () => menu.troubleFix(fix))(f[1]) });
+                    } else if (f[0] === "action")
+                        rows.push({ id: "act-" + f[1], icon: "\u{F0142}", label: f[3], hint: f[2], act: (fix => () => menu.troubleFix(fix))(f[1]) });
+                }
+                if (problems === 0) rows.unshift({ text: menu.t("Nothing wrong found here.", "Fant ikke noe galt her."), big: true, ok: true });
+                rows.push({ id: "again", icon: "\u{F0450}", label: menu.t("Check again", "Sjekk igjen"), act: () => menu.troubleCheck(menu.troubleTopic, menu.troubleTitle) });
+                rows.push({ id: "back", icon: "", label: menu.t("Back", "Tilbake"), act: () => menu.back() });
+                menu.view = { kind: "text", title: menu.troubleTitle, rows: rows };
+                const first = rows.findIndex(r => r.id && r.id.startsWith("fix-"));
+                menu.current = first >= 0 ? first : rows.length - 1;
+            }
+        }
+    }
+    Process {
+        id: troubleRun
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const f = text.trim().split("\n").pop().split("\t");
+                menu.troubleNote = f[1] ? (f[0] === "done" ? "✓  " : "✗  ") + f[1] : "";
+                menu.troubleCheck(menu.troubleTopic, menu.troubleTitle);   // and look again
+            }
+        }
     }
     function textView(title, lines) {
         view = { kind: "text", title: title, rows: lines.map(l => ({ text: l })).concat([{ id: "back", icon: "", label: t("Back", "Tilbake"), act: () => back() }]) };

@@ -37,7 +37,7 @@ unlock_and_desktop "$PW"
 
 # This repo's files in place, the shell restarted in Norwegian, fresh package lists (for the install test)
 press meta_l+ret; sleep 2
-keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /mnt/default/settings /mnt/default/menu /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -m755 /mnt/system/bin/olymparch-settings /mnt/system/bin/olymparch-changes /usr/bin/ && sudo install -Dm755 /mnt/system/lib/packages /usr/lib/olymparch/packages && sudo install -Dm755 /mnt/system/lib/install-app /usr/lib/olymparch/install-app && sudo install -Dm644 /mnt/system/polkit/org.olymparch.packages.policy /usr/share/polkit-1/actions/org.olymparch.packages.policy && sudo install -Dm644 /mnt/system/polkit/50-olymparch-packages.rules /usr/share/polkit-1/rules.d/50-olymparch-packages.rules && sudo systemctl restart polkit && sudo pacman -Sy >/dev/null && sudo chmod 666 /dev/kmsg && hyprctl reload >/dev/null; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=$L setsid -f /usr/lib/olymparch/launch-shell; echo '<2>MENU-UPDATED' > /dev/kmsg\n" 1
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /mnt/default/settings /mnt/default/menu /usr/share/olymparch/ && sudo cp /mnt/default/hypr/olymparch.lua /usr/share/olymparch/hypr/ && sudo install -m755 /mnt/system/bin/olymparch-settings /mnt/system/bin/olymparch-changes /mnt/system/bin/olymparch-fix /usr/bin/ && sudo install -Dm644 /mnt/system/lib/lang.sh /usr/lib/olymparch/lang.sh && sudo install -Dm755 /mnt/system/lib/packages /usr/lib/olymparch/packages && sudo install -Dm755 /mnt/system/lib/install-app /usr/lib/olymparch/install-app && sudo install -Dm644 /mnt/system/polkit/org.olymparch.packages.policy /usr/share/polkit-1/actions/org.olymparch.packages.policy && sudo install -Dm644 /mnt/system/polkit/50-olymparch-packages.rules /usr/share/polkit-1/rules.d/50-olymparch-packages.rules && sudo systemctl restart polkit && sudo pacman -Sy >/dev/null && sudo chmod 666 /dev/kmsg && hyprctl reload >/dev/null; pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=$L setsid -f /usr/lib/olymparch/launch-shell; echo '<2>MENU-UPDATED' > /dev/kmsg\n" 1
 keys "$PW\n" 1
 wait_for 'MENU-UPDATED' 120 || finish "FAIL · fikk ikke kopiert filene inn"
 keys "c() { if eval \"\$2\" >/dev/null 2>&1; then echo \"<2>CHK-\$1-OK\"; else echo \"<2>CHK-\$1-NO\"; fi > /dev/kmsg; }; clear\n" 0.5
@@ -86,7 +86,13 @@ press down; press down; press down; press ret; sleep 0.5
 shot system-bekreft "Start på nytt: bekreftelse, Avbryt er valgt"
 press esc; press esc
 press down; press ret; sleep 0.5
-shot hjelp "Hjelp: hurtigtaster, brukerveiledning, meld fra om en feil"
+shot hjelp "Hjelp: noe er galt, hurtigtaster, brukerveiledning, meld fra om en feil"
+# «Something's wrong» → No sound: a check in plain words, with a Fix button when something can be fixed
+press ret; sleep 0.6
+shot noe-er-galt "Hjelp › Noe er galt: lyd, internett og Wi-Fi, Bluetooth, spill, disk"
+press ret; sleep 5
+shot ingen-lyd "Noe er galt › Ingen lyd: sjekket, og en knapp til lydinnstillingene"
+press esc; press esc
 press esc
 press esc; press esc; sleep 0.5
 # Super+Shift+M logs out only after asking (it used to log out at once)

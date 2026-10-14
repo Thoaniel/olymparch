@@ -1,0 +1,164 @@
+#!/bin/bash
+# «Something's wrong» (Olymparch menu → Help): check one topic and fix what can be fixed, in plain words.
+#   olymparch-fix TOPIC            check; one line per finding, tab-separated:
+#                                    ok<TAB>TEXT
+#                                    problem<TAB>FIX<TAB>TEXT<TAB>BUTTON      (FIX is a fixed word, see below)
+#                                    info<TAB>TEXT
+#                                    action<TAB>FIX<TAB>TEXT<TAB>BUTTON       (not a problem: a way onwards)
+#   olymparch-fix TOPIC fix FIX    do that fix; prints one line «done<TAB>TEXT» or «failed<TAB>TEXT»
+# Topics: sound, network, bluetooth, games, disk. The fixes are fixed actions, never a command or a path from
+# outside: restart the sound, unmute, set the volume, turn Wi-Fi or Bluetooth on, restart the network, DNS or
+# Bluetooth service (pkexec settings-apply restart WORD, the same helper Settings and the MCP server use), install
+# the missing drivers (pkexec hw-apply, rule ids from olymparch-hw), or open the right page of Settings.
+set -uo pipefail
+. /usr/lib/olymparch/lang.sh 2>/dev/null || . "${BASH_SOURCE[0]%/*}/../lib/lang.sh" 2>/dev/null || L() { printf '%s' "$1"; }
+ok() { printf 'ok\t%s\n' "$1"; }
+info() { printf 'info\t%s\n' "$1"; }
+problem() { printf 'problem\t%s\t%s\t%s\n' "$1" "$2" "$3"; }
+action() { printf 'action\t%s\t%s\t%s\n' "$1" "$2" "$3"; }
+done_() { printf 'done\t%s\n' "$1"; exit 0; }
+failed() { printf 'failed\t%s\n' "$1"; exit 1; }
+have() { command -v "$1" >/dev/null 2>&1; }
+helper() { pkexec /usr/lib/olymparch/settings-apply restart "$1" >/dev/null 2>&1; }
+
+topic=${1:-}
+[ "${2:-}" = fix ] && action=${3:-} || action=''
+
+missing_drivers() {   # packages the hardware rules want that are not installed
+    have olymparch-hw || return 0
+    olymparch-hw plan --list packages 2>/dev/null | while read -r p; do
+        [ -n "$p" ] && ! pacman -Qq -- "$p" >/dev/null 2>&1 && echo "$p"
+    done
+}
+
+case $topic in
+sound)
+    if [ -n "$action" ]; then
+        case $action in
+            restart) systemctl --user restart pipewire.service pipewire-pulse.service wireplumber.service \
+                         && sleep 2 && done_ "$(L "The sound system was restarted" "Lydsystemet er startet på nytt")" \
+                         || failed "$(L "The sound system did not restart" "Lydsystemet startet ikke på nytt")" ;;
+            unmute) wpctl set-mute @DEFAULT_AUDIO_SINK@ 0 && done_ "$(L "Sound is on" "Lyden er på")" || failed "$(L "Could not unmute" "Fikk ikke skrudd på lyden")" ;;
+            volume) wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.5 && done_ "$(L "Volume set to 50 %" "Volumet er satt til 50 %")" || failed "$(L "Could not change the volume" "Fikk ikke endret volumet")" ;;
+            settings) olymparch-settings open audio >/dev/null 2>&1 & done_ "" ;;
+        esac
+        failed "?"
+    fi
+    if ! systemctl --user is-active -q pipewire.service wireplumber.service pipewire-pulse.service; then
+        problem restart "$(L "The sound system is not running" "Lydsystemet kjører ikke")" "$(L "Restart the sound" "Start lyden på nytt")"
+        exit 0
+    fi
+    ok "$(L "The sound system is running" "Lydsystemet kjører")"
+    if ! wpctl inspect @DEFAULT_AUDIO_SINK@ >/dev/null 2>&1; then
+        problem restart "$(L "No speakers or headphones found" "Fant ingen høyttalere eller hodetelefoner")" "$(L "Restart the sound" "Start lyden på nytt")"
+        exit 0
+    fi
+    name=$(wpctl inspect @DEFAULT_AUDIO_SINK@ 2>/dev/null | sed -n 's/.*node.description = "\(.*\)"/\1/p' | head -n 1)
+    ok "$(L "Sound goes to" "Lyden går til"): ${name:-?}"
+    vol=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null)
+    case $vol in *MUTED*) problem unmute "$(L "The sound is muted" "Lyden er dempet")" "$(L "Turn the sound on" "Skru på lyden")" ;; esac
+    v=$(awk '{ print int($2 * 100) }' <<<"$vol")
+    if [ "${v:-0}" -lt 5 ]; then problem volume "$(L "The volume is almost off" "Volumet er nesten av") (${v:-0} %)" "$(L "Set it to 50 %" "Sett til 50 %")"
+    else ok "$(L "Volume" "Volum"): $v %"; fi
+    action settings "$(L "Wrong speakers? Pick where the sound goes" "Feil høyttaler? Velg hvor lyden går")" "$(L "Sound settings" "Lydinnstillinger")"
+    ;;
+network)
+    if [ -n "$action" ]; then
+        case $action in
+            wifi-on) nmcli radio wifi on && sleep 3 && done_ "$(L "Wi-Fi is on" "Wi-Fi er på")" || failed "$(L "Could not turn Wi-Fi on" "Fikk ikke slått på Wi-Fi")" ;;
+            restart) helper network && sleep 5 && done_ "$(L "The network was restarted" "Nettverket er startet på nytt")" || failed "$(L "The network did not restart" "Nettverket startet ikke på nytt")" ;;
+            dns) helper dns && sleep 2 && done_ "$(L "Name lookups were restarted" "Navneoppslag er startet på nytt")" || failed "$(L "Did not work" "Det gikk ikke")" ;;
+            portal) xdg-open http://neverssl.com >/dev/null 2>&1 & done_ "$(L "Sign in on the page that opened" "Logg inn på siden som åpnet seg")" ;;
+            settings) olymparch-settings open network >/dev/null 2>&1 & done_ "" ;;
+        esac
+        failed "?"
+    fi
+    if ! systemctl is-active -q NetworkManager.service; then
+        problem restart "$(L "The network service is not running" "Nettverkstjenesten kjører ikke")" "$(L "Restart the network" "Start nettverket på nytt")"
+        exit 0
+    fi
+    if rfkill list wifi 2>/dev/null | grep -q 'Hard blocked: yes'; then
+        info "$(L "Wi-Fi is switched off on the PC itself (a switch or an Fn key with an antenna)" "Wi-Fi er slått av på selve PC-en (en bryter eller en Fn-tast med en antenne)")"
+    elif [ -n "$(ls /sys/class/ieee80211 2>/dev/null)" ] && [ "$(nmcli radio wifi 2>/dev/null)" != enabled ]; then
+        problem wifi-on "$(L "Wi-Fi is off" "Wi-Fi er av")" "$(L "Turn Wi-Fi on" "Slå på Wi-Fi")"
+    fi
+    state=$(nmcli -t -f STATE general 2>/dev/null)
+    case $state in
+        connected*) ok "$(L "Connected to a network" "Koblet til et nettverk")" ;;
+        *) problem settings "$(L "Not connected to any network" "Ikke koblet til noe nettverk")" "$(L "Choose a network" "Velg et nettverk")"; exit 0 ;;
+    esac
+    case $(nmcli networking connectivity check 2>/dev/null) in
+        full) ok "$(L "The internet answers" "Internett svarer")" ;;
+        portal) problem portal "$(L "This network wants you to sign in (hotel, café, train)" "Dette nettverket vil at du logger inn (hotell, kafé, tog)")" "$(L "Open the sign-in page" "Åpne innloggingssiden")" ;;
+        *) problem restart "$(L "Connected, but the internet does not answer" "Koblet til, men internett svarer ikke")" "$(L "Restart the network" "Start nettverket på nytt")" ;;
+    esac
+    getent hosts archlinux.org >/dev/null 2>&1 && ok "$(L "Name lookups work" "Navneoppslag virker")" \
+        || problem dns "$(L "Web addresses cannot be looked up (DNS)" "Nettadresser kan ikke slås opp (DNS)")" "$(L "Restart name lookups" "Start navneoppslag på nytt")"
+    ;;
+bluetooth)
+    if [ -n "$action" ]; then
+        case $action in
+            restart) helper bluetooth && sleep 3 && done_ "$(L "Bluetooth was restarted" "Bluetooth er startet på nytt")" || failed "$(L "Bluetooth did not restart" "Bluetooth startet ikke på nytt")" ;;
+            on) timeout 8 bluetoothctl power on >/dev/null 2>&1 && done_ "$(L "Bluetooth is on" "Bluetooth er på")" || failed "$(L "Could not turn Bluetooth on" "Fikk ikke slått på Bluetooth")" ;;
+            settings) olymparch-settings open bluetooth >/dev/null 2>&1 & done_ "" ;;
+        esac
+        failed "?"
+    fi
+    if [ -z "$(ls /sys/class/bluetooth 2>/dev/null)" ]; then info "$(L "This PC has no Bluetooth adapter (a small USB adapter adds one)" "Denne PC-en har ingen Bluetooth-adapter (en liten USB-adapter gir en)")"; exit 0; fi
+    ok "$(L "A Bluetooth adapter is here" "En Bluetooth-adapter finnes")"
+    if ! systemctl is-active -q bluetooth.service; then
+        problem restart "$(L "The Bluetooth service is not running" "Bluetooth-tjenesten kjører ikke")" "$(L "Restart Bluetooth" "Start Bluetooth på nytt")"; exit 0
+    fi
+    if rfkill list bluetooth 2>/dev/null | grep -q 'blocked: yes' || ! timeout 5 bluetoothctl show 2>/dev/null | grep -q 'Powered: yes'; then
+        problem on "$(L "Bluetooth is off" "Bluetooth er av")" "$(L "Turn Bluetooth on" "Slå på Bluetooth")"
+    else
+        ok "$(L "Bluetooth is on" "Bluetooth er på")"
+    fi
+    action settings "$(L "A device does not connect? Pair it again" "En enhet kobler seg ikke til? Par den på nytt")" "$(L "Bluetooth settings" "Bluetooth-innstillinger")"
+    ;;
+games)
+    if [ -n "$action" ]; then
+        case $action in
+            drivers)
+                rules=$(olymparch-hw plan --list rules 2>/dev/null | xargs)
+                [ -n "$rules" ] || failed "$(L "No driver rule matches this PC" "Ingen driverregel passer denne PC-en")"
+                # shellcheck disable=SC2086
+                pkexec /usr/lib/olymparch/hw-apply $rules >/dev/null 2>&1 \
+                    && done_ "$(L "The drivers are installed. Restart the PC to use them." "Driverne er installert. Start PC-en på nytt for å bruke dem.")" \
+                    || failed "$(L "The drivers were not installed" "Driverne ble ikke installert")" ;;
+            settings) olymparch-settings open games >/dev/null 2>&1 & done_ "" ;;
+        esac
+        failed "?"
+    fi
+    m=$(missing_drivers | xargs)
+    if [ -n "$m" ]; then problem drivers "$(L "Drivers this PC needs are missing" "Drivere denne PC-en trenger mangler") ($m)" "$(L "Install the drivers" "Installer driverne")"
+    else ok "$(L "The graphics drivers are installed (also the 32-bit ones games use)" "Skjermdriverne er installert (også 32-biters, som spill bruker)")"; fi
+    have steam && ok "$(L "Steam is installed" "Steam er installert")" || info "$(L "Steam is not installed: Olymparch menu → Install → Apps" "Steam er ikke installert: Olymparch-menyen → Installer → Apper")"
+    have gamemoded && ok "$(L "Game mode is ready" "Spillmodus er klar")" || info "$(L "Game mode (gamemode) is not installed" "Spillmodus (gamemode) er ikke installert")"
+    lib=$HOME/.local/share/Steam
+    if [ -d "$lib" ]; then
+        free=$(df -Pk "$lib" | awk 'NR == 2 { print int($4 / 1048576) }')
+        [ "${free:-0}" -lt 20 ] && info "$(L "Only $free GB free for games: a big game may not fit" "Bare $free GB ledig til spill: et stort spill får kanskje ikke plass")"
+    fi
+    info "$(L "A game that crashed at start moves on to the next Proton by itself; olymparch-proton undo goes back" "Et spill som krasjet ved start bytter selv til neste Proton; olymparch-proton undo går tilbake")"
+    action settings "$(L "Game settings (game mode, main monitor, MangoHud)" "Spillinnstillinger (spillmodus, hovedskjerm, MangoHud)")" "$(L "Game settings" "Spillinnstillinger")"
+    ;;
+disk)
+    if [ -n "$action" ]; then
+        case $action in
+            cleanup) olymparch-settings open disks >/dev/null 2>&1 & done_ "" ;;
+        esac
+        failed "?"
+    fi
+    while read -r mnt size used free pct; do
+        p=${pct%\%}
+        line="$mnt: $(L "$free free of $size" "$free ledig av $size")"
+        if [ "$p" -ge 90 ]; then problem cleanup "$line — $(L "almost full" "nesten full")" "$(L "Free some space" "Frigjør plass")"
+        else ok "$line"; fi
+    done < <(df -h --output=source,target,size,used,avail,pcent / /home 2>/dev/null | tail -n +2 | awk '!seen[$1]++ { $1 = ""; sub(/^ /, ""); print }')
+    ;;
+*)
+    printf '%s\n' "$(L "usage: olymparch-fix sound|network|bluetooth|games|disk [fix FIX]" "bruk: olymparch-fix sound|network|bluetooth|games|disk [fix FIX]")" >&2
+    exit 2 ;;
+esac
+exit 0
