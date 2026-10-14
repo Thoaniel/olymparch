@@ -1,0 +1,8 @@
+// The system update (/usr/lib/olymparch/update) asks for your password (remembered a few minutes); only the
+// active, local admin (wheel) user may be asked at all, everyone else is refused outright.
+polkit.addRule(function (action, subject) {
+    if (action.id == "org.olymparch.update") {
+        if (subject.local && subject.active && subject.isInGroup("wheel")) return polkit.Result.AUTH_ADMIN_KEEP;
+        return polkit.Result.NO;
+    }
+});

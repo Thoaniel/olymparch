@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- pkexec /usr/lib/olymparch/update: the whole-system update the desktop runs (bar, menu, notification).
+     Always asks for the password (50-olymparch-update.rules: wheel users only); the shell (PasswordPrompt.qml) shows it. -->
+<policyconfig>
+  <vendor>Olymparch</vendor>
+  <action id="org.olymparch.update">
+    <description>Update the system</description>
+    <description xml:lang="nb">Oppdater systemet</description>
+    <message>Type your password to update the system</message>
+    <message xml:lang="nb">Skriv passordet ditt for å oppdatere systemet</message>
+    <icon_name>system-software-update</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/olymparch/update</annotate>
+  </action>
+</policyconfig>

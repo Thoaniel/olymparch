@@ -1,0 +1,59 @@
+#!/bin/bash
+# VM test: the system update from the desktop, the way a person does it. Copies the shell, the update helper with its
+# polkit rule, the snapshot hook and the language helper from this repo into a copy of the installed disk (no
+# rebuild), leaves a stale pacman lock behind (as a power cut would), then: Olymparch menu → Update now (through
+# its IPC, the same call the notification's «Install» and the System panel make), the password in the shell's own
+# prompt, progress in the menu, a plain result. Checks that the stale lock was cleared, that the update finished
+# (ok, or nothing to do), and that an update with packages took an «important» snapshot first.
+#   OLYMPARCH_BASE=$HOME/dev/olymparch-base tests/vm/update
+set -uo pipefail
+cd "$(dirname "$0")/../.."
+. dev/env
+SRC=${OLYMPARCH_BASE:-tests/vm/out/install-disk}
+[ -f "$SRC/disk.qcow2" ] || { echo "kjør tests/vm/install-disk først (eller sett OLYMPARCH_BASE)" >&2; exit 2; }
+O=tests/vm/out/update
+rm -rf -- tests/vm/out/update
+mkdir -p "$O"
+install -m644 "$SRC/vars.fd" "$O/vars.fd"
+qemu-img create -q -f qcow2 -b "$(realpath "$SRC/disk.qcow2")" -F qcow2 "$O/disk.qcow2"
+QMP=$O/qmp.sock
+. tests/vm/lib.sh
+PW='olymp-test-123'
+L=${OLYMPARCH_TEST_LANG:-nb_NO.UTF-8}
+trap 'kill "$QPID" 2>/dev/null; python3 -I tests/vm/report.py tests/vm/out/report.html "$O" >/dev/null 2>&1' EXIT
+t0=$SECONDS
+fails=()
+
+vm boot.log -virtfs local,path="$PWD",mount_tag=olysrc,security_model=none,readonly=on,id=src -device qemu-xhci,id=xhci
+unlock_and_desktop "$PW"
+
+# this repo's files in place; a stale lock; a watcher that reports the helper's result on the serial console
+press meta_l+ret; sleep 2
+keys "sudo mount -t 9p -o trans=virtio,ro olysrc /mnt && sudo cp -r /mnt/default/shell/. /usr/share/olymparch/shell/ && sudo cp -r /mnt/default/i18n /mnt/default/settings /mnt/default/menu /usr/share/olymparch/ && sudo install -Dm755 /mnt/system/lib/update /usr/lib/olymparch/update && sudo install -Dm644 /mnt/system/lib/lang.sh /usr/lib/olymparch/lang.sh && sudo install -m755 /mnt/system/bin/olymparch-snapshot /mnt/system/bin/olymparch-boot /usr/bin/ && sudo install -Dm644 /mnt/system/hooks/05-olymparch-snapshot.hook /etc/pacman.d/hooks/05-olymparch-snapshot.hook && sudo install -Dm644 /mnt/system/polkit/org.olymparch.update.policy /usr/share/polkit-1/actions/org.olymparch.update.policy && sudo install -Dm644 /mnt/system/polkit/50-olymparch-update.rules /usr/share/polkit-1/rules.d/50-olymparch-update.rules && sudo systemctl restart polkit && sudo touch /var/lib/pacman/db.lck && sudo chmod 666 /dev/kmsg && pkill -x launch-shell; pkill -x quickshell; sleep 1; LANG=$L setsid -f /usr/lib/olymparch/launch-shell; setsid -f sh -c 'until grep -q \"^OLYMPARCH-UPDATE\" /var/log/olymparch-update.log 2>/dev/null; do sleep 2; done; grep -m1 \"stale pacman lock\" /var/log/olymparch-update.log >/dev/null && echo \"<2>LOCK-CLEARED\" > /dev/kmsg; grep \"^OLYMPARCH-UPDATE\" /var/log/olymparch-update.log | tail -n 1 | sed \"s/^/<2>/\" > /dev/kmsg'; echo '<2>UPDATE-READY' > /dev/kmsg; exit\n" 1
+keys "$PW\n" 1
+wait_for 'UPDATE-READY' 120 || finish "FAIL · fikk ikke kopiert filene inn"
+sleep 4
+
+# Update now, as the notification's «Install» does
+press meta_l+ret; sleep 1.5
+keys "qs ipc -p /usr/share/olymparch/shell call menu update; exit\n" 2
+shot passord "Oppdater nå: passordet spørres av skallet selv (polkit), ingen terminal"
+keys "$PW\n" 6
+shot fremdrift "Oppdateringen går: fremdrift i menyen"
+wait_for 'OLYMPARCH-UPDATE (ok|none|failed)' 1800 || { shot henger "Oppdateringen ble ikke ferdig"; finish "FAIL · oppdateringen ble ikke ferdig på 30 min"; }
+sleep 3
+shot resultat "Resultatet i klartekst"
+result=$(grep -aoE 'OLYMPARCH-UPDATE (ok [0-9]+|none|failed [a-z]+)' "$O/$LOG" | tail -n 1)
+seen 'LOCK-CLEARED' || fails+=(laas-ikke-fjernet)
+case $result in
+    *" ok "*)
+        # an update with packages: the snapshot before it is marked important
+        press esc; press esc; press esc; sleep 0.5
+        press meta_l+ret; sleep 1.5
+        keys "snapper -c root list --columns userdata,description | grep -q 'important=yes' && echo '<2>SNAP-IMPORTANT' > /dev/kmsg; exit\n" 3
+        wait_for 'SNAP-IMPORTANT' 20 || fails+=(oyeblikksbilde)
+        ;;
+    *none*) ;;
+    *) fails+=("${result##* }") ;;
+esac
+finish "$([ ${#fails[@]} = 0 ] && echo PASS || echo "FAIL (${fails[*]})") · oppdatering fra skrivebordet: ${result#OLYMPARCH-UPDATE }, gammel lås fjernet, passord i skallet, fremdrift og resultat i menyen på $((SECONDS - t0)) s"

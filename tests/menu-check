@@ -122,12 +122,22 @@ for c in cat.get("categories", []):
 # ── the menu escalates only through the two helpers, and only after a confirm step
 menu = (root / "default/shell/Menu.qml").read_text()
 for m in re.finditer(r'"pkexec"\s*,\s*"([^"]+)"', menu):
-    if m.group(1) not in ("/usr/lib/olymparch/packages", "/usr/lib/olymparch/install-app"):
+    if m.group(1) not in ("/usr/lib/olymparch/packages", "/usr/lib/olymparch/install-app", "/usr/lib/olymparch/update"):
         bad(f"Menu.qml runs pkexec on {m.group(1)}")
 if re.search(r'\bsudo\b|"pacman"', menu):
     bad("Menu.qml may not run sudo or pacman itself")
-if menu.count('"pkexec"') != 2:
-    bad("Menu.qml should run pkexec in exactly two places (packages, install-app)")
+if menu.count('"pkexec"') != 3:
+    bad("Menu.qml should run pkexec in exactly three places (packages, install-app, update)")
+# ── the system update helper: the whole system, never anything that forces past pacman's checks
+upd = re.sub(r"#[^\n]*", "", (root / "system/lib/update").read_text())
+for flag in ("-dd", "--overwrite", "--nodeps", "-U ", "makepkg", "yay", "paru", "curl", "wget", "--asdeps"):
+    if flag in upd:
+        bad(f"update: must never use {flag.strip()}")
+if "pacman -Su --noconfirm" not in upd or 'flock 9' not in upd:
+    bad("update: one pacman -Su --noconfirm, under the packages lock")
+pol = (root / "system/polkit/org.olymparch.update.policy").read_text()
+if "auth_admin_keep" not in pol or "/usr/lib/olymparch/update" not in pol:
+    bad("update: the polkit action must ask for the password and name the helper")
 if "confirm" not in menu:
     bad("Menu.qml: installs and removals need a confirm step")
 cheat = (root / "default/shell/Cheatsheet.qml").read_text()

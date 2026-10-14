@@ -1,0 +1,39 @@
+#!/bin/bash
+# The system update the desktop runs (bar, menu, notification «Install»): pkexec /usr/lib/olymparch/update
+# Root, no terminal and no questions: what pacman would ask is decided here, and anything it cannot decide stops
+# the update with a plain message instead. Every package change takes a snapshot first (the pacman hook), so a bad
+# update is undone from the boot menu or with olymparch-rollback.
+#   1. a pacman lock left by a crash or a power cut is removed (a real one is waited for)
+#   2. at least 3 GB must be free on /
+#   3. the package databases are refreshed, the keyring is updated first (an old keyring rejects new packages),
+#      then the whole system: pacman -Su --noconfirm (replacements are accepted; a file conflict stops it)
+#   4. the last line says how it went: «OLYMPARCH-UPDATE ok N» (N packages) | «… none» | «… failed REASON»
+# Everything is logged to /var/log/olymparch-update.log. Exit codes: 0 done (or nothing to do), 1 failed.
+set -uo pipefail
+export PATH=/usr/bin LC_ALL=C
+LOG=/var/log/olymparch-update.log
+[ "$(id -u)" = 0 ] || { echo "update: runs through pkexec" >&2; exit 1; }
+exec </dev/null 9>/run/olymparch-packages.lock   # the same lock as the menu's package helper: one at a time
+flock 9
+umask 022
+fail() { echo "OLYMPARCH-UPDATE failed $1"; exit 1; }
+{
+    printf '\n== %s update (uid %s)\n' "$(date '+%F %T')" "${PKEXEC_UID:-?}"
+    if [ -e /var/lib/pacman/db.lck ] && ! pgrep -x pacman >/dev/null; then rm -f /var/lib/pacman/db.lck; echo "removed a stale pacman lock"; fi
+    for _ in $(seq 60); do [ -e /var/lib/pacman/db.lck ] || break; sleep 2; done
+    [ -e /var/lib/pacman/db.lck ] && fail busy
+    free=$(df -Pk / | awk 'NR == 2 { print int($4 / 1048576) }')
+    [ "${free:-0}" -ge 3 ] || fail space
+    pacman -Sy --noconfirm || fail network
+    pending=$(pacman -Qu 2>/dev/null | wc -l)
+    [ "$pending" -gt 0 ] || { echo "OLYMPARCH-UPDATE none"; exit 0; }
+    if pacman -Qu archlinux-keyring >/dev/null 2>&1; then pacman -S --noconfirm --needed archlinux-keyring || fail keyring; fi
+    if ! pacman -Su --noconfirm; then
+        # tell the cause apart from the log: conflicting files, a signature, or something else
+        tail -n 40 "$LOG" | grep -q 'conflicting files\|exists in filesystem' && fail conflict
+        tail -n 40 "$LOG" | grep -qi 'signature\|PGP\|keyring' && fail keyring
+        fail pacman
+    fi
+    echo "OLYMPARCH-UPDATE ok $pending"
+} 2>&1 | tee -a "$LOG"
+exit "${PIPESTATUS[0]}"

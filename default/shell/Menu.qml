@@ -78,6 +78,7 @@ Scope {
         function close(): void { menu.open = false; }
         function toggle(): void { menu.toggle(); }
         function go(where: string): void { menu.open = true; menu.goTo(where.split("/").filter(s => s)); }
+        function update(): void { menu.updateSystem(); }
     }
 
     onOpenChanged: {
@@ -156,7 +157,7 @@ Scope {
                 node("all-settings", "", "All settings", "Alle innstillinger", { act: () => run(["olymparch-settings", "open"]) })
             ] }),
             node("update", "", "Update", "Oppdater", { children: [
-                node("update-now", "", "Update now", "Oppdater nå", { hint: t("in a terminal", "i en terminal"), act: () => run(term("olymparch update")) }),
+                node("update-now", "", "Update now", "Oppdater nå", { hint: Updates.count > 0 ? t(Updates.count + " ready", Updates.count + " klare") : "", act: () => updateSystem() }),
                 node("changes", "", "What changed", "Hva som er endret", { hint: t("last update", "siste oppdatering"), act: () => showChanges() })
             ] }),
             node("system", "", "System", "System", { children: [
@@ -401,9 +402,17 @@ Scope {
     // The package helper asks for your password (PasswordPrompt.qml): the menu steps aside until it is typed.
     property bool waitingAuth: false
     property string authWhat: ""     // what the password is for, shown in the prompt («installere cowsay (2 pakker)»)
-    function runJob(title, cmd, label, inst, asks) {
+    // the whole system, without a terminal: /usr/lib/olymparch/update (pkexec), progress here, a plain result
+    function updateSystem() {
+        open = true;
+        updateResult = "";
+        runJob(t("Updating the system", "Oppdaterer systemet"), ["pkexec", "/usr/lib/olymparch/update"], "", false,
+               t("update the system", "oppdatere systemet"), true);
+    }
+    property string updateResult: ""   // the helper's last line: ok N | none | failed REASON
+    function runJob(title, cmd, label, inst, asks, isUpdate) {
         busy = true;
-        view = { kind: "run", title: title, label: label, inst: inst, lines: [], done: false, rows: [{ text: title + " …", big: true }] };
+        view = { kind: "run", title: title, label: label, inst: inst, update: !!isUpdate, lines: [], done: false, rows: [{ text: title + " …", big: true }] };
         job.command = cmd;
         job.running = true;
         if (asks) { authWhat = asks; waitingAuth = true; open = false; }
@@ -412,6 +421,8 @@ Scope {
     function noise(l) { return !l.trim() || /\[[Yy]\/[Nn]\]|^:: Proceed|Do you want to|^Error executing command|^This incident|^==/.test(l); }
     function jobLine(l, fromHelper) {
         if (waitingAuth && fromHelper) { waitingAuth = false; authWhat = ""; open = true; }   // the helper runs: the password was right
+        const u = l.match(/^OLYMPARCH-UPDATE (.*)$/);
+        if (u) { updateResult = u[1].trim(); return; }
         if (!view || view.kind !== "run" || noise(l)) return;
         const lines = view.lines.concat([l.trim()]).slice(-6);
         const step = (l.match(/^(?:installing|removing|upgrading) (\S+?)\.\.\./) || [])[1];
@@ -426,11 +437,25 @@ Scope {
             const v = menu.view && menu.view.kind === "run" ? menu.view : { lines: [], label: "", inst: true };
             const ok = code === 0;
             const denied = menu.waitingAuth && (code === 126 || code === 127);   // pkexec: cancelled, or a wrong password
-            const msg = ok ? (v.inst ? menu.t("Installed: ", "Installert: ") : menu.t("Removed: ", "Fjernet: ")) + v.label
+            const r = menu.updateResult.split(" ");
+            const updMsg = {
+                none: menu.t("Already up to date", "Allerede oppdatert"),
+                space: menu.t("Not enough free space (3 GB is needed). Free some in Settings → Disks, then try again.", "For lite ledig plass (3 GB trengs). Frigjør litt i Innstillinger → Disker, og prøv igjen."),
+                network: menu.t("Could not reach the update servers. Check the internet and try again.", "Fikk ikke kontakt med oppdateringsserverne. Sjekk internett og prøv igjen."),
+                keyring: menu.t("The packages' signatures could not be checked. Try again later; details in /var/log/olymparch-update.log.", "Signaturene til pakkene kunne ikke sjekkes. Prøv igjen senere; detaljer i /var/log/olymparch-update.log."),
+                conflict: menu.t("An update would overwrite a file it does not own, so nothing was changed. Details: /var/log/olymparch-update.log", "En oppdatering ville skrevet over en fil den ikke eier, så ingenting ble endret. Detaljer: /var/log/olymparch-update.log"),
+                busy: menu.t("Another install is running. Try again in a moment.", "En annen installasjon pågår. Prøv igjen om litt.")
+            };
+            const msg = v.update && !denied ? (r[0] === "ok" ? menu.t(`Updated: ${r[1]} packages`, `Oppdatert: ${r[1]} pakker`)
+                                             : r[0] === "none" ? updMsg.none
+                                             : updMsg[r[1]] || menu.t("The update did not work. Details: /var/log/olymparch-update.log", "Oppdateringen gikk ikke. Detaljer: /var/log/olymparch-update.log"))
+                      : ok ? (v.inst ? menu.t("Installed: ", "Installert: ") : menu.t("Removed: ", "Fjernet: ")) + v.label
                       : denied ? menu.t("Cancelled – nothing was changed", "Avbrutt – ingenting ble endret")
                       : menu.t("Did not work. Details: /var/log/olymparch-packages.log", "Det gikk ikke. Detaljer: /var/log/olymparch-packages.log");
+            if (v.update) { Updates.check(false); RestartNeeded.check(); }
             if (!menu.open && !menu.waitingAuth) Quickshell.execDetached(["notify-send", "-a", "Olymparch", msg]);
-            const title = ok ? (v.inst ? menu.t("Installed", "Installert") : menu.t("Removed", "Fjernet"))
+            const title = v.update ? (ok ? menu.t("Up to date", "Oppdatert") : denied ? menu.t("Cancelled", "Avbrutt") : menu.t("Not updated", "Ikke oppdatert"))
+                        : ok ? (v.inst ? menu.t("Installed", "Installert") : menu.t("Removed", "Fjernet"))
                         : denied ? menu.t("Cancelled", "Avbrutt") : (v.inst ? menu.t("Not installed", "Ikke installert") : menu.t("Not removed", "Ikke fjernet"));
             const rows = [{ text: (ok ? "✓  " : denied ? "" : "✗  ") + msg, big: true, ok: ok, error: !ok && !denied }].concat((denied ? [] : v.lines).map(x => ({ text: x, dim: true })));
             rows.push({ id: "back", icon: "", label: menu.t("Back", "Tilbake"), act: () => menu.back() });

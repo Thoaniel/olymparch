@@ -463,6 +463,10 @@ fi
 install -Dm755 /usr/share/olymparch/system/lib/packages /mnt/usr/lib/olymparch/packages
 install -Dm644 /usr/share/olymparch/system/polkit/org.olymparch.packages.policy /mnt/usr/share/polkit-1/actions/org.olymparch.packages.policy
 install -Dm644 /usr/share/olymparch/system/polkit/50-olymparch-packages.rules /mnt/usr/share/polkit-1/rules.d/50-olymparch-packages.rules
+# the system update from the desktop (bar, menu, notification): one more narrow helper, the same password prompt
+install -Dm755 /usr/share/olymparch/system/lib/update /mnt/usr/lib/olymparch/update
+install -Dm644 /usr/share/olymparch/system/polkit/org.olymparch.update.policy /mnt/usr/share/polkit-1/actions/org.olymparch.update.policy
+install -Dm644 /usr/share/olymparch/system/polkit/50-olymparch-update.rules /mnt/usr/share/polkit-1/rules.d/50-olymparch-update.rules
 # (the password prompt for it is the shell itself: PasswordPrompt.qml is the session's polkit agent)
 mkdir -p /mnt/var/lib/olymparch
 arch-chroot /mnt pacman -Qqe >/mnt/var/lib/olymparch/base-packages

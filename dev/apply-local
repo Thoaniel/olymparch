@@ -49,6 +49,10 @@ done
 for f in "$repo"/system/bin/*; do put 755 "$f" "/usr/bin/${f##*/}"; done
 for f in "$repo"/system/lib/*; do [ "${f##*/}" != lang.sh ] && [ -e "/usr/lib/olymparch/${f##*/}" ] && put 755 "$f" "/usr/lib/olymparch/${f##*/}"; done
 put 644 "$repo/system/lib/lang.sh" /usr/lib/olymparch/lang.sh   # sourced by the system commands, so always
+# the desktop's system update (new): its helper and polkit files, whether or not an older install had them
+put 755 "$repo/system/lib/update" /usr/lib/olymparch/update
+put 644 "$repo/system/polkit/org.olymparch.update.policy" /usr/share/polkit-1/actions/org.olymparch.update.policy
+put 644 "$repo/system/polkit/50-olymparch-update.rules" /usr/share/polkit-1/rules.d/50-olymparch-update.rules
 put 755 "$repo/default/launch-shell" /usr/lib/olymparch/launch-shell
 for f in "$repo"/default/systemd/user/*; do put 644 "$f" "/usr/lib/systemd/user/${f##*/}"; done
 for f in "$repo"/system/polkit/*.policy; do [ -e "/usr/share/polkit-1/actions/${f##*/}" ] && put 644 "$f" "/usr/share/polkit-1/actions/${f##*/}"; done

@@ -171,7 +171,7 @@ Dropdown {
         onActivated: p.theme.toggleDnd()
     }
     PanelAction { theme: p.theme; icon: ""; label: p.t("system.doctor", "Check the system"); hint: "olymparch-doctor"; onActivated: { Panels.close("system"); Quickshell.execDetached(["foot", "-H", "olymparch-doctor"]); } }
-    PanelAction { theme: p.theme; visible: p.info.updates > 0; icon: ""; label: p.t("system.update", "Update now"); onActivated: { Panels.close("system"); Quickshell.execDetached(["foot", "-H", "olymparch", "update"]); } }
+    PanelAction { theme: p.theme; visible: Updates.count > 0 || p.info.updates > 0; icon: ""; label: p.t("system.update", "Update now"); hint: Updates.count > 0 ? String(Updates.count) : ""; onActivated: { Panels.close("system"); Quickshell.execDetached(["qs", "ipc", "-p", "/usr/share/olymparch/shell", "call", "menu", "update"]); } }
     PanelAction { theme: p.theme; icon: ""; label: p.t("system.rollback", "Roll back to a snapshot"); onActivated: { Panels.close("system"); Quickshell.execDetached(["foot", "-e", "olymparch-rollback"]); } }
     PanelAction { theme: p.theme; icon: ""; label: p.t("system.settings", "All settings"); onActivated: { Panels.close("system"); Quickshell.execDetached(["olymparch-settings", "open"]); } }
 }
