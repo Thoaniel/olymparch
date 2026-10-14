@@ -247,11 +247,15 @@ pacstrap_opts=(-K)
 tools_pkgs=(wl-clipboard cliphist grim slurp satty hyprpicker gpu-screen-recorder wf-recorder
     tesseract tesseract-data-eng tesseract-data-nor wtype noto-fonts-emoji)
 # ── end everyday tools
+# ── what people expect to just work: printers (IPP Everywhere, found on the network by avahi) and scanners,
+#    the file picker in apps (the GTK portal next to Hyprland's), a plain text editor, and iPhones (photos, files)
+everyday_pkgs=(cups cups-filters cups-pdf system-config-printer avahi nss-mdns sane-airscan simple-scan
+    xdg-desktop-portal-gtk gnome-text-editor libimobiledevice usbmuxd gvfs-afc)
 pacstrap "${pacstrap_opts[@]}" /mnt base "$KERNEL" mkinitcpio btrfs-progs cryptsetup limine sudo networkmanager snapper \
     hyprland hypridle quickshell foot adwaita-cursors ttf-jetbrains-mono ttf-nerd-fonts-symbols-mono libnotify polkit \
     pipewire pipewire-pulse wireplumber xdg-desktop-portal-hyprland plymouth upower \
     firefox thunar tumbler gvfs gvfs-mtp gvfs-gphoto2 thunar-volman imv mpv xdg-utils xdg-user-dirs udiskie udisks2 clamav pacman-contrib fakeroot tmux \
-    "${tools_pkgs[@]}"
+    "${tools_pkgs[@]}" "${everyday_pkgs[@]}"
 
 # --- Hardware (olymparch-hw): the live system is the same machine, so its plan is the new system's plan.
 # Drivers, microcode and only the firmware this machine needs, the initramfs MODULES for a built-in keyboard,
@@ -333,6 +337,9 @@ printf '%s:%s\n' "$USERNAME" "$PASSWORD" | arch-chroot /mnt chpasswd
 echo '%wheel ALL=(ALL:ALL) ALL' >/mnt/etc/sudoers.d/10-wheel
 chmod 440 /mnt/etc/sudoers.d/10-wheel
 arch-chroot /mnt systemctl enable NetworkManager >/dev/null 2>&1
+# printers: CUPS starts when something prints; avahi finds network printers and scanners (mDNS)
+arch-chroot /mnt systemctl enable cups.socket avahi-daemon.service >/dev/null 2>&1
+sed -i 's/^hosts: mymachines resolve/hosts: mymachines mdns_minimal [NOTFOUND=return] resolve/' /mnt/etc/nsswitch.conf
 # the network the installer used (Wi-Fi with its password): online at the first login without typing it again
 if compgen -G '/etc/NetworkManager/system-connections/*.nmconnection' >/dev/null; then
     install -d -m700 /mnt/etc/NetworkManager/system-connections

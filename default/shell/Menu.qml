@@ -151,6 +151,8 @@ Scope {
                 node("displays", "", "Displays", "Skjermer", { act: () => settingsPage("display") }),
                 node("sound", "", "Sound", "Lyd", { act: () => settingsPage("audio") }),
                 node("keyboard", "", "Keyboard", "Tastatur", { act: () => settingsPage("keyboard") }),
+                have["system-config-printer"] ? node("printers", "\u{F042A}", "Printers", "Skrivere", { hint: t("found on the network by themselves", "finnes på nettet av seg selv"), act: () => run(["system-config-printer"]) })
+                                               : coming("printers", "\u{F042A}", "Printers", "Skrivere"),
                 node("all-settings", "", "All settings", "Alle innstillinger", { act: () => run(["olymparch-settings", "open"]) })
             ] }),
             node("update", "", "Update", "Oppdater", { children: [
@@ -447,7 +449,7 @@ Scope {
     Process {
         id: probe
         command: ["sh", "-c", 'for c in "$@"; do p=$(command -v -- "$c") || continue; echo "have $c"; o=$(pacman -Qqo -- "$p" 2>/dev/null) && echo "owner $c $o"; done; qs ipc -p /usr/share/olymparch/shell show 2>/dev/null | grep -qx "target theme" && echo theme; true',
-                  "sh", "olymparch-tool", "olymparch-webapp", "olymparch-rollback"].concat((menu.catalog.apps || []).map(a => a.needs).filter(n => /^[a-z0-9][a-z0-9._+-]*$/.test(n)))
+                  "sh", "olymparch-tool", "olymparch-webapp", "olymparch-rollback", "system-config-printer"].concat((menu.catalog.apps || []).map(a => a.needs).filter(n => /^[a-z0-9][a-z0-9._+-]*$/.test(n)))
         stdout: StdioCollector {
             onStreamFinished: {
                 const h = {}, o = {};
